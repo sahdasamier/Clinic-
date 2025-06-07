@@ -1,0 +1,6 @@
+File not found: /usr/lib/code-server/lib/vscode/node_modules/vsda/rust/web/vsda_bg.wasm
+File not found: /usr/lib/code-server/lib/vscode/node_modules/vsda/rust/web/vsda.js
+[08:33:16] No ptyHost heartbeat after 6 seconds
+File not found: /usr/lib/code-server/lib/vscode/node_modules/vsda/rust/web/vsda_bg.wasm
+File not found: /usr/lib/code-server/lib/vscode/node_modules/vsda/rust/web/vsda.js
+[08:33:42] [File Watcher] Inotify limit reached (ENOSPC) (path: /home/ubuntu)

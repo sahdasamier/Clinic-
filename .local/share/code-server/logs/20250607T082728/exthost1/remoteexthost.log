@@ -1,0 +1,20 @@
+2025-06-07 04:27:45.945 [info] Extension host with pid 9435 started
+2025-06-07 04:27:45.954 [info] Lock '/home/ubuntu/.local/share/code-server/User/workspaceStorage/738b1f69/vscode.lock': Lock acquired.
+2025-06-07 04:27:46.283 [info] ExtensionService#_doActivateExtension vscode.git-base, startup: true, activationEvent: '*', root cause: vscode.git
+2025-06-07 04:27:46.480 [info] ExtensionService#_doActivateExtension vscode.git, startup: true, activationEvent: '*'
+2025-06-07 04:27:46.481 [info] ExtensionService#_doActivateExtension vscode.github, startup: true, activationEvent: '*'
+2025-06-07 04:27:46.856 [info] Eager extensions activated
+2025-06-07 04:27:46.857 [info] ExtensionService#_doActivateExtension vscode.debug-auto-launch, startup: false, activationEvent: 'onStartupFinished'
+2025-06-07 04:27:46.857 [info] ExtensionService#_doActivateExtension vscode.merge-conflict, startup: false, activationEvent: 'onStartupFinished'
+2025-06-07 04:27:47.160 [info] ExtensionService#_doActivateExtension vscode.emmet, startup: false, activationEvent: 'onLanguage'
+2025-06-07 04:27:47.265 [info] ExtensionService#_doActivateExtension vscode.github-authentication, startup: false, activationEvent: 'onAuthenticationRequest:github'
+2025-06-07 04:27:47.494 [warning] [Decorations] CAPPING events from decorations provider vscode.git 10000
+2025-06-07 04:27:49.073 [warning] [Decorations] CAPPING events from decorations provider vscode.git 10000
+2025-06-07 04:28:50.371 [info] ExtensionService#_doActivateExtension vscode.typescript-language-features, startup: false, activationEvent: 'onLanguage:javascriptreact'
+2025-06-07 04:29:22.352 [info] ExtensionService#_doActivateExtension vscode.media-preview, startup: false, activationEvent: 'onCustomEditor:imagePreview.previewEditor'
+2025-06-07 04:31:06.716 [info] ExtensionService#_doActivateExtension vscode.npm, startup: false, activationEvent: 'onTerminalQuickFixRequest:ms-vscode.npm-command'
+2025-06-07 04:31:10.948 [warning] [Decorations] CAPPING events from decorations provider vscode.git 10000
+2025-06-07 04:31:12.599 [warning] [Decorations] CAPPING events from decorations provider vscode.git 10000
+2025-06-07 04:31:15.116 [info] ExtensionService#_doActivateExtension vscode.configuration-editing, startup: false, activationEvent: 'onLanguage:json'
+2025-06-07 04:31:15.116 [info] ExtensionService#_doActivateExtension vscode.extension-editing, startup: false, activationEvent: 'onLanguage:json'
+2025-06-07 04:31:15.116 [info] ExtensionService#_doActivateExtension vscode.json-language-features, startup: false, activationEvent: 'onLanguage:json'

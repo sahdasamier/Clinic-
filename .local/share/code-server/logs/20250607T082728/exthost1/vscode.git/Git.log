@@ -1,0 +1,120 @@
+2025-06-07 04:27:47.089 [info] [main] Log level: Info
+2025-06-07 04:27:47.089 [info] [main] Validating found git in: "git"
+2025-06-07 04:27:47.089 [info] [main] Using git "2.34.1" from "git"
+2025-06-07 04:27:47.089 [info] [Model][doInitialScan] Initial repository scan started
+2025-06-07 04:27:47.089 [info] > git rev-parse --show-toplevel [3ms]
+2025-06-07 04:27:47.089 [info] fatal: not a git repository (or any of the parent directories): .git
+2025-06-07 04:27:47.089 [info] > git rev-parse --show-toplevel [2ms]
+2025-06-07 04:27:47.089 [info] fatal: not a git repository (or any of the parent directories): .git
+2025-06-07 04:27:47.089 [info] > git rev-parse --show-toplevel [1ms]
+2025-06-07 04:27:47.089 [info] fatal: not a git repository (or any of the parent directories): .git
+2025-06-07 04:27:47.089 [info] > git rev-parse --show-toplevel [1ms]
+2025-06-07 04:27:47.089 [info] fatal: not a git repository (or any of the parent directories): .git
+2025-06-07 04:27:47.089 [info] > git rev-parse --show-toplevel [1ms]
+2025-06-07 04:27:47.089 [info] fatal: not a git repository (or any of the parent directories): .git
+2025-06-07 04:27:47.089 [info] > git rev-parse --show-toplevel [1ms]
+2025-06-07 04:27:47.089 [info] fatal: not a git repository (or any of the parent directories): .git
+2025-06-07 04:27:47.089 [info] > git rev-parse --show-toplevel [3ms]
+2025-06-07 04:27:47.089 [info] > git rev-parse --git-dir --git-common-dir [1ms]
+2025-06-07 04:27:47.089 [info] [Model][openRepository] Opened repository (path): /home/ubuntu/.nvm
+2025-06-07 04:27:47.089 [info] [Model][openRepository] Opened repository (real path): /home/ubuntu/.nvm
+2025-06-07 04:27:47.089 [info] > git config --get commit.template [3ms]
+2025-06-07 04:27:47.089 [info] > git rev-parse --show-toplevel [1ms]
+2025-06-07 04:27:47.089 [info] fatal: not a git repository (or any of the parent directories): .git
+2025-06-07 04:27:47.089 [info] > git rev-parse --show-toplevel [1ms]
+2025-06-07 04:27:47.089 [info] fatal: not a git repository (or any of the parent directories): .git
+2025-06-07 04:27:47.089 [info] > git rev-parse --show-toplevel [1ms]
+2025-06-07 04:27:47.089 [info] > git for-each-ref --format %(refname)%00%(objectname)%00%(*objectname) refs/tags [11ms]
+2025-06-07 04:27:47.089 [info] > git rev-parse --git-dir --git-common-dir [8ms]
+2025-06-07 04:27:47.089 [info] [Model][openRepository] Opened repository (path): /home/ubuntu/multiclinic-app
+2025-06-07 04:27:47.089 [info] [Model][openRepository] Opened repository (real path): /home/ubuntu/multiclinic-app
+2025-06-07 04:27:47.089 [info] > git for-each-ref --sort -committerdate --format %(refname)%00%(objectname)%00%(*objectname) [14ms]
+2025-06-07 04:27:47.089 [info] > git rev-parse --show-toplevel [3ms]
+2025-06-07 04:27:47.089 [info] fatal: not a git repository (or any of the parent directories): .git
+2025-06-07 04:27:47.089 [info] [Model][doInitialScan] Initial repository scan completed - repositories (2), closed repositories (0), parent repositories (0), unsafe repositories (0)
+2025-06-07 04:27:47.089 [info] > git config --get commit.template [10ms]
+2025-06-07 04:27:47.089 [info] [Git][getRemotes] No remotes found in the git config file
+2025-06-07 04:27:47.089 [info] > git for-each-ref --format=%(refname)%00%(upstream:short)%00%(objectname)%00%(upstream:track)%00%(upstream:remotename)%00%(upstream:remoteref) refs/heads/master refs/remotes/master [1ms]
+2025-06-07 04:27:47.089 [warning] [Git][getBranch] No such branch: master
+2025-06-07 04:27:47.089 [info] > git for-each-ref --sort -committerdate --format %(refname)%00%(objectname)%00%(*objectname) [2ms]
+2025-06-07 04:27:47.089 [info] > git status -z -uall [56ms]
+2025-06-07 04:27:47.089 [info] > git config --get commit.template [3ms]
+2025-06-07 04:27:47.089 [info] > git for-each-ref --format %(refname)%00%(objectname)%00%(*objectname) refs/tags [2ms]
+2025-06-07 04:27:47.090 [info] > git for-each-ref --sort -committerdate --format %(refname)%00%(objectname)%00%(*objectname) [5ms]
+2025-06-07 04:27:47.102 [info] > git status -z -uall [20ms]
+2025-06-07 04:27:47.391 [info] > git status -z -uall [382ms] (cancelled)
+2025-06-07 04:27:47.392 [info] > git check-ignore -v -z --stdin [1ms]
+2025-06-07 04:27:47.514 [info] > git for-each-ref --format=%(refname)%00%(upstream:short)%00%(objectname)%00%(upstream:track)%00%(upstream:remotename)%00%(upstream:remoteref) refs/heads/master refs/remotes/master [6ms]
+2025-06-07 04:27:47.514 [warning] [Git][getBranch] No such branch: master
+2025-06-07 04:27:47.514 [error] [GitHistoryProvider][resolveHEADMergeBase] Failed to resolve merge base for master: Error: No such branch: master.
+2025-06-07 04:27:47.515 [info] > git config --get commit.template [2ms]
+2025-06-07 04:27:47.517 [info] [Git][getRemotes] No remotes found in the git config file
+2025-06-07 04:27:48.804 [info] > git for-each-ref --format=%(refname)%00%(upstream:short)%00%(objectname)%00%(upstream:track)%00%(upstream:remotename)%00%(upstream:remoteref) refs/heads/master refs/remotes/master [1287ms]
+2025-06-07 04:27:48.804 [warning] [Git][getBranch] No such branch: master
+2025-06-07 04:27:48.877 [info] > git check-ignore -v -z --stdin [30ms]
+2025-06-07 04:27:48.878 [info] > git check-ignore -v -z --stdin [27ms]
+2025-06-07 04:27:48.879 [info] > git for-each-ref --sort -committerdate --format %(refname)%00%(objectname)%00%(*objectname) [41ms]
+2025-06-07 04:27:48.880 [info] > git rev-parse --show-toplevel [18ms]
+2025-06-07 04:27:48.989 [info] > git status -z -uall [170ms] (cancelled)
+2025-06-07 04:27:48.990 [info] > git check-ignore -v -z --stdin [1ms]
+2025-06-07 04:28:37.442 [info] > git check-ignore -v -z --stdin [1ms]
+2025-06-07 04:28:39.173 [info] > git check-ignore -v -z --stdin [1ms]
+2025-06-07 04:28:45.313 [info] > git check-ignore -v -z --stdin [1ms]
+2025-06-07 04:28:47.285 [info] > git check-ignore -v -z --stdin [1ms]
+2025-06-07 04:28:50.731 [info] > git show --textconv :src/components/ui/avatar.jsx [4ms]
+2025-06-07 04:28:50.737 [info] > git ls-files --stage -- src/components/ui/avatar.jsx [7ms]
+2025-06-07 04:28:50.741 [info] > git hash-object -t tree /dev/null [8ms]
+2025-06-07 04:28:50.741 [warning] [GitFileSystemProvider][readFile] File not found - git:/home/ubuntu/multiclinic-app/src/components/ui/avatar.jsx.git?%7B%22path%22%3A%22%2Fhome%2Fubuntu%2Fmulticlinic-app%2Fsrc%2Fcomponents%2Fui%2Favatar.jsx%22%2C%22ref%22%3A%22%22%7D
+2025-06-07 04:28:50.743 [info] > git hash-object -t tree /dev/null [4ms]
+2025-06-07 04:28:50.743 [warning] [GitFileSystemProvider][stat] File not found - git:/home/ubuntu/multiclinic-app/src/components/ui/avatar.jsx.git?%7B%22path%22%3A%22%2Fhome%2Fubuntu%2Fmulticlinic-app%2Fsrc%2Fcomponents%2Fui%2Favatar.jsx%22%2C%22ref%22%3A%22%22%7D
+2025-06-07 04:28:52.357 [info] > git show --textconv :src/components/ui/accordion.jsx [4ms]
+2025-06-07 04:28:52.357 [warning] [GitFileSystemProvider][readFile] File not found - git:/home/ubuntu/multiclinic-app/src/components/ui/accordion.jsx.git?%7B%22path%22%3A%22%2Fhome%2Fubuntu%2Fmulticlinic-app%2Fsrc%2Fcomponents%2Fui%2Faccordion.jsx%22%2C%22ref%22%3A%22%22%7D
+2025-06-07 04:28:52.358 [info] > git ls-files --stage -- src/components/ui/accordion.jsx [2ms]
+2025-06-07 04:28:52.358 [warning] [GitFileSystemProvider][stat] File not found - git:/home/ubuntu/multiclinic-app/src/components/ui/accordion.jsx.git?%7B%22path%22%3A%22%2Fhome%2Fubuntu%2Fmulticlinic-app%2Fsrc%2Fcomponents%2Fui%2Faccordion.jsx%22%2C%22ref%22%3A%22%22%7D
+2025-06-07 04:28:57.558 [info] > git show --textconv :src/components/ui/alert-dialog.jsx [4ms]
+2025-06-07 04:28:57.558 [warning] [GitFileSystemProvider][readFile] File not found - git:/home/ubuntu/multiclinic-app/src/components/ui/alert-dialog.jsx.git?%7B%22path%22%3A%22%2Fhome%2Fubuntu%2Fmulticlinic-app%2Fsrc%2Fcomponents%2Fui%2Falert-dialog.jsx%22%2C%22ref%22%3A%22%22%7D
+2025-06-07 04:28:57.559 [info] > git ls-files --stage -- src/components/ui/alert-dialog.jsx [2ms]
+2025-06-07 04:28:57.559 [warning] [GitFileSystemProvider][stat] File not found - git:/home/ubuntu/multiclinic-app/src/components/ui/alert-dialog.jsx.git?%7B%22path%22%3A%22%2Fhome%2Fubuntu%2Fmulticlinic-app%2Fsrc%2Fcomponents%2Fui%2Falert-dialog.jsx%22%2C%22ref%22%3A%22%22%7D
+2025-06-07 04:28:58.858 [info] > git log --format=%H%n%aN%n%aE%n%at%n%ct%n%P%n%D%n%B -z --shortstat --diff-merges=first-parent -n50 --skip=0 --topo-order --decorate=full --stdin [20ms]
+2025-06-07 04:28:58.858 [info] fatal: bad revision 'refs/heads/master'
+2025-06-07 04:28:58.858 [error] [GitHistoryProvider][provideHistoryItems] Failed to get history items with options '{"historyItemRefs":["refs/heads/master"],"limit":50,"skip":0}': Failed to execute git {
+  "exitCode": 128,
+  "gitCommand": "log",
+  "stdout": "",
+  "stderr": "fatal: bad revision 'refs/heads/master'\n"
+}
+2025-06-07 04:28:58.859 [info] > git rev-parse --show-toplevel [3ms]
+2025-06-07 04:28:58.859 [info] fatal: not a git repository (or any of the parent directories): .git
+2025-06-07 04:28:58.946 [info] > git rev-parse --show-toplevel [2ms]
+2025-06-07 04:28:58.946 [info] fatal: not a git repository (or any of the parent directories): .git
+2025-06-07 04:29:02.424 [info] > git check-ignore -v -z --stdin [1ms]
+2025-06-07 04:29:05.692 [info] > git check-ignore -v -z --stdin [2ms]
+2025-06-07 04:29:08.226 [info] > git check-ignore -v -z --stdin [1ms]
+2025-06-07 04:29:09.974 [info] > git check-ignore -v -z --stdin [1ms]
+2025-06-07 04:29:11.273 [info] > git check-ignore -v -z --stdin [1ms]
+2025-06-07 04:29:11.980 [info] > git check-ignore -v -z --stdin [1ms]
+2025-06-07 04:29:41.142 [info] > git rev-parse --show-toplevel [12ms]
+2025-06-07 04:29:41.142 [info] fatal: not a git repository (or any of the parent directories): .git
+2025-06-07 04:31:10.672 [info] > git rev-parse --show-toplevel [2ms]
+2025-06-07 04:31:10.677 [info] > git rev-parse --git-dir --git-common-dir [1ms]
+2025-06-07 04:31:10.688 [info] [Model][openRepository] Opened repository (path): /home/ubuntu
+2025-06-07 04:31:10.688 [info] [Model][openRepository] Opened repository (real path): /home/ubuntu
+2025-06-07 04:31:10.699 [info] [Git][getRemotes] No remotes found in the git config file
+2025-06-07 04:31:10.700 [info] > git config --get commit.template [6ms]
+2025-06-07 04:31:10.700 [info] > git for-each-ref --format=%(refname)%00%(upstream:short)%00%(objectname)%00%(upstream:track)%00%(upstream:remotename)%00%(upstream:remoteref) refs/heads/master refs/remotes/master [2ms]
+2025-06-07 04:31:10.700 [warning] [Git][getBranch] No such branch: master
+2025-06-07 04:31:10.709 [info] > git for-each-ref --sort -committerdate --format %(refname)%00%(objectname)%00%(*objectname) [1ms]
+2025-06-07 04:31:10.830 [info] > git status -z -uall [126ms] (cancelled)
+2025-06-07 04:31:12.371 [info] > git for-each-ref --format=%(refname)%00%(upstream:short)%00%(objectname)%00%(upstream:track)%00%(upstream:remotename)%00%(upstream:remoteref) refs/heads/master refs/remotes/master [1411ms]
+2025-06-07 04:31:12.371 [warning] [Git][getBranch] No such branch: master
+2025-06-07 04:31:12.372 [error] [GitHistoryProvider][resolveHEADMergeBase] Failed to resolve merge base for master: Error: No such branch: master.
+2025-06-07 04:31:12.382 [info] > git config --get commit.template [14ms]
+2025-06-07 04:31:12.387 [info] [Git][getRemotes] No remotes found in the git config file
+2025-06-07 04:31:12.401 [info] > git for-each-ref --format=%(refname)%00%(upstream:short)%00%(objectname)%00%(upstream:track)%00%(upstream:remotename)%00%(upstream:remoteref) refs/heads/master refs/remotes/master [14ms]
+2025-06-07 04:31:12.402 [warning] [Git][getBranch] No such branch: master
+2025-06-07 04:31:12.419 [info] > git for-each-ref --sort -committerdate --format %(refname)%00%(objectname)%00%(*objectname) [10ms]
+2025-06-07 04:31:12.606 [info] > git status -z -uall [201ms] (cancelled)
+2025-06-07 04:31:13.952 [info] > git check-ignore -v -z --stdin [19ms]
+2025-06-07 04:31:13.953 [info] > git check-ignore -v -z --stdin [16ms]
+2025-06-07 04:31:24.596 [info] > git check-ignore -v -z --stdin [2ms]
+2025-06-07 04:31:43.774 [info] > git check-ignore -v -z --stdin [1ms]

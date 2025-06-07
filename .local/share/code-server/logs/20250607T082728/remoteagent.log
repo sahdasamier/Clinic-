@@ -1,0 +1,17 @@
+2025-06-07 08:27:28.117 [info] 
+
+
+
+
+2025-06-07 08:27:28.132 [info] Extension host agent started.
+2025-06-07 08:27:28.201 [info] Started initializing default profile extensions in extensions installation folder. file:///home/ubuntu/.local/share/code-server/extensions
+2025-06-07 08:27:28.209 [info] ComputeTargetPlatform: linux-x64
+2025-06-07 08:27:28.228 [info] Completed initializing default profile extensions in extensions installation folder. file:///home/ubuntu/.local/share/code-server/extensions
+2025-06-07 08:27:38.669 [info] [10.79.247.1][a1645c2b][ManagementConnection] New connection established.
+2025-06-07 08:27:41.424 [info] [10.79.247.1][edd53fec][ExtensionHostConnection] New connection established.
+2025-06-07 08:27:41.428 [info] [10.79.247.1][edd53fec][ExtensionHostConnection] <9435> Launched Extension Host Process.
+2025-06-07 08:33:16.112 [warning] No ptyHost heartbeat after 6 seconds
+2025-06-07 08:33:24.610 [info] [10.227.23.1][2e3de619][ManagementConnection] New connection established.
+2025-06-07 08:33:27.098 [info] [10.227.23.1][487b491e][ExtensionHostConnection] New connection established.
+2025-06-07 08:33:27.103 [info] [10.227.23.1][487b491e][ExtensionHostConnection] <13214> Launched Extension Host Process.
+2025-06-07 08:33:42.344 [error] [File Watcher] Inotify limit reached (ENOSPC) (path: /home/ubuntu)

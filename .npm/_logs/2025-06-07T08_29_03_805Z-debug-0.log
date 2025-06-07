@@ -1,0 +1,129 @@
+0 verbose cli /home/ubuntu/.nvm/versions/node/v22.13.0/bin/node /home/ubuntu/.nvm/versions/node/v22.13.0/bin/npm
+1 info using npm@10.9.2
+2 info using node@v22.13.0
+3 silly config load:file:/home/ubuntu/.nvm/versions/node/v22.13.0/lib/node_modules/npm/npmrc
+4 silly config load:file:/home/ubuntu/.cache/typescript/5.8/.npmrc
+5 silly config load:file:/home/ubuntu/.npmrc
+6 silly config load:file:/home/ubuntu/.nvm/versions/node/v22.13.0/etc/npmrc
+7 verbose title npm install @types/react@ts5.8 @types/react-dom@ts5.8 @types/progress@ts5.8 @types/stylus@ts5.8 @types/less@ts5.8 @types/lodash@ts5.8
+8 verbose argv "install" "--ignore-scripts" "@types/react@ts5.8" "@types/react-dom@ts5.8" "@types/progress@ts5.8" "@types/stylus@ts5.8" "@types/less@ts5.8" "@types/lodash@ts5.8" "--save-dev" "--user-agent" "typesInstaller/5.8.3"
+9 verbose logfile logs-max:10 dir:/home/ubuntu/.npm/_logs/2025-06-07T08_29_03_805Z-
+10 verbose logfile /home/ubuntu/.npm/_logs/2025-06-07T08_29_03_805Z-debug-0.log
+11 silly logfile start cleaning logs, removing 1 files
+12 silly packumentCache heap:2117074944 maxSize:529268736 maxEntrySize:264634368
+13 silly logfile done cleaning log files
+14 silly packumentCache corgi:https://registry.npmjs.org/@types%2freact cache-miss
+15 silly packumentCache corgi:https://registry.npmjs.org/@types%2freact-dom cache-miss
+16 silly packumentCache corgi:https://registry.npmjs.org/@types%2fprogress cache-miss
+17 silly packumentCache corgi:https://registry.npmjs.org/@types%2fstylus cache-miss
+18 silly packumentCache corgi:https://registry.npmjs.org/@types%2fless cache-miss
+19 silly packumentCache corgi:https://registry.npmjs.org/@types%2flodash cache-miss
+20 http fetch GET 200 https://registry.npmjs.org/@types%2fstylus 144ms (cache miss)
+21 silly packumentCache corgi:https://registry.npmjs.org/@types%2fstylus set size:undefined disposed:false
+22 http fetch GET 200 https://registry.npmjs.org/@types%2freact-dom 152ms (cache miss)
+23 silly packumentCache corgi:https://registry.npmjs.org/@types%2freact-dom set size:undefined disposed:false
+24 http fetch GET 200 https://registry.npmjs.org/@types%2flodash 153ms (cache miss)
+25 silly packumentCache corgi:https://registry.npmjs.org/@types%2flodash set size:undefined disposed:false
+26 http fetch GET 200 https://registry.npmjs.org/@types%2freact 162ms (cache miss)
+27 silly packumentCache corgi:https://registry.npmjs.org/@types%2freact set size:undefined disposed:false
+28 http fetch GET 200 https://registry.npmjs.org/@types%2fprogress 172ms (cache miss)
+29 silly packumentCache corgi:https://registry.npmjs.org/@types%2fprogress set size:undefined disposed:false
+30 http fetch GET 200 https://registry.npmjs.org/@types%2fless 172ms (cache miss)
+31 silly packumentCache corgi:https://registry.npmjs.org/@types%2fless set size:undefined disposed:false
+32 silly idealTree buildDeps
+33 silly fetch manifest @types/stylus@0.48.43
+34 silly packumentCache full:https://registry.npmjs.org/@types%2fstylus cache-miss
+35 http fetch GET 200 https://registry.npmjs.org/@types%2fstylus 104ms (cache miss)
+36 silly packumentCache full:https://registry.npmjs.org/@types%2fstylus set size:undefined disposed:false
+37 silly fetch manifest @types/react-dom@19.1.6
+38 silly packumentCache full:https://registry.npmjs.org/@types%2freact-dom cache-miss
+39 http fetch GET 200 https://registry.npmjs.org/@types%2freact-dom 36ms (cache revalidated)
+40 silly packumentCache full:https://registry.npmjs.org/@types%2freact-dom set size:403694 disposed:false
+41 silly fetch manifest @types/react@19.1.6
+42 silly packumentCache full:https://registry.npmjs.org/@types%2freact cache-miss
+43 http fetch GET 200 https://registry.npmjs.org/@types%2freact 40ms (cache revalidated)
+44 silly packumentCache full:https://registry.npmjs.org/@types%2freact set size:2403615 disposed:false
+45 silly fetch manifest @types/lodash@4.17.17
+46 silly packumentCache full:https://registry.npmjs.org/@types%2flodash cache-miss
+47 http fetch GET 200 https://registry.npmjs.org/@types%2flodash 51ms (cache miss)
+48 silly packumentCache full:https://registry.npmjs.org/@types%2flodash set size:undefined disposed:false
+49 silly fetch manifest @types/progress@2.0.7
+50 silly packumentCache full:https://registry.npmjs.org/@types%2fprogress cache-miss
+51 http fetch GET 200 https://registry.npmjs.org/@types%2fprogress 41ms (cache miss)
+52 silly packumentCache full:https://registry.npmjs.org/@types%2fprogress set size:undefined disposed:false
+53 silly fetch manifest @types/less@3.0.8
+54 silly packumentCache full:https://registry.npmjs.org/@types%2fless cache-miss
+55 http fetch GET 200 https://registry.npmjs.org/@types%2fless 60ms (cache miss)
+56 silly packumentCache full:https://registry.npmjs.org/@types%2fless set size:undefined disposed:false
+57 silly placeDep ROOT @types/less@3.0.8 OK for:  want: 3.0.8
+58 silly placeDep ROOT @types/lodash@4.17.17 OK for:  want: 4.17.17
+59 silly placeDep ROOT @types/progress@2.0.7 OK for:  want: 2.0.7
+60 silly placeDep ROOT @types/react@19.1.6 OK for:  want: 19.1.6
+61 silly placeDep ROOT @types/react-dom@19.1.6 OK for:  want: 19.1.6
+62 silly placeDep ROOT @types/stylus@0.48.43 OK for:  want: 0.48.43
+63 silly fetch manifest @types/node@*
+64 silly packumentCache full:https://registry.npmjs.org/@types%2fnode cache-miss
+65 silly fetch manifest csstype@^3.0.2
+66 silly packumentCache full:https://registry.npmjs.org/csstype cache-miss
+67 silly fetch manifest @types/node@*
+68 silly packumentCache full:https://registry.npmjs.org/@types%2fnode cache-miss
+69 http fetch GET 200 https://registry.npmjs.org/csstype 33ms (cache revalidated)
+70 silly packumentCache full:https://registry.npmjs.org/csstype set size:371760 disposed:false
+71 http fetch GET 200 https://registry.npmjs.org/@types%2fnode 54ms (cache revalidated)
+72 silly packumentCache full:https://registry.npmjs.org/@types%2fnode set size:10234472 disposed:false
+73 http fetch GET 200 https://registry.npmjs.org/@types%2fnode 241ms (cache revalidated)
+74 silly packumentCache full:https://registry.npmjs.org/@types%2fnode set size:10234472 disposed:false
+75 silly placeDep ROOT @types/node@22.15.30 OK for: @types/progress@2.0.7 want: *
+76 silly fetch manifest undici-types@~6.21.0
+77 silly packumentCache full:https://registry.npmjs.org/undici-types cache-miss
+78 http fetch GET 200 https://registry.npmjs.org/undici-types 43ms (cache revalidated)
+79 silly packumentCache full:https://registry.npmjs.org/undici-types set size:137075 disposed:false
+80 silly placeDep ROOT undici-types@6.21.0 OK for: @types/node@22.15.30 want: ~6.21.0
+81 silly placeDep ROOT csstype@3.1.3 OK for: @types/react@19.1.6 want: ^3.0.2
+82 silly reify moves {}
+83 silly audit bulk request {
+83 silly audit   'types-registry': [ '0.1.723' ],
+83 silly audit   '@types/less': [ '3.0.8' ],
+83 silly audit   '@types/lodash': [ '4.17.17' ],
+83 silly audit   '@types/progress': [ '2.0.7' ],
+83 silly audit   '@types/react': [ '19.1.6' ],
+83 silly audit   '@types/react-dom': [ '19.1.6' ],
+83 silly audit   '@types/stylus': [ '0.48.43' ],
+83 silly audit   '@types/node': [ '22.15.30' ],
+83 silly audit   'undici-types': [ '6.21.0' ],
+83 silly audit   csstype: [ '3.1.3' ]
+83 silly audit }
+84 http cache csstype@https://registry.npmjs.org/csstype/-/csstype-3.1.3.tgz 0ms (cache hit)
+85 http cache @types/node@https://registry.npmjs.org/@types/node/-/node-22.15.30.tgz 0ms (cache hit)
+86 http cache undici-types@https://registry.npmjs.org/undici-types/-/undici-types-6.21.0.tgz 0ms (cache hit)
+87 http cache @types/stylus@https://registry.npmjs.org/@types/stylus/-/stylus-0.48.43.tgz 0ms (cache hit)
+88 http cache @types/progress@https://registry.npmjs.org/@types/progress/-/progress-2.0.7.tgz 0ms (cache hit)
+89 http cache @types/lodash@https://registry.npmjs.org/@types/lodash/-/lodash-4.17.17.tgz 0ms (cache hit)
+90 http cache @types/react-dom@https://registry.npmjs.org/@types/react-dom/-/react-dom-19.1.6.tgz 0ms (cache hit)
+91 http cache @types/react@https://registry.npmjs.org/@types/react/-/react-19.1.6.tgz 0ms (cache hit)
+92 silly tarball no local data for @types/stylus@https://registry.npmjs.org/@types/stylus/-/stylus-0.48.43.tgz. Extracting by manifest.
+93 silly tarball no local data for @types/progress@https://registry.npmjs.org/@types/progress/-/progress-2.0.7.tgz. Extracting by manifest.
+94 silly tarball no local data for @types/lodash@https://registry.npmjs.org/@types/lodash/-/lodash-4.17.17.tgz. Extracting by manifest.
+95 http cache @types/less@https://registry.npmjs.org/@types/less/-/less-3.0.8.tgz 0ms (cache hit)
+96 silly tarball no local data for @types/less@https://registry.npmjs.org/@types/less/-/less-3.0.8.tgz. Extracting by manifest.
+97 http fetch GET 200 https://registry.npmjs.org/@types/progress/-/progress-2.0.7.tgz 60ms (cache miss)
+98 http fetch GET 200 https://registry.npmjs.org/@types/less/-/less-3.0.8.tgz 59ms (cache miss)
+99 http fetch GET 200 https://registry.npmjs.org/@types/stylus/-/stylus-0.48.43.tgz 66ms (cache miss)
+100 http fetch POST 200 https://registry.npmjs.org/-/npm/v1/security/advisories/bulk 116ms
+101 silly audit report {}
+102 http fetch GET 200 https://registry.npmjs.org/@types/lodash/-/lodash-4.17.17.tgz 171ms (cache miss)
+103 silly ADD node_modules/csstype
+104 silly ADD node_modules/undici-types
+105 silly ADD node_modules/@types/node
+106 silly ADD node_modules/@types/stylus
+107 silly ADD node_modules/@types/react-dom
+108 silly ADD node_modules/@types/react
+109 silly ADD node_modules/@types/progress
+110 silly ADD node_modules/@types/lodash
+111 silly ADD node_modules/@types/less
+112 verbose cwd /home/ubuntu/.cache/typescript/5.8
+113 verbose os Linux 6.1.102
+114 verbose node v22.13.0
+115 verbose npm  v10.9.2
+116 verbose exit 0
+117 info ok
