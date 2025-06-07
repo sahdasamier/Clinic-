@@ -26,3 +26,5 @@
 [08:49:58] [10.31.21.1][1bbe4e4a][ManagementConnection] New connection established.
 [08:50:01] [10.31.21.1][2641f97e][ExtensionHostConnection] New connection established.
 [08:50:01] [10.31.21.1][2641f97e][ExtensionHostConnection] <21749> Launched Extension Host Process.
+[08:54:59] [10.79.247.1][a1645c2b][ManagementConnection] The reconnection short grace time of 5m has expired, so the connection will be disposed.
+[08:54:59] [10.79.247.1][edd53fec][ExtensionHostConnection] <9435> Extension Host Process exited with code: 0, signal: null.

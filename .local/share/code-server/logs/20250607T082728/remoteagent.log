@@ -108,3 +108,5 @@
 2025-06-07 08:50:01.971 [info] [10.31.21.1][2641f97e][ExtensionHostConnection] New connection established.
 2025-06-07 08:50:01.979 [info] [10.31.21.1][2641f97e][ExtensionHostConnection] <21749> Launched Extension Host Process.
 2025-06-07 08:50:18.256 [error] [File Watcher] Inotify limit reached (ENOSPC) (path: /home/ubuntu)
+2025-06-07 08:54:59.145 [info] [10.79.247.1][a1645c2b][ManagementConnection] The reconnection short grace time of 5m has expired, so the connection will be disposed.
+2025-06-07 08:54:59.295 [info] [10.79.247.1][edd53fec][ExtensionHostConnection] <9435> Extension Host Process exited with code: 0, signal: null.
