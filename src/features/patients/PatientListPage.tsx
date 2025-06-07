@@ -357,7 +357,7 @@ const PatientListPage: React.FC = () => {
         return patient;
       });
       
-      setPatients(updatedPatients);
+      setPatients(updatedPatients as any);
       setNewMedication({ name: '', dosage: '', frequency: '', duration: '' });
     }
   };
@@ -397,7 +397,10 @@ const PatientListPage: React.FC = () => {
             dosage: editingMedication.dosage,
             frequency: editingMedication.frequency,
             duration: editingMedication.duration,
-            prescribed: editingMedication.prescribed
+            prescribedBy: editingMedication.prescribedBy || editingMedication.prescribed || 'Dr. Ahmed Ali',
+            status: editingMedication.status || 'Active',
+            dateStarted: editingMedication.dateStarted || new Date().toISOString().split('T')[0],
+            id: editingMedication.id || Date.now()
           };
           const updatedPatient = {
             ...patient,
@@ -409,7 +412,7 @@ const PatientListPage: React.FC = () => {
         return patient;
       });
       
-      setPatients(updatedPatients);
+      setPatients(updatedPatients as any);
       setEditMedicationOpen(false);
       setEditingMedication(null);
     }
@@ -498,7 +501,7 @@ const PatientListPage: React.FC = () => {
         return patient;
       });
 
-      setPatients(updatedPatients);
+      setPatients(updatedPatients as any);
       setUploadDocumentOpen(false);
       setSelectedFile(null);
       setDocumentTitle('');
@@ -643,7 +646,7 @@ const PatientListPage: React.FC = () => {
   const handleQuickStatusEdit = (patient: any, event: React.MouseEvent) => {
     event.stopPropagation(); // Prevent row click
     setStatusEditPatient(patient);
-    setStatusMenuAnchor(event.currentTarget);
+    setStatusMenuAnchor(event.currentTarget as HTMLElement);
   };
 
   const handleStatusChange = (newStatus: string) => {
@@ -690,7 +693,7 @@ const PatientListPage: React.FC = () => {
     
     // Handle different treatment types
     if (treatmentType === 'existing' && selectedMedication) {
-      const medication = selectedPatient?.medications?.find(m => m.name === selectedMedication);
+      const medication = selectedPatient?.medications?.find((m: any) => m.name === selectedMedication);
       treatmentText = medication ? `${medication.name} - ${medication.dosage}, ${medication.frequency}` : selectedMedication;
     } else if (treatmentType === 'new') {
       if (!newTreatmentMedication.name.trim()) {

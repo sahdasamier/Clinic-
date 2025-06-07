@@ -46,7 +46,7 @@ import {
   Schedule,
   Phone,
   Email,
-  Location,
+  LocationOn,
   People,
 } from '@mui/icons-material';
 import Header from '../../components/Header';
