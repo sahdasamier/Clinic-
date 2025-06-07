@@ -109,3 +109,8 @@
 2025-06-07 04:47:14.179 [info] > git for-each-ref --format=%(refname)%00%(upstream:short)%00%(objectname)%00%(upstream:track)%00%(upstream:remotename)%00%(upstream:remoteref) refs/heads/master refs/remotes/master [1ms]
 2025-06-07 04:47:14.188 [info] > git for-each-ref --sort -committerdate --format %(refname)%00%(objectname)%00%(*objectname) [1ms]
 2025-06-07 04:47:15.845 [info] > git status -z -uall [1662ms] (cancelled)
+2025-06-07 04:47:45.046 [info] [Git][getRemotes] No remotes found in the git config file
+2025-06-07 04:47:45.051 [info] > git config --get commit.template [7ms]
+2025-06-07 04:47:45.052 [info] > git for-each-ref --format=%(refname)%00%(upstream:short)%00%(objectname)%00%(upstream:track)%00%(upstream:remotename)%00%(upstream:remoteref) refs/heads/master refs/remotes/master [1ms]
+2025-06-07 04:47:45.065 [info] > git for-each-ref --sort -committerdate --format %(refname)%00%(objectname)%00%(*objectname) [2ms]
+2025-06-07 04:47:45.372 [info] > git status -z -uall [315ms] (cancelled)

@@ -15,3 +15,96 @@
 2025-06-07 08:33:27.098 [info] [10.227.23.1][487b491e][ExtensionHostConnection] New connection established.
 2025-06-07 08:33:27.103 [info] [10.227.23.1][487b491e][ExtensionHostConnection] <13214> Launched Extension Host Process.
 2025-06-07 08:33:42.344 [error] [File Watcher] Inotify limit reached (ENOSPC) (path: /home/ubuntu)
+2025-06-07 08:49:43.088 [error] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20)
+2025-06-07 08:49:43.026 [error] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20)
+2025-06-07 08:49:43.026 [error] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20)
+2025-06-07 08:49:43.026 [error] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20)
+2025-06-07 08:49:43.027 [error] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20)
+2025-06-07 08:49:43.027 [error] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20)
+2025-06-07 08:49:43.027 [error] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20)
+2025-06-07 08:49:43.028 [error] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20)
+2025-06-07 08:49:43.028 [error] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20)
+2025-06-07 08:49:43.028 [error] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20)
+2025-06-07 08:49:43.028 [error] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20)
+2025-06-07 08:49:43.028 [error] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20)
+2025-06-07 08:49:43.029 [error] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20)
+2025-06-07 08:49:43.029 [error] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20)
+2025-06-07 08:49:43.029 [error] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20)
+2025-06-07 08:49:43.029 [error] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20)
+2025-06-07 08:49:43.029 [error] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20)
+2025-06-07 08:49:43.030 [error] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20)
+2025-06-07 08:49:43.030 [error] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20)
+2025-06-07 08:49:43.030 [error] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20)
+2025-06-07 08:49:43.030 [error] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20)
+2025-06-07 08:49:43.031 [error] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20)
+2025-06-07 08:49:43.031 [error] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20)
+2025-06-07 08:49:43.031 [error] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20)
+2025-06-07 08:49:43.031 [error] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20)
+2025-06-07 08:49:43.031 [error] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20)
+2025-06-07 08:49:43.031 [error] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20)
+2025-06-07 08:49:43.031 [error] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20)
+2025-06-07 08:49:43.032 [error] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20)
+2025-06-07 08:49:43.032 [error] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20)
+2025-06-07 08:49:43.032 [error] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20)
+2025-06-07 08:49:43.032 [error] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20)
+2025-06-07 08:49:43.032 [error] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20)
+2025-06-07 08:49:43.034 [error] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20)
+2025-06-07 08:49:43.034 [error] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20)
+2025-06-07 08:49:43.034 [error] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20)
+2025-06-07 08:49:43.035 [error] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20)
+2025-06-07 08:49:43.035 [error] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20)
+2025-06-07 08:49:43.038 [error] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20)
+2025-06-07 08:49:43.038 [error] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20)
+2025-06-07 08:49:43.039 [error] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20)
+2025-06-07 08:49:43.039 [error] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20)
+2025-06-07 08:49:43.039 [error] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20)
+2025-06-07 08:49:43.040 [info] [10.79.247.1][a1645c2b][ManagementConnection] The client has disconnected, will wait for reconnection 3h before disposing...
+2025-06-07 08:49:43.046 [warning] No ptyHost heartbeat after 6 seconds
+2025-06-07 08:49:58.948 [info] [10.79.247.1][a1645c2b][ManagementConnection] Another client has connected, will shorten the wait for reconnection 5m before disposing...
+2025-06-07 08:49:58.948 [info] [10.31.21.1][1bbe4e4a][ManagementConnection] New connection established.
+2025-06-07 08:50:01.971 [info] [10.31.21.1][2641f97e][ExtensionHostConnection] New connection established.
+2025-06-07 08:50:01.979 [info] [10.31.21.1][2641f97e][ExtensionHostConnection] <21749> Launched Extension Host Process.
+2025-06-07 08:50:18.256 [error] [File Watcher] Inotify limit reached (ENOSPC) (path: /home/ubuntu)

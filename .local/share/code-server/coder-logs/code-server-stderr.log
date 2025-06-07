@@ -4,3 +4,265 @@ File not found: /usr/lib/code-server/lib/vscode/node_modules/vsda/rust/web/vsda.
 File not found: /usr/lib/code-server/lib/vscode/node_modules/vsda/rust/web/vsda_bg.wasm
 File not found: /usr/lib/code-server/lib/vscode/node_modules/vsda/rust/web/vsda.js
 [08:33:42] [File Watcher] Inotify limit reached (ENOSPC) (path: /home/ubuntu)
+[08:49:43] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20) {
+  errno: -110,
+  code: 'ETIMEDOUT',
+  syscall: 'read'
+}
+[08:49:43] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20) {
+  errno: -110,
+  code: 'ETIMEDOUT',
+  syscall: 'read'
+}
+[08:49:43] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20) {
+  errno: -110,
+  code: 'ETIMEDOUT',
+  syscall: 'read'
+}
+[08:49:43] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20) {
+  errno: -110,
+  code: 'ETIMEDOUT',
+  syscall: 'read'
+}
+[08:49:43] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20) {
+  errno: -110,
+  code: 'ETIMEDOUT',
+  syscall: 'read'
+}
+[08:49:43] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20) {
+  errno: -110,
+  code: 'ETIMEDOUT',
+  syscall: 'read'
+}
+[08:49:43] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20) {
+  errno: -110,
+  code: 'ETIMEDOUT',
+  syscall: 'read'
+}
+[08:49:43] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20) {
+  errno: -110,
+  code: 'ETIMEDOUT',
+  syscall: 'read'
+}
+[08:49:43] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20) {
+  errno: -110,
+  code: 'ETIMEDOUT',
+  syscall: 'read'
+}
+[08:49:43] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20) {
+  errno: -110,
+  code: 'ETIMEDOUT',
+  syscall: 'read'
+}
+[08:49:43] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20) {
+  errno: -110,
+  code: 'ETIMEDOUT',
+  syscall: 'read'
+}
+[08:49:43] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20) {
+  errno: -110,
+  code: 'ETIMEDOUT',
+  syscall: 'read'
+}
+[08:49:43] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20) {
+  errno: -110,
+  code: 'ETIMEDOUT',
+  syscall: 'read'
+}
+[08:49:43] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20) {
+  errno: -110,
+  code: 'ETIMEDOUT',
+  syscall: 'read'
+}
+[08:49:43] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20) {
+  errno: -110,
+  code: 'ETIMEDOUT',
+  syscall: 'read'
+}
+[08:49:43] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20) {
+  errno: -110,
+  code: 'ETIMEDOUT',
+  syscall: 'read'
+}
+[08:49:43] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20) {
+  errno: -110,
+  code: 'ETIMEDOUT',
+  syscall: 'read'
+}
+[08:49:43] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20) {
+  errno: -110,
+  code: 'ETIMEDOUT',
+  syscall: 'read'
+}
+[08:49:43] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20) {
+  errno: -110,
+  code: 'ETIMEDOUT',
+  syscall: 'read'
+}
+[08:49:43] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20) {
+  errno: -110,
+  code: 'ETIMEDOUT',
+  syscall: 'read'
+}
+[08:49:43] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20) {
+  errno: -110,
+  code: 'ETIMEDOUT',
+  syscall: 'read'
+}
+[08:49:43] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20) {
+  errno: -110,
+  code: 'ETIMEDOUT',
+  syscall: 'read'
+}
+[08:49:43] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20) {
+  errno: -110,
+  code: 'ETIMEDOUT',
+  syscall: 'read'
+}
+[08:49:43] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20) {
+  errno: -110,
+  code: 'ETIMEDOUT',
+  syscall: 'read'
+}
+[08:49:43] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20) {
+  errno: -110,
+  code: 'ETIMEDOUT',
+  syscall: 'read'
+}
+[08:49:43] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20) {
+  errno: -110,
+  code: 'ETIMEDOUT',
+  syscall: 'read'
+}
+[08:49:43] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20) {
+  errno: -110,
+  code: 'ETIMEDOUT',
+  syscall: 'read'
+}
+[08:49:43] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20) {
+  errno: -110,
+  code: 'ETIMEDOUT',
+  syscall: 'read'
+}
+[08:49:43] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20) {
+  errno: -110,
+  code: 'ETIMEDOUT',
+  syscall: 'read'
+}
+[08:49:43] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20) {
+  errno: -110,
+  code: 'ETIMEDOUT',
+  syscall: 'read'
+}
+[08:49:43] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20) {
+  errno: -110,
+  code: 'ETIMEDOUT',
+  syscall: 'read'
+}
+[08:49:43] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20) {
+  errno: -110,
+  code: 'ETIMEDOUT',
+  syscall: 'read'
+}
+[08:49:43] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20) {
+  errno: -110,
+  code: 'ETIMEDOUT',
+  syscall: 'read'
+}
+[08:49:43] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20) {
+  errno: -110,
+  code: 'ETIMEDOUT',
+  syscall: 'read'
+}
+[08:49:43] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20) {
+  errno: -110,
+  code: 'ETIMEDOUT',
+  syscall: 'read'
+}
+[08:49:43] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20) {
+  errno: -110,
+  code: 'ETIMEDOUT',
+  syscall: 'read'
+}
+[08:49:43] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20) {
+  errno: -110,
+  code: 'ETIMEDOUT',
+  syscall: 'read'
+}
+[08:49:43] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20) {
+  errno: -110,
+  code: 'ETIMEDOUT',
+  syscall: 'read'
+}
+[08:49:43] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20) {
+  errno: -110,
+  code: 'ETIMEDOUT',
+  syscall: 'read'
+}
+[08:49:43] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20) {
+  errno: -110,
+  code: 'ETIMEDOUT',
+  syscall: 'read'
+}
+[08:49:43] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20) {
+  errno: -110,
+  code: 'ETIMEDOUT',
+  syscall: 'read'
+}
+[08:49:43] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20) {
+  errno: -110,
+  code: 'ETIMEDOUT',
+  syscall: 'read'
+}
+[08:49:43] Error: read ETIMEDOUT
+    at TCP.onStreamRead (node:internal/stream_base_commons:218:20) {
+  errno: -110,
+  code: 'ETIMEDOUT',
+  syscall: 'read'
+}
+[08:49:43] No ptyHost heartbeat after 6 seconds
+File not found: /usr/lib/code-server/lib/vscode/node_modules/vsda/rust/web/vsda_bg.wasm
+File not found: /usr/lib/code-server/lib/vscode/node_modules/vsda/rust/web/vsda.js
+[08:50:18] [File Watcher] Inotify limit reached (ENOSPC) (path: /home/ubuntu)

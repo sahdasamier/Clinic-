@@ -21,3 +21,8 @@
 [08:33:24] [10.227.23.1][2e3de619][ManagementConnection] New connection established.
 [08:33:27] [10.227.23.1][487b491e][ExtensionHostConnection] New connection established.
 [08:33:27] [10.227.23.1][487b491e][ExtensionHostConnection] <13214> Launched Extension Host Process.
+[08:49:43] [10.79.247.1][a1645c2b][ManagementConnection] The client has disconnected, will wait for reconnection 3h before disposing...
+[08:49:58] [10.79.247.1][a1645c2b][ManagementConnection] Another client has connected, will shorten the wait for reconnection 5m before disposing...
+[08:49:58] [10.31.21.1][1bbe4e4a][ManagementConnection] New connection established.
+[08:50:01] [10.31.21.1][2641f97e][ExtensionHostConnection] New connection established.
+[08:50:01] [10.31.21.1][2641f97e][ExtensionHostConnection] <21749> Launched Extension Host Process.
