@@ -108,7 +108,7 @@ const initialPatients = [
     lastVisit: '2024-01-15',
     nextAppointment: '2024-01-25',
     condition: 'Diabetes',
-    status: 'active',
+    status: 'old',
     avatar: 'AR',
     address: 'Dubai, UAE',
     bloodType: 'A+',
@@ -141,7 +141,7 @@ const initialPatients = [
     lastVisit: '2024-01-12',
     nextAppointment: '2024-01-22',
     condition: 'Hypertension',
-    status: 'active',
+    status: 'old',
     avatar: 'FH',
     address: 'Abu Dhabi, UAE',
     bloodType: 'O+',
@@ -289,6 +289,36 @@ const PatientListPage: React.FC = () => {
     
     // Open WhatsApp in a new tab
     window.open(whatsappUrl, '_blank');
+  };
+
+  const handleWhatsAppAll = () => {
+    // Get all filtered patients with valid phone numbers
+    const patientsWithPhones = filteredPatients.filter(patient => 
+      patient.phone && patient.phone.trim() !== ''
+    );
+    
+    if (patientsWithPhones.length === 0) {
+      alert('No patients with valid phone numbers found.');
+      return;
+    }
+
+    // Create a general message for all patients
+    const generalMessage = 'Hello! This is a message from ClinicCare Medical Center. We hope you are doing well. Please feel free to contact us if you need any assistance.';
+    const encodedMessage = encodeURIComponent(generalMessage);
+    
+    // Open WhatsApp for each patient in a new tab with a slight delay to avoid browser blocking
+    patientsWithPhones.forEach((patient, index) => {
+      setTimeout(() => {
+        const cleanPhoneNumber = patient.phone.replace(/\D/g, '');
+        const personalizedMessage = `Hello ${patient.name}! This is a message from ClinicCare Medical Center. We hope you are doing well. Please feel free to contact us if you need any assistance.`;
+        const personalizedEncodedMessage = encodeURIComponent(personalizedMessage);
+        const whatsappUrl = `https://wa.me/${cleanPhoneNumber}?text=${personalizedEncodedMessage}`;
+        window.open(whatsappUrl, '_blank');
+      }, index * 1000); // 1 second delay between each patient to avoid overwhelming the browser
+    });
+    
+    // Show confirmation message
+    alert(`Opening WhatsApp for ${patientsWithPhones.length} patients. Please allow pop-ups if prompted.`);
   };
 
   const handleOpenPatientProfile = (patient: any) => {
@@ -802,14 +832,14 @@ const PatientListPage: React.FC = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active':
-        return 'success';
-      case 'follow-up':
-        return 'warning';
       case 'new':
         return 'info';
-      case 'inactive':
-        return 'default';
+      case 'follow-up':
+        return 'warning';
+      case 'old':
+        return 'success';
+      case 'admitted':
+        return 'secondary';
       case 'transferred':
         return 'secondary';
       case 'discharged':
@@ -819,40 +849,70 @@ const PatientListPage: React.FC = () => {
     }
   };
 
-  const filteredPatients = patients.filter(patient => {
-    // Search query filter
-    const matchesSearch = searchQuery === '' || 
-      patient.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      patient.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      patient.condition.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      patient.phone.toLowerCase().includes(searchQuery.toLowerCase());
+  const getFilteredPatients = () => {
+    let filtered = patients.filter(patient => {
+      // Search query filter
+      const matchesSearch = searchQuery === '' || 
+        patient.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        patient.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        patient.condition.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        patient.phone.toLowerCase().includes(searchQuery.toLowerCase());
 
-    // Gender filter
-    const matchesGender = activeFilters.gender === '' || 
-      patient.gender.toLowerCase() === activeFilters.gender.toLowerCase();
+      // Gender filter
+      const matchesGender = activeFilters.gender === '' || 
+        patient.gender.toLowerCase() === activeFilters.gender.toLowerCase();
 
-    // Age range filter
-    const matchesAge = activeFilters.ageRange === '' || (() => {
-      const age = patient.age;
-      switch (activeFilters.ageRange) {
-        case '18-30': return age >= 18 && age <= 30;
-        case '31-50': return age >= 31 && age <= 50;
-        case '51-65': return age >= 51 && age <= 65;
-        case '65+': return age > 65;
-        default: return true;
-      }
-    })();
+      // Age range filter
+      const matchesAge = activeFilters.ageRange === '' || (() => {
+        const age = patient.age;
+        switch (activeFilters.ageRange) {
+          case '18-30': return age >= 18 && age <= 30;
+          case '31-50': return age >= 31 && age <= 50;
+          case '51-65': return age >= 51 && age <= 65;
+          case '65+': return age > 65;
+          default: return true;
+        }
+      })();
 
-    // Condition filter
-    const matchesCondition = activeFilters.condition === '' ||
-      patient.condition.toLowerCase().includes(activeFilters.condition.toLowerCase());
+      // Condition filter
+      const matchesCondition = activeFilters.condition === '' ||
+        patient.condition.toLowerCase().includes(activeFilters.condition.toLowerCase());
 
-    // Status filter
-    const matchesStatus = activeFilters.status === '' ||
-      patient.status === activeFilters.status;
+      // Status filter
+      const matchesStatus = activeFilters.status === '' ||
+        patient.status === activeFilters.status;
 
-    return matchesSearch && matchesGender && matchesAge && matchesCondition && matchesStatus;
-  });
+      return matchesSearch && matchesGender && matchesAge && matchesCondition && matchesStatus;
+    });
+
+    // Apply tab-specific filtering
+    switch (tabValue) {
+      case 1: // New patients
+        filtered = filtered.filter(patient => patient.status === 'new');
+        break;
+      case 2: // Follow-up patients
+        filtered = filtered.filter(patient => patient.status === 'follow-up');
+        break;
+      case 3: // Old patients
+        filtered = filtered.filter(patient => patient.status === 'old');
+        break;
+      case 4: // Under Observation patients
+        filtered = filtered.filter(patient => patient.status === 'admitted');
+        break;
+      case 5: // Transferred patients
+        filtered = filtered.filter(patient => patient.status === 'transferred');
+        break;
+      case 6: // Discharged patients
+        filtered = filtered.filter(patient => patient.status === 'discharged');
+        break;
+      default: // All patients
+        break;
+    }
+
+    return filtered;
+  };
+
+  const filteredPatients = getFilteredPatients();
 
   const handleFilterSelect = (filterType: string, filterValue: string) => {
     setActiveFilters(prev => ({
@@ -901,6 +961,7 @@ const PatientListPage: React.FC = () => {
                 <Button
                   variant="outlined"
                   startIcon={<WhatsApp />}
+                  onClick={handleWhatsAppAll}
                   sx={{ borderRadius: 3, color: '#25D366', borderColor: '#25D366' }}
                 >
                   WhatsApp All
@@ -1053,17 +1114,508 @@ const PatientListPage: React.FC = () => {
 
               {/* Tabs */}
               <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 3 }}>
-                <Tabs value={tabValue} onChange={handleTabChange}>
+                <Tabs value={tabValue} onChange={handleTabChange} variant="scrollable" scrollButtons="auto">
                   <Tab label={`All Patients (${filteredPatients.length})`} />
-                  <Tab label={`Active (${filteredPatients.filter(p => p.status === 'active').length})`} />
                   <Tab label={`New (${filteredPatients.filter(p => p.status === 'new').length})`} />
                   <Tab label={`Follow-up (${filteredPatients.filter(p => p.status === 'follow-up').length})`} />
+                  <Tab label={`Old (${filteredPatients.filter(p => p.status === 'old').length})`} />
+                  <Tab label={`Under Observation (${filteredPatients.filter(p => p.status === 'admitted').length})`} />
+                  <Tab label={`Transferred (${filteredPatients.filter(p => p.status === 'transferred').length})`} />
+                  <Tab label={`Discharged (${filteredPatients.filter(p => p.status === 'discharged').length})`} />
                 </Tabs>
               </Box>
 
               {/* Patient List - Table View */}
               {viewMode === 'table' && (
-                <TabPanel value={tabValue} index={0}>
+                <>
+                  {/* All Patients Tab */}
+                  <TabPanel value={tabValue} index={0}>
+                    <TableContainer>
+                      <Table>
+                        <TableHead>
+                          <TableRow>
+                            <TableCell sx={{ fontWeight: 600 }}>Patient</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Contact</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Last Visit</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Next Appointment</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Condition</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Actions</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {filteredPatients.length === 0 && getActiveFilterCount() > 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={7} sx={{ textAlign: 'center', py: 6 }}>
+                                <Box>
+                                  <FilterList sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+                                  <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
+                                    No patients match your filters
+                                  </Typography>
+                                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                                    Try adjusting your search criteria or clearing some filters
+                                  </Typography>
+                                  <Button 
+                                    variant="outlined" 
+                                    onClick={clearAllFilters}
+                                    startIcon={<FilterList />}
+                                  >
+                                    Clear All Filters
+                                  </Button>
+                                </Box>
+                              </TableCell>
+                            </TableRow>
+                          ) : filteredPatients.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={7} sx={{ textAlign: 'center', py: 6 }}>
+                                <Box>
+                                  <People sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+                                  <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
+                                    No patients found
+                                  </Typography>
+                                  <Typography variant="body2" color="text.secondary">
+                                    Add your first patient to get started
+                                  </Typography>
+                                </Box>
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            filteredPatients.map((patient) => (
+                            <TableRow key={patient.id} hover>
+                              <TableCell>
+                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                  <Avatar
+                                    sx={{
+                                      width: 40,
+                                      height: 40,
+                                      mr: 2,
+                                      backgroundColor: 'primary.main',
+                                      fontSize: '0.875rem',
+                                    }}
+                                  >
+                                    {patient.avatar}
+                                  </Avatar>
+                                  <Box>
+                                    <Typography 
+                                      variant="body2" 
+                                      fontWeight={600}
+                                      sx={{ 
+                                        color: 'primary.main', 
+                                        cursor: 'pointer',
+                                        '&:hover': { textDecoration: 'underline' }
+                                      }}
+                                      onClick={() => handleOpenPatientProfile(patient)}
+                                    >
+                                      {patient.name}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                      {patient.gender}, {patient.age} years
+                                    </Typography>
+                                  </Box>
+                                </Box>
+                              </TableCell>
+                              <TableCell>
+                                <Box>
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                    <Typography variant="body2">{patient.phone}</Typography>
+                                    <WhatsApp sx={{ fontSize: 14, color: '#25D366' }} />
+                                  </Box>
+                                  <Typography variant="caption" color="text.secondary">
+                                    {patient.email}
+                                  </Typography>
+                                </Box>
+                              </TableCell>
+                              <TableCell>
+                                <Typography variant="body2">{patient.lastVisit}</Typography>
+                              </TableCell>
+                              <TableCell>
+                                <Typography variant="body2" color="primary.main" fontWeight={600}>
+                                  {patient.nextAppointment}
+                                </Typography>
+                              </TableCell>
+                              <TableCell>
+                                <Typography variant="body2">{patient.condition}</Typography>
+                              </TableCell>
+                              <TableCell>
+                                <Tooltip title="Click to change status" arrow>
+                                  <Chip
+                                    label={patient.status}
+                                    color={getStatusColor(patient.status) as any}
+                                    size="small"
+                                    variant="outlined"
+                                    onClick={(e) => handleQuickStatusEdit(patient, e)}
+                                    sx={{ 
+                                      cursor: 'pointer',
+                                      '&:hover': { 
+                                        backgroundColor: 'primary.light',
+                                        transform: 'scale(1.05)'
+                                      },
+                                      transition: 'all 0.2s ease'
+                                    }}
+                                  />
+                                </Tooltip>
+                              </TableCell>
+                              <TableCell>
+                                <Box sx={{ display: 'flex', gap: 0.5 }}>
+                                  <Tooltip title="Medical Notes & History">
+                                    <IconButton 
+                                      size="small" 
+                                      color="primary"
+                                      onClick={() => handleOpenPatientProfile(patient)}
+                                    >
+                                      <Assignment fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Tooltip title="Edit Patient Info">
+                                    <IconButton 
+                                      size="small" 
+                                      color="primary"
+                                      onClick={() => handleEditPatient(patient)}
+                                    >
+                                      <Edit fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Tooltip title="Send WhatsApp Message">
+                                    <IconButton 
+                                      size="small" 
+                                      color="success"
+                                      onClick={() => handleWhatsAppMessage(patient.phone, patient.name)}
+                                      sx={{ color: '#25D366' }}
+                                    >
+                                      <WhatsApp fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Tooltip title="Schedule Appointment">
+                                    <IconButton 
+                                      size="small" 
+                                      color="primary"
+                                      onClick={() => handleScheduleAppointment(patient)}
+                                    >
+                                      <CalendarToday fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                </Box>
+                              </TableCell>
+                            </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  </TabPanel>
+
+                  {/* New Patients Tab */}
+                  <TabPanel value={tabValue} index={1}>
+                    <TableContainer>
+                      <Table>
+                        <TableHead>
+                          <TableRow>
+                            <TableCell sx={{ fontWeight: 600 }}>Patient</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Contact</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Last Visit</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Next Appointment</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Condition</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Actions</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {filteredPatients.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={7} sx={{ textAlign: 'center', py: 6 }}>
+                                <Box>
+                                  <People sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+                                  <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
+                                    No new patients found
+                                  </Typography>
+                                  <Typography variant="body2" color="text.secondary">
+                                    All new patients will appear here
+                                  </Typography>
+                                </Box>
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            filteredPatients.map((patient) => (
+                            <TableRow key={patient.id} hover>
+                              <TableCell>
+                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                  <Avatar
+                                    sx={{
+                                      width: 40,
+                                      height: 40,
+                                      mr: 2,
+                                      backgroundColor: 'primary.main',
+                                      fontSize: '0.875rem',
+                                    }}
+                                  >
+                                    {patient.avatar}
+                                  </Avatar>
+                                  <Box>
+                                    <Typography 
+                                      variant="body2" 
+                                      fontWeight={600}
+                                      sx={{ 
+                                        color: 'primary.main', 
+                                        cursor: 'pointer',
+                                        '&:hover': { textDecoration: 'underline' }
+                                      }}
+                                      onClick={() => handleOpenPatientProfile(patient)}
+                                    >
+                                      {patient.name}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                      {patient.gender}, {patient.age} years
+                                    </Typography>
+                                  </Box>
+                                </Box>
+                              </TableCell>
+                              <TableCell>
+                                <Box>
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                    <Typography variant="body2">{patient.phone}</Typography>
+                                    <WhatsApp sx={{ fontSize: 14, color: '#25D366' }} />
+                                  </Box>
+                                  <Typography variant="caption" color="text.secondary">
+                                    {patient.email}
+                                  </Typography>
+                                </Box>
+                              </TableCell>
+                              <TableCell>
+                                <Typography variant="body2">{patient.lastVisit}</Typography>
+                              </TableCell>
+                              <TableCell>
+                                <Typography variant="body2" color="primary.main" fontWeight={600}>
+                                  {patient.nextAppointment}
+                                </Typography>
+                              </TableCell>
+                              <TableCell>
+                                <Typography variant="body2">{patient.condition}</Typography>
+                              </TableCell>
+                              <TableCell>
+                                <Tooltip title="Click to change status" arrow>
+                                  <Chip
+                                    label={patient.status}
+                                    color={getStatusColor(patient.status) as any}
+                                    size="small"
+                                    variant="outlined"
+                                    onClick={(e) => handleQuickStatusEdit(patient, e)}
+                                    sx={{ 
+                                      cursor: 'pointer',
+                                      '&:hover': { 
+                                        backgroundColor: 'primary.light',
+                                        transform: 'scale(1.05)'
+                                      },
+                                      transition: 'all 0.2s ease'
+                                    }}
+                                  />
+                                </Tooltip>
+                              </TableCell>
+                              <TableCell>
+                                <Box sx={{ display: 'flex', gap: 0.5 }}>
+                                  <Tooltip title="Medical Notes & History">
+                                    <IconButton 
+                                      size="small" 
+                                      color="primary"
+                                      onClick={() => handleOpenPatientProfile(patient)}
+                                    >
+                                      <Assignment fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Tooltip title="Edit Patient Info">
+                                    <IconButton 
+                                      size="small" 
+                                      color="primary"
+                                      onClick={() => handleEditPatient(patient)}
+                                    >
+                                      <Edit fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Tooltip title="Send WhatsApp Message">
+                                    <IconButton 
+                                      size="small" 
+                                      color="success"
+                                      onClick={() => handleWhatsAppMessage(patient.phone, patient.name)}
+                                      sx={{ color: '#25D366' }}
+                                    >
+                                      <WhatsApp fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Tooltip title="Schedule Appointment">
+                                    <IconButton 
+                                      size="small" 
+                                      color="primary"
+                                      onClick={() => handleScheduleAppointment(patient)}
+                                    >
+                                      <CalendarToday fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                </Box>
+                              </TableCell>
+                            </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  </TabPanel>
+
+                  {/* Follow-up Patients Tab */}
+                  <TabPanel value={tabValue} index={2}>
+                    <TableContainer>
+                      <Table>
+                        <TableHead>
+                          <TableRow>
+                            <TableCell sx={{ fontWeight: 600 }}>Patient</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Contact</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Last Visit</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Next Appointment</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Condition</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Actions</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {filteredPatients.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={7} sx={{ textAlign: 'center', py: 6 }}>
+                                <Box>
+                                  <People sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+                                  <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
+                                    No follow-up patients found
+                                  </Typography>
+                                  <Typography variant="body2" color="text.secondary">
+                                    Patients requiring follow-up will appear here
+                                  </Typography>
+                                </Box>
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            filteredPatients.map((patient) => (
+                            <TableRow key={patient.id} hover>
+                              <TableCell>
+                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                  <Avatar
+                                    sx={{
+                                      width: 40,
+                                      height: 40,
+                                      mr: 2,
+                                      backgroundColor: 'primary.main',
+                                      fontSize: '0.875rem',
+                                    }}
+                                  >
+                                    {patient.avatar}
+                                  </Avatar>
+                                  <Box>
+                                    <Typography 
+                                      variant="body2" 
+                                      fontWeight={600}
+                                      sx={{ 
+                                        color: 'primary.main', 
+                                        cursor: 'pointer',
+                                        '&:hover': { textDecoration: 'underline' }
+                                      }}
+                                      onClick={() => handleOpenPatientProfile(patient)}
+                                    >
+                                      {patient.name}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                      {patient.gender}, {patient.age} years
+                                    </Typography>
+                                  </Box>
+                                </Box>
+                              </TableCell>
+                              <TableCell>
+                                <Box>
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                    <Typography variant="body2">{patient.phone}</Typography>
+                                    <WhatsApp sx={{ fontSize: 14, color: '#25D366' }} />
+                                  </Box>
+                                  <Typography variant="caption" color="text.secondary">
+                                    {patient.email}
+                                  </Typography>
+                                </Box>
+                              </TableCell>
+                              <TableCell>
+                                <Typography variant="body2">{patient.lastVisit}</Typography>
+                              </TableCell>
+                              <TableCell>
+                                <Typography variant="body2" color="primary.main" fontWeight={600}>
+                                  {patient.nextAppointment}
+                                </Typography>
+                              </TableCell>
+                              <TableCell>
+                                <Typography variant="body2">{patient.condition}</Typography>
+                              </TableCell>
+                              <TableCell>
+                                <Tooltip title="Click to change status" arrow>
+                                  <Chip
+                                    label={patient.status}
+                                    color={getStatusColor(patient.status) as any}
+                                    size="small"
+                                    variant="outlined"
+                                    onClick={(e) => handleQuickStatusEdit(patient, e)}
+                                    sx={{ 
+                                      cursor: 'pointer',
+                                      '&:hover': { 
+                                        backgroundColor: 'primary.light',
+                                        transform: 'scale(1.05)'
+                                      },
+                                      transition: 'all 0.2s ease'
+                                    }}
+                                  />
+                                </Tooltip>
+                              </TableCell>
+                              <TableCell>
+                                <Box sx={{ display: 'flex', gap: 0.5 }}>
+                                  <Tooltip title="Medical Notes & History">
+                                    <IconButton 
+                                      size="small" 
+                                      color="primary"
+                                      onClick={() => handleOpenPatientProfile(patient)}
+                                    >
+                                      <Assignment fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Tooltip title="Edit Patient Info">
+                                    <IconButton 
+                                      size="small" 
+                                      color="primary"
+                                      onClick={() => handleEditPatient(patient)}
+                                    >
+                                      <Edit fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Tooltip title="Send WhatsApp Message">
+                                    <IconButton 
+                                      size="small" 
+                                      color="success"
+                                      onClick={() => handleWhatsAppMessage(patient.phone, patient.name)}
+                                      sx={{ color: '#25D366' }}
+                                    >
+                                      <WhatsApp fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Tooltip title="Schedule Appointment">
+                                    <IconButton 
+                                      size="small" 
+                                      color="primary"
+                                      onClick={() => handleScheduleAppointment(patient)}
+                                    >
+                                      <CalendarToday fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                </Box>
+                              </TableCell>
+                            </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  </TabPanel>
+
+                  {/* Old Patients Tab */}
+                  <TabPanel value={tabValue} index={3}>
                   <TableContainer>
                     <Table>
                       <TableHead>
@@ -1237,168 +1789,1441 @@ const PatientListPage: React.FC = () => {
                     </Table>
                   </TableContainer>
                 </TabPanel>
+
+                  {/* Under Observation Patients Tab */}
+                  <TabPanel value={tabValue} index={4}>
+                    <TableContainer>
+                      <Table>
+                        <TableHead>
+                          <TableRow>
+                            <TableCell sx={{ fontWeight: 600 }}>Patient</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Contact</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Last Visit</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Next Appointment</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Condition</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Actions</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {filteredPatients.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={7} sx={{ textAlign: 'center', py: 6 }}>
+                                <Box>
+                                  <People sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+                                  <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
+                                    No patients under observation
+                                  </Typography>
+                                  <Typography variant="body2" color="text.secondary">
+                                    Patients admitted for observation or delivery will appear here
+                                  </Typography>
+                                </Box>
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            filteredPatients.map((patient) => (
+                            <TableRow key={patient.id} hover>
+                              <TableCell>
+                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                  <Avatar
+                                    sx={{
+                                      width: 40,
+                                      height: 40,
+                                      mr: 2,
+                                      backgroundColor: 'primary.main',
+                                      fontSize: '0.875rem',
+                                    }}
+                                  >
+                                    {patient.avatar}
+                                  </Avatar>
+                                  <Box>
+                                    <Typography 
+                                      variant="body2" 
+                                      fontWeight={600}
+                                      sx={{ 
+                                        color: 'primary.main', 
+                                        cursor: 'pointer',
+                                        '&:hover': { textDecoration: 'underline' }
+                                      }}
+                                      onClick={() => handleOpenPatientProfile(patient)}
+                                    >
+                                      {patient.name}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                      {patient.gender}, {patient.age} years
+                                    </Typography>
+                                  </Box>
+                                </Box>
+                              </TableCell>
+                              <TableCell>
+                                <Box>
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                    <Typography variant="body2">{patient.phone}</Typography>
+                                    <WhatsApp sx={{ fontSize: 14, color: '#25D366' }} />
+                                  </Box>
+                                  <Typography variant="caption" color="text.secondary">
+                                    {patient.email}
+                                  </Typography>
+                                </Box>
+                              </TableCell>
+                              <TableCell>
+                                <Typography variant="body2">{patient.lastVisit}</Typography>
+                              </TableCell>
+                              <TableCell>
+                                <Typography variant="body2" color="primary.main" fontWeight={600}>
+                                  {patient.nextAppointment}
+                                </Typography>
+                              </TableCell>
+                              <TableCell>
+                                <Typography variant="body2">{patient.condition}</Typography>
+                              </TableCell>
+                              <TableCell>
+                                <Tooltip title="Click to change status" arrow>
+                                  <Chip
+                                    label={patient.status}
+                                    color={getStatusColor(patient.status) as any}
+                                    size="small"
+                                    variant="outlined"
+                                    onClick={(e) => handleQuickStatusEdit(patient, e)}
+                                    sx={{ 
+                                      cursor: 'pointer',
+                                      '&:hover': { 
+                                        backgroundColor: 'primary.light',
+                                        transform: 'scale(1.05)'
+                                      },
+                                      transition: 'all 0.2s ease'
+                                    }}
+                                  />
+                                </Tooltip>
+                              </TableCell>
+                              <TableCell>
+                                <Box sx={{ display: 'flex', gap: 0.5 }}>
+                                  <Tooltip title="Medical Notes & History">
+                                    <IconButton 
+                                      size="small" 
+                                      color="primary"
+                                      onClick={() => handleOpenPatientProfile(patient)}
+                                    >
+                                      <Assignment fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Tooltip title="Edit Patient Info">
+                                    <IconButton 
+                                      size="small" 
+                                      color="primary"
+                                      onClick={() => handleEditPatient(patient)}
+                                    >
+                                      <Edit fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Tooltip title="Send WhatsApp Message">
+                                    <IconButton 
+                                      size="small" 
+                                      color="success"
+                                      onClick={() => handleWhatsAppMessage(patient.phone, patient.name)}
+                                      sx={{ color: '#25D366' }}
+                                    >
+                                      <WhatsApp fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Tooltip title="Schedule Appointment">
+                                    <IconButton 
+                                      size="small" 
+                                      color="primary"
+                                      onClick={() => handleScheduleAppointment(patient)}
+                                    >
+                                      <CalendarToday fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                </Box>
+                              </TableCell>
+                            </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  </TabPanel>
+
+                  {/* Transferred Patients Tab */}
+                  <TabPanel value={tabValue} index={5}>
+                    <TableContainer>
+                      <Table>
+                        <TableHead>
+                          <TableRow>
+                            <TableCell sx={{ fontWeight: 600 }}>Patient</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Contact</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Last Visit</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Next Appointment</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Condition</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Actions</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {filteredPatients.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={7} sx={{ textAlign: 'center', py: 6 }}>
+                                <Box>
+                                  <People sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+                                  <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
+                                    No transferred patients
+                                  </Typography>
+                                  <Typography variant="body2" color="text.secondary">
+                                    Patients transferred to other facilities will appear here
+                                  </Typography>
+                                </Box>
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            filteredPatients.map((patient) => (
+                            <TableRow key={patient.id} hover>
+                              <TableCell>
+                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                  <Avatar
+                                    sx={{
+                                      width: 40,
+                                      height: 40,
+                                      mr: 2,
+                                      backgroundColor: 'primary.main',
+                                      fontSize: '0.875rem',
+                                    }}
+                                  >
+                                    {patient.avatar}
+                                  </Avatar>
+                                  <Box>
+                                    <Typography 
+                                      variant="body2" 
+                                      fontWeight={600}
+                                      sx={{ 
+                                        color: 'primary.main', 
+                                        cursor: 'pointer',
+                                        '&:hover': { textDecoration: 'underline' }
+                                      }}
+                                      onClick={() => handleOpenPatientProfile(patient)}
+                                    >
+                                      {patient.name}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                      {patient.gender}, {patient.age} years
+                                    </Typography>
+                                  </Box>
+                                </Box>
+                              </TableCell>
+                              <TableCell>
+                                <Box>
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                    <Typography variant="body2">{patient.phone}</Typography>
+                                    <WhatsApp sx={{ fontSize: 14, color: '#25D366' }} />
+                                  </Box>
+                                  <Typography variant="caption" color="text.secondary">
+                                    {patient.email}
+                                  </Typography>
+                                </Box>
+                              </TableCell>
+                              <TableCell>
+                                <Typography variant="body2">{patient.lastVisit}</Typography>
+                              </TableCell>
+                              <TableCell>
+                                <Typography variant="body2" color="primary.main" fontWeight={600}>
+                                  {patient.nextAppointment}
+                                </Typography>
+                              </TableCell>
+                              <TableCell>
+                                <Typography variant="body2">{patient.condition}</Typography>
+                              </TableCell>
+                              <TableCell>
+                                <Tooltip title="Click to change status" arrow>
+                                  <Chip
+                                    label={patient.status}
+                                    color={getStatusColor(patient.status) as any}
+                                    size="small"
+                                    variant="outlined"
+                                    onClick={(e) => handleQuickStatusEdit(patient, e)}
+                                    sx={{ 
+                                      cursor: 'pointer',
+                                      '&:hover': { 
+                                        backgroundColor: 'primary.light',
+                                        transform: 'scale(1.05)'
+                                      },
+                                      transition: 'all 0.2s ease'
+                                    }}
+                                  />
+                                </Tooltip>
+                              </TableCell>
+                              <TableCell>
+                                <Box sx={{ display: 'flex', gap: 0.5 }}>
+                                  <Tooltip title="Medical Notes & History">
+                                    <IconButton 
+                                      size="small" 
+                                      color="primary"
+                                      onClick={() => handleOpenPatientProfile(patient)}
+                                    >
+                                      <Assignment fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Tooltip title="Edit Patient Info">
+                                    <IconButton 
+                                      size="small" 
+                                      color="primary"
+                                      onClick={() => handleEditPatient(patient)}
+                                    >
+                                      <Edit fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Tooltip title="Send WhatsApp Message">
+                                    <IconButton 
+                                      size="small" 
+                                      color="success"
+                                      onClick={() => handleWhatsAppMessage(patient.phone, patient.name)}
+                                      sx={{ color: '#25D366' }}
+                                    >
+                                      <WhatsApp fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Tooltip title="Schedule Appointment">
+                                    <IconButton 
+                                      size="small" 
+                                      color="primary"
+                                      onClick={() => handleScheduleAppointment(patient)}
+                                    >
+                                      <CalendarToday fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                </Box>
+                              </TableCell>
+                            </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  </TabPanel>
+
+                  {/* Discharged Patients Tab */}
+                  <TabPanel value={tabValue} index={6}>
+                    <TableContainer>
+                      <Table>
+                        <TableHead>
+                          <TableRow>
+                            <TableCell sx={{ fontWeight: 600 }}>Patient</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Contact</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Last Visit</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Next Appointment</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Condition</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Actions</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {filteredPatients.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={7} sx={{ textAlign: 'center', py: 6 }}>
+                                <Box>
+                                  <People sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+                                  <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
+                                    No discharged patients
+                                  </Typography>
+                                  <Typography variant="body2" color="text.secondary">
+                                    Discharged patients will appear here
+                                  </Typography>
+                                </Box>
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            filteredPatients.map((patient) => (
+                            <TableRow key={patient.id} hover>
+                              <TableCell>
+                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                  <Avatar
+                                    sx={{
+                                      width: 40,
+                                      height: 40,
+                                      mr: 2,
+                                      backgroundColor: 'primary.main',
+                                      fontSize: '0.875rem',
+                                    }}
+                                  >
+                                    {patient.avatar}
+                                  </Avatar>
+                                  <Box>
+                                    <Typography 
+                                      variant="body2" 
+                                      fontWeight={600}
+                                      sx={{ 
+                                        color: 'primary.main', 
+                                        cursor: 'pointer',
+                                        '&:hover': { textDecoration: 'underline' }
+                                      }}
+                                      onClick={() => handleOpenPatientProfile(patient)}
+                                    >
+                                      {patient.name}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                      {patient.gender}, {patient.age} years
+                                    </Typography>
+                                  </Box>
+                                </Box>
+                              </TableCell>
+                              <TableCell>
+                                <Box>
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                    <Typography variant="body2">{patient.phone}</Typography>
+                                    <WhatsApp sx={{ fontSize: 14, color: '#25D366' }} />
+                                  </Box>
+                                  <Typography variant="caption" color="text.secondary">
+                                    {patient.email}
+                                  </Typography>
+                                </Box>
+                              </TableCell>
+                              <TableCell>
+                                <Typography variant="body2">{patient.lastVisit}</Typography>
+                              </TableCell>
+                              <TableCell>
+                                <Typography variant="body2" color="primary.main" fontWeight={600}>
+                                  {patient.nextAppointment}
+                                </Typography>
+                              </TableCell>
+                              <TableCell>
+                                <Typography variant="body2">{patient.condition}</Typography>
+                              </TableCell>
+                              <TableCell>
+                                <Tooltip title="Click to change status" arrow>
+                                  <Chip
+                                    label={patient.status}
+                                    color={getStatusColor(patient.status) as any}
+                                    size="small"
+                                    variant="outlined"
+                                    onClick={(e) => handleQuickStatusEdit(patient, e)}
+                                    sx={{ 
+                                      cursor: 'pointer',
+                                      '&:hover': { 
+                                        backgroundColor: 'primary.light',
+                                        transform: 'scale(1.05)'
+                                      },
+                                      transition: 'all 0.2s ease'
+                                    }}
+                                  />
+                                </Tooltip>
+                              </TableCell>
+                              <TableCell>
+                                <Box sx={{ display: 'flex', gap: 0.5 }}>
+                                  <Tooltip title="Medical Notes & History">
+                                    <IconButton 
+                                      size="small" 
+                                      color="primary"
+                                      onClick={() => handleOpenPatientProfile(patient)}
+                                    >
+                                      <Assignment fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Tooltip title="Edit Patient Info">
+                                    <IconButton 
+                                      size="small" 
+                                      color="primary"
+                                      onClick={() => handleEditPatient(patient)}
+                                    >
+                                      <Edit fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Tooltip title="Send WhatsApp Message">
+                                    <IconButton 
+                                      size="small" 
+                                      color="success"
+                                      onClick={() => handleWhatsAppMessage(patient.phone, patient.name)}
+                                      sx={{ color: '#25D366' }}
+                                    >
+                                      <WhatsApp fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Tooltip title="Schedule Appointment">
+                                    <IconButton 
+                                      size="small" 
+                                      color="primary"
+                                      onClick={() => handleScheduleAppointment(patient)}
+                                    >
+                                      <CalendarToday fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                </Box>
+                              </TableCell>
+                            </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  </TabPanel>
+                </>
               )}
 
               {/* Patient List - Cards View */}
               {viewMode === 'cards' && (
-                <TabPanel value={tabValue} index={0}>
-                  <Grid container spacing={3} sx={{ p: 3 }}>
-                    {filteredPatients.length === 0 && getActiveFilterCount() > 0 ? (
-                      <Grid item xs={12}>
-                        <Card sx={{ p: 6, textAlign: 'center' }}>
-                          <FilterList sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-                          <Typography variant="h5" color="text.secondary" sx={{ mb: 1 }}>
-                            No patients match your filters
-                          </Typography>
-                          <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-                            Try adjusting your search criteria or clearing some filters
-                          </Typography>
-                          <Button 
-                            variant="contained" 
-                            onClick={clearAllFilters}
-                            startIcon={<FilterList />}
-                          >
-                            Clear All Filters
-                          </Button>
-                        </Card>
-                      </Grid>
-                    ) : filteredPatients.length === 0 ? (
-                      <Grid item xs={12}>
-                        <Card sx={{ p: 6, textAlign: 'center' }}>
-                          <People sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-                          <Typography variant="h5" color="text.secondary" sx={{ mb: 1 }}>
-                            No patients found
-                          </Typography>
-                          <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-                            Add your first patient to get started
-                          </Typography>
-                          <Button 
-                            variant="contained" 
-                            onClick={() => setAddPatientOpen(true)}
-                            startIcon={<PersonAdd />}
-                          >
-                            Add New Patient
-                          </Button>
-                        </Card>
-                      </Grid>
-                    ) : (
-                      filteredPatients.map((patient) => (
-                      <Grid item xs={12} sm={6} md={4} key={patient.id}>
-                        <Card sx={{ height: '100%', '&:hover': { boxShadow: 4 } }}>
-                          <CardContent sx={{ p: 3 }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                              <Avatar
-                                sx={{
-                                  width: 50,
-                                  height: 50,
-                                  mr: 2,
-                                  backgroundColor: 'primary.main',
-                                }}
-                              >
-                                {patient.avatar}
-                              </Avatar>
-                              <Box sx={{ flexGrow: 1 }}>
-                                <Typography 
-                                  variant="h6" 
-                                  sx={{ 
-                                    fontWeight: 600, 
-                                    mb: 0.5,
-                                    color: 'primary.main',
-                                    cursor: 'pointer',
-                                    '&:hover': { textDecoration: 'underline' }
+                <>
+                  {/* All Patients Tab */}
+                  <TabPanel value={tabValue} index={0}>
+                    <Grid container spacing={3} sx={{ p: 3 }}>
+                      {filteredPatients.length === 0 && getActiveFilterCount() > 0 ? (
+                        <Grid item xs={12}>
+                          <Card sx={{ p: 6, textAlign: 'center' }}>
+                            <FilterList sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+                            <Typography variant="h5" color="text.secondary" sx={{ mb: 1 }}>
+                              No patients match your filters
+                            </Typography>
+                            <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+                              Try adjusting your search criteria or clearing some filters
+                            </Typography>
+                            <Button 
+                              variant="contained" 
+                              onClick={clearAllFilters}
+                              startIcon={<FilterList />}
+                            >
+                              Clear All Filters
+                            </Button>
+                          </Card>
+                        </Grid>
+                      ) : filteredPatients.length === 0 ? (
+                        <Grid item xs={12}>
+                          <Card sx={{ p: 6, textAlign: 'center' }}>
+                            <People sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+                            <Typography variant="h5" color="text.secondary" sx={{ mb: 1 }}>
+                              No patients found
+                            </Typography>
+                            <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+                              Add your first patient to get started
+                            </Typography>
+                            <Button 
+                              variant="contained" 
+                              onClick={() => setAddPatientOpen(true)}
+                              startIcon={<PersonAdd />}
+                            >
+                              Add New Patient
+                            </Button>
+                          </Card>
+                        </Grid>
+                      ) : (
+                        filteredPatients.map((patient) => (
+                        <Grid item xs={12} sm={6} md={4} key={patient.id}>
+                          <Card sx={{ height: '100%', '&:hover': { boxShadow: 4 } }}>
+                            <CardContent sx={{ p: 3 }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                                <Avatar
+                                  sx={{
+                                    width: 50,
+                                    height: 50,
+                                    mr: 2,
+                                    backgroundColor: 'primary.main',
                                   }}
-                                  onClick={() => handleOpenPatientProfile(patient)}
                                 >
-                                  {patient.name}
+                                  {patient.avatar}
+                                </Avatar>
+                                <Box sx={{ flexGrow: 1 }}>
+                                  <Typography 
+                                    variant="h6" 
+                                    sx={{ 
+                                      fontWeight: 600, 
+                                      mb: 0.5,
+                                      color: 'primary.main',
+                                      cursor: 'pointer',
+                                      '&:hover': { textDecoration: 'underline' }
+                                    }}
+                                    onClick={() => handleOpenPatientProfile(patient)}
+                                  >
+                                    {patient.name}
+                                  </Typography>
+                                  <Typography variant="body2" color="text.secondary">
+                                    {patient.gender}, {patient.age} years
+                                  </Typography>
+                                </Box>
+                                <Tooltip title="Click to change status" arrow>
+                                  <Chip
+                                    label={patient.status}
+                                    color={getStatusColor(patient.status) as any}
+                                    size="small"
+                                    variant="outlined"
+                                    onClick={(e) => handleQuickStatusEdit(patient, e)}
+                                    sx={{ 
+                                      cursor: 'pointer',
+                                      '&:hover': { 
+                                        backgroundColor: 'primary.light',
+                                        transform: 'scale(1.05)'
+                                      },
+                                      transition: 'all 0.2s ease'
+                                    }}
+                                  />
+                                </Tooltip>
+                              </Box>
+                              
+                              <Divider sx={{ my: 2 }} />
+                              
+                              <Box sx={{ mb: 2 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
+                                  <Typography variant="body2" color="text.secondary">
+                                    Phone: {patient.phone}
+                                  </Typography>
+                                  <WhatsApp sx={{ fontSize: 14, color: '#25D366' }} />
+                                </Box>
+                                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                  Condition: {patient.condition}
                                 </Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                  {patient.gender}, {patient.age} years
+                                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                  Last Visit: {patient.lastVisit}
+                                </Typography>
+                                <Typography variant="body2" color="primary.main" fontWeight={600}>
+                                  Next: {patient.nextAppointment}
                                 </Typography>
                               </Box>
-                              <Tooltip title="Click to change status" arrow>
-                                <Chip
-                                  label={patient.status}
-                                  color={getStatusColor(patient.status) as any}
-                                  size="small"
-                                  variant="outlined"
-                                  onClick={(e) => handleQuickStatusEdit(patient, e)}
-                                  sx={{ 
-                                    cursor: 'pointer',
-                                    '&:hover': { 
-                                      backgroundColor: 'primary.light',
-                                      transform: 'scale(1.05)'
-                                    },
-                                    transition: 'all 0.2s ease'
-                                  }}
-                                />
-                              </Tooltip>
-                            </Box>
-                            
-                            <Divider sx={{ my: 2 }} />
-                            
-                            <Box sx={{ mb: 2 }}>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
-                                <Typography variant="body2" color="text.secondary">
-                                  Phone: {patient.phone}
-                                </Typography>
-                                <WhatsApp sx={{ fontSize: 14, color: '#25D366' }} />
+                              
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
+                                <Tooltip title="Medical Notes & History">
+                                  <IconButton 
+                                    size="small" 
+                                    color="primary"
+                                    onClick={() => handleOpenPatientProfile(patient)}
+                                  >
+                                    <Assignment fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Send WhatsApp Message">
+                                  <IconButton 
+                                    size="small"
+                                    onClick={() => handleWhatsAppMessage(patient.phone, patient.name)}
+                                    sx={{ color: '#25D366' }}
+                                  >
+                                    <WhatsApp fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Schedule Appointment">
+                                  <IconButton 
+                                    size="small" 
+                                    color="primary"
+                                    onClick={() => handleScheduleAppointment(patient)}
+                                  >
+                                    <CalendarToday fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Edit Patient">
+                                  <IconButton 
+                                    size="small" 
+                                    color="primary"
+                                    onClick={() => handleEditPatient(patient)}
+                                  >
+                                    <Edit fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
                               </Box>
-                              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                                Condition: {patient.condition}
-                              </Typography>
-                              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                                Last Visit: {patient.lastVisit}
-                              </Typography>
-                              <Typography variant="body2" color="primary.main" fontWeight={600}>
-                                Next: {patient.nextAppointment}
-                              </Typography>
-                            </Box>
-                            
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
-                              <Tooltip title="Medical Notes & History">
-                                <IconButton 
-                                  size="small" 
-                                  color="primary"
-                                  onClick={() => handleOpenPatientProfile(patient)}
+                            </CardContent>
+                          </Card>
+                        </Grid>
+                        ))
+                      )}
+                    </Grid>
+                  </TabPanel>
+
+                  {/* New Patients Tab */}
+                  <TabPanel value={tabValue} index={1}>
+                    <Grid container spacing={3} sx={{ p: 3 }}>
+                      {filteredPatients.length === 0 ? (
+                        <Grid item xs={12}>
+                          <Card sx={{ p: 6, textAlign: 'center' }}>
+                            <People sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+                            <Typography variant="h5" color="text.secondary" sx={{ mb: 1 }}>
+                              No new patients found
+                            </Typography>
+                            <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+                              All new patients will appear here
+                            </Typography>
+                          </Card>
+                        </Grid>
+                      ) : (
+                        filteredPatients.map((patient) => (
+                        <Grid item xs={12} sm={6} md={4} key={patient.id}>
+                          <Card sx={{ height: '100%', '&:hover': { boxShadow: 4 } }}>
+                            <CardContent sx={{ p: 3 }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                                <Avatar
+                                  sx={{
+                                    width: 50,
+                                    height: 50,
+                                    mr: 2,
+                                    backgroundColor: 'primary.main',
+                                  }}
                                 >
-                                  <Assignment fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
-                              <Tooltip title="Send WhatsApp Message">
-                                <IconButton 
-                                  size="small"
-                                  onClick={() => handleWhatsAppMessage(patient.phone, patient.name)}
-                                  sx={{ color: '#25D366' }}
+                                  {patient.avatar}
+                                </Avatar>
+                                <Box sx={{ flexGrow: 1 }}>
+                                  <Typography 
+                                    variant="h6" 
+                                    sx={{ 
+                                      fontWeight: 600, 
+                                      mb: 0.5,
+                                      color: 'primary.main',
+                                      cursor: 'pointer',
+                                      '&:hover': { textDecoration: 'underline' }
+                                    }}
+                                    onClick={() => handleOpenPatientProfile(patient)}
+                                  >
+                                    {patient.name}
+                                  </Typography>
+                                  <Typography variant="body2" color="text.secondary">
+                                    {patient.gender}, {patient.age} years
+                                  </Typography>
+                                </Box>
+                                <Tooltip title="Click to change status" arrow>
+                                  <Chip
+                                    label={patient.status}
+                                    color={getStatusColor(patient.status) as any}
+                                    size="small"
+                                    variant="outlined"
+                                    onClick={(e) => handleQuickStatusEdit(patient, e)}
+                                    sx={{ 
+                                      cursor: 'pointer',
+                                      '&:hover': { 
+                                        backgroundColor: 'primary.light',
+                                        transform: 'scale(1.05)'
+                                      },
+                                      transition: 'all 0.2s ease'
+                                    }}
+                                  />
+                                </Tooltip>
+                              </Box>
+                              
+                              <Divider sx={{ my: 2 }} />
+                              
+                              <Box sx={{ mb: 2 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
+                                  <Typography variant="body2" color="text.secondary">
+                                    Phone: {patient.phone}
+                                  </Typography>
+                                  <WhatsApp sx={{ fontSize: 14, color: '#25D366' }} />
+                                </Box>
+                                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                  Condition: {patient.condition}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                  Last Visit: {patient.lastVisit}
+                                </Typography>
+                                <Typography variant="body2" color="primary.main" fontWeight={600}>
+                                  Next: {patient.nextAppointment}
+                                </Typography>
+                              </Box>
+                              
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
+                                <Tooltip title="Medical Notes & History">
+                                  <IconButton 
+                                    size="small" 
+                                    color="primary"
+                                    onClick={() => handleOpenPatientProfile(patient)}
+                                  >
+                                    <Assignment fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Send WhatsApp Message">
+                                  <IconButton 
+                                    size="small"
+                                    onClick={() => handleWhatsAppMessage(patient.phone, patient.name)}
+                                    sx={{ color: '#25D366' }}
+                                  >
+                                    <WhatsApp fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Schedule Appointment">
+                                  <IconButton 
+                                    size="small" 
+                                    color="primary"
+                                    onClick={() => handleScheduleAppointment(patient)}
+                                  >
+                                    <CalendarToday fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Edit Patient">
+                                  <IconButton 
+                                    size="small" 
+                                    color="primary"
+                                    onClick={() => handleEditPatient(patient)}
+                                  >
+                                    <Edit fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                              </Box>
+                            </CardContent>
+                          </Card>
+                        </Grid>
+                        ))
+                      )}
+                    </Grid>
+                  </TabPanel>
+
+                  {/* Follow-up Patients Tab */}
+                  <TabPanel value={tabValue} index={2}>
+                    <Grid container spacing={3} sx={{ p: 3 }}>
+                      {filteredPatients.length === 0 ? (
+                        <Grid item xs={12}>
+                          <Card sx={{ p: 6, textAlign: 'center' }}>
+                            <People sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+                            <Typography variant="h5" color="text.secondary" sx={{ mb: 1 }}>
+                              No follow-up patients found
+                            </Typography>
+                            <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+                              Patients requiring follow-up will appear here
+                            </Typography>
+                          </Card>
+                        </Grid>
+                      ) : (
+                        filteredPatients.map((patient) => (
+                        <Grid item xs={12} sm={6} md={4} key={patient.id}>
+                          <Card sx={{ height: '100%', '&:hover': { boxShadow: 4 } }}>
+                            <CardContent sx={{ p: 3 }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                                <Avatar
+                                  sx={{
+                                    width: 50,
+                                    height: 50,
+                                    mr: 2,
+                                    backgroundColor: 'primary.main',
+                                  }}
                                 >
-                                  <WhatsApp fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
-                              <Tooltip title="Schedule Appointment">
-                                <IconButton 
-                                  size="small" 
-                                  color="primary"
-                                  onClick={() => handleScheduleAppointment(patient)}
+                                  {patient.avatar}
+                                </Avatar>
+                                <Box sx={{ flexGrow: 1 }}>
+                                  <Typography 
+                                    variant="h6" 
+                                    sx={{ 
+                                      fontWeight: 600, 
+                                      mb: 0.5,
+                                      color: 'primary.main',
+                                      cursor: 'pointer',
+                                      '&:hover': { textDecoration: 'underline' }
+                                    }}
+                                    onClick={() => handleOpenPatientProfile(patient)}
+                                  >
+                                    {patient.name}
+                                  </Typography>
+                                  <Typography variant="body2" color="text.secondary">
+                                    {patient.gender}, {patient.age} years
+                                  </Typography>
+                                </Box>
+                                <Tooltip title="Click to change status" arrow>
+                                  <Chip
+                                    label={patient.status}
+                                    color={getStatusColor(patient.status) as any}
+                                    size="small"
+                                    variant="outlined"
+                                    onClick={(e) => handleQuickStatusEdit(patient, e)}
+                                    sx={{ 
+                                      cursor: 'pointer',
+                                      '&:hover': { 
+                                        backgroundColor: 'primary.light',
+                                        transform: 'scale(1.05)'
+                                      },
+                                      transition: 'all 0.2s ease'
+                                    }}
+                                  />
+                                </Tooltip>
+                              </Box>
+                              
+                              <Divider sx={{ my: 2 }} />
+                              
+                              <Box sx={{ mb: 2 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
+                                  <Typography variant="body2" color="text.secondary">
+                                    Phone: {patient.phone}
+                                  </Typography>
+                                  <WhatsApp sx={{ fontSize: 14, color: '#25D366' }} />
+                                </Box>
+                                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                  Condition: {patient.condition}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                  Last Visit: {patient.lastVisit}
+                                </Typography>
+                                <Typography variant="body2" color="primary.main" fontWeight={600}>
+                                  Next: {patient.nextAppointment}
+                                </Typography>
+                              </Box>
+                              
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
+                                <Tooltip title="Medical Notes & History">
+                                  <IconButton 
+                                    size="small" 
+                                    color="primary"
+                                    onClick={() => handleOpenPatientProfile(patient)}
+                                  >
+                                    <Assignment fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Send WhatsApp Message">
+                                  <IconButton 
+                                    size="small"
+                                    onClick={() => handleWhatsAppMessage(patient.phone, patient.name)}
+                                    sx={{ color: '#25D366' }}
+                                  >
+                                    <WhatsApp fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Schedule Appointment">
+                                  <IconButton 
+                                    size="small" 
+                                    color="primary"
+                                    onClick={() => handleScheduleAppointment(patient)}
+                                  >
+                                    <CalendarToday fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Edit Patient">
+                                  <IconButton 
+                                    size="small" 
+                                    color="primary"
+                                    onClick={() => handleEditPatient(patient)}
+                                  >
+                                    <Edit fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                              </Box>
+                            </CardContent>
+                          </Card>
+                        </Grid>
+                        ))
+                      )}
+                    </Grid>
+                  </TabPanel>
+
+                  {/* Old Patients Tab */}
+                  <TabPanel value={tabValue} index={3}>
+                    <Grid container spacing={3} sx={{ p: 3 }}>
+                      {filteredPatients.length === 0 ? (
+                        <Grid item xs={12}>
+                          <Card sx={{ p: 6, textAlign: 'center' }}>
+                            <People sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+                            <Typography variant="h5" color="text.secondary" sx={{ mb: 1 }}>
+                              No old patients found
+                            </Typography>
+                            <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+                              Established patients will appear here
+                            </Typography>
+                          </Card>
+                        </Grid>
+                      ) : (
+                        filteredPatients.map((patient) => (
+                        <Grid item xs={12} sm={6} md={4} key={patient.id}>
+                          <Card sx={{ height: '100%', '&:hover': { boxShadow: 4 } }}>
+                            <CardContent sx={{ p: 3 }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                                <Avatar
+                                  sx={{
+                                    width: 50,
+                                    height: 50,
+                                    mr: 2,
+                                    backgroundColor: 'primary.main',
+                                  }}
                                 >
-                                  <CalendarToday fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
-                              <Tooltip title="Edit Patient">
-                                <IconButton 
-                                  size="small" 
-                                  color="primary"
-                                  onClick={() => handleEditPatient(patient)}
+                                  {patient.avatar}
+                                </Avatar>
+                                <Box sx={{ flexGrow: 1 }}>
+                                  <Typography 
+                                    variant="h6" 
+                                    sx={{ 
+                                      fontWeight: 600, 
+                                      mb: 0.5,
+                                      color: 'primary.main',
+                                      cursor: 'pointer',
+                                      '&:hover': { textDecoration: 'underline' }
+                                    }}
+                                    onClick={() => handleOpenPatientProfile(patient)}
+                                  >
+                                    {patient.name}
+                                  </Typography>
+                                  <Typography variant="body2" color="text.secondary">
+                                    {patient.gender}, {patient.age} years
+                                  </Typography>
+                                </Box>
+                                <Tooltip title="Click to change status" arrow>
+                                  <Chip
+                                    label={patient.status}
+                                    color={getStatusColor(patient.status) as any}
+                                    size="small"
+                                    variant="outlined"
+                                    onClick={(e) => handleQuickStatusEdit(patient, e)}
+                                    sx={{ 
+                                      cursor: 'pointer',
+                                      '&:hover': { 
+                                        backgroundColor: 'primary.light',
+                                        transform: 'scale(1.05)'
+                                      },
+                                      transition: 'all 0.2s ease'
+                                    }}
+                                  />
+                                </Tooltip>
+                              </Box>
+                              
+                              <Divider sx={{ my: 2 }} />
+                              
+                              <Box sx={{ mb: 2 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
+                                  <Typography variant="body2" color="text.secondary">
+                                    Phone: {patient.phone}
+                                  </Typography>
+                                  <WhatsApp sx={{ fontSize: 14, color: '#25D366' }} />
+                                </Box>
+                                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                  Condition: {patient.condition}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                  Last Visit: {patient.lastVisit}
+                                </Typography>
+                                <Typography variant="body2" color="primary.main" fontWeight={600}>
+                                  Next: {patient.nextAppointment}
+                                </Typography>
+                              </Box>
+                              
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
+                                <Tooltip title="Medical Notes & History">
+                                  <IconButton 
+                                    size="small" 
+                                    color="primary"
+                                    onClick={() => handleOpenPatientProfile(patient)}
+                                  >
+                                    <Assignment fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Send WhatsApp Message">
+                                  <IconButton 
+                                    size="small"
+                                    onClick={() => handleWhatsAppMessage(patient.phone, patient.name)}
+                                    sx={{ color: '#25D366' }}
+                                  >
+                                    <WhatsApp fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Schedule Appointment">
+                                  <IconButton 
+                                    size="small" 
+                                    color="primary"
+                                    onClick={() => handleScheduleAppointment(patient)}
+                                  >
+                                    <CalendarToday fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Edit Patient">
+                                  <IconButton 
+                                    size="small" 
+                                    color="primary"
+                                    onClick={() => handleEditPatient(patient)}
+                                  >
+                                    <Edit fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                              </Box>
+                            </CardContent>
+                          </Card>
+                        </Grid>
+                        ))
+                      )}
+                    </Grid>
+                  </TabPanel>
+
+                  {/* Under Observation Patients Tab */}
+                  <TabPanel value={tabValue} index={4}>
+                    <Grid container spacing={3} sx={{ p: 3 }}>
+                      {filteredPatients.length === 0 ? (
+                        <Grid item xs={12}>
+                          <Card sx={{ p: 6, textAlign: 'center' }}>
+                            <People sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+                            <Typography variant="h5" color="text.secondary" sx={{ mb: 1 }}>
+                              No patients under observation
+                            </Typography>
+                            <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+                              Patients admitted for observation or delivery will appear here
+                            </Typography>
+                          </Card>
+                        </Grid>
+                      ) : (
+                        filteredPatients.map((patient) => (
+                        <Grid item xs={12} sm={6} md={4} key={patient.id}>
+                          <Card sx={{ height: '100%', '&:hover': { boxShadow: 4 } }}>
+                            <CardContent sx={{ p: 3 }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                                <Avatar
+                                  sx={{
+                                    width: 50,
+                                    height: 50,
+                                    mr: 2,
+                                    backgroundColor: 'primary.main',
+                                  }}
                                 >
-                                  <Edit fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
-                            </Box>
-                          </CardContent>
-                        </Card>
-                      </Grid>
-                      ))
-                    )}
-                  </Grid>
-                </TabPanel>
+                                  {patient.avatar}
+                                </Avatar>
+                                <Box sx={{ flexGrow: 1 }}>
+                                  <Typography 
+                                    variant="h6" 
+                                    sx={{ 
+                                      fontWeight: 600, 
+                                      mb: 0.5,
+                                      color: 'primary.main',
+                                      cursor: 'pointer',
+                                      '&:hover': { textDecoration: 'underline' }
+                                    }}
+                                    onClick={() => handleOpenPatientProfile(patient)}
+                                  >
+                                    {patient.name}
+                                  </Typography>
+                                  <Typography variant="body2" color="text.secondary">
+                                    {patient.gender}, {patient.age} years
+                                  </Typography>
+                                </Box>
+                                <Tooltip title="Click to change status" arrow>
+                                  <Chip
+                                    label={patient.status}
+                                    color={getStatusColor(patient.status) as any}
+                                    size="small"
+                                    variant="outlined"
+                                    onClick={(e) => handleQuickStatusEdit(patient, e)}
+                                    sx={{ 
+                                      cursor: 'pointer',
+                                      '&:hover': { 
+                                        backgroundColor: 'primary.light',
+                                        transform: 'scale(1.05)'
+                                      },
+                                      transition: 'all 0.2s ease'
+                                    }}
+                                  />
+                                </Tooltip>
+                              </Box>
+                              
+                              <Divider sx={{ my: 2 }} />
+                              
+                              <Box sx={{ mb: 2 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
+                                  <Typography variant="body2" color="text.secondary">
+                                    Phone: {patient.phone}
+                                  </Typography>
+                                  <WhatsApp sx={{ fontSize: 14, color: '#25D366' }} />
+                                </Box>
+                                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                  Condition: {patient.condition}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                  Last Visit: {patient.lastVisit}
+                                </Typography>
+                                <Typography variant="body2" color="primary.main" fontWeight={600}>
+                                  Next: {patient.nextAppointment}
+                                </Typography>
+                              </Box>
+                              
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
+                                <Tooltip title="Medical Notes & History">
+                                  <IconButton 
+                                    size="small" 
+                                    color="primary"
+                                    onClick={() => handleOpenPatientProfile(patient)}
+                                  >
+                                    <Assignment fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Send WhatsApp Message">
+                                  <IconButton 
+                                    size="small"
+                                    onClick={() => handleWhatsAppMessage(patient.phone, patient.name)}
+                                    sx={{ color: '#25D366' }}
+                                  >
+                                    <WhatsApp fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Schedule Appointment">
+                                  <IconButton 
+                                    size="small" 
+                                    color="primary"
+                                    onClick={() => handleScheduleAppointment(patient)}
+                                  >
+                                    <CalendarToday fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Edit Patient">
+                                  <IconButton 
+                                    size="small" 
+                                    color="primary"
+                                    onClick={() => handleEditPatient(patient)}
+                                  >
+                                    <Edit fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                              </Box>
+                            </CardContent>
+                          </Card>
+                        </Grid>
+                        ))
+                      )}
+                    </Grid>
+                  </TabPanel>
+
+                  {/* Transferred Patients Tab */}
+                  <TabPanel value={tabValue} index={5}>
+                    <Grid container spacing={3} sx={{ p: 3 }}>
+                      {filteredPatients.length === 0 ? (
+                        <Grid item xs={12}>
+                          <Card sx={{ p: 6, textAlign: 'center' }}>
+                            <People sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+                            <Typography variant="h5" color="text.secondary" sx={{ mb: 1 }}>
+                              No transferred patients
+                            </Typography>
+                            <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+                              Patients transferred to other facilities will appear here
+                            </Typography>
+                          </Card>
+                        </Grid>
+                      ) : (
+                        filteredPatients.map((patient) => (
+                        <Grid item xs={12} sm={6} md={4} key={patient.id}>
+                          <Card sx={{ height: '100%', '&:hover': { boxShadow: 4 } }}>
+                            <CardContent sx={{ p: 3 }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                                <Avatar
+                                  sx={{
+                                    width: 50,
+                                    height: 50,
+                                    mr: 2,
+                                    backgroundColor: 'primary.main',
+                                  }}
+                                >
+                                  {patient.avatar}
+                                </Avatar>
+                                <Box sx={{ flexGrow: 1 }}>
+                                  <Typography 
+                                    variant="h6" 
+                                    sx={{ 
+                                      fontWeight: 600, 
+                                      mb: 0.5,
+                                      color: 'primary.main',
+                                      cursor: 'pointer',
+                                      '&:hover': { textDecoration: 'underline' }
+                                    }}
+                                    onClick={() => handleOpenPatientProfile(patient)}
+                                  >
+                                    {patient.name}
+                                  </Typography>
+                                  <Typography variant="body2" color="text.secondary">
+                                    {patient.gender}, {patient.age} years
+                                  </Typography>
+                                </Box>
+                                <Tooltip title="Click to change status" arrow>
+                                  <Chip
+                                    label={patient.status}
+                                    color={getStatusColor(patient.status) as any}
+                                    size="small"
+                                    variant="outlined"
+                                    onClick={(e) => handleQuickStatusEdit(patient, e)}
+                                    sx={{ 
+                                      cursor: 'pointer',
+                                      '&:hover': { 
+                                        backgroundColor: 'primary.light',
+                                        transform: 'scale(1.05)'
+                                      },
+                                      transition: 'all 0.2s ease'
+                                    }}
+                                  />
+                                </Tooltip>
+                              </Box>
+                              
+                              <Divider sx={{ my: 2 }} />
+                              
+                              <Box sx={{ mb: 2 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
+                                  <Typography variant="body2" color="text.secondary">
+                                    Phone: {patient.phone}
+                                  </Typography>
+                                  <WhatsApp sx={{ fontSize: 14, color: '#25D366' }} />
+                                </Box>
+                                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                  Condition: {patient.condition}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                  Last Visit: {patient.lastVisit}
+                                </Typography>
+                                <Typography variant="body2" color="primary.main" fontWeight={600}>
+                                  Next: {patient.nextAppointment}
+                                </Typography>
+                              </Box>
+                              
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
+                                <Tooltip title="Medical Notes & History">
+                                  <IconButton 
+                                    size="small" 
+                                    color="primary"
+                                    onClick={() => handleOpenPatientProfile(patient)}
+                                  >
+                                    <Assignment fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Send WhatsApp Message">
+                                  <IconButton 
+                                    size="small"
+                                    onClick={() => handleWhatsAppMessage(patient.phone, patient.name)}
+                                    sx={{ color: '#25D366' }}
+                                  >
+                                    <WhatsApp fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Schedule Appointment">
+                                  <IconButton 
+                                    size="small" 
+                                    color="primary"
+                                    onClick={() => handleScheduleAppointment(patient)}
+                                  >
+                                    <CalendarToday fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Edit Patient">
+                                  <IconButton 
+                                    size="small" 
+                                    color="primary"
+                                    onClick={() => handleEditPatient(patient)}
+                                  >
+                                    <Edit fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                              </Box>
+                            </CardContent>
+                          </Card>
+                        </Grid>
+                        ))
+                      )}
+                    </Grid>
+                  </TabPanel>
+
+                  {/* Discharged Patients Tab */}
+                  <TabPanel value={tabValue} index={6}>
+                    <Grid container spacing={3} sx={{ p: 3 }}>
+                      {filteredPatients.length === 0 ? (
+                        <Grid item xs={12}>
+                          <Card sx={{ p: 6, textAlign: 'center' }}>
+                            <People sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+                            <Typography variant="h5" color="text.secondary" sx={{ mb: 1 }}>
+                              No discharged patients
+                            </Typography>
+                            <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+                              Discharged patients will appear here
+                            </Typography>
+                          </Card>
+                        </Grid>
+                      ) : (
+                        filteredPatients.map((patient) => (
+                        <Grid item xs={12} sm={6} md={4} key={patient.id}>
+                          <Card sx={{ height: '100%', '&:hover': { boxShadow: 4 } }}>
+                            <CardContent sx={{ p: 3 }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                                <Avatar
+                                  sx={{
+                                    width: 50,
+                                    height: 50,
+                                    mr: 2,
+                                    backgroundColor: 'primary.main',
+                                  }}
+                                >
+                                  {patient.avatar}
+                                </Avatar>
+                                <Box sx={{ flexGrow: 1 }}>
+                                  <Typography 
+                                    variant="h6" 
+                                    sx={{ 
+                                      fontWeight: 600, 
+                                      mb: 0.5,
+                                      color: 'primary.main',
+                                      cursor: 'pointer',
+                                      '&:hover': { textDecoration: 'underline' }
+                                    }}
+                                    onClick={() => handleOpenPatientProfile(patient)}
+                                  >
+                                    {patient.name}
+                                  </Typography>
+                                  <Typography variant="body2" color="text.secondary">
+                                    {patient.gender}, {patient.age} years
+                                  </Typography>
+                                </Box>
+                                <Tooltip title="Click to change status" arrow>
+                                  <Chip
+                                    label={patient.status}
+                                    color={getStatusColor(patient.status) as any}
+                                    size="small"
+                                    variant="outlined"
+                                    onClick={(e) => handleQuickStatusEdit(patient, e)}
+                                    sx={{ 
+                                      cursor: 'pointer',
+                                      '&:hover': { 
+                                        backgroundColor: 'primary.light',
+                                        transform: 'scale(1.05)'
+                                      },
+                                      transition: 'all 0.2s ease'
+                                    }}
+                                  />
+                                </Tooltip>
+                              </Box>
+                              
+                              <Divider sx={{ my: 2 }} />
+                              
+                              <Box sx={{ mb: 2 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
+                                  <Typography variant="body2" color="text.secondary">
+                                    Phone: {patient.phone}
+                                  </Typography>
+                                  <WhatsApp sx={{ fontSize: 14, color: '#25D366' }} />
+                                </Box>
+                                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                  Condition: {patient.condition}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                  Last Visit: {patient.lastVisit}
+                                </Typography>
+                                <Typography variant="body2" color="primary.main" fontWeight={600}>
+                                  Next: {patient.nextAppointment}
+                                </Typography>
+                              </Box>
+                              
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
+                                <Tooltip title="Medical Notes & History">
+                                  <IconButton 
+                                    size="small" 
+                                    color="primary"
+                                    onClick={() => handleOpenPatientProfile(patient)}
+                                  >
+                                    <Assignment fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Send WhatsApp Message">
+                                  <IconButton 
+                                    size="small"
+                                    onClick={() => handleWhatsAppMessage(patient.phone, patient.name)}
+                                    sx={{ color: '#25D366' }}
+                                  >
+                                    <WhatsApp fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Schedule Appointment">
+                                  <IconButton 
+                                    size="small" 
+                                    color="primary"
+                                    onClick={() => handleScheduleAppointment(patient)}
+                                  >
+                                    <CalendarToday fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Edit Patient">
+                                  <IconButton 
+                                    size="small" 
+                                    color="primary"
+                                    onClick={() => handleEditPatient(patient)}
+                                  >
+                                    <Edit fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                              </Box>
+                            </CardContent>
+                          </Card>
+                        </Grid>
+                        ))
+                      )}
+                    </Grid>
+                  </TabPanel>
+                </>
               )}
             </CardContent>
           </Card>
@@ -1518,11 +3343,11 @@ const PatientListPage: React.FC = () => {
                 All Statuses
               </MenuItem>
               <MenuItem 
-                onClick={() => handleFilterSelect('status', 'active')}
-                selected={activeFilters.status === 'active'}
+                onClick={() => handleFilterSelect('status', 'old')}
+                selected={activeFilters.status === 'old'}
                 dense
               >
-                Active Patients
+                Old Patients
               </MenuItem>
               <MenuItem 
                 onClick={() => handleFilterSelect('status', 'new')}
@@ -1537,6 +3362,13 @@ const PatientListPage: React.FC = () => {
                 dense
               >
                 Follow-up Required
+              </MenuItem>
+              <MenuItem 
+                onClick={() => handleFilterSelect('status', 'admitted')}
+                selected={activeFilters.status === 'admitted'}
+                dense
+              >
+                Under Observation
               </MenuItem>
             </Box>
 
@@ -2470,7 +4302,7 @@ const PatientListPage: React.FC = () => {
                       <MenuItem value="new">New Patient</MenuItem>
                       <MenuItem value="active">Active</MenuItem>
                       <MenuItem value="follow-up">Follow-up Required</MenuItem>
-                      <MenuItem value="inactive">Inactive</MenuItem>
+                      <MenuItem value="admitted">Under Observation</MenuItem>
                       <MenuItem value="transferred">Transferred</MenuItem>
                       <MenuItem value="discharged">Discharged</MenuItem>
                     </Select>
@@ -3374,17 +5206,17 @@ const PatientListPage: React.FC = () => {
             </MenuItem>
             
             <MenuItem 
-              onClick={() => handleStatusChange('active')}
-              selected={statusEditPatient?.status === 'active'}
+              onClick={() => handleStatusChange('old')}
+              selected={statusEditPatient?.status === 'old'}
             >
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Chip 
-                  label="Active" 
+                  label="Old" 
                   color="success" 
                   size="small" 
                   variant="outlined" 
                 />
-                <Typography variant="body2">Active Patient</Typography>
+                <Typography variant="body2">Old Patient</Typography>
               </Box>
             </MenuItem>
             
@@ -3404,17 +5236,17 @@ const PatientListPage: React.FC = () => {
             </MenuItem>
             
             <MenuItem 
-              onClick={() => handleStatusChange('inactive')}
-              selected={statusEditPatient?.status === 'inactive'}
+              onClick={() => handleStatusChange('admitted')}
+              selected={statusEditPatient?.status === 'admitted'}
             >
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Chip 
-                  label="Inactive" 
-                  color="default" 
+                  label="Under Observation" 
+                  color="secondary" 
                   size="small" 
                   variant="outlined" 
                 />
-                <Typography variant="body2">Inactive Patient</Typography>
+                <Typography variant="body2">Under Observation / Admitted for Delivery</Typography>
               </Box>
             </MenuItem>
             

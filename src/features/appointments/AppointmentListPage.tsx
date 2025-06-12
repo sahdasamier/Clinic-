@@ -60,6 +60,7 @@ import {
   Today,
   ViewWeek,
   ViewModule,
+  BarChart,
 } from '@mui/icons-material';
 import Header from '../../components/Header';
 import Sidebar from '../../components/Sidebar';
@@ -171,6 +172,57 @@ const appointments = [
     completed: false,
     priority: 'normal',
   },
+  {
+    id: 6,
+    patient: 'Layla Hassan',
+    patientAvatar: 'LH',
+    date: '2024-01-21',
+    time: '2:00 PM',
+    timeSlot: '14:00',
+    duration: 30,
+    doctor: 'Dr. Sarah Ahmed',
+    type: 'Check-up',
+    status: 'cancelled',
+    location: 'Room 101',
+    phone: '+971 50 678 9012',
+    notes: 'Patient cancelled due to emergency',
+    completed: false,
+    priority: 'normal',
+  },
+  {
+    id: 7,
+    patient: 'Khalid Al-Mansouri',
+    patientAvatar: 'KM',
+    date: '2024-01-21',
+    time: '3:30 PM',
+    timeSlot: '15:30',
+    duration: 20,
+    doctor: 'Dr. Sarah Ahmed',
+    type: 'Follow-up',
+    status: 'rescheduled',
+    location: 'Room 101',
+    phone: '+971 50 789 0123',
+    notes: 'Rescheduled from previous week',
+    completed: false,
+    priority: 'normal',
+  },
+  {
+    id: 8,
+    patient: 'Amina Farid',
+    patientAvatar: 'AF',
+    date: '2024-01-19',
+    time: '11:00 AM',
+    timeSlot: '11:00',
+    duration: 25,
+    doctor: 'Dr. Sarah Ahmed',
+    type: 'Consultation',
+    status: 'no-show',
+    location: 'Room 101',
+    phone: '+971 50 890 1234',
+    notes: 'Patient did not show up',
+    completed: false,
+    priority: 'normal',
+  },
 ];
 
 const StatCard: React.FC<{
@@ -233,6 +285,8 @@ const AppointmentListPage: React.FC = () => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [viewNotesOpen, setViewNotesOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
+  const [statusMenuAnchor, setStatusMenuAnchor] = useState<null | HTMLElement>(null);
+  const [statusEditAppointment, setStatusEditAppointment] = useState<any>(null);
   const [newAppointment, setNewAppointment] = useState({
     patient: '',
     doctor: '',
@@ -358,6 +412,28 @@ const AppointmentListPage: React.FC = () => {
     setViewNotesOpen(true);
   };
 
+  // Add status editing functions
+  const handleQuickStatusEdit = (appointment: any, event: React.MouseEvent) => {
+    event.stopPropagation(); // Prevent row/card click
+    setStatusEditAppointment(appointment);
+    setStatusMenuAnchor(event.currentTarget as HTMLElement);
+  };
+
+  const handleStatusChange = (newStatus: string) => {
+    if (!statusEditAppointment) return;
+
+    setAppointmentList(prev => 
+      prev.map(apt => 
+        apt.id === statusEditAppointment.id 
+          ? { ...apt, status: newStatus }
+          : apt
+      )
+    );
+
+    setStatusMenuAnchor(null);
+    setStatusEditAppointment(null);
+  };
+
   const handleSaveAppointment = () => {
     if (selectedAppointment) {
       // Edit existing appointment
@@ -441,6 +517,10 @@ const AppointmentListPage: React.FC = () => {
         return 'info';
       case 'cancelled':
         return 'error';
+      case 'rescheduled':
+        return 'info';
+      case 'no-show':
+        return 'secondary';
       default:
         return 'default';
     }
@@ -455,6 +535,10 @@ const AppointmentListPage: React.FC = () => {
       case 'completed':
         return <CheckCircle fontSize="small" />;
       case 'cancelled':
+        return <Cancel fontSize="small" />;
+      case 'rescheduled':
+        return <Schedule fontSize="small" />;
+      case 'no-show':
         return <Cancel fontSize="small" />;
       default:
         return <Schedule fontSize="small" />;
@@ -499,11 +583,26 @@ const AppointmentListPage: React.FC = () => {
       case 1: // Today
         filtered = filtered.filter(apt => apt.date === selectedDate);
         break;
-      case 2: // Pending
+      case 2: // Pending (not completed)
         filtered = filtered.filter(apt => !apt.completed);
         break;
       case 3: // Completed
         filtered = filtered.filter(apt => apt.completed);
+        break;
+      case 4: // Confirmed Status
+        filtered = filtered.filter(apt => apt.status === 'confirmed');
+        break;
+      case 5: // Pending Confirmation Status
+        filtered = filtered.filter(apt => apt.status === 'pending');
+        break;
+      case 6: // Cancelled Status
+        filtered = filtered.filter(apt => apt.status === 'cancelled');
+        break;
+      case 7: // Rescheduled Status
+        filtered = filtered.filter(apt => apt.status === 'rescheduled');
+        break;
+      case 8: // No-show Status
+        filtered = filtered.filter(apt => apt.status === 'no-show');
         break;
       default: // All
         break;
@@ -544,11 +643,24 @@ const AppointmentListPage: React.FC = () => {
               </Box>
               <Button
                 variant="contained"
+                size="large"
                 startIcon={<Add />}
                 onClick={() => setAddAppointmentOpen(true)}
-                sx={{ borderRadius: 3 }}
+                sx={{ 
+                  borderRadius: 3,
+                  px: 4,
+                  py: 1.5,
+                  background: 'linear-gradient(45deg, #FE6B8B 30%, #FF8E53 90%)',
+                  boxShadow: '0 3px 5px 2px rgba(255, 105, 135, .3)',
+                  '&:hover': {
+                    background: 'linear-gradient(45deg, #FE6B8B 60%, #FF8E53 100%)',
+                    transform: 'translateY(-1px)',
+                    boxShadow: '0 6px 10px 2px rgba(255, 105, 135, .3)',
+                  },
+                  transition: 'all 0.3s ease'
+                }}
               >
-                Schedule Appointment
+                Schedule New Appointment
               </Button>
             </Box>
           </Box>
@@ -593,11 +705,9 @@ const AppointmentListPage: React.FC = () => {
             </Grid>
           </Grid>
 
-          <Grid container spacing={3}>
-            {/* Main Appointments View */}
-            <Grid item xs={12} lg={8}>
-              <Card>
-                <CardContent sx={{ p: 0 }}>
+          {/* Main Appointments Table - Full Width */}
+          <Card sx={{ borderRadius: 3, boxShadow: 3, mb: 4 }}>
+            <CardContent sx={{ p: 0 }}>
                   {/* Search and Filters */}
                   <Box sx={{ p: 3, borderBottom: 1, borderColor: 'divider' }}>
                     <Grid container spacing={2} alignItems="center">
@@ -744,19 +854,166 @@ const AppointmentListPage: React.FC = () => {
                     </Box>
                   )}
 
-                  {/* Tabs */}
+                  {/* Enhanced Tabs */}
                   <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 3 }}>
-                    <Tabs value={tabValue} onChange={handleTabChange}>
-                      <Tab label={`All (${filteredAppointments.length})`} />
-                      <Tab label={`Today (${filteredAppointments.filter(apt => apt.date === selectedDate).length})`} />
-                      <Tab label={`Pending (${filteredAppointments.filter(apt => !apt.completed).length})`} />
-                      <Tab label={`Completed (${filteredAppointments.filter(apt => apt.completed).length})`} />
+                    <Tabs 
+                      value={tabValue} 
+                      onChange={handleTabChange}
+                      variant="scrollable"
+                      scrollButtons="auto"
+                      allowScrollButtonsMobile
+                      sx={{
+                        '& .MuiTab-root': {
+                          textTransform: 'none',
+                          fontWeight: 600,
+                          fontSize: '0.95rem',
+                          minWidth: 'auto',
+                          padding: '12px 16px',
+                          '&.Mui-selected': {
+                            color: 'primary.main',
+                          }
+                        },
+                        '& .MuiTabs-indicator': {
+                          height: 3,
+                          borderRadius: '3px 3px 0 0',
+                        },
+                        '& .MuiTabs-scrollButtons': {
+                          color: 'primary.main',
+                        }
+                      }}
+                    >
+                      <Tab 
+                        label={
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <CalendarToday fontSize="small" />
+                            <span>All</span>
+                            <Chip 
+                              label={appointmentList.length} 
+                              size="small" 
+                              color="primary"
+                              sx={{ height: 20, fontSize: '0.75rem' }}
+                            />
+                          </Box>
+                        }
+                      />
+                      <Tab 
+                        label={
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Today fontSize="small" />
+                            <span>Today</span>
+                            <Chip 
+                              label={appointmentList.filter(apt => apt.date === selectedDate).length} 
+                              size="small" 
+                              color="info"
+                              sx={{ height: 20, fontSize: '0.75rem' }}
+                            />
+                          </Box>
+                        }
+                      />
+                      <Tab 
+                        label={
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <AccessTime fontSize="small" />
+                            <span>Pending</span>
+                            <Chip 
+                              label={appointmentList.filter(apt => !apt.completed).length} 
+                              size="small" 
+                              color="warning"
+                              sx={{ height: 20, fontSize: '0.75rem' }}
+                            />
+                          </Box>
+                        }
+                      />
+                      <Tab 
+                        label={
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <CheckCircle fontSize="small" />
+                            <span>Completed</span>
+                            <Chip 
+                              label={appointmentList.filter(apt => apt.completed).length} 
+                              size="small" 
+                              color="success"
+                              sx={{ height: 20, fontSize: '0.75rem' }}
+                            />
+                          </Box>
+                        }
+                      />
+                      <Tab 
+                        label={
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <CheckCircle fontSize="small" />
+                            <span>Confirmed</span>
+                            <Chip 
+                              label={appointmentList.filter(apt => apt.status === 'confirmed').length} 
+                              size="small" 
+                              color="success"
+                              sx={{ height: 20, fontSize: '0.75rem' }}
+                            />
+                          </Box>
+                        }
+                      />
+                      <Tab 
+                        label={
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <AccessTime fontSize="small" />
+                            <span>Pending Conf.</span>
+                            <Chip 
+                              label={appointmentList.filter(apt => apt.status === 'pending').length} 
+                              size="small" 
+                              color="warning"
+                              sx={{ height: 20, fontSize: '0.75rem' }}
+                            />
+                          </Box>
+                        }
+                      />
+                      <Tab 
+                        label={
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Cancel fontSize="small" />
+                            <span>Cancelled</span>
+                            <Chip 
+                              label={appointmentList.filter(apt => apt.status === 'cancelled').length} 
+                              size="small" 
+                              color="error"
+                              sx={{ height: 20, fontSize: '0.75rem' }}
+                            />
+                          </Box>
+                        }
+                      />
+                      <Tab 
+                        label={
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Schedule fontSize="small" />
+                            <span>Rescheduled</span>
+                            <Chip 
+                              label={appointmentList.filter(apt => apt.status === 'rescheduled').length} 
+                              size="small" 
+                              color="info"
+                              sx={{ height: 20, fontSize: '0.75rem' }}
+                            />
+                          </Box>
+                        }
+                      />
+                      <Tab 
+                        label={
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Cancel fontSize="small" />
+                            <span>No-show</span>
+                            <Chip 
+                              label={appointmentList.filter(apt => apt.status === 'no-show').length} 
+                              size="small" 
+                              color="secondary"
+                              sx={{ height: 20, fontSize: '0.75rem' }}
+                            />
+                          </Box>
+                        }
+                      />
                     </Tabs>
                   </Box>
 
                   {/* Appointments List - Table View */}
                   {viewMode === 'table' && (
-                    <TabPanel value={tabValue} index={0}>
+                    <Box sx={{ py: 3 }}>
                       <TableContainer>
                         <Table>
                           <TableHead>
@@ -798,10 +1055,26 @@ const AppointmentListPage: React.FC = () => {
                                   <Box>
                                     <CalendarToday sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
                                     <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
-                                      No appointments found
+                                      {tabValue === 1 ? 'No appointments scheduled for today' :
+                                       tabValue === 2 ? 'No pending appointments' :
+                                       tabValue === 3 ? 'No completed appointments' :
+                                       tabValue === 4 ? 'No confirmed appointments' :
+                                       tabValue === 5 ? 'No pending confirmation appointments' :
+                                       tabValue === 6 ? 'No cancelled appointments' :
+                                       tabValue === 7 ? 'No rescheduled appointments' :
+                                       tabValue === 8 ? 'No no-show appointments' :
+                                       'No appointments found'}
                                     </Typography>
                                     <Typography variant="body2" color="text.secondary">
-                                      Schedule your first appointment to get started
+                                      {tabValue === 1 ? 'Schedule some appointments for today' :
+                                       tabValue === 2 ? 'All appointments are completed or confirmed' :
+                                       tabValue === 3 ? 'Complete some appointments to see them here' :
+                                       tabValue === 4 ? 'No appointments with confirmed status yet' :
+                                       tabValue === 5 ? 'All appointments have been confirmed' :
+                                       tabValue === 6 ? 'No appointments have been cancelled' :
+                                       tabValue === 7 ? 'No appointments have been rescheduled' :
+                                       tabValue === 8 ? 'No patients have missed their appointments' :
+                                       'Schedule your first appointment to get started'}
                                     </Typography>
                                   </Box>
                                 </TableCell>
@@ -889,13 +1162,24 @@ const AppointmentListPage: React.FC = () => {
                                   />
                                 </TableCell>
                                 <TableCell>
-                                  <Chip
-                                    icon={getStatusIcon(appointment.status)}
-                                    label={appointment.completed ? 'completed' : appointment.status}
-                                    color={appointment.completed ? 'success' : getStatusColor(appointment.status) as any}
-                                    size="small"
-                                    variant="outlined"
-                                  />
+                                  <Tooltip title="Click to change status" arrow>
+                                    <Chip
+                                      icon={getStatusIcon(appointment.status)}
+                                      label={appointment.completed ? 'completed' : appointment.status}
+                                      color={appointment.completed ? 'success' : getStatusColor(appointment.status) as any}
+                                      size="small"
+                                      variant="outlined"
+                                      onClick={(e) => handleQuickStatusEdit(appointment, e)}
+                                      sx={{ 
+                                        cursor: 'pointer',
+                                        '&:hover': { 
+                                          backgroundColor: 'primary.light',
+                                          transform: 'scale(1.05)'
+                                        },
+                                        transition: 'all 0.2s ease'
+                                      }}
+                                    />
+                                  </Tooltip>
                                 </TableCell>
                                 <TableCell>
                                   <Box sx={{ display: 'flex', gap: 0.5 }}>
@@ -903,7 +1187,10 @@ const AppointmentListPage: React.FC = () => {
                                       <IconButton 
                                         size="small" 
                                         color="primary"
-                                        onClick={() => handleViewNotes(appointment)}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleViewNotes(appointment);
+                                        }}
                                       >
                                         <Visibility fontSize="small" />
                                       </IconButton>
@@ -912,7 +1199,10 @@ const AppointmentListPage: React.FC = () => {
                                       <IconButton 
                                         size="small" 
                                         color="primary"
-                                        onClick={() => handleEditAppointment(appointment)}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleEditAppointment(appointment);
+                                        }}
                                       >
                                         <Edit fontSize="small" />
                                       </IconButton>
@@ -921,7 +1211,8 @@ const AppointmentListPage: React.FC = () => {
                                       <IconButton 
                                         size="small" 
                                         sx={{ color: '#25D366' }}
-                                        onClick={() => {
+                                        onClick={(e) => {
+                                          e.stopPropagation();
                                           const message = `Hello ${appointment.patient}, this is a reminder for your ${appointment.type} appointment today at ${appointment.time}.`;
                                           const phone = appointment.phone.replace(/\D/g, '');
                                           window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
@@ -938,12 +1229,12 @@ const AppointmentListPage: React.FC = () => {
                           </TableBody>
                         </Table>
                       </TableContainer>
-                    </TabPanel>
+                    </Box>
                   )}
 
                   {/* Appointments List - Cards View */}
                   {viewMode === 'cards' && (
-                    <TabPanel value={tabValue} index={0}>
+                    <Box sx={{ py: 3 }}>
                       <Grid container spacing={3} sx={{ p: 3 }}>
                         {filteredAppointments.length === 0 && getActiveFilterCount() > 0 ? (
                           <Grid item xs={12}>
@@ -969,10 +1260,26 @@ const AppointmentListPage: React.FC = () => {
                             <Card sx={{ p: 6, textAlign: 'center' }}>
                               <CalendarToday sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
                               <Typography variant="h5" color="text.secondary" sx={{ mb: 1 }}>
-                                No appointments found
+                                {tabValue === 1 ? 'No appointments scheduled for today' :
+                                 tabValue === 2 ? 'No pending appointments' :
+                                 tabValue === 3 ? 'No completed appointments' :
+                                 tabValue === 4 ? 'No confirmed appointments' :
+                                 tabValue === 5 ? 'No pending confirmation appointments' :
+                                 tabValue === 6 ? 'No cancelled appointments' :
+                                 tabValue === 7 ? 'No rescheduled appointments' :
+                                 tabValue === 8 ? 'No no-show appointments' :
+                                 'No appointments found'}
                               </Typography>
                               <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-                                Schedule your first appointment to get started
+                                {tabValue === 1 ? 'Schedule some appointments for today' :
+                                 tabValue === 2 ? 'All appointments are completed or confirmed' :
+                                 tabValue === 3 ? 'Complete some appointments to see them here' :
+                                 tabValue === 4 ? 'No appointments with confirmed status yet' :
+                                 tabValue === 5 ? 'All appointments have been confirmed' :
+                                 tabValue === 6 ? 'No appointments have been cancelled' :
+                                 tabValue === 7 ? 'No appointments have been rescheduled' :
+                                 tabValue === 8 ? 'No patients have missed their appointments' :
+                                 'Schedule your first appointment to get started'}
                               </Typography>
                               <Button 
                                 variant="contained" 
@@ -1013,13 +1320,24 @@ const AppointmentListPage: React.FC = () => {
                                       </Typography>
                                     </Box>
                                   </Box>
-                                  <Chip
-                                    icon={getStatusIcon(appointment.status)}
-                                    label={appointment.status}
-                                    color={getStatusColor(appointment.status) as any}
-                                    size="small"
-                                    variant="outlined"
-                                  />
+                                  <Tooltip title="Click to change status" arrow>
+                                    <Chip
+                                      icon={getStatusIcon(appointment.status)}
+                                      label={appointment.status}
+                                      color={getStatusColor(appointment.status) as any}
+                                      size="small"
+                                      variant="outlined"
+                                      onClick={(e) => handleQuickStatusEdit(appointment, e)}
+                                      sx={{ 
+                                        cursor: 'pointer',
+                                        '&:hover': { 
+                                          backgroundColor: 'primary.light',
+                                          transform: 'scale(1.05)'
+                                        },
+                                        transition: 'all 0.2s ease'
+                                      }}
+                                    />
+                                  </Tooltip>
                                 </Box>
                                 
                                 <Divider sx={{ my: 2 }} />
@@ -1081,7 +1399,8 @@ const AppointmentListPage: React.FC = () => {
                                       size="small" 
                                       startIcon={<Phone />}
                                       sx={{ color: '#25D366' }}
-                                      onClick={() => {
+                                      onClick={(e) => {
+                                        e.stopPropagation();
                                         const message = `Hello ${appointment.patient}, this is a reminder for your ${appointment.type} appointment today at ${appointment.time}.`;
                                         const phone = appointment.phone.replace(/\D/g, '');
                                         window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
@@ -1106,218 +1425,365 @@ const AppointmentListPage: React.FC = () => {
                           ))
                         )}
                       </Grid>
-                    </TabPanel>
+                    </Box>
+                  )}
+                </CardContent>
+              </Card>
+
+          {/* Professional Dashboard Sections Below Main Table */}
+          <Grid container spacing={4}>
+            {/* Today's Schedule Section */}
+            <Grid item xs={12} md={8}>
+              <Card sx={{ 
+                borderRadius: 3, 
+                boxShadow: 3, 
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                color: 'white',
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                <Box sx={{ 
+                  position: 'absolute', 
+                  top: 0, 
+                  right: 0, 
+                  width: 100, 
+                  height: 100, 
+                  background: 'rgba(255,255,255,0.1)', 
+                  borderRadius: '50%', 
+                  transform: 'translate(30px, -30px)' 
+                }} />
+                <CardContent sx={{ p: 4, position: 'relative', zIndex: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <Today sx={{ fontSize: 32 }} />
+                      <Box>
+                        <Typography variant="h5" sx={{ fontWeight: 700, mb: 0.5 }}>
+                          Today's Schedule
+                        </Typography>
+                        <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                          {todayAppointments.length} appointments • Finishing at {calculateEstimatedFinishTime()}
+                        </Typography>
+                      </Box>
+                    </Box>
+                    <Chip 
+                      label={`${completedToday}/${todayAppointments.length} Done`}
+                      sx={{ 
+                        backgroundColor: 'rgba(255,255,255,0.2)', 
+                        color: 'white',
+                        fontWeight: 600
+                      }}
+                    />
+                  </Box>
+                  
+                                     {todayAppointments.length === 0 ? (
+                     <Box sx={{ textAlign: 'center', py: 4 }}>
+                       <CalendarToday sx={{ fontSize: 48, mb: 2, opacity: 0.7 }} />
+                       <Typography variant="h6" sx={{ mb: 1, opacity: 0.9 }}>
+                         No appointments today
+                       </Typography>
+                       <Typography variant="body2" sx={{ opacity: 0.7, mb: 3 }}>
+                         Enjoy your free day or schedule some appointments
+                       </Typography>
+                       <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
+                         <Button
+                           variant="outlined"
+                           startIcon={<Add />}
+                           onClick={() => setAddAppointmentOpen(true)}
+                           sx={{ 
+                             color: 'white', 
+                             borderColor: 'rgba(255,255,255,0.5)',
+                             '&:hover': { 
+                               borderColor: 'white',
+                               backgroundColor: 'rgba(255,255,255,0.1)'
+                             }
+                           }}
+                         >
+                           Schedule
+                         </Button>
+                         <Button
+                           variant="outlined"
+                           startIcon={<People />}
+                           onClick={() => window.location.href = '/patients'}
+                           sx={{ 
+                             color: 'white', 
+                             borderColor: 'rgba(255,255,255,0.5)',
+                             '&:hover': { 
+                               borderColor: 'white',
+                               backgroundColor: 'rgba(255,255,255,0.1)'
+                             }
+                           }}
+                         >
+                           Patients
+                         </Button>
+                       </Box>
+                     </Box>
+                  ) : (
+                    <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                      {todayAppointments.slice(0, 3).map((appointment) => (
+                        <Card 
+                          key={appointment.id}
+                          sx={{ 
+                            minWidth: 200,
+                            backgroundColor: 'rgba(255,255,255,0.15)',
+                            backdropFilter: 'blur(10px)',
+                            border: '1px solid rgba(255,255,255,0.2)',
+                            cursor: 'pointer',
+                            '&:hover': { 
+                              backgroundColor: 'rgba(255,255,255,0.25)',
+                              transform: 'translateY(-2px)'
+                            },
+                            transition: 'all 0.3s ease'
+                          }}
+                          onClick={(e) => handleQuickStatusEdit(appointment, e)}
+                        >
+                          <CardContent sx={{ p: 2, color: 'white' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                              <Avatar sx={{ width: 24, height: 24, mr: 1, fontSize: '0.75rem' }}>
+                                {appointment.patientAvatar}
+                              </Avatar>
+                              <Typography variant="body2" fontWeight={600}>
+                                {appointment.patient}
+                              </Typography>
+                            </Box>
+                            <Typography variant="caption" sx={{ opacity: 0.9, display: 'block' }}>
+                              {appointment.time} • {appointment.type}
+                            </Typography>
+                            <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                              <Chip 
+                                size="small" 
+                                label={appointment.status}
+                                sx={{ 
+                                  backgroundColor: 'rgba(255,255,255,0.2)',
+                                  color: 'white',
+                                  fontSize: '0.65rem'
+                                }}
+                              />
+                              {appointment.completed && (
+                                <CheckCircle sx={{ fontSize: 16, color: '#4CAF50' }} />
+                              )}
+                            </Box>
+                          </CardContent>
+                        </Card>
+                      ))}
+                      {todayAppointments.length > 3 && (
+                        <Card sx={{ 
+                          minWidth: 120,
+                          backgroundColor: 'rgba(255,255,255,0.1)',
+                          border: '2px dashed rgba(255,255,255,0.3)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer',
+                          '&:hover': { backgroundColor: 'rgba(255,255,255,0.15)' }
+                        }}>
+                          <CardContent sx={{ textAlign: 'center', color: 'white' }}>
+                            <Typography variant="h6" fontWeight={700}>
+                              +{todayAppointments.length - 3}
+                            </Typography>
+                            <Typography variant="caption" sx={{ opacity: 0.8 }}>
+                              more appointments
+                            </Typography>
+                          </CardContent>
+                        </Card>
+                      )}
+                    </Box>
                   )}
                 </CardContent>
               </Card>
             </Grid>
 
-            {/* Right Sidebar - Quick Info */}
-            <Grid item xs={12} lg={4}>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                {/* Today's Schedule - Todo Style */}
-                <Card>
-                  <CardContent sx={{ p: 3 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                      <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                        Today's Schedule
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {calculateEstimatedFinishTime()}
-                      </Typography>
-                    </Box>
-                    <List sx={{ p: 0, maxHeight: 400, overflow: 'auto' }}>
-                      {todayAppointments.length === 0 ? (
-                        <ListItem sx={{ justifyContent: 'center', py: 4 }}>
-                          <Box sx={{ textAlign: 'center' }}>
-                            <CalendarToday sx={{ fontSize: 48, color: 'text.secondary', mb: 1 }} />
-                            <Typography variant="body2" color="text.secondary">
-                              No appointments scheduled for today
-                            </Typography>
-                          </Box>
-                        </ListItem>
-                      ) : (
-                        todayAppointments.map((appointment, index) => (
-                          <React.Fragment key={appointment.id}>
-                            <ListItem 
-                              sx={{ 
-                                px: 0, 
-                                py: 1,
-                                opacity: appointment.completed ? 0.6 : 1,
-                                borderLeft: `3px solid ${getPriorityColor(appointment.priority)}`,
-                                pl: 1,
-                                '&:hover': { backgroundColor: 'action.hover' },
-                                cursor: 'pointer'
-                              }}
-                              onClick={() => handleViewNotes(appointment)}
-                            >
-                              <IconButton
-                                size="small"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  toggleAppointmentCompletion(appointment.id);
-                                }}
-                                sx={{ 
-                                  mr: 1,
-                                  color: appointment.completed ? 'success.main' : 'text.secondary',
-                                  '&:hover': { backgroundColor: 'primary.light' }
-                                }}
-                              >
-                                <CheckCircle fontSize="small" />
-                              </IconButton>
-                              <ListItemAvatar>
-                                <Avatar
-                                  sx={{
-                                    width: 32,
-                                    height: 32,
-                                    backgroundColor: appointment.completed ? 'success.main' : 'primary.main',
-                                    fontSize: '0.75rem',
-                                  }}
-                                >
-                                  {appointment.patientAvatar}
-                                </Avatar>
-                              </ListItemAvatar>
-                              <ListItemText
-                                primary={
-                                  <Typography 
-                                    variant="body2" 
-                                    fontWeight={600}
-                                    sx={{ 
-                                      textDecoration: appointment.completed ? 'line-through' : 'none',
-                                      color: appointment.completed ? 'text.secondary' : 'text.primary'
-                                    }}
-                                  >
-                                    {appointment.patient}
-                                  </Typography>
-                                }
-                                secondary={
-                                  <Box>
-                                    <Typography variant="caption" color="primary.main">
-                                      {appointment.time} ({appointment.duration}m)
-                                    </Typography>
-                                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                                      {appointment.type}
-                                    </Typography>
-                                  </Box>
-                                }
-                              />
-                              <ListItemSecondaryAction>
-                                <IconButton 
-                                  size="small"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    const message = `Hello ${appointment.patient}, this is a reminder for your ${appointment.type} appointment today at ${appointment.time}.`;
-                                    const phone = appointment.phone.replace(/\D/g, '');
-                                    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
-                                  }}
-                                  sx={{ color: '#25D366' }}
-                                >
-                                  <Phone fontSize="small" />
-                                </IconButton>
-                              </ListItemSecondaryAction>
-                            </ListItem>
-                            {index < todayAppointments.length - 1 && <Divider sx={{ ml: 6 }} />}
-                          </React.Fragment>
-                        ))
-                      )}
-                    </List>
-                    <Box sx={{ mt: 2, p: 2, backgroundColor: '#f8f9fa', borderRadius: 2 }}>
-                      <Typography variant="caption" color="text.secondary">
-                        ⏱️ {getRemainingTime()} • {pendingToday} patients remaining
-                      </Typography>
-                    </Box>
-                  </CardContent>
-                </Card>
-
-                {/* Quick Actions */}
-                <Card>
-                  <CardContent sx={{ p: 3 }}>
-                    <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
-                      Quick Actions
+            {/* Quick Performance Insights */}
+            <Grid item xs={12} md={4}>
+              <Card sx={{ 
+                borderRadius: 3, 
+                boxShadow: 3,
+                background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
+                color: 'white',
+                height: '100%',
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                <Box sx={{ 
+                  position: 'absolute', 
+                  bottom: 0, 
+                  left: 0, 
+                  width: 80, 
+                  height: 80, 
+                  background: 'rgba(255,255,255,0.1)', 
+                  borderRadius: '50%', 
+                  transform: 'translate(-20px, 20px)' 
+                }} />
+                <CardContent sx={{ p: 4, position: 'relative', zIndex: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                    <TrendingUp sx={{ fontSize: 28, mr: 2 }} />
+                    <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                      Performance Today
                     </Typography>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                      <Button
-                        variant="contained"
-                        fullWidth
-                        startIcon={<Add />}
-                        onClick={() => setAddAppointmentOpen(true)}
-                      >
-                        Schedule Appointment
-                      </Button>
-                      <Button 
-                        variant="outlined" 
-                        fullWidth 
-                        startIcon={<CalendarToday />}
-                        onClick={() => setTabValue(1)}
-                      >
-                        Today's Schedule ({todayAppointments.length})
-                      </Button>
-                      <Button 
-                        variant="outlined" 
-                        fullWidth 
-                        startIcon={<People />}
-                        onClick={() => window.location.href = '/patients'}
-                      >
-                        Patient List
-                      </Button>
-                      <Button 
-                        variant="outlined" 
-                        fullWidth 
-                        startIcon={<Warning />}
-                        onClick={() => {
-                          setActiveFilters(prev => ({ ...prev, status: 'pending' }));
-                          setTabValue(2);
-                        }}
-                      >
-                        Pending Confirmations ({appointmentList.filter(apt => apt.status === 'pending').length})
-                      </Button>
-                    </Box>
-                  </CardContent>
-                </Card>
-
-                {/* Quick Stats */}
-                <Card>
-                  <CardContent sx={{ p: 3 }}>
-                    <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
-                      Quick Stats
+                  </Box>
+                  
+                  <Box sx={{ mb: 3 }}>
+                    <Typography variant="h2" sx={{ fontWeight: 800, mb: 0.5 }}>
+                      {Math.round((completedToday / (todayAppointments.length || 1)) * 100)}%
                     </Typography>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <Typography variant="body2" color="text.secondary">
-                          Avg. Duration
+                    <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                      Completion Rate
+                    </Typography>
+                  </Box>
+
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                        Completed
+                      </Typography>
+                      <Typography variant="body2" fontWeight={600}>
+                        {completedToday}/{todayAppointments.length}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                        Time Remaining
+                      </Typography>
+                      <Typography variant="body2" fontWeight={600}>
+                        {getRemainingTime().split(' remaining')[0]}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                        Avg. Duration
+                      </Typography>
+                      <Typography variant="body2" fontWeight={600}>
+                        {Math.round(appointmentList.reduce((sum, apt) => sum + apt.duration, 0) / appointmentList.length)} min
+                      </Typography>
+                    </Box>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
+
+            {/* Professional Analytics Dashboard */}
+            <Grid item xs={12}>
+              <Card sx={{ borderRadius: 3, boxShadow: 3 }}>
+                <CardContent sx={{ p: 4 }}>
+                  <Typography variant="h6" sx={{ fontWeight: 700, mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <BarChart sx={{ color: 'primary.main' }} />
+                    Clinic Analytics Overview
+                  </Typography>
+                  
+                  <Grid container spacing={3}>
+                    <Grid item xs={12} sm={6} md={3}>
+                      <Box sx={{ 
+                        p: 3, 
+                        borderRadius: 2, 
+                        backgroundColor: '#E3F2FD',
+                        textAlign: 'center',
+                        position: 'relative',
+                        overflow: 'hidden'
+                      }}>
+                        <Box sx={{ 
+                          position: 'absolute', 
+                          top: -20, 
+                          right: -20, 
+                          width: 60, 
+                          height: 60, 
+                          background: 'rgba(25, 118, 210, 0.1)', 
+                          borderRadius: '50%' 
+                        }} />
+                        <CalendarToday sx={{ fontSize: 32, color: '#1976D2', mb: 1 }} />
+                        <Typography variant="h4" sx={{ fontWeight: 800, color: '#1976D2', mb: 0.5 }}>
+                          {appointmentList.length}
                         </Typography>
-                        <Typography variant="body2" fontWeight={600}>
-                          {Math.round(appointmentList.reduce((sum, apt) => sum + apt.duration, 0) / appointmentList.length)} min
+                        <Typography variant="body2" color="text.secondary">
+                          Total Appointments
                         </Typography>
                       </Box>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <Typography variant="body2" color="text.secondary">
-                          Completion Rate
+                    </Grid>
+
+                    <Grid item xs={12} sm={6} md={3}>
+                      <Box sx={{ 
+                        p: 3, 
+                        borderRadius: 2, 
+                        backgroundColor: '#E8F5E8',
+                        textAlign: 'center',
+                        position: 'relative',
+                        overflow: 'hidden'
+                      }}>
+                        <Box sx={{ 
+                          position: 'absolute', 
+                          top: -20, 
+                          right: -20, 
+                          width: 60, 
+                          height: 60, 
+                          background: 'rgba(46, 125, 50, 0.1)', 
+                          borderRadius: '50%' 
+                        }} />
+                        <CheckCircle sx={{ fontSize: 32, color: '#2E7D32', mb: 1 }} />
+                        <Typography variant="h4" sx={{ fontWeight: 800, color: '#2E7D32', mb: 0.5 }}>
+                          {appointmentList.filter(apt => apt.completed).length}
                         </Typography>
-                        <Typography variant="body2" fontWeight={600} color="success.main">
-                          {Math.round((appointmentList.filter(apt => apt.completed).length / appointmentList.length) * 100)}%
+                        <Typography variant="body2" color="text.secondary">
+                          Completed
                         </Typography>
                       </Box>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                    </Grid>
+
+                    <Grid item xs={12} sm={6} md={3}>
+                      <Box sx={{ 
+                        p: 3, 
+                        borderRadius: 2, 
+                        backgroundColor: '#FFF3E0',
+                        textAlign: 'center',
+                        position: 'relative',
+                        overflow: 'hidden'
+                      }}>
+                        <Box sx={{ 
+                          position: 'absolute', 
+                          top: -20, 
+                          right: -20, 
+                          width: 60, 
+                          height: 60, 
+                          background: 'rgba(245, 124, 0, 0.1)', 
+                          borderRadius: '50%' 
+                        }} />
+                        <Warning sx={{ fontSize: 32, color: '#F57C00', mb: 1 }} />
+                        <Typography variant="h4" sx={{ fontWeight: 800, color: '#F57C00', mb: 0.5 }}>
+                          {appointmentList.filter(apt => apt.status === 'pending').length}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Pending Confirmation
+                        </Typography>
+                      </Box>
+                    </Grid>
+
+                    <Grid item xs={12} sm={6} md={3}>
+                      <Box sx={{ 
+                        p: 3, 
+                        borderRadius: 2, 
+                        backgroundColor: '#FCE4EC',
+                        textAlign: 'center',
+                        position: 'relative',
+                        overflow: 'hidden'
+                      }}>
+                        <Box sx={{ 
+                          position: 'absolute', 
+                          top: -20, 
+                          right: -20, 
+                          width: 60, 
+                          height: 60, 
+                          background: 'rgba(194, 24, 91, 0.1)', 
+                          borderRadius: '50%' 
+                        }} />
+                        <TrendingUp sx={{ fontSize: 32, color: '#C2185B', mb: 1 }} />
+                        <Typography variant="h4" sx={{ fontWeight: 800, color: '#C2185B', mb: 0.5 }}>
+                          {appointmentList.filter(apt => apt.priority === 'high' || apt.priority === 'urgent').length}
+                        </Typography>
                         <Typography variant="body2" color="text.secondary">
                           High Priority
                         </Typography>
-                        <Typography variant="body2" fontWeight={600} color="warning.main">
-                          {appointmentList.filter(apt => apt.priority === 'high' || apt.priority === 'urgent').length}
-                        </Typography>
                       </Box>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <Typography variant="body2" color="text.secondary">
-                          Today's Load
-                        </Typography>
-                        <Typography variant="body2" fontWeight={600} color={todayAppointments.length > 5 ? 'error.main' : 'success.main'}>
-                          {todayAppointments.length}/8 slots
-                        </Typography>
-                      </Box>
-                    </Box>
-                  </CardContent>
-                </Card>
-              </Box>
+                    </Grid>
+                  </Grid>
+                </CardContent>
+              </Card>
             </Grid>
           </Grid>
 
@@ -1385,6 +1851,20 @@ const AppointmentListPage: React.FC = () => {
                 dense
               >
                 Cancelled
+              </MenuItem>
+              <MenuItem 
+                onClick={() => handleFilterSelect('status', 'rescheduled')}
+                selected={activeFilters.status === 'rescheduled'}
+                dense
+              >
+                Rescheduled
+              </MenuItem>
+              <MenuItem 
+                onClick={() => handleFilterSelect('status', 'no-show')}
+                selected={activeFilters.status === 'no-show'}
+                dense
+              >
+                No-show
               </MenuItem>
             </Box>
 
@@ -1753,7 +2233,8 @@ const AppointmentListPage: React.FC = () => {
                     variant="outlined"
                     startIcon={<Phone />}
                     sx={{ color: '#25D366', borderColor: '#25D366' }}
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
                       if (selectedAppointment) {
                         const message = `Hello ${selectedAppointment.patient}, this is regarding your ${selectedAppointment.type} appointment on ${selectedAppointment.date} at ${selectedAppointment.time}.`;
                         const phone = selectedAppointment.phone.replace(/\D/g, '');
@@ -1766,7 +2247,8 @@ const AppointmentListPage: React.FC = () => {
                   <Button
                     variant="outlined"
                     startIcon={<Edit />}
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
                       setViewNotesOpen(false);
                       handleEditAppointment(selectedAppointment);
                     }}
@@ -1780,6 +2262,107 @@ const AppointmentListPage: React.FC = () => {
               <Button onClick={() => setViewNotesOpen(false)}>Close</Button>
             </DialogActions>
           </Dialog>
+
+          {/* Quick Status Edit Menu */}
+          <Menu
+            anchorEl={statusMenuAnchor}
+            open={Boolean(statusMenuAnchor)}
+            onClose={() => {
+              setStatusMenuAnchor(null);
+              setStatusEditAppointment(null);
+            }}
+            PaperProps={{
+              sx: { minWidth: 200 }
+            }}
+          >
+            <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                Change Status
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {statusEditAppointment?.patient}
+              </Typography>
+            </Box>
+            
+            <MenuItem 
+              onClick={() => handleStatusChange('confirmed')}
+              selected={statusEditAppointment?.status === 'confirmed'}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Chip 
+                  icon={<CheckCircle fontSize="small" />}
+                  label="Confirmed" 
+                  color="success" 
+                  size="small" 
+                  variant="outlined" 
+                />
+                <Typography variant="body2">Confirmed</Typography>
+              </Box>
+            </MenuItem>
+            
+            <MenuItem 
+              onClick={() => handleStatusChange('pending')}
+              selected={statusEditAppointment?.status === 'pending'}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Chip 
+                  icon={<AccessTime fontSize="small" />}
+                  label="Pending" 
+                  color="warning" 
+                  size="small" 
+                  variant="outlined" 
+                />
+                <Typography variant="body2">Pending Confirmation</Typography>
+              </Box>
+            </MenuItem>
+            
+            <MenuItem 
+              onClick={() => handleStatusChange('cancelled')}
+              selected={statusEditAppointment?.status === 'cancelled'}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Chip 
+                  icon={<Cancel fontSize="small" />}
+                  label="Cancelled" 
+                  color="error" 
+                  size="small" 
+                  variant="outlined" 
+                />
+                <Typography variant="body2">Cancelled</Typography>
+              </Box>
+            </MenuItem>
+            
+            <MenuItem 
+              onClick={() => handleStatusChange('rescheduled')}
+              selected={statusEditAppointment?.status === 'rescheduled'}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Chip 
+                  icon={<Schedule fontSize="small" />}
+                  label="Rescheduled" 
+                  color="info" 
+                  size="small" 
+                  variant="outlined" 
+                />
+                <Typography variant="body2">Rescheduled</Typography>
+              </Box>
+            </MenuItem>
+            
+            <MenuItem 
+              onClick={() => handleStatusChange('no-show')}
+              selected={statusEditAppointment?.status === 'no-show'}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Chip 
+                  label="No-show" 
+                  color="secondary" 
+                  size="small" 
+                  variant="outlined" 
+                />
+                <Typography variant="body2">No-show</Typography>
+              </Box>
+            </MenuItem>
+          </Menu>
         </Container>
       </Box>
     </Box>
