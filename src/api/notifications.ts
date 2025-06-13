@@ -199,12 +199,18 @@ const generateAppointmentNotifications = (appointments: any[]): Notification[] =
   const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
   appointments.forEach(appointment => {
+    // Check if this is a recent appointment action (within last 5 minutes for real-time feel)
     const appointmentDate = new Date(appointment.createdAt || appointment.date);
-    const timeAgo = getTimeAgo(appointmentDate);
+    const isRecentAction = appointment.updatedAt && 
+      new Date(appointment.updatedAt).getTime() > now.getTime() - 5 * 60 * 1000;
+    
+    // Use current time for recently updated items, otherwise use actual creation time
+    const notificationTime = isRecentAction ? now : appointmentDate;
+    const timeAgo = getTimeAgo(notificationTime);
 
-    // New appointments
+    // New appointments - show for recent appointments or very recent ones
     if (appointment.status === 'confirmed' && 
-        new Date(appointment.createdAt || appointment.date).getTime() > now.getTime() - 24 * 60 * 60 * 1000) {
+        (isRecentAction || appointmentDate.getTime() > now.getTime() - 60 * 60 * 1000)) { // 1 hour window
       notifications.push({
         id: `appointment-new-${appointment.id}`,
         type: 'appointment',
@@ -215,8 +221,8 @@ const generateAppointmentNotifications = (appointments: any[]): Notification[] =
         color: '#3B82F6',
         clinicId: 'clinic-1',
         branchId: 'branch-1',
-        createdAt: appointment.createdAt || appointment.date,
-        updatedAt: appointment.createdAt || appointment.date
+        createdAt: notificationTime.toISOString(),
+        updatedAt: notificationTime.toISOString()
       });
     }
 
@@ -249,8 +255,8 @@ const generateAppointmentNotifications = (appointments: any[]): Notification[] =
         color: '#F59E0B',
         clinicId: 'clinic-1',
         branchId: 'branch-1',
-        createdAt: appointment.createdAt || appointment.date,
-        updatedAt: appointment.createdAt || appointment.date
+        createdAt: notificationTime.toISOString(),
+        updatedAt: notificationTime.toISOString()
       });
     }
 
@@ -266,8 +272,8 @@ const generateAppointmentNotifications = (appointments: any[]): Notification[] =
         color: '#EF4444',
         clinicId: 'clinic-1',
         branchId: 'branch-1',
-        createdAt: appointment.createdAt || appointment.date,
-        updatedAt: appointment.createdAt || appointment.date
+        createdAt: notificationTime.toISOString(),
+        updatedAt: notificationTime.toISOString()
       });
     }
   });
@@ -280,12 +286,18 @@ const generatePaymentNotifications = (payments: any[]): Notification[] => {
   const now = new Date();
 
   payments.forEach(payment => {
+    // Check if this is a recent payment action (within last 5 minutes for real-time feel)
     const paymentDate = new Date(payment.createdAt || payment.date);
-    const timeAgo = getTimeAgo(paymentDate);
+    const isRecentAction = payment.updatedAt && 
+      new Date(payment.updatedAt).getTime() > now.getTime() - 5 * 60 * 1000;
+    
+    // Use current time for recently updated items, otherwise use actual creation time
+    const notificationTime = isRecentAction ? now : paymentDate;
+    const timeAgo = getTimeAgo(notificationTime);
 
-    // Payment received
+    // Payment received - show for recent payments or very recent ones
     if (payment.status === 'paid' && 
-        paymentDate.getTime() > now.getTime() - 24 * 60 * 60 * 1000) {
+        (isRecentAction || paymentDate.getTime() > now.getTime() - 60 * 60 * 1000)) { // 1 hour window
       notifications.push({
         id: `payment-received-${payment.id}`,
         type: 'payment',
@@ -296,8 +308,8 @@ const generatePaymentNotifications = (payments: any[]): Notification[] => {
         color: '#10B981',
         clinicId: 'clinic-1',
         branchId: 'branch-1',
-        createdAt: payment.createdAt || payment.date,
-        updatedAt: payment.createdAt || payment.date
+        createdAt: notificationTime.toISOString(),
+        updatedAt: notificationTime.toISOString()
       });
     }
 
@@ -352,12 +364,18 @@ const generatePatientNotifications = (patients: any[]): Notification[] => {
   const now = new Date();
 
   patients.forEach(patient => {
+    // Check if this is a recent patient action (within last 5 minutes for real-time feel)
     const createdDate = new Date(patient.createdAt || now);
-    const timeAgo = getTimeAgo(createdDate);
+    const isRecentAction = patient.updatedAt && 
+      new Date(patient.updatedAt).getTime() > now.getTime() - 5 * 60 * 1000;
+    
+    // Use current time for recently updated items, otherwise use actual creation time
+    const notificationTime = isRecentAction ? now : createdDate;
+    const timeAgo = getTimeAgo(notificationTime);
 
-    // New patient registrations
+    // New patient registrations - show for recent registrations or very recent ones
     if (patient.status === 'new' && 
-        createdDate.getTime() > now.getTime() - 24 * 60 * 60 * 1000) {
+        (isRecentAction || createdDate.getTime() > now.getTime() - 60 * 60 * 1000)) { // 1 hour window
       notifications.push({
         id: `patient-new-${patient.id}`,
         type: 'system',
@@ -368,8 +386,8 @@ const generatePatientNotifications = (patients: any[]): Notification[] => {
         color: '#8B5CF6',
         clinicId: 'clinic-1',
         branchId: 'branch-1',
-        createdAt: patient.createdAt || now.toISOString(),
-        updatedAt: patient.createdAt || now.toISOString()
+        createdAt: notificationTime.toISOString(),
+        updatedAt: notificationTime.toISOString()
       });
     }
 
@@ -553,6 +571,55 @@ const saveNotificationsToStorage = (notifications: Notification[]) => {
 
 // Simulate network delay
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Helper function to mark an item as recently updated (for notifications)
+export const markAsRecentlyUpdated = (storageKey: string, itemId: string | number) => {
+  try {
+    const data = loadDataFromStorage(storageKey, []);
+    const updatedData = data.map((item: any) => 
+      item.id === itemId ? { ...item, updatedAt: new Date().toISOString() } : item
+    );
+    localStorage.setItem(storageKey, JSON.stringify(updatedData));
+    
+    // Trigger a custom event to notify that data was updated
+    window.dispatchEvent(new CustomEvent('dataUpdated', { 
+      detail: { storageKey, itemId, timestamp: new Date().toISOString() } 
+    }));
+  } catch (error) {
+    console.warn(`Error marking item ${itemId} as recently updated:`, error);
+  }
+};
+
+// Helper function to add a new item with current timestamp
+export const addNewItemToStorage = (storageKey: string, newItem: any) => {
+  try {
+    const data = loadDataFromStorage(storageKey, []);
+    const itemWithTimestamp = {
+      ...newItem,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    
+    // Find the highest ID and increment
+    const maxId = Math.max(0, ...data.map((item: any) => parseInt(item.id) || 0));
+    if (!itemWithTimestamp.id) {
+      itemWithTimestamp.id = maxId + 1;
+    }
+    
+    const updatedData = [...data, itemWithTimestamp];
+    localStorage.setItem(storageKey, JSON.stringify(updatedData));
+    
+    // Trigger a custom event to notify that data was updated
+    window.dispatchEvent(new CustomEvent('dataUpdated', { 
+      detail: { storageKey, itemId: itemWithTimestamp.id, timestamp: new Date().toISOString(), action: 'add' } 
+    }));
+    
+    return itemWithTimestamp;
+  } catch (error) {
+    console.warn('Error adding new item to storage:', error);
+    return newItem;
+  }
+};
 
 // Notifications API
 export const notificationsApi = {

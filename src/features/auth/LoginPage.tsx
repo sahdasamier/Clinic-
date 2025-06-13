@@ -1,6 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '../../api/firebase';
+import { AuthContext } from '../../app/AuthProvider';
 import {
   Box,
   Card,
@@ -9,8 +12,6 @@ import {
   Button,
   Typography,
   Container,
-  FormControlLabel,
-  Checkbox,
   Divider,
   IconButton,
   InputAdornment,
@@ -18,6 +19,8 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
+  Alert,
+  CircularProgress,
 } from '@mui/material';
 import {
   Visibility,
@@ -30,8 +33,24 @@ import {
 
 const LoginPage: React.FC = () => {
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { user } = useContext(AuthContext);
+  
   const [showPassword, setShowPassword] = useState(false);
   const [language, setLanguage] = useState(i18n.language);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  // Redirect if already logged in
+  React.useEffect(() => {
+    if (user) {
+      const from = location.state?.from?.pathname || '/dashboard';
+      navigate(from, { replace: true });
+    }
+  }, [user, navigate, location]);
 
   const handleLanguageChange = (lng: string) => {
     setLanguage(lng);
@@ -39,9 +58,20 @@ const LoginPage: React.FC = () => {
     document.documentElement.dir = i18n.dir();
   };
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    // Handle login logic here
+    setError('');
+    setLoading(true);
+
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      // Navigation will happen automatically via the useEffect above
+    } catch (error: any) {
+      console.error('Login error:', error);
+      setError(error.message || 'Failed to sign in. Please check your credentials.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -118,14 +148,23 @@ const LoginPage: React.FC = () => {
 
             <Divider sx={{ mb: 3 }} />
 
+            {error && (
+              <Alert severity="error" sx={{ mb: 3 }}>
+                {error}
+              </Alert>
+            )}
+
             <form onSubmit={handleSubmit}>
               <Box sx={{ mb: 3 }}>
                 <TextField
                   fullWidth
-                  label={t('email')}
+                  label="Email Address"
                   type="email"
                   variant="outlined"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   required
+                  disabled={loading}
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
@@ -141,13 +180,16 @@ const LoginPage: React.FC = () => {
                 />
               </Box>
 
-              <Box sx={{ mb: 3 }}>
+              <Box sx={{ mb: 4 }}>
                 <TextField
                   fullWidth
-                  label={t('password')}
+                  label="Password"
                   type={showPassword ? 'text' : 'password'}
                   variant="outlined"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   required
+                  disabled={loading}
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
@@ -159,6 +201,7 @@ const LoginPage: React.FC = () => {
                         <IconButton
                           onClick={() => setShowPassword(!showPassword)}
                           edge="end"
+                          disabled={loading}
                         >
                           {showPassword ? <VisibilityOff /> : <Visibility />}
                         </IconButton>
@@ -173,34 +216,12 @@ const LoginPage: React.FC = () => {
                 />
               </Box>
 
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                <FormControlLabel
-                  control={<Checkbox size="small" />}
-                  label={
-                    <Typography variant="body2" color="text.secondary">
-                      Remember me
-                    </Typography>
-                  }
-                />
-                <Link to="/forgot-password" style={{ textDecoration: 'none' }}>
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      color: 'primary.main',
-                      fontWeight: 600,
-                      '&:hover': { textDecoration: 'underline' },
-                    }}
-                  >
-                    {t('forgot_password')}
-                  </Typography>
-                </Link>
-              </Box>
-
               <Button
                 type="submit"
                 fullWidth
                 variant="contained"
                 size="large"
+                disabled={loading}
                 sx={{
                   py: 1.5,
                   borderRadius: 2,
@@ -210,33 +231,21 @@ const LoginPage: React.FC = () => {
                   mb: 3,
                 }}
               >
-                {t('login')}
+                {loading ? (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <CircularProgress size={20} color="inherit" />
+                    Signing in...
+                  </Box>
+                ) : (
+                  'Sign In'
+                )}
               </Button>
             </form>
 
-            <Divider sx={{ mb: 3 }}>
+            <Box sx={{ textAlign: 'center', mt: 2 }}>
               <Typography variant="body2" color="text.secondary">
-                or
+                Authorized access only
               </Typography>
-            </Divider>
-
-            <Box sx={{ textAlign: 'center' }}>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                Don't have an account?
-              </Typography>
-              <Link to="/register" style={{ textDecoration: 'none' }}>
-                <Button
-                  variant="outlined"
-                  fullWidth
-                  sx={{
-                    borderRadius: 2,
-                    textTransform: 'none',
-                    fontWeight: 600,
-                  }}
-                >
-                  {t('register')}
-                </Button>
-              </Link>
             </Box>
           </CardContent>
         </Card>

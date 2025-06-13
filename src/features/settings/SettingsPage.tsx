@@ -535,7 +535,7 @@ const SettingsPage: React.FC = () => {
           URL.revokeObjectURL(csvUrl);
         }, 100);
 
-        setLoading(false);
+      setLoading(false);
         showSnackbar('Complete clinic data exported successfully (JSON & CSV formats)', 'success');
       } catch (error) {
         setLoading(false);
@@ -1552,100 +1552,100 @@ const SettingsPage: React.FC = () => {
                     <Grid container spacing={3}>
                       {/* Profile Statistics Card */}
                       <Grid item xs={12} md={6}>
-                        <Card sx={{ 
-                          borderRadius: 4, 
-                          boxShadow: '0 12px 50px rgba(0,0,0,0.12), 0 6px 30px rgba(0,0,0,0.08)',
-                          border: 'none',
-                          background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
+                    <Card sx={{ 
+                      borderRadius: 4, 
+                      boxShadow: '0 12px 50px rgba(0,0,0,0.12), 0 6px 30px rgba(0,0,0,0.08)',
+                      border: 'none',
+                      background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
                           overflow: 'hidden',
                           height: '100%'
+                    }}>
+                      <CardContent sx={{ p: 0 }}>
+                        {/* Card Header */}
+                        <Box sx={{ 
+                          p: 4,
+                          background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+                          position: 'relative',
+                          borderBottom: '1px solid rgba(147, 197, 253, 0.3)',
+                          '&::before': {
+                            content: '""',
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            height: '4px',
+                            background: 'linear-gradient(90deg, #3b82f6 0%, #06b6d4 100%)'
+                          }
                         }}>
-                          <CardContent sx={{ p: 0 }}>
-                            {/* Card Header */}
-                            <Box sx={{ 
-                              p: 4,
-                              background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
-                              position: 'relative',
-                              borderBottom: '1px solid rgba(147, 197, 253, 0.3)',
-                              '&::before': {
-                                content: '""',
-                                position: 'absolute',
-                                top: 0,
-                                left: 0,
-                                right: 0,
-                                height: '4px',
-                                background: 'linear-gradient(90deg, #3b82f6 0%, #06b6d4 100%)'
-                              }
+                          <Box sx={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: 2.5
+                          }}>
+                            <Box sx={{
+                              p: 2,
+                              borderRadius: 3,
+                              background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                              color: 'white',
+                              boxShadow: '0 8px 25px rgba(59, 130, 246, 0.3)'
                             }}>
-                              <Box sx={{ 
-                                display: 'flex', 
-                                alignItems: 'center', 
-                                gap: 2.5
-                              }}>
-                                <Box sx={{
-                                  p: 2,
-                                  borderRadius: 3,
-                                  background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-                                  color: 'white',
-                                  boxShadow: '0 8px 25px rgba(59, 130, 246, 0.3)'
-                                }}>
-                                  <Business sx={{ fontSize: 24 }} />
-                                </Box>
-                                <Box>
-                                  <Typography variant="h6" sx={{ 
-                                    fontWeight: 800, 
-                                    color: 'grey.800',
-                                    fontSize: '1.3rem',
-                                    mb: 0.2
-                                  }}>
-                                    Profile Statistics
-                                  </Typography>
-                                  <Typography variant="body2" sx={{ 
-                                    color: 'grey.600',
-                                    fontWeight: 500
-                                  }}>
-                                    Performance overview
-                                  </Typography>
-                                </Box>
-                              </Box>
+                              <Business sx={{ fontSize: 24 }} />
                             </Box>
-                            
-                            {/* Card Content */}
-                            <Box sx={{ p: 4 }}>
-                              <List sx={{ p: 0 }}>
-                                <ListItem sx={{ px: 0, py: 1 }}>
-                                  <ListItemIcon>
-                                    <People color="primary" />
-                                  </ListItemIcon>
-                                  <ListItemText
-                                    primary="Total Patients"
-                                    secondary="156"
-                                    primaryTypographyProps={{ variant: 'body2' }}
-                                    secondaryTypographyProps={{ variant: 'h6', fontWeight: 600 }}
-                                  />
-                                </ListItem>
-                                <ListItem sx={{ px: 0, py: 1 }}>
-                                  <ListItemIcon>
-                                    <Schedule color="primary" />
-                                  </ListItemIcon>
-                                  <ListItemText
-                                    primary="Appointments This Month"
-                                    secondary="89"
-                                    primaryTypographyProps={{ variant: 'body2' }}
-                                    secondaryTypographyProps={{ variant: 'h6', fontWeight: 600 }}
-                                  />
-                                </ListItem>
-                                <ListItem sx={{ px: 0, py: 1 }}>
-                                  <ListItemIcon>
-                                    <Business color="primary" />
-                                  </ListItemIcon>
-                                  <ListItemText
-                                    primary="Years of Experience"
-                                    secondary={profile.experience || "8"}
-                                    primaryTypographyProps={{ variant: 'body2' }}
-                                    secondaryTypographyProps={{ variant: 'h6', fontWeight: 600 }}
-                                  />
-                                </ListItem>
+                            <Box>
+                              <Typography variant="h6" sx={{ 
+                                fontWeight: 800, 
+                                color: 'grey.800',
+                                fontSize: '1.3rem',
+                                mb: 0.2
+                              }}>
+                                Profile Statistics
+                        </Typography>
+                              <Typography variant="body2" sx={{ 
+                                color: 'grey.600',
+                                fontWeight: 500
+                              }}>
+                                Performance overview
+                              </Typography>
+                            </Box>
+                          </Box>
+                        </Box>
+                        
+                        {/* Card Content */}
+                        <Box sx={{ p: 4 }}>
+                        <List sx={{ p: 0 }}>
+                          <ListItem sx={{ px: 0, py: 1 }}>
+                            <ListItemIcon>
+                              <People color="primary" />
+                            </ListItemIcon>
+                            <ListItemText
+                              primary="Total Patients"
+                              secondary="156"
+                              primaryTypographyProps={{ variant: 'body2' }}
+                              secondaryTypographyProps={{ variant: 'h6', fontWeight: 600 }}
+                            />
+                          </ListItem>
+                          <ListItem sx={{ px: 0, py: 1 }}>
+                            <ListItemIcon>
+                              <Schedule color="primary" />
+                            </ListItemIcon>
+                            <ListItemText
+                              primary="Appointments This Month"
+                              secondary="89"
+                              primaryTypographyProps={{ variant: 'body2' }}
+                              secondaryTypographyProps={{ variant: 'h6', fontWeight: 600 }}
+                            />
+                          </ListItem>
+                          <ListItem sx={{ px: 0, py: 1 }}>
+                            <ListItemIcon>
+                              <Business color="primary" />
+                            </ListItemIcon>
+                            <ListItemText
+                              primary="Years of Experience"
+                              secondary={profile.experience || "8"}
+                              primaryTypographyProps={{ variant: 'body2' }}
+                              secondaryTypographyProps={{ variant: 'h6', fontWeight: 600 }}
+                            />
+                          </ListItem>
                                 <ListItem sx={{ px: 0, py: 1 }}>
                                   <ListItemIcon>
                                     <Check color="primary" />
@@ -1653,19 +1653,19 @@ const SettingsPage: React.FC = () => {
                                   <ListItemText
                                     primary="Successful Treatments"
                                     secondary="1,247"
-                                    primaryTypographyProps={{ variant: 'body2' }}
-                                    secondaryTypographyProps={{ variant: 'h6', fontWeight: 600 }}
-                                  />
-                                </ListItem>
-                              </List>
-                            </Box>
-                          </CardContent>
-                        </Card>
+                              primaryTypographyProps={{ variant: 'body2' }}
+                              secondaryTypographyProps={{ variant: 'h6', fontWeight: 600 }}
+                            />
+                          </ListItem>
+                        </List>
+                        </Box>
+                      </CardContent>
+                    </Card>
                       </Grid>
 
                       {/* Achievements & Certifications Card */}
                       <Grid item xs={12} md={6}>
-                        <Card sx={{ 
+                    <Card sx={{ 
                           borderRadius: 4, 
                           boxShadow: '0 12px 50px rgba(0,0,0,0.12), 0 6px 30px rgba(0,0,0,0.08)',
                           border: 'none',
@@ -1821,30 +1821,30 @@ const SettingsPage: React.FC = () => {
                             justifyContent: 'space-between'
                           }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2.5 }}>
-                              <Box sx={{
-                                p: 2,
-                                borderRadius: 3,
-                                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                                color: 'white',
-                                boxShadow: '0 8px 25px rgba(16, 185, 129, 0.3)'
+                            <Box sx={{
+                              p: 2,
+                              borderRadius: 3,
+                              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                              color: 'white',
+                              boxShadow: '0 8px 25px rgba(16, 185, 129, 0.3)'
+                            }}>
+                              <Shield sx={{ fontSize: 24 }} />
+                            </Box>
+                            <Box>
+                              <Typography variant="h6" sx={{ 
+                                fontWeight: 800, 
+                                color: 'grey.800',
+                                fontSize: '1.3rem',
+                                mb: 0.2
                               }}>
-                                <Shield sx={{ fontSize: 24 }} />
-                              </Box>
-                              <Box>
-                                <Typography variant="h6" sx={{ 
-                                  fontWeight: 800, 
-                                  color: 'grey.800',
-                                  fontSize: '1.3rem',
-                                  mb: 0.2
-                                }}>
                                   Professional Information & Actions
-                                </Typography>
-                                <Typography variant="body2" sx={{ 
-                                  color: 'grey.600',
-                                  fontWeight: 500
-                                }}>
+                        </Typography>
+                              <Typography variant="body2" sx={{ 
+                                color: 'grey.600',
+                                fontWeight: 500
+                              }}>
                                   License details and quick actions
-                                </Typography>
+                              </Typography>
                               </Box>
                             </Box>
                           </Box>
@@ -1855,97 +1855,97 @@ const SettingsPage: React.FC = () => {
                           <Grid container spacing={4}>
                             {/* License Information */}
                             <Grid item xs={12} md={6}>
-                              <Box sx={{ mb: 2 }}>
-                                <Typography variant="body2" color="text.secondary">
-                                  License Number
-                                </Typography>
-                                <Typography variant="body1" fontWeight={600}>
-                                  {profile.licenseNumber || 'EG-12345-MED'}
-                                </Typography>
-                              </Box>
-                              <Box sx={{ mb: 2 }}>
-                                <Typography variant="body2" color="text.secondary">
-                                  Registration Date
-                                </Typography>
-                                <Typography variant="body1" fontWeight={600}>
-                                  January 15, 2016
-                                </Typography>
-                              </Box>
-                              <Box sx={{ mb: 2 }}>
-                                <Typography variant="body2" color="text.secondary">
-                                  Department
-                                </Typography>
-                                <Typography variant="body1" fontWeight={600}>
-                                  {profile.specialization}
-                                </Typography>
-                              </Box>
-                              <Box sx={{ mb: 2 }}>
-                                <Typography variant="body2" color="text.secondary">
-                                  License Status
-                                </Typography>
-                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                  <Box
-                                    sx={{
-                                      width: 8,
-                                      height: 8,
-                                      borderRadius: '50%',
-                                      backgroundColor: 'success.main',
-                                      mr: 1,
-                                    }}
-                                  />
-                                  <Typography variant="body1" fontWeight={600} color="success.main">
-                                    Active
-                                  </Typography>
-                                </Box>
-                              </Box>
+                        <Box sx={{ mb: 2 }}>
+                          <Typography variant="body2" color="text.secondary">
+                            License Number
+                          </Typography>
+                          <Typography variant="body1" fontWeight={600}>
+                            {profile.licenseNumber || 'EG-12345-MED'}
+                          </Typography>
+                        </Box>
+                        <Box sx={{ mb: 2 }}>
+                          <Typography variant="body2" color="text.secondary">
+                            Registration Date
+                          </Typography>
+                          <Typography variant="body1" fontWeight={600}>
+                            January 15, 2016
+                          </Typography>
+                        </Box>
+                        <Box sx={{ mb: 2 }}>
+                          <Typography variant="body2" color="text.secondary">
+                            Department
+                          </Typography>
+                          <Typography variant="body1" fontWeight={600}>
+                            {profile.specialization}
+                          </Typography>
+                        </Box>
+                        <Box sx={{ mb: 2 }}>
+                          <Typography variant="body2" color="text.secondary">
+                            License Status
+                          </Typography>
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <Box
+                              sx={{
+                                width: 8,
+                                height: 8,
+                                borderRadius: '50%',
+                                backgroundColor: 'success.main',
+                                mr: 1,
+                              }}
+                            />
+                            <Typography variant="body1" fontWeight={600} color="success.main">
+                              Active
+                            </Typography>
+                          </Box>
+                        </Box>
                             </Grid>
 
                             {/* Quick Actions */}
                             <Grid item xs={12} md={6}>
                               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, height: '100%', justifyContent: 'center' }}>
-                                <Button 
-                                  variant="contained" 
-                                  size="medium" 
-                                  fullWidth 
-                                  onClick={() => {
-                                    setCredentialsForm({
-                                      licenseNumber: profile.licenseNumber || '',
-                                      medicalSchool: profile.medicalSchool || '',
-                                      residency: profile.residency || '',
-                                      certifications: profile.certifications || '',
-                                      experience: profile.experience || '',
-                                    });
-                                    setCredentialsDialogOpen(true);
-                                  }}
-                                  sx={{
-                                    borderRadius: 2,
-                                    textTransform: 'none',
-                                    fontWeight: 600,
-                                    py: 1.5,
-                                    boxShadow: 2
-                                  }}
-                                >
-                                  Update Credentials
-                                </Button>
-                                <Button 
-                                  variant="outlined" 
-                                  size="medium" 
-                                  fullWidth
-                                  onClick={() => setCertificateDialogOpen(true)}
-                                  sx={{
-                                    borderRadius: 2,
-                                    textTransform: 'none',
-                                    fontWeight: 600,
-                                    py: 1.5,
-                                    borderWidth: 2,
-                                    '&:hover': {
-                                      borderWidth: 2
-                                    }
-                                  }}
-                                >
-                                  View Certificate
-                                </Button>
-                              </Box>
+                          <Button 
+                            variant="contained" 
+                            size="medium" 
+                            fullWidth 
+                            onClick={() => {
+                              setCredentialsForm({
+                                licenseNumber: profile.licenseNumber || '',
+                                medicalSchool: profile.medicalSchool || '',
+                                residency: profile.residency || '',
+                                certifications: profile.certifications || '',
+                                experience: profile.experience || '',
+                              });
+                              setCredentialsDialogOpen(true);
+                            }}
+                            sx={{
+                              borderRadius: 2,
+                              textTransform: 'none',
+                              fontWeight: 600,
+                              py: 1.5,
+                              boxShadow: 2
+                            }}
+                          >
+                          Update Credentials
+                        </Button>
+                          <Button 
+                            variant="outlined" 
+                            size="medium" 
+                            fullWidth
+                            onClick={() => setCertificateDialogOpen(true)}
+                            sx={{
+                              borderRadius: 2,
+                              textTransform: 'none',
+                              fontWeight: 600,
+                              py: 1.5,
+                              borderWidth: 2,
+                              '&:hover': {
+                                borderWidth: 2
+                              }
+                            }}
+                          >
+                          View Certificate
+                        </Button>
+                        </Box>
                             </Grid>
                           </Grid>
                         </Box>
@@ -2078,8 +2078,8 @@ const SettingsPage: React.FC = () => {
                               <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2, color: 'primary.main' }}>
                                 Basic Information
                               </Typography>
-                              <Grid container spacing={3}>
-                                <Grid item xs={12} md={6}>
+                        <Grid container spacing={3}>
+                          <Grid item xs={12} md={6}>
                                   <Box sx={{ mb: 2 }}>
                                     <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
                                       Clinic Name
@@ -2088,8 +2088,8 @@ const SettingsPage: React.FC = () => {
                                       {clinicSettings.name || 'Not specified'}
                                     </Typography>
                                   </Box>
-                                </Grid>
-                                <Grid item xs={12} md={6}>
+                          </Grid>
+                          <Grid item xs={12} md={6}>
                                   <Box sx={{ mb: 2 }}>
                                     <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
                                       License Number
@@ -2098,8 +2098,8 @@ const SettingsPage: React.FC = () => {
                                       {clinicSettings.licenseNumber || 'EG-CL-2024-001'}
                                     </Typography>
                                   </Box>
-                                </Grid>
-                                <Grid item xs={12}>
+                          </Grid>
+                          <Grid item xs={12}>
                                   <Box sx={{ mb: 2 }}>
                                     <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
                                       Address
@@ -2108,8 +2108,8 @@ const SettingsPage: React.FC = () => {
                                       {clinicSettings.address || 'Not specified'}
                                     </Typography>
                                   </Box>
-                                </Grid>
-                                <Grid item xs={12} md={4}>
+                          </Grid>
+                          <Grid item xs={12} md={4}>
                                   <Box sx={{ mb: 2 }}>
                                     <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
                                       Phone Number
@@ -2118,8 +2118,8 @@ const SettingsPage: React.FC = () => {
                                       {clinicSettings.phone || 'Not specified'}
                                     </Typography>
                                   </Box>
-                                </Grid>
-                                <Grid item xs={12} md={4}>
+                          </Grid>
+                          <Grid item xs={12} md={4}>
                                   <Box sx={{ mb: 2 }}>
                                     <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
                                       Email Address
@@ -2128,8 +2128,8 @@ const SettingsPage: React.FC = () => {
                                       {clinicSettings.email || 'Not specified'}
                                     </Typography>
                                   </Box>
-                                </Grid>
-                                <Grid item xs={12} md={4}>
+                          </Grid>
+                          <Grid item xs={12} md={4}>
                                   <Box sx={{ mb: 2 }}>
                                     <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
                                       Website
@@ -2138,7 +2138,7 @@ const SettingsPage: React.FC = () => {
                                       {clinicSettings.website || 'Not specified'}
                                     </Typography>
                                   </Box>
-                                </Grid>
+                          </Grid>
                               </Grid>
                             </Box>
 
@@ -2148,7 +2148,7 @@ const SettingsPage: React.FC = () => {
                                 Operation Information
                               </Typography>
                               <Grid container spacing={3}>
-                                <Grid item xs={12} md={6}>
+                          <Grid item xs={12} md={6}>
                                   <Box sx={{ mb: 2 }}>
                                     <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
                                       Working Hours
@@ -2207,7 +2207,7 @@ const SettingsPage: React.FC = () => {
                                       </Typography>
                                     </Box>
                                   </Box>
-                                </Grid>
+                          </Grid>
                               </Grid>
                             </Box>
 
@@ -2217,7 +2217,7 @@ const SettingsPage: React.FC = () => {
                                 Additional Information
                               </Typography>
                               <Grid container spacing={3}>
-                                <Grid item xs={12} md={6}>
+                          <Grid item xs={12} md={6}>
                                   <Box sx={{ mb: 2 }}>
                                     <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
                                       Establishment Date
@@ -2226,7 +2226,7 @@ const SettingsPage: React.FC = () => {
                                       January 2016
                                     </Typography>
                                   </Box>
-                                </Grid>
+                          </Grid>
                                 <Grid item xs={12} md={6}>
                                   <Box sx={{ mb: 2 }}>
                                     <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
@@ -2236,7 +2236,7 @@ const SettingsPage: React.FC = () => {
                                       Private Medical Clinic
                                     </Typography>
                                   </Box>
-                                </Grid>
+                        </Grid>
                                 <Grid item xs={12}>
                                   <Box sx={{ mb: 2 }}>
                                     <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
@@ -3936,13 +3936,13 @@ const SettingsPage: React.FC = () => {
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                     <Typography variant="body2" sx={{ fontWeight: 600 }}>📞 Phone Support:</Typography>
                   </Box>
-                  <Typography variant="body2">+20 2 1234 5678 (24/7)</Typography>
+                  <Typography variant="body2">+201147299675 (24/7)</Typography>
                 </Grid>
                 <Grid item xs={12} md={6}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                     <Typography variant="body2" sx={{ fontWeight: 600 }}>📧 Email Support:</Typography>
                   </Box>
-                  <Typography variant="body2">support@cliniccare.com</Typography>
+                  <Typography variant="body2">drsuperclinic@gmail.com</Typography>
                 </Grid>
               </Grid>
             </Box>
@@ -3993,6 +3993,59 @@ const SettingsPage: React.FC = () => {
               </ListItem>
             </List>
 
+            {/* Emergency Contact */}
+            <Box sx={{ mb: 4, p: 3, backgroundColor: 'error.light', borderRadius: 2, color: 'error.contrastText' }}>
+              <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+                🚨 Emergency Support
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 2 }}>
+                For critical system issues affecting patient care or data security:
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                <Button 
+                  variant="contained" 
+                  size="small"
+                  sx={{ backgroundColor: 'white', color: 'error.main', '&:hover': { backgroundColor: 'grey.100' } }}
+                  onClick={() => {
+                    window.open('tel:+201147299675');
+                    showSnackbar('Calling emergency support...', 'warning');
+                  }}
+                >
+                  📞 Call Emergency Line
+                </Button>
+                <Button 
+                  variant="outlined" 
+                  size="small"
+                  sx={{ borderColor: 'white', color: 'white', '&:hover': { backgroundColor: 'rgba(255,255,255,0.1)' } }}
+                  onClick={() => {
+                    const subject = encodeURIComponent('URGENT - Emergency Support Required');
+                    const body = encodeURIComponent(`
+🚨 EMERGENCY SUPPORT REQUEST 🚨
+
+Urgency Level: HIGH
+Date/Time: ${new Date().toLocaleString()}
+
+Issue Description:
+[Describe the critical issue affecting patient care or system security]
+
+Impact:
+[How is this affecting your clinic operations?]
+
+Immediate Actions Needed:
+[What support do you need right away?]
+
+Contact Information:
+Phone: [Your immediate contact number]
+                    `);
+                    window.open(`mailto:drsuperclinic@gmail.com?subject=${subject}&body=${body}`);
+                    showSnackbar('Opening emergency email...', 'warning');
+                  }}
+                >
+                  📧 Emergency Email
+                </Button>
+              </Box>
+            </Box>
+
             {/* Contact Options */}
             <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
               📞 Contact Support
@@ -4008,15 +4061,45 @@ const SettingsPage: React.FC = () => {
                     Technical Support
                   </Typography>
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    Get help with system issues, bugs, or technical difficulties
+                    Get help with system issues, bugs, or technical difficulties. Please include screenshots of the issue in your email
                   </Typography>
                   <Button 
                     variant="outlined" 
                     size="small" 
                     fullWidth
                     onClick={() => {
-                      window.open('mailto:tech-support@cliniccare.com?subject=Technical Support Request');
-                      showSnackbar('Opening email client...', 'info');
+                      const subject = encodeURIComponent('Technical Support - Please attach screenshots');
+                      const body = encodeURIComponent(`
+Dear Support Team,
+
+I need technical assistance with the following issue:
+
+Issue Description:
+[Please describe the problem you're experiencing]
+
+Steps to Reproduce:
+1. [Step 1]
+2. [Step 2]
+3. [Step 3]
+
+Expected Behavior:
+[What should happen]
+
+Actual Behavior:
+[What actually happens]
+
+System Information:
+- Browser: ${navigator.userAgent}
+- Date: ${new Date().toLocaleDateString()}
+- Time: ${new Date().toLocaleTimeString()}
+
+Please find attached screenshots of the issue.
+
+Best regards,
+Dr. Clinic User
+                      `);
+                      window.open(`mailto:drsuperclinic@gmail.com?subject=${subject}&body=${body}`);
+                      showSnackbar('Opening email client with template...', 'success');
                     }}
                   >
                     Email Tech Support
@@ -4033,15 +4116,49 @@ const SettingsPage: React.FC = () => {
                     General Support
                   </Typography>
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    Questions about features, billing, or general clinic management
+                    Questions about features, billing, or general clinic management. Please include screenshots of any issues in your email
                   </Typography>
                   <Button 
                     variant="outlined" 
                     size="small" 
                     fullWidth
                     onClick={() => {
-                      window.open('mailto:support@cliniccare.com?subject=General Support Request');
-                      showSnackbar('Opening email client...', 'info');
+                      const subject = encodeURIComponent('General Support - Please attach screenshots if applicable');
+                      const body = encodeURIComponent(`
+Dear Support Team,
+
+I have a question/inquiry regarding:
+
+Topic: [e.g., Billing, Features, Account Management, etc.]
+
+Question/Issue:
+[Please describe your question or concern in detail]
+
+What I'm trying to accomplish:
+[Describe what you're trying to do]
+
+Additional Information:
+[Any relevant details that might help us assist you better]
+
+Contact Information:
+- Name: [Your Name]
+- Clinic: [Your Clinic Name]
+- Phone: [Your Phone Number]
+- Preferred Contact Method: [Email/Phone]
+
+System Information:
+- Date: ${new Date().toLocaleDateString()}
+- Time: ${new Date().toLocaleTimeString()}
+
+Please attach screenshots if your inquiry involves any visual elements or specific screens.
+
+Thank you for your assistance.
+
+Best regards,
+Dr. Clinic User
+                      `);
+                      window.open(`mailto:drsuperclinic@gmail.com?subject=${subject}&body=${body}`);
+                      showSnackbar('Opening email client with template...', 'success');
                     }}
                   >
                     Email General Support
@@ -4049,6 +4166,67 @@ const SettingsPage: React.FC = () => {
                 </Card>
               </Grid>
             </Grid>
+
+            {/* Live Chat Support */}
+            <Box sx={{ mt: 4, mb: 4, p: 3, backgroundColor: 'success.light', borderRadius: 2 }}>
+              <Typography variant="h6" sx={{ mb: 2, fontWeight: 600, color: 'success.contrastText' }}>
+                💬 Live Chat Support
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 3, color: 'success.contrastText' }}>
+                Get instant help from our support team. Available Monday-Friday, 9 AM - 6 PM (GMT+2)
+              </Typography>
+              <Grid container spacing={2}>
+                <Grid item xs={12} md={4}>
+                  <Button 
+                    variant="contained" 
+                    fullWidth
+                    sx={{ backgroundColor: 'white', color: 'success.main', '&:hover': { backgroundColor: 'grey.100' } }}
+                    onClick={() => {
+                      // Simulate opening live chat
+                      showSnackbar('Opening live chat window...', 'info');
+                      setTimeout(() => {
+                        showSnackbar('Live chat is currently unavailable. Please use email support.', 'warning');
+                      }, 2000);
+                    }}
+                  >
+                    💬 Start Live Chat
+                  </Button>
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  <Button 
+                    variant="outlined" 
+                    fullWidth
+                    sx={{ borderColor: 'white', color: 'white', '&:hover': { backgroundColor: 'rgba(255,255,255,0.1)' } }}
+                    onClick={() => {
+                      window.open('https://wa.me/+201147299675?text=Hello, I need support with ClinicCare system');
+                      showSnackbar('Opening WhatsApp...', 'info');
+                    }}
+                  >
+                    📱 WhatsApp Support
+                  </Button>
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  <Button 
+                    variant="outlined" 
+                    fullWidth
+                    sx={{ borderColor: 'white', color: 'white', '&:hover': { backgroundColor: 'rgba(255,255,255,0.1)' } }}
+                    onClick={() => {
+                      showSnackbar('Checking support availability...', 'info');
+                      setTimeout(() => {
+                        const isAvailable = new Date().getHours() >= 9 && new Date().getHours() < 18;
+                        if (isAvailable) {
+                          showSnackbar('Support team is online and ready to help!', 'success');
+                        } else {
+                          showSnackbar('Support team is offline. Please email us or try during business hours.', 'warning');
+                        }
+                      }, 1000);
+                    }}
+                  >
+                    🟢 Check Availability
+                  </Button>
+                </Grid>
+              </Grid>
+            </Box>
 
             {/* Additional Resources */}
             <Box sx={{ mt: 4, p: 3, backgroundColor: 'grey.50', borderRadius: 2 }}>
@@ -4064,7 +4242,19 @@ const SettingsPage: React.FC = () => {
                     primary="User Documentation"
                     secondary="Complete guides and tutorials for using ClinicCare"
                   />
-                  <Button size="small" variant="text">View Docs</Button>
+                  <Button 
+                    size="small" 
+                    variant="text"
+                    onClick={() => {
+                      showSnackbar('Opening user documentation...', 'info');
+                      // Simulate opening documentation
+                      setTimeout(() => {
+                        showSnackbar('Documentation is being prepared. Please contact support for immediate help.', 'warning');
+                      }, 1500);
+                    }}
+                  >
+                    View Docs
+                  </Button>
                 </ListItem>
                 <ListItem sx={{ px: 0, py: 1 }}>
                   <ListItemIcon>
@@ -4074,7 +4264,18 @@ const SettingsPage: React.FC = () => {
                     primary="Video Tutorials"
                     secondary="Step-by-step video guides for common tasks"
                   />
-                  <Button size="small" variant="text">Watch Videos</Button>
+                  <Button 
+                    size="small" 
+                    variant="text"
+                    onClick={() => {
+                      showSnackbar('Loading video tutorials...', 'info');
+                      setTimeout(() => {
+                        showSnackbar('Video tutorials are coming soon! Contact support for personalized guidance.', 'info');
+                      }, 1500);
+                    }}
+                  >
+                    Watch Videos
+                  </Button>
                 </ListItem>
                 <ListItem sx={{ px: 0, py: 1 }}>
                   <ListItemIcon>
@@ -4084,11 +4285,98 @@ const SettingsPage: React.FC = () => {
                     primary="System Status"
                     secondary="Check our system status and maintenance updates"
                   />
-                  <Button size="small" variant="text">Check Status</Button>
+                  <Button 
+                    size="small" 
+                    variant="text"
+                    onClick={() => {
+                      showSnackbar('Checking system status...', 'info');
+                      setTimeout(() => {
+                        const status = Math.random() > 0.2 ? 'operational' : 'maintenance';
+                        if (status === 'operational') {
+                          showSnackbar('✅ All systems operational', 'success');
+                        } else {
+                          showSnackbar('🔧 System maintenance in progress. Some features may be temporarily unavailable.', 'warning');
+                        }
+                      }, 2000);
+                    }}
+                  >
+                    Check Status
+                  </Button>
                 </ListItem>
               </List>
             </Box>
           </Box>
+            {/* Feedback Section */}
+            <Box sx={{ mt: 4, p: 3, backgroundColor: 'warning.light', borderRadius: 2 }}>
+              <Typography variant="h6" sx={{ mb: 2, fontWeight: 600, color: 'warning.contrastText' }}>
+                📝 Share Your Feedback
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 3, color: 'warning.contrastText' }}>
+                Help us improve ClinicCare by sharing your experience and suggestions
+              </Typography>
+              <Grid container spacing={2}>
+                <Grid item xs={12} md={6}>
+                  <Button 
+                    variant="contained" 
+                    fullWidth
+                    sx={{ backgroundColor: 'white', color: 'warning.main', '&:hover': { backgroundColor: 'grey.100' } }}
+                    onClick={() => {
+                      const subject = encodeURIComponent('ClinicCare Feedback & Suggestions');
+                      const body = encodeURIComponent(`
+Dear ClinicCare Team,
+
+I would like to share my feedback about the system:
+
+Overall Experience: [Excellent/Good/Average/Poor]
+
+What I like most:
+[Please share what features you find most helpful]
+
+Areas for improvement:
+[What could be better or what features are missing?]
+
+Suggestions:
+[Any new features or improvements you'd like to see]
+
+Technical Performance:
+[How is the system performance, speed, reliability?]
+
+User Interface:
+[Is the interface easy to use and navigate?]
+
+Additional Comments:
+[Any other feedback you'd like to share]
+
+Thank you for your time and for helping us improve!
+
+Best regards,
+[Your Name]
+[Your Clinic Name]
+                      `);
+                      window.open(`mailto:drsuperclinic@gmail.com?subject=${subject}&body=${body}`);
+                      showSnackbar('Opening feedback email...', 'success');
+                    }}
+                  >
+                    📧 Send Feedback
+                  </Button>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Button 
+                    variant="outlined" 
+                    fullWidth
+                    sx={{ borderColor: 'white', color: 'white', '&:hover': { backgroundColor: 'rgba(255,255,255,0.1)' } }}
+                    onClick={() => {
+                      showSnackbar('Thank you for your interest in providing feedback!', 'success');
+                      setTimeout(() => {
+                        showSnackbar('Survey feature coming soon. Please use email feedback for now.', 'info');
+                      }, 2000);
+                    }}
+                  >
+                    📊 Quick Survey
+                  </Button>
+                </Grid>
+              </Grid>
+            </Box>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 3 }}>
           <Button onClick={() => setHelpDialogOpen(false)}>
@@ -4098,7 +4386,7 @@ const SettingsPage: React.FC = () => {
             variant="contained" 
             startIcon={<Help />}
             onClick={() => {
-              window.open('tel:+2021234567');
+              window.open('tel:+201147299675');
               showSnackbar('Calling support hotline...', 'info');
             }}
           >

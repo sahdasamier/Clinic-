@@ -1,6 +1,10 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import { signOut } from 'firebase/auth';
+import { auth } from '../api/firebase';
+import { AuthContext } from '../app/AuthProvider';
+import { useNotifications } from '../contexts/NotificationContext';
 import {
   AppBar,
   Toolbar,
@@ -13,35 +17,94 @@ import {
   Menu,
   MenuItem,
   Chip,
+  Divider,
+  ListItemIcon,
+  ListItemText,
 } from '@mui/material';
 import {
   Search,
   Notifications,
   AccountCircle,
   Language,
+  Logout,
+  Person,
+  Settings,
+  AdminPanelSettings,
 } from '@mui/icons-material';
 
 const Header: React.FC = () => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
-  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
+  const { user } = useContext(AuthContext);
+  const { unreadCount } = useNotifications();
+  
+  // Language menu state
+  const [languageAnchorEl, setLanguageAnchorEl] = React.useState<null | HTMLElement>(null);
+  
+  // User menu state
+  const [userAnchorEl, setUserAnchorEl] = React.useState<null | HTMLElement>(null);
 
   const changeLanguage = (lng: string) => {
     i18n.changeLanguage(lng);
     document.documentElement.dir = i18n.dir();
-    setAnchorEl(null);
+    setLanguageAnchorEl(null);
   };
 
   const handleLanguageMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget);
+    setLanguageAnchorEl(event.currentTarget);
   };
 
   const handleLanguageMenuClose = () => {
-    setAnchorEl(null);
+    setLanguageAnchorEl(null);
+  };
+
+  const handleUserMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setUserAnchorEl(event.currentTarget);
+  };
+
+  const handleUserMenuClose = () => {
+    setUserAnchorEl(null);
   };
 
   const handleNotificationClick = () => {
     navigate('/notifications');
+  };
+
+  const handleProfileClick = () => {
+    setUserAnchorEl(null);
+    navigate('/settings');
+  };
+
+  const handleSignOut = async () => {
+    try {
+      setUserAnchorEl(null);
+      await signOut(auth);
+      navigate('/login');
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
+
+  // Get user display information
+  const getUserDisplayName = () => {
+    if (user?.displayName) {
+      return user.displayName;
+    }
+    if (user?.email) {
+      // Extract name from email if no display name
+      const name = user.email.split('@')[0];
+      return name.charAt(0).toUpperCase() + name.slice(1);
+    }
+    return 'Dr. Ahmed Ali'; // Fallback
+  };
+
+  const getUserInitials = () => {
+    const displayName = getUserDisplayName();
+    const names = displayName.split(' ');
+    if (names.length >= 2) {
+      return names[0].charAt(0) + names[1].charAt(0);
+    }
+    return displayName.slice(0, 2).toUpperCase();
   };
 
   return (
@@ -79,8 +142,8 @@ const Header: React.FC = () => {
               <Language />
             </IconButton>
             <Menu
-              anchorEl={anchorEl}
-              open={Boolean(anchorEl)}
+              anchorEl={languageAnchorEl}
+              open={Boolean(languageAnchorEl)}
               onClose={handleLanguageMenuClose}
               anchorOrigin={{
                 vertical: 'bottom',
@@ -116,7 +179,7 @@ const Header: React.FC = () => {
               },
             }}
           >
-            <Badge badgeContent={3} color="error">
+            <Badge badgeContent={unreadCount} color="error">
               <Notifications />
             </Badge>
           </IconButton>
@@ -137,22 +200,108 @@ const Header: React.FC = () => {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Box sx={{ textAlign: 'right', display: { xs: 'none', sm: 'block' } }}>
               <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.2 }}>
-                Dr. Ahmed Ali
+                {getUserDisplayName()}
               </Typography>
               <Typography variant="caption" color="text.secondary">
-                {t('general_practitioner')}
+                General Practitioner
               </Typography>
             </Box>
-            <Avatar
+            <IconButton
+              onClick={handleUserMenuOpen}
               sx={{
-                width: 40,
-                height: 40,
-                backgroundColor: 'primary.main',
-                fontWeight: 600,
+                p: 0,
+                '&:hover': {
+                  backgroundColor: 'transparent',
+                },
               }}
             >
-              DA
-            </Avatar>
+              <Avatar
+                sx={{
+                  width: 40,
+                  height: 40,
+                  backgroundColor: 'primary.main',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease-in-out',
+                  '&:hover': {
+                    transform: 'scale(1.05)',
+                    boxShadow: 2,
+                  },
+                }}
+              >
+                {getUserInitials()}
+              </Avatar>
+            </IconButton>
+            
+            {/* User Menu */}
+            <Menu
+              anchorEl={userAnchorEl}
+              open={Boolean(userAnchorEl)}
+              onClose={handleUserMenuClose}
+              anchorOrigin={{
+                vertical: 'bottom',
+                horizontal: 'right',
+              }}
+              transformOrigin={{
+                vertical: 'top',
+                horizontal: 'right',
+              }}
+              PaperProps={{
+                sx: {
+                  mt: 1,
+                  minWidth: 200,
+                  borderRadius: 2,
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+                },
+              }}
+            >
+              {/* User Info Header */}
+              <Box sx={{ px: 3, py: 2, borderBottom: 1, borderColor: 'divider' }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                  {getUserDisplayName()}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  General Practitioner
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {user?.email}
+                </Typography>
+              </Box>
+              
+              {/* Menu Items */}
+              <MenuItem onClick={handleProfileClick} sx={{ py: 1.5 }}>
+                <ListItemIcon>
+                  <Person fontSize="small" />
+                </ListItemIcon>
+                <ListItemText>Profile & Settings</ListItemText>
+              </MenuItem>
+              
+              <MenuItem onClick={() => { setUserAnchorEl(null); navigate('/dashboard'); }} sx={{ py: 1.5 }}>
+                <ListItemIcon>
+                  <AdminPanelSettings fontSize="small" />
+                </ListItemIcon>
+                <ListItemText>Dashboard</ListItemText>
+              </MenuItem>
+              
+              <Divider />
+              
+              <MenuItem 
+                onClick={handleSignOut} 
+                sx={{ 
+                  py: 1.5,
+                  color: 'error.main',
+                  '&:hover': {
+                    backgroundColor: 'error.light',
+                    color: 'error.contrastText',
+                  },
+                }}
+              >
+                <ListItemIcon>
+                  <Logout fontSize="small" sx={{ color: 'inherit' }} />
+                </ListItemIcon>
+                <ListItemText>Sign Out</ListItemText>
+              </MenuItem>
+            </Menu>
           </Box>
         </Box>
       </Toolbar>

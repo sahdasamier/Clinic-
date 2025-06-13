@@ -57,6 +57,7 @@ import Header from '../../components/Header';
 import Sidebar from '../../components/Sidebar';
 import { Notification, NotificationSettings } from '../../types/models';
 import { notificationsApi, notificationSettingsApi } from '../../api/notifications';
+import { useNotifications } from '../../contexts/NotificationContext';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -131,15 +132,23 @@ const getPriorityColor = (type: string) => {
 
 const NotificationsPage: React.FC = () => {
   const { t } = useTranslation();
+  const { 
+    notifications, 
+    unreadCount, 
+    loading, 
+    markAsRead: contextMarkAsRead, 
+    markAllAsRead: contextMarkAllAsRead, 
+    deleteNotification: contextDeleteNotification, 
+    refreshNotifications: contextRefreshNotifications 
+  } = useNotifications();
+  
   const [tabValue, setTabValue] = useState(0);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>({
     appointments: true,
     payments: true,
     inventory: true,
     system: true,
   });
-  const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [settingsLoading, setSettingsLoading] = useState(false);
@@ -170,61 +179,10 @@ const NotificationsPage: React.FC = () => {
     setSnackbar(prev => ({ ...prev, open: false }));
   };
 
-  // Load notifications and settings
+  // Load settings
   useEffect(() => {
-    loadNotifications();
     loadSettings();
   }, []);
-
-  // Listen for appointment updates and refresh notifications
-  useEffect(() => {
-    const handleAppointmentsUpdate = () => {
-      console.log('Appointments updated, refreshing notifications...');
-      loadNotifications(true);
-    };
-
-    // Listen for custom appointment update events
-    window.addEventListener('appointmentsUpdated', handleAppointmentsUpdate);
-    
-    // Also listen for localStorage changes (in case data is updated from another tab)
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'clinic_appointments_data' || 
-          e.key === 'clinic_payments_data' || 
-          e.key === 'clinic_patients_data' || 
-          e.key === 'clinic_inventory_data') {
-        console.log('Storage updated, refreshing notifications...');
-        loadNotifications(true);
-      }
-    };
-    
-    window.addEventListener('storage', handleStorageChange);
-
-    return () => {
-      window.removeEventListener('appointmentsUpdated', handleAppointmentsUpdate);
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, []);
-
-  const loadNotifications = async (showFeedback = false) => {
-    try {
-      setLoading(true);
-      const data = await notificationsApi.getAll(currentUser.clinicId, currentUser.branchId);
-      setNotifications(data);
-      setDisplayCount(4); // Reset display count when loading new notifications
-      
-      if (showFeedback) {
-        const newCount = data.filter(n => !n.read).length;
-        showSnackbar(`Auto-refreshed! ${newCount} unread notifications`, 'info');
-      }
-    } catch (error) {
-      console.error('Error loading notifications:', error);
-      if (showFeedback) {
-        showSnackbar('Failed to load notifications', 'error');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const loadSettings = async () => {
     try {
@@ -239,12 +197,10 @@ const NotificationsPage: React.FC = () => {
   const handleRefresh = async () => {
     try {
       setRefreshing(true);
-      const data = await notificationsApi.refresh(currentUser.clinicId, currentUser.branchId);
-      setNotifications(data);
+      await contextRefreshNotifications();
       setDisplayCount(4); // Reset display count when refreshing
-      const newCount = data.filter(n => !n.read).length;
       showSnackbar(
-        `Notifications refreshed! Found ${data.length} total notifications (${newCount} unread) from all application data`, 
+        `Notifications refreshed! Found ${notifications.length} total notifications (${unreadCount} unread) from all application data`, 
         'success'
       );
     } catch (error) {
@@ -263,10 +219,7 @@ const NotificationsPage: React.FC = () => {
   const handleMarkAsRead = async (id: string) => {
     try {
       setUpdating(true);
-      await notificationsApi.markAsRead(id);
-      setNotifications(prev => 
-        prev.map(n => n.id === id ? { ...n, read: true } : n)
-      );
+      await contextMarkAsRead(id);
       showSnackbar('Notification marked as read');
     } catch (error) {
       console.error('Error marking as read:', error);
@@ -279,8 +232,7 @@ const NotificationsPage: React.FC = () => {
   const handleDelete = async (id: string) => {
     try {
       setUpdating(true);
-      await notificationsApi.delete(id);
-      setNotifications(prev => prev.filter(n => n.id !== id));
+      await contextDeleteNotification(id);
       showSnackbar('Notification deleted');
     } catch (error) {
       console.error('Error deleting notification:', error);
@@ -293,8 +245,7 @@ const NotificationsPage: React.FC = () => {
   const handleMarkAllAsRead = async () => {
     try {
       setUpdating(true);
-      await notificationsApi.markAllAsRead(currentUser.clinicId, currentUser.branchId);
-      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      await contextMarkAllAsRead();
       showSnackbar('All notifications marked as read');
     } catch (error) {
       console.error('Error marking all as read:', error);
@@ -308,7 +259,7 @@ const NotificationsPage: React.FC = () => {
     try {
       setUpdating(true);
       await notificationsApi.clearAll(currentUser.clinicId, currentUser.branchId);
-      setNotifications([]);
+      // Note: We would need to add clearAll to the context if we want to use it
       showSnackbar('All notifications cleared');
     } catch (error) {
       console.error('Error clearing notifications:', error);
@@ -351,8 +302,6 @@ const NotificationsPage: React.FC = () => {
       setUpdating(false);
     }
   };
-
-  const unreadCount = notifications.filter(n => !n.read).length;
 
   const getNotificationsByType = (type?: string) => {
     if (!type) return notifications;
