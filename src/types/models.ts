@@ -37,4 +37,29 @@ export interface Appointment {
   status: "scheduled" | "checked-in" | "completed" | "cancelled";
   // ...
 }
+
+// Notification types
+export interface Notification {
+  id: string;
+  type: 'appointment' | 'payment' | 'inventory' | 'system';
+  title: string;
+  message: string;
+  time: string;
+  read: boolean;
+  icon?: React.ReactNode;
+  color?: string;
+  clinicId: string;
+  branchId?: string;
+  userId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface NotificationSettings {
+  appointments: boolean;
+  payments: boolean;
+  inventory: boolean;
+  system: boolean;
+}
+
 // Add more as needed 

@@ -8,9 +8,9 @@ const ClinicDetailPage: React.FC = () => {
 
   const clinic = {
     name: 'Al-Shifa Clinic',
-    address: '123 Health St, Dubai, UAE',
-    phone: '+971 4 123 4567',
-    email: 'contact@alshifa.ae',
+    address: '15 شارع النيل، وسط البلد، القاهرة، مصر',
+    phone: '+20 2 2345 6789',
+    email: 'contact@alshifa.com.eg',
     operatingHours: 'Sun-Thu, 9:00 AM - 6:00 PM',
   };
 

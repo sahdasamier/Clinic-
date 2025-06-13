@@ -2483,7 +2483,7 @@ ${new Date().toLocaleString()}
                         { 
                           icon: <CreditCard />, 
                           title: 'Credit Cards', 
-                          description: 'Visa, Mastercard, American Express',
+                          description: 'Visa, Mastercard, Fawry, Vodafone Cash',
                           color: '#1976d2',
                           enabled: true
                         },

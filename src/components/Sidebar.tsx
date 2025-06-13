@@ -20,9 +20,9 @@ import {
   Inventory,
   Payment,
   Notifications,
-  Chat,
   Settings,
   LocalHospital,
+  Schedule,
 } from '@mui/icons-material';
 
 const drawerWidth = 280;
@@ -34,7 +34,7 @@ const navLinks = [
   { to: '/inventory', text: 'inventory', icon: <Inventory /> },
   { to: '/payments', text: 'payments', icon: <Payment /> },
   { to: '/notifications', text: 'notifications', icon: <Notifications /> },
-  { to: '/chat', text: 'chat', icon: <Chat /> },
+  { to: '/chat', text: 'scheduling', icon: <Schedule /> },
   { to: '/settings', text: 'settings', icon: <Settings /> },
 ];
 

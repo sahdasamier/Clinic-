@@ -7,9 +7,9 @@ const ClinicListPage: React.FC = () => {
   const { t } = useTranslation();
 
   const clinics = [
-    { id: 1, name: 'Al-Shifa Clinic', address: '123 Health St, Dubai', phone: '+971 4 123 4567' },
-    { id: 2, name: 'Nour Clinic', address: '456 Wellness Ave, Abu Dhabi', phone: '+971 2 987 6543' },
-    { id: 3, name: 'The Modern Clinic', address: '789 Cure Blvd, Sharjah', phone: '+971 6 555 8888' },
+    { id: 1, name: 'Al-Shifa Clinic', address: '15 شارع النيل، وسط البلد، القاهرة', phone: '+20 2 2345 6789' },
+    { id: 2, name: 'Nour Clinic', address: '25 شارع الحرية، الزمالك، القاهرة', phone: '+20 2 3456 7890' },
+    { id: 3, name: 'The Modern Clinic', address: '10 شارع الجيزة، المهندسين، الجيزة', phone: '+20 2 4567 8901' },
   ];
 
   return (

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Box,
@@ -86,144 +86,138 @@ function TabPanel(props: TabPanelProps) {
   );
 }
 
-const appointments = [
-  {
-    id: 1,
-    patient: 'Ahmed Al-Rashid',
-    patientAvatar: 'AR',
-    date: '2024-01-20',
-    time: '3:00 PM',
-    timeSlot: '15:00',
-    duration: 25,
-    doctor: 'Dr. Sarah Ahmed',
-    type: 'Consultation',
-    status: 'confirmed',
-    location: 'Room 101',
-    phone: '+971 50 123 4567',
-    notes: 'Follow-up for diabetes management',
-    completed: false,
-    priority: 'normal',
-  },
-  {
-    id: 2,
-    patient: 'Fatima Hassan',
-    patientAvatar: 'FH',
-    date: '2024-01-20',
-    time: '3:25 PM',
-    timeSlot: '15:25',
-    duration: 30,
-    doctor: 'Dr. Sarah Ahmed',
-    type: 'Check-up',
-    status: 'confirmed',
-    location: 'Room 101',
-    phone: '+971 50 234 5678',
-    notes: 'Routine blood pressure check',
-    completed: true,
-    priority: 'normal',
-  },
-  {
-    id: 3,
-    patient: 'Mohammed Ali',
-    patientAvatar: 'MA',
-    date: '2024-01-20',
-    time: '3:55 PM',
-    timeSlot: '15:55',
-    duration: 20,
-    doctor: 'Dr. Sarah Ahmed',
-    type: 'Follow-up',
-    status: 'confirmed',
-    location: 'Room 101',
-    phone: '+971 50 345 6789',
-    notes: 'Asthma medication review',
-    completed: false,
-    priority: 'normal',
-  },
-  {
-    id: 4,
-    patient: 'Sara Ahmed',
-    patientAvatar: 'SA',
-    date: '2024-01-20',
-    time: '4:15 PM',
-    timeSlot: '16:15',
-    duration: 30,
-    doctor: 'Dr. Sarah Ahmed',
-    type: 'Surgery Consultation',
-    status: 'confirmed',
-    location: 'Room 101',
-    phone: '+971 50 456 7890',
-    notes: 'Pre-operative consultation',
-    completed: false,
-    priority: 'high',
-  },
-  {
-    id: 5,
-    patient: 'Omar Khalil',
-    patientAvatar: 'OK',
-    date: '2024-01-20',
-    time: '4:45 PM',
-    timeSlot: '16:45',
-    duration: 25,
-    doctor: 'Dr. Sarah Ahmed',
-    type: 'Consultation',
-    status: 'pending',
-    location: 'Room 101',
-    phone: '+971 50 567 8901',
-    notes: 'First-time consultation',
-    completed: false,
-    priority: 'normal',
-  },
-  {
-    id: 6,
-    patient: 'Layla Hassan',
-    patientAvatar: 'LH',
-    date: '2024-01-21',
-    time: '2:00 PM',
-    timeSlot: '14:00',
-    duration: 30,
-    doctor: 'Dr. Sarah Ahmed',
-    type: 'Check-up',
-    status: 'cancelled',
-    location: 'Room 101',
-    phone: '+971 50 678 9012',
-    notes: 'Patient cancelled due to emergency',
-    completed: false,
-    priority: 'normal',
-  },
-  {
-    id: 7,
-    patient: 'Khalid Al-Mansouri',
-    patientAvatar: 'KM',
-    date: '2024-01-21',
-    time: '3:30 PM',
-    timeSlot: '15:30',
-    duration: 20,
-    doctor: 'Dr. Sarah Ahmed',
-    type: 'Follow-up',
-    status: 'rescheduled',
-    location: 'Room 101',
-    phone: '+971 50 789 0123',
-    notes: 'Rescheduled from previous week',
-    completed: false,
-    priority: 'normal',
-  },
-  {
-    id: 8,
-    patient: 'Amina Farid',
-    patientAvatar: 'AF',
-    date: '2024-01-19',
-    time: '11:00 AM',
-    timeSlot: '11:00',
-    duration: 25,
-    doctor: 'Dr. Sarah Ahmed',
-    type: 'Consultation',
-    status: 'no-show',
-    location: 'Room 101',
-    phone: '+971 50 890 1234',
-    notes: 'Patient did not show up',
-    completed: false,
-    priority: 'normal',
-  },
-];
+// Storage key for appointments (same as notifications system)
+const APPOINTMENTS_STORAGE_KEY = 'clinic_appointments_data';
+
+// Load appointments from localStorage
+const loadAppointmentsFromStorage = (): any[] => {
+  try {
+    const stored = localStorage.getItem(APPOINTMENTS_STORAGE_KEY);
+    if (stored) {
+      const parsedData = JSON.parse(stored);
+      if (Array.isArray(parsedData) && parsedData.length > 0) {
+        return parsedData;
+      }
+    }
+  } catch (error) {
+    console.warn('Error loading appointments from localStorage:', error);
+  }
+  return getDefaultAppointments();
+};
+
+// Save appointments to localStorage
+const saveAppointmentsToStorage = (appointments: any[]) => {
+  try {
+    localStorage.setItem(APPOINTMENTS_STORAGE_KEY, JSON.stringify(appointments));
+    // Trigger storage event for other components (like notifications) to detect changes
+    window.dispatchEvent(new Event('appointmentsUpdated'));
+  } catch (error) {
+    console.warn('Error saving appointments to localStorage:', error);
+  }
+};
+
+// Default appointments data
+const getDefaultAppointments = () => {
+  const today = new Date();
+  const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+  const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+  
+  return [
+    {
+      id: 1,
+      patient: 'Ahmed Al-Rashid',
+      patientAvatar: 'AR',
+      date: tomorrow.toISOString().split('T')[0],
+      time: '3:00 PM',
+      timeSlot: '15:00',
+      duration: 25,
+      doctor: 'Dr. Sarah Ahmed',
+      type: 'Consultation',
+      status: 'confirmed',
+      location: 'Room 101',
+      phone: '+971 50 123 4567',
+      notes: 'Follow-up for diabetes management',
+      completed: false,
+      priority: 'normal',
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: 2,
+      patient: 'Fatima Hassan',
+      patientAvatar: 'FH',
+      date: today.toISOString().split('T')[0],
+      time: '4:00 PM',
+      timeSlot: '16:00',
+      duration: 30,
+      doctor: 'Dr. Ahmed Omar',
+      type: 'Check-up',
+      status: 'confirmed',
+      location: 'Room 102',
+      phone: '+971 50 234 5678',
+      notes: 'Routine blood pressure check',
+      completed: false,
+      priority: 'normal',
+      createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+    },
+    {
+      id: 3,
+      patient: 'Mohammed Ali',
+      patientAvatar: 'MA',
+      date: yesterday.toISOString().split('T')[0],
+      time: '10:00 AM',
+      timeSlot: '10:00',
+      duration: 45,
+      doctor: 'Dr. Mohammed Ali',
+      type: 'Follow-up',
+      status: 'no-show',
+      location: 'Room 103',
+      phone: '+971 50 345 6789',
+      notes: 'Cardiology follow-up',
+      completed: false,
+      priority: 'normal',
+      createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+    },
+    {
+      id: 4,
+      patient: 'Sara Ahmed',
+      patientAvatar: 'SA',
+      date: today.toISOString().split('T')[0],
+      time: '4:15 PM',
+      timeSlot: '16:15',
+      duration: 30,
+      doctor: 'Dr. Sarah Ahmed',
+      type: 'Surgery Consultation',
+      status: 'cancelled',
+      location: 'Room 101',
+      phone: '+971 50 456 7890',
+      notes: 'Pre-operative consultation',
+      completed: false,
+      priority: 'high',
+      createdAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
+    },
+    {
+      id: 5,
+      patient: 'Omar Khalil',
+      patientAvatar: 'OK',
+      date: today.toISOString().split('T')[0],
+      time: '2:00 PM',
+      timeSlot: '14:00',
+      duration: 15,
+      doctor: 'Dr. Fatima Hassan',
+      type: 'Dermatology',
+      status: 'pending',
+      location: 'Room 104',
+      phone: '+971 50 567 8901',
+      notes: 'Skin condition consultation',
+      completed: false,
+      priority: 'normal',
+      createdAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+    },
+    // ... rest of default appointments
+  ];
+};
+
+const appointments = getDefaultAppointments();
 
 const StatCard: React.FC<{
   title: string;
@@ -273,7 +267,13 @@ const AppointmentListPage: React.FC = () => {
   const [addAppointmentOpen, setAddAppointmentOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'table' | 'cards' | 'calendar'>('table');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [appointmentList, setAppointmentList] = useState(appointments);
+  const [appointmentList, setAppointmentList] = useState<any[]>([]);
+
+  // Load appointments from localStorage on component mount
+  useEffect(() => {
+    const savedAppointments = loadAppointmentsFromStorage();
+    setAppointmentList(savedAppointments);
+  }, []);
   const [doctorStartTime] = useState('15:00'); // 3:00 PM start time
   const [activeFilters, setActiveFilters] = useState({
     status: '',
@@ -305,13 +305,13 @@ const AppointmentListPage: React.FC = () => {
   };
 
   const toggleAppointmentCompletion = (appointmentId: number) => {
-    setAppointmentList(prev => 
-      prev.map(apt => 
-        apt.id === appointmentId 
-          ? { ...apt, completed: !apt.completed, status: apt.completed ? 'confirmed' : 'completed' }
-          : apt
-      )
+    const updatedList = appointmentList.map(apt => 
+      apt.id === appointmentId 
+        ? { ...apt, completed: !apt.completed, status: apt.completed ? 'confirmed' : 'completed' }
+        : apt
     );
+    setAppointmentList(updatedList);
+    saveAppointmentsToStorage(updatedList);
   };
 
   const calculateEstimatedFinishTime = () => {
@@ -422,27 +422,27 @@ const AppointmentListPage: React.FC = () => {
   const handleStatusChange = (newStatus: string) => {
     if (!statusEditAppointment) return;
 
-    setAppointmentList(prev => 
-      prev.map(apt => 
-        apt.id === statusEditAppointment.id 
-          ? { ...apt, status: newStatus }
-          : apt
-      )
+    const updatedList = appointmentList.map(apt => 
+      apt.id === statusEditAppointment.id 
+        ? { ...apt, status: newStatus }
+        : apt
     );
-
+    
+    setAppointmentList(updatedList);
+    saveAppointmentsToStorage(updatedList);
     setStatusMenuAnchor(null);
     setStatusEditAppointment(null);
   };
 
   const handleSaveAppointment = () => {
+    let updatedList;
+    
     if (selectedAppointment) {
       // Edit existing appointment
-      setAppointmentList(prev => 
-        prev.map(apt => 
-          apt.id === selectedAppointment.id 
-            ? { ...apt, ...newAppointment }
-            : apt
-        )
+      updatedList = appointmentList.map(apt => 
+        apt.id === selectedAppointment.id 
+          ? { ...apt, ...newAppointment }
+          : apt
       );
       setEditDialogOpen(false);
     } else {
@@ -468,12 +468,16 @@ const AppointmentListPage: React.FC = () => {
         phone: newAppointment.phone,
         notes: newAppointment.notes,
         completed: false,
-        priority: newAppointment.priority
+        priority: newAppointment.priority,
+        createdAt: new Date().toISOString(),
       };
       
-      setAppointmentList(prev => [...prev, newApt]);
+      updatedList = [...appointmentList, newApt];
       setAddAppointmentOpen(false);
     }
+    
+    setAppointmentList(updatedList);
+    saveAppointmentsToStorage(updatedList);
     
     // Reset form
     setNewAppointment({

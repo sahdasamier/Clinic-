@@ -55,6 +55,8 @@ const upcomingAppointments = [
     status: 'confirmed',
     avatar: 'AR',
     type: 'General Checkup',
+    doctor: 'Dr. Ahmed Omar',
+    duration: 30,
   },
   {
     id: 2,
@@ -63,6 +65,8 @@ const upcomingAppointments = [
     status: 'pending',
     avatar: 'FH',
     type: 'Consultation',
+    doctor: 'Dr. Sarah Ahmed',
+    duration: 20,
   },
   {
     id: 3,
@@ -71,6 +75,8 @@ const upcomingAppointments = [
     status: 'confirmed',
     avatar: 'MA',
     type: 'Follow-up',
+    doctor: 'Dr. Mohammed Ali',
+    duration: 45,
   },
   {
     id: 4,
@@ -78,7 +84,9 @@ const upcomingAppointments = [
     time: '03:30 PM', 
     status: 'pending',
     avatar: 'SA',
-    type: 'Dental Checkup',
+    type: 'Dermatology',
+    doctor: 'Dr. Fatima Hassan',
+    duration: 15,
   },
 ];
 
@@ -293,6 +301,7 @@ const DashboardPage: React.FC = () => {
                         <TableRow>
                           <TableCell sx={{ fontWeight: 600 }}>{t('patient')}</TableCell>
                           <TableCell sx={{ fontWeight: 600 }}>{t('time')}</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>Doctor</TableCell>
                           <TableCell sx={{ fontWeight: 600 }}>{t('type')}</TableCell>
                           <TableCell sx={{ fontWeight: 600 }}>{t('status')}</TableCell>
                         </TableRow>
@@ -323,6 +332,14 @@ const DashboardPage: React.FC = () => {
                                 <Schedule sx={{ mr: 1, color: 'text.secondary', fontSize: 20 }} />
                                 <Typography variant="body2">{appointment.time}</Typography>
                               </Box>
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2" fontWeight={600} color="primary.main">
+                                {appointment.doctor}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                {appointment.duration} min
+                              </Typography>
                             </TableCell>
                             <TableCell>
                               <Typography variant="body2" color="text.secondary">

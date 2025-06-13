@@ -12,7 +12,7 @@ import PaymentListPage from "../features/payments/PaymentListPage";
 import InventoryPage from "../features/inventory/InventoryPage";
 import NotificationsPage from "../features/notifications/NotificationsPage";
 import SettingsPage from "../features/settings/SettingsPage";
-import ChatPage from "../features/chat/ChatPage";
+import AppointmentSchedulingPage from "../features/chat/AppointmentSchedulingPage";
 
 const Router: React.FC = () => {
   return (
@@ -39,7 +39,7 @@ const Router: React.FC = () => {
         <Route path="/payments" element={<PaymentListPage />} />
         <Route path="/inventory" element={<InventoryPage />} />
         <Route path="/notifications" element={<NotificationsPage />} />
-        <Route path="/chat" element={<ChatPage />} />
+        <Route path="/chat" element={<AppointmentSchedulingPage />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Routes>
     </BrowserRouter>
