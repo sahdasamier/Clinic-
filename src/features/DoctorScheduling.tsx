@@ -77,8 +77,8 @@ function TabPanel(props: TabPanelProps) {
   );
 }
 
-// Doctor schedules with working hours and off days
-const doctorSchedules = [
+// EXPORT: Doctor schedules with working hours and off days
+export const doctorSchedules = [
   {
     id: 1,
     name: 'Dr. Ahmed Omar',
@@ -132,8 +132,8 @@ interface Appointment {
   isAvailableSlot?: boolean; // New field to distinguish available slots from actual appointments
 }
 
-// Sample appointments data (these are REAL appointments with patients)
-const initialAppointments: Appointment[] = [
+// EXPORT: Sample appointments data (these are REAL appointments with patients)
+export const initialAppointments: Appointment[] = [
   // Dr. Ahmed Omar - Monday 4-6 PM has 4 patients (RESERVED)
   { id: 1, doctorId: 1, date: '2024-01-15', time: '16:00', patient: 'Ahmed Al-Rashid', duration: 30 },
   { id: 2, doctorId: 1, date: '2024-01-15', time: '16:30', patient: 'Fatima Hassan', duration: 30 },

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Box,
   Container,
@@ -14,103 +14,108 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
   LinearProgress,
+  Divider,
+  Alert,
+  IconButton,
+  Tooltip,
 } from '@mui/material';
 import {
   TrendingUp,
   People,
   CalendarToday,
   CheckCircle,
-  Schedule,
-  PersonAdd,
+  LocalHospital,
+  Analytics,
+  MedicalServices,
+  Timeline,
+  Assignment,
+  Groups,
+  ShowChart,
+  Refresh,
 } from '@mui/icons-material';
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  ResponsiveContainer, 
+  PieChart, 
+  Pie, 
+  Cell,
+  Area,
+  AreaChart,
+  Tooltip as RechartsTooltip,
+} from 'recharts';
 import Header from '../../components/Header';
 import Sidebar from '../../components/Sidebar';
 import { useTranslation } from 'react-i18next';
 
-// Mock data for charts
-const appointmentData = [
-  { name: 'Mon', appointments: 12 },
-  { name: 'Tue', appointments: 19 },
-  { name: 'Wed', appointments: 15 },
-  { name: 'Thu', appointments: 22 },
-  { name: 'Fri', appointments: 18 },
-  { name: 'Sat', appointments: 8 },
-  { name: 'Sun', appointments: 5 },
-];
+// DIRECT IMPORTS from actual pages
+import { 
+  loadAppointmentsFromStorage, 
+  getDefaultAppointments 
+} from '../appointments/AppointmentListPage';
+import { loadPatientsFromStorage } from '../patients/PatientListPage';
+import { doctorSchedules } from '../DoctorScheduling';
+import { loadPaymentsFromStorage } from '../payments/PaymentListPage';
 
-const pieData = [
-  { name: 'Completed', value: 65, color: '#10B981' },
-  { name: 'Pending', value: 20, color: '#F59E0B' },
-  { name: 'Cancelled', value: 15, color: '#EF4444' },
-];
-
-const upcomingAppointments = [
-  {
-    id: 1,
-    patient: 'Ahmed Al-Rashid',
-    time: '10:00 AM',
-    status: 'confirmed',
-    avatar: 'AR',
-    type: 'General Checkup',
-    doctor: 'Dr. Ahmed Omar',
-    duration: 30,
-  },
-  {
-    id: 2,
-    patient: 'Fatima Hassan',
-    time: '11:30 AM', 
-    status: 'pending',
-    avatar: 'FH',
-    type: 'Consultation',
-    doctor: 'Dr. Sarah Ahmed',
-    duration: 20,
-  },
-  {
-    id: 3,
-    patient: 'Mohammed Ali',
-    time: '02:00 PM',
-    status: 'confirmed',
-    avatar: 'MA',
-    type: 'Follow-up',
-    doctor: 'Dr. Mohammed Ali',
-    duration: 45,
-  },
-  {
-    id: 4,
-    patient: 'Sara Ahmed',
-    time: '03:30 PM', 
-    status: 'pending',
-    avatar: 'SA',
-    type: 'Dermatology',
-    doctor: 'Dr. Fatima Hassan',
-    duration: 15,
-  },
-];
+// Professional Color Palette
+const colorPalette = {
+  primary: '#1976d2',
+  secondary: '#2196f3',
+  success: '#4caf50',
+  warning: '#ff9800',
+  error: '#f44336',
+  info: '#00bcd4',
+  purple: '#9c27b0',
+  indigo: '#3f51b5',
+  teal: '#009688',
+  pink: '#e91e63',
+  gradient: {
+    blue: 'linear-gradient(135deg, #1976d2 0%, #2196f3 100%)',
+    green: 'linear-gradient(135deg, #4caf50 0%, #66bb6a 100%)',
+    orange: 'linear-gradient(135deg, #ff9800 0%, #ffb74d 100%)',
+    purple: 'linear-gradient(135deg, #9c27b0 0%, #ba68c8 100%)',
+    teal: 'linear-gradient(135deg, #009688 0%, #4db6ac 100%)',
+  }
+};
 
 const StatCard: React.FC<{
   title: string;
   value: string | number;
   icon: React.ReactNode;
-  color: string;
+  gradient: string;
   change?: string;
   trend?: 'up' | 'down';
-}> = ({ title, value, icon, color, change, trend }) => (
-  <Card sx={{ height: '100%', position: 'relative', overflow: 'visible' }}>
-    <CardContent sx={{ p: 3 }}>
+  subtitle?: string;
+}> = ({ title, value, icon, gradient, change, trend, subtitle }) => (
+  <Card sx={{ 
+    height: '100%', 
+    position: 'relative', 
+    overflow: 'hidden',
+    background: gradient,
+    color: 'white',
+    boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+    transition: 'all 0.3s ease',
+    '&:hover': {
+      transform: 'translateY(-4px)',
+      boxShadow: '0 16px 48px rgba(0,0,0,0.15)',
+    }
+  }}>
+    <CardContent sx={{ p: 3, position: 'relative', zIndex: 2 }}>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
         <Box
           sx={{
-            width: 48,
-            height: 48,
-            borderRadius: '12px',
-            backgroundColor: `${color}15`,
+            width: 56,
+            height: 56,
+            borderRadius: '16px',
+            backgroundColor: 'rgba(255,255,255,0.2)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: color,
+            color: 'white',
+            backdropFilter: 'blur(10px)',
           }}
         >
           {icon}
@@ -120,149 +125,574 @@ const StatCard: React.FC<{
             size="small"
             label={change}
             sx={{
-              backgroundColor: trend === 'up' ? '#10B98115' : '#EF444415',
-              color: trend === 'up' ? '#10B981' : '#EF4444',
-              fontWeight: 600,
+              backgroundColor: 'rgba(255,255,255,0.2)',
+              color: 'white',
+              fontWeight: 700,
+              backdropFilter: 'blur(10px)',
             }}
           />
         )}
       </Box>
-      <Typography variant="h3" sx={{ fontWeight: 700, mb: 0.5, color: 'text.primary' }}>
+      <Typography variant="h3" sx={{ fontWeight: 800, mb: 0.5, color: 'white' }}>
         {value}
       </Typography>
-      <Typography variant="body2" color="text.secondary">
+      <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.9)', fontWeight: 600 }}>
         {title}
       </Typography>
+      {subtitle && (
+        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', display: 'block', mt: 0.5 }}>
+          {subtitle}
+        </Typography>
+      )}
     </CardContent>
+    {/* Decorative Elements */}
+    <Box sx={{
+      position: 'absolute',
+      top: -20,
+      right: -20,
+      width: 80,
+      height: 80,
+      borderRadius: '50%',
+      backgroundColor: 'rgba(255,255,255,0.1)',
+      zIndex: 1,
+    }} />
+    <Box sx={{
+      position: 'absolute',
+      bottom: -30,
+      left: -30,
+      width: 100,
+      height: 100,
+      borderRadius: '50%',
+      backgroundColor: 'rgba(255,255,255,0.05)',
+      zIndex: 1,
+    }} />
   </Card>
 );
 
 const DashboardPage: React.FC = () => {
   const { t } = useTranslation();
+  const [refreshKey, setRefreshKey] = useState(0);
+  
+  // Load real data directly from the pages
+  const [appointments, setAppointments] = useState<any[]>([]);
+  const [patients, setPatients] = useState<any[]>([]);
+  const [payments, setPayments] = useState<any[]>([]);
+  const doctors = doctorSchedules;
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'confirmed':
-        return 'success';
-      case 'pending':
-        return 'warning';
-      case 'cancelled':
-        return 'error';
-      default:
-        return 'default';
-    }
+  // Load all data directly from the pages
+  useEffect(() => {
+    const loadedAppointments = loadAppointmentsFromStorage();
+    setAppointments(loadedAppointments.length > 0 ? loadedAppointments : getDefaultAppointments());
+    
+    const loadedPatients = loadPatientsFromStorage();
+    setPatients(loadedPatients);
+    
+    const loadedPayments = loadPaymentsFromStorage();
+    setPayments(loadedPayments);
+  }, [refreshKey]);
+
+  // Refresh function
+  const refreshData = () => {
+    setRefreshKey(prev => prev + 1);
+    const loadedAppointments = loadAppointmentsFromStorage();
+    setAppointments(loadedAppointments.length > 0 ? loadedAppointments : getDefaultAppointments());
+    
+    const loadedPatients = loadPatientsFromStorage();
+    setPatients(loadedPatients);
+    
+    const loadedPayments = loadPaymentsFromStorage();
+    setPayments(loadedPayments);
   };
 
+  // Calculate statistics from real data
+  const stats = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0];
+    const daysOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    
+    // Working doctors today
+    const workingDoctors = doctors.filter(doctor => 
+      !doctor.offDays.includes(daysOfWeek[new Date().getDay()])
+    );
+    
+    // Appointment statistics
+    const todayAppointments = appointments.filter(apt => apt.date === today);
+    const completedAppointments = appointments.filter(apt => 
+      apt.status === 'completed' || apt.completed === true
+    );
+    const pendingAppointments = appointments.filter(apt => 
+      apt.status === 'pending' || (apt.status === 'confirmed' && !apt.completed)
+    );
+    const confirmedAppointments = appointments.filter(apt => apt.status === 'confirmed');
+    const cancelledAppointments = appointments.filter(apt => apt.status === 'cancelled' || apt.status === 'no-show');
+    
+    // Revenue calculation from real payment data (EGP)
+    const paidPayments = payments.filter(p => p.status === 'paid');
+    const pendingPayments = payments.filter(p => p.status === 'pending');
+    const overduePayments = payments.filter(p => p.status === 'overdue');
+    const partialPayments = payments.filter(p => p.status === 'partial');
+    
+    const totalRevenue = paidPayments.reduce((sum, payment) => sum + payment.amount, 0);
+    const totalPendingRevenue = pendingPayments.reduce((sum, payment) => sum + payment.amount, 0);
+    const totalOverdueRevenue = overduePayments.reduce((sum, payment) => sum + payment.amount, 0);
+    const totalPartialRevenue = partialPayments.reduce((sum, payment) => sum + payment.amount, 0);
+
+    // Debug logging for revenue analytics
+    console.log('💰 Revenue Analytics Debug:', {
+      allPayments: payments.length,
+      paidCount: paidPayments.length,
+      pendingCount: pendingPayments.length,
+      overdueCount: overduePayments.length,
+      partialCount: partialPayments.length,
+      totalRevenue: `EGP ${totalRevenue}`,
+      totalPendingRevenue: `EGP ${totalPendingRevenue}`,
+      totalOverdueRevenue: `EGP ${totalOverdueRevenue}`,
+      totalPartialRevenue: `EGP ${totalPartialRevenue}`,
+      paymentDetails: payments.map(p => ({ 
+        patient: p.patient, 
+        amount: `EGP ${p.amount}`, 
+        status: p.status, 
+        currency: p.currency 
+      }))
+    });
+
+    // Patient statistics
+    const uniquePatients = new Set(appointments.map(apt => apt.patient)).size;
+    const newPatients = patients.filter(patient => patient.status === 'new').length;
+    
+    // Time statistics
+    const avgConsultationTime = appointments.length > 0 
+      ? Math.round(appointments.reduce((sum, apt) => sum + (apt.duration || 30), 0) / appointments.length)
+      : 30;
+
+    // Weekly data for charts
+    const last7Days = [];
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      const dayAppointments = appointments.filter(apt => apt.date === dateStr);
+      
+      last7Days.push({
+        name: date.toLocaleDateString('en', { weekday: 'short' }),
+        date: dateStr,
+        appointments: dayAppointments.length,
+        completed: dayAppointments.filter(apt => apt.status === 'completed' || apt.completed).length,
+        pending: dayAppointments.filter(apt => apt.status === 'pending').length,
+        cancelled: dayAppointments.filter(apt => apt.status === 'cancelled' || apt.status === 'no-show').length,
+      });
+    }
+
+    // Specialty distribution - Fixed matching logic
+    const specialtyStats = doctors.reduce((acc, doctor) => {
+      // Match exact doctor names from appointments with doctor scheduling
+      const doctorAppointments = appointments.filter(apt => 
+        apt.doctor === doctor.name || // Exact match: 'Dr. Sarah Ahmed' === 'Dr. Sarah Ahmed'
+        apt.doctor?.includes(doctor.name.replace('Dr. ', '')) || // Partial match for backwards compatibility
+        apt.type === doctor.specialty // Match by specialty type
+      );
+      acc[doctor.specialty] = doctorAppointments.length;
+      return acc;
+    }, {} as Record<string, number>);
+
+    console.log('🔍 Department Status Debug:', {
+      doctors: doctors.map(d => ({ name: d.name, specialty: d.specialty })),
+      appointments: appointments.map(a => ({ doctor: a.doctor, type: a.type })),
+      specialtyStats
+    });
+
+    // Doctor performance - Fixed matching logic
+    const doctorPerformance = doctors.map(doctor => {
+      const doctorAppointments = appointments.filter(apt => 
+        apt.doctor === doctor.name || // Exact match: 'Dr. Sarah Ahmed' === 'Dr. Sarah Ahmed'
+        apt.doctor?.includes(doctor.name.replace('Dr. ', '')) // Partial match for backwards compatibility
+      );
+      const completed = doctorAppointments.filter(apt => apt.status === 'completed' || apt.completed).length;
+      const total = doctorAppointments.length;
+      const efficiency = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+      return {
+        id: doctor.id,
+        name: doctor.name,
+        avatar: doctor.avatar,
+        specialty: doctor.specialty,
+        appointments: total,
+        completed,
+        efficiency,
+        workingHours: doctor.workingHours || { start: '09:00', end: '17:00' },
+        offDays: doctor.offDays || [],
+      };
+    });
+
+    return {
+      // Basic counts
+      workingDoctors: workingDoctors.length,
+      totalDoctors: doctors.length,
+      totalAppointments: appointments.length,
+      todayAppointments: todayAppointments.length,
+      
+      // Appointment status
+      completedAppointments: completedAppointments.length,
+      pendingAppointments: pendingAppointments.length,
+      confirmedAppointments: confirmedAppointments.length,
+      cancelledAppointments: cancelledAppointments.length,
+      
+      // Financial (EGP from PaymentListPage)
+      totalRevenue,
+      totalPendingRevenue,
+      totalOverdueRevenue,
+      totalPartialRevenue,
+      avgRevenuePerPayment: paidPayments.length > 0 ? Math.round(totalRevenue / paidPayments.length) : 0,
+      totalPayments: payments.length,
+      paidPayments: paidPayments.length,
+      pendingPayments: pendingPayments.length,
+      overduePayments: overduePayments.length,
+      partialPayments: partialPayments.length,
+      
+      // Patients
+      totalPatients: patients.length,
+      uniquePatients,
+      newPatients,
+      
+      // Time metrics
+      avgConsultationTime,
+      clinicUtilization: Math.round((appointments.length / (doctors.length * 8)) * 100),
+      
+      // Chart data
+      weeklyData: last7Days,
+      specialtyStats,
+      doctorPerformance,
+      
+      // Status distribution for pie chart
+      statusDistribution: [
+        { name: 'Completed', value: completedAppointments.length, color: '#4caf50' },
+        { name: 'Confirmed', value: confirmedAppointments.length, color: '#2196f3' },
+        { name: 'Pending', value: pendingAppointments.length, color: '#ff9800' },
+        { name: 'Cancelled', value: cancelledAppointments.length, color: '#f44336' },
+      ].filter(item => item.value > 0),
+    };
+  }, [appointments, patients, doctors, refreshKey]);
+
+  // Prepare specialty data for charts
+  const specialtyData = Object.entries(stats.specialtyStats).map(([specialty, count], index) => ({
+    name: specialty,
+    value: count,
+    color: [colorPalette.primary, colorPalette.success, colorPalette.warning, colorPalette.purple][index % 4],
+  }));
+
   return (
-    <Box sx={{ display: 'flex', height: '100vh', backgroundColor: 'background.default' }}>
+    <Box sx={{ display: 'flex', height: '100vh', backgroundColor: '#f8fafc' }}>
       <Sidebar />
       <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <Header />
         <Container maxWidth="xl" sx={{ mt: 4, mb: 4, flex: 1, overflow: 'auto' }}>
           {/* Welcome Section */}
-          <Box sx={{ mb: 4 }}>
-            <Typography variant="h4" sx={{ fontWeight: 700, mb: 1, color: 'text.primary' }}>
-              {t('welcome_back')} Dr. Ahmed! 👋
-            </Typography>
-            <Typography variant="body1" color="text.secondary">
-              {t('dashboard_subtitle')} Here's what's happening at your clinic today.
-            </Typography>
+          <Box sx={{ 
+            mb: 4, 
+            p: 4,
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            borderRadius: 4,
+            color: 'white',
+            position: 'relative',
+            overflow: 'hidden',
+          }}>
+            <Box sx={{ position: 'relative', zIndex: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Box>
+                  <Typography variant="h3" sx={{ fontWeight: 800, mb: 1 }}>
+                    Clinical Dashboard 🏥
+                  </Typography>
+                  <Typography variant="h6" sx={{ opacity: 0.9, fontWeight: 400 }}>
+                    Real-time data directly from AppointmentList, PatientList & DoctorScheduling pages
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Tooltip title="Refresh Data">
+                    <IconButton 
+                      onClick={refreshData}
+                      sx={{ 
+                        color: 'white',
+                        backgroundColor: 'rgba(255,255,255,0.2)',
+                        '&:hover': { backgroundColor: 'rgba(255,255,255,0.3)' }
+                      }}
+                    >
+                      <Refresh />
+                    </IconButton>
+                  </Tooltip>
+                  <Typography variant="body2" sx={{ opacity: 0.8 }}>
+                    Data Source: Direct Page Imports
+                  </Typography>
+                </Box>
+              </Box>
+            </Box>
+            {/* Decorative background */}
+            <Box sx={{
+              position: 'absolute',
+              top: -50,
+              right: -50,
+              width: 200,
+              height: 200,
+              borderRadius: '50%',
+              backgroundColor: 'rgba(255,255,255,0.1)',
+              zIndex: 1,
+            }} />
           </Box>
 
-          {/* Stats Cards */}
+          {/* Enhanced Stats Cards */}
           <Grid container spacing={3} sx={{ mb: 4 }}>
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid item xs={12} sm={6} lg={3}>
               <StatCard
-                title={t('appointments_today')}
-                value="21"
-                icon={<CalendarToday />}
-                color="#3B82F6"
-                change="+12%"
-                trend="up"
+                title="Working Doctors Today"
+                value={`${stats.workingDoctors}/${stats.totalDoctors}`}
+                icon={<LocalHospital sx={{ fontSize: 32 }} />}
+                gradient={colorPalette.gradient.blue}
+                change={stats.workingDoctors > 0 ? `${stats.workingDoctors} active` : 'None today'}
               />
             </Grid>
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid item xs={12} sm={6} lg={3}>
               <StatCard
-                title={t('new_patients')}
-                value="3"
-                icon={<PersonAdd />}
-                color="#10B981"
-                change="+5%"
-                trend="up"
+                title="Total Appointments"
+                value={stats.totalAppointments}
+                icon={<CalendarToday sx={{ fontSize: 32 }} />}
+                gradient={colorPalette.gradient.green}
+                change={stats.todayAppointments > 0 ? `${stats.todayAppointments} today` : 'None today'}
               />
             </Grid>
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid item xs={12} sm={6} lg={3}>
               <StatCard
-                title={t('completed_appointments')}
-                value="18"
-                icon={<CheckCircle />}
-                color="#F59E0B"
-                change="-3%"
-                trend="down"
+                title="Completion Rate"
+                value={stats.totalAppointments > 0 ? `${Math.round((stats.completedAppointments / stats.totalAppointments) * 100)}%` : '0%'}
+                icon={<CheckCircle sx={{ fontSize: 32 }} />}
+                gradient={colorPalette.gradient.orange}
+                change={`${stats.completedAppointments} completed`}
+                subtitle={`${stats.pendingAppointments} pending completion`}
               />
             </Grid>
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid item xs={12} sm={6} lg={3}>
               <StatCard
-                title={t('total_revenue')}
-                value="$2,450"
-                icon={<TrendingUp />}
-                color="#8B5CF6"
-                change="+8%"
-                trend="up"
+                title="Total Patients"
+                value={stats.totalPatients}
+                icon={<Groups sx={{ fontSize: 32 }} />}
+                gradient={colorPalette.gradient.purple}
+                change={`${stats.newPatients} new patients`}
               />
             </Grid>
           </Grid>
+          
 
-          {/* Charts and Tables Row */}
-          <Grid container spacing={3}>
-            {/* Appointments Chart */}
-            <Grid item xs={12} md={8}>
-              <Card>
-                <CardContent sx={{ p: 3 }}>
-                  <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
-                    {t('weekly_appointments')}
+          {/* Key Performance Indicators */}
+          <Grid container spacing={3} sx={{ mb: 4 }}>
+            <Grid item xs={12} md={4}>
+              <Card sx={{ height: '100%', p: 3 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                  <Analytics sx={{ fontSize: 28, color: colorPalette.primary, mr: 2 }} />
+                  <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                    Revenue Analytics (EGP)
                   </Typography>
-                  <Box sx={{ height: 300 }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={appointmentData}>
-                        <XAxis dataKey="name" />
-                        <YAxis />
-                        <Bar dataKey="appointments" fill="#3B82F6" radius={[8, 8, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
+                </Box>
+                <Box sx={{ textAlign: 'center', mb: 2 }}>
+                  <Typography variant="h3" sx={{ fontWeight: 800, color: colorPalette.success }}>
+                    EGP {stats.totalRevenue.toLocaleString()}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Total Paid Revenue ({stats.paidPayments} invoices)
+                  </Typography>
+                </Box>
+                <Divider sx={{ my: 2 }} />
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                  <Typography variant="body2">Avg. per Payment:</Typography>
+                  <Typography variant="body2" fontWeight={600}>
+                    EGP {stats.avgRevenuePerPayment}
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                  <Typography variant="body2">Pending ({stats.pendingPayments}):</Typography>
+                  <Typography variant="body2" fontWeight={600} color="warning.main">
+                    EGP {stats.totalPendingRevenue.toLocaleString()}
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                  <Typography variant="body2">Overdue ({stats.overduePayments}):</Typography>
+                  <Typography variant="body2" fontWeight={600} color="error.main">
+                    EGP {stats.totalOverdueRevenue.toLocaleString()}
+                  </Typography>
+                </Box>
+                {stats.partialPayments > 0 && (
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                    <Typography variant="body2">Partial ({stats.partialPayments}):</Typography>
+                    <Typography variant="body2" fontWeight={600} color="info.main">
+                      EGP {stats.totalPartialRevenue.toLocaleString()}
+                    </Typography>
                   </Box>
-                </CardContent>
+                )}
+                <Divider sx={{ my: 1 }} />
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                  <Typography variant="body2" fontWeight={700}>Total Expected:</Typography>
+                  <Typography variant="body2" fontWeight={700} color="primary.main">
+                    EGP {(stats.totalRevenue + stats.totalPendingRevenue + stats.totalOverdueRevenue + stats.totalPartialRevenue).toLocaleString()}
+                  </Typography>
+                </Box>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center', mt: 1 }}>
+                  Data source: PaymentListPage.tsx
+                </Typography>
               </Card>
             </Grid>
 
-            {/* Status Distribution */}
             <Grid item xs={12} md={4}>
-              <Card>
-                <CardContent sx={{ p: 3 }}>
-                  <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
-                    {t('appointment_status')}
+              <Card sx={{ height: '100%', p: 3 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                  <Timeline sx={{ fontSize: 28, color: colorPalette.info, mr: 2 }} />
+                  <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                    Efficiency Metrics
                   </Typography>
-                  <Box sx={{ height: 200, mb: 2 }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={pieData}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={40}
-                          outerRadius={80}
-                          dataKey="value"
-                        >
-                          {pieData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Pie>
-                      </PieChart>
-                    </ResponsiveContainer>
+                </Box>
+                <Box sx={{ mb: 3 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                    <Typography variant="body2">Average Consultation</Typography>
+                    <Typography variant="body2" fontWeight={600}>
+                      {stats.avgConsultationTime} min
+                    </Typography>
                   </Box>
-                  <Box>
-                    {pieData.map((item, index) => (
-                      <Box key={index} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                  <LinearProgress 
+                    variant="determinate" 
+                    value={(stats.avgConsultationTime / 60) * 100} 
+                    sx={{ height: 8, borderRadius: 4, backgroundColor: '#e0e0e0' }}
+                  />
+                </Box>
+                <Box sx={{ mb: 2 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                    <Typography variant="body2">Clinic Utilization</Typography>
+                    <Typography variant="body2" fontWeight={600}>
+                      {stats.clinicUtilization}%
+                    </Typography>
+                  </Box>
+                  <LinearProgress 
+                    variant="determinate" 
+                    value={stats.clinicUtilization} 
+                    sx={{ height: 8, borderRadius: 4, backgroundColor: '#e0e0e0' }}
+                  />
+                </Box>
+              </Card>
+            </Grid>
+
+            <Grid item xs={12} md={4}>
+              <Card sx={{ height: '100%', p: 3 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                  <MedicalServices sx={{ fontSize: 28, color: colorPalette.success, mr: 2 }} />
+                  <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                    Department Status
+                  </Typography>
+                </Box>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
+                  Doctor specialties from DoctorScheduling matched with AppointmentList
+                </Typography>
+                {specialtyData.length > 0 && specialtyData.some(s => s.value > 0) ? (
+                  specialtyData.filter(s => s.value > 0).map((specialty, index) => (
+                    <Box key={index} sx={{ mb: 2 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                        <Typography variant="body2" fontWeight={600}>{specialty.name}</Typography>
+                        <Typography variant="body2" fontWeight={600} color="primary.main">
+                          {specialty.value} appointments
+                        </Typography>
+                      </Box>
+                      <LinearProgress 
+                        variant="determinate" 
+                        value={(specialty.value / Math.max(...specialtyData.filter(s => s.value > 0).map(s => s.value))) * 100} 
+                        sx={{ 
+                          height: 8, 
+                          borderRadius: 4, 
+                          backgroundColor: '#f0f0f0',
+                          '& .MuiLinearProgress-bar': {
+                            backgroundColor: specialty.color,
+                            borderRadius: 4,
+                          }
+                        }}
+                      />
+                    </Box>
+                  ))
+                ) : (
+                  <Alert severity="warning" sx={{ mt: 1 }}>
+                    <Typography variant="body2">
+                      No appointments found matching doctors from DoctorScheduling
+                    </Typography>
+                    <Typography variant="caption" sx={{ display: 'block', mt: 1, opacity: 0.8 }}>
+                      Check that appointment doctors match exactly with doctor names in DoctorScheduling
+                    </Typography>
+                  </Alert>
+                )}
+              </Card>
+            </Grid>
+          </Grid>
+
+          {/* Charts Section */}
+          <Grid container spacing={3} sx={{ mb: 4 }}>
+            {/* Weekly Appointments Trend */}
+            <Grid item xs={12} lg={8}>
+              <Card sx={{ p: 3 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+                  <Typography variant="h6" sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <ShowChart sx={{ color: colorPalette.primary }} />
+                    Weekly Appointment Trends
+                  </Typography>
+                  <Alert severity="info">
+                    Last 7 days from real data
+                  </Alert>
+                </Box>
+                <Box sx={{ height: 300 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={stats.weeklyData}>
+                      <defs>
+                        <linearGradient id="appointmentGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor={colorPalette.primary} stopOpacity={0.8}/>
+                          <stop offset="95%" stopColor={colorPalette.primary} stopOpacity={0.1}/>
+                        </linearGradient>
+                      </defs>
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <RechartsTooltip />
+                      <Area 
+                        type="monotone" 
+                        dataKey="appointments" 
+                        stroke={colorPalette.primary} 
+                        fillOpacity={1} 
+                        fill="url(#appointmentGradient)" 
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </Box>
+              </Card>
+            </Grid>
+
+            {/* Appointment Status Distribution */}
+            <Grid item xs={12} lg={4}>
+              <Card sx={{ p: 3 }}>
+                <Typography variant="h6" sx={{ mb: 3, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Assignment sx={{ color: colorPalette.warning }} />
+                  Status Distribution
+                </Typography>
+                <Box sx={{ height: 200, mb: 2 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={stats.statusDistribution}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={50}
+                        outerRadius={80}
+                        paddingAngle={5}
+                        dataKey="value"
+                      >
+                        {stats.statusDistribution.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <RechartsTooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </Box>
+                <Box>
+                  {stats.statusDistribution.map((item, index) => (
+                    <Box key={index} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
                         <Box
                           sx={{
                             width: 12,
@@ -272,43 +702,44 @@ const DashboardPage: React.FC = () => {
                             mr: 1,
                           }}
                         />
-                        <Typography variant="body2" sx={{ flexGrow: 1 }}>
-                          {item.name}
-                        </Typography>
-                        <Typography variant="body2" fontWeight={600}>
-                          {item.value}%
-                        </Typography>
+                        <Typography variant="body2">{item.name}</Typography>
                       </Box>
-                    ))}
-                  </Box>
-                </CardContent>
+                      <Typography variant="body2" fontWeight={600}>
+                        {item.value} ({stats.totalAppointments > 0 ? Math.round((item.value / stats.totalAppointments) * 100) : 0}%)
+                      </Typography>
+                    </Box>
+                  ))}
+                </Box>
               </Card>
             </Grid>
+          </Grid>
 
-            {/* Upcoming Appointments */}
+          {/* Doctor Performance Table */}
+          <Grid container spacing={3}>
             <Grid item xs={12}>
               <Card>
-                <CardContent sx={{ p: 3 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
-                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                      {t('upcoming_appointments')}
+                <CardContent sx={{ p: 0 }}>
+                  <Box sx={{ p: 3, pb: 0 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <People sx={{ color: colorPalette.success }} />
+                      Doctor Performance Analytics (Real Data)
                     </Typography>
-                    <Chip label={`${upcomingAppointments.length} ${t('appointments')}`} variant="outlined" />
                   </Box>
                   <TableContainer>
                     <Table>
                       <TableHead>
-                        <TableRow>
-                          <TableCell sx={{ fontWeight: 600 }}>{t('patient')}</TableCell>
-                          <TableCell sx={{ fontWeight: 600 }}>{t('time')}</TableCell>
-                          <TableCell sx={{ fontWeight: 600 }}>Doctor</TableCell>
-                          <TableCell sx={{ fontWeight: 600 }}>{t('type')}</TableCell>
-                          <TableCell sx={{ fontWeight: 600 }}>{t('status')}</TableCell>
+                        <TableRow sx={{ backgroundColor: '#f8fafc' }}>
+                          <TableCell sx={{ fontWeight: 700, py: 2 }}>Doctor</TableCell>
+                          <TableCell sx={{ fontWeight: 700 }}>Specialty</TableCell>
+                          <TableCell sx={{ fontWeight: 700 }}>Total Appointments</TableCell>
+                          <TableCell sx={{ fontWeight: 700 }}>Completed</TableCell>
+                          <TableCell sx={{ fontWeight: 700 }}>Efficiency Rate</TableCell>
+                          <TableCell sx={{ fontWeight: 700 }}>Performance</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
-                        {upcomingAppointments.map((appointment) => (
-                          <TableRow key={appointment.id} hover>
+                        {stats.doctorPerformance.map((doctor, index) => (
+                          <TableRow key={index} hover sx={{ '&:hover': { backgroundColor: '#f8fafc' } }}>
                             <TableCell>
                               <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                 <Avatar
@@ -316,43 +747,76 @@ const DashboardPage: React.FC = () => {
                                     width: 40,
                                     height: 40,
                                     mr: 2,
-                                    backgroundColor: 'primary.main',
-                                    fontSize: '0.875rem',
+                                    backgroundColor: colorPalette.primary,
+                                    fontWeight: 700,
                                   }}
                                 >
-                                  {appointment.avatar}
+                                  {doctor.avatar}
                                 </Avatar>
-                                <Typography variant="body2" fontWeight={600}>
-                                  {appointment.patient}
-                                </Typography>
+                                <Box>
+                                  <Typography variant="body2" fontWeight={700}>
+                                    {doctor.name}
+                                  </Typography>
+                                  <Typography variant="caption" color="text.secondary">
+                                    {doctor.workingHours.start} - {doctor.workingHours.end}
+                                  </Typography>
+                                </Box>
                               </Box>
                             </TableCell>
                             <TableCell>
-                              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                <Schedule sx={{ mr: 1, color: 'text.secondary', fontSize: 20 }} />
-                                <Typography variant="body2">{appointment.time}</Typography>
-                              </Box>
-                            </TableCell>
-                            <TableCell>
-                              <Typography variant="body2" fontWeight={600} color="primary.main">
-                                {appointment.doctor}
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                {appointment.duration} min
-                              </Typography>
-                            </TableCell>
-                            <TableCell>
-                              <Typography variant="body2" color="text.secondary">
-                                {appointment.type}
-                              </Typography>
-                            </TableCell>
-                            <TableCell>
-                              <Chip
-                                label={t(appointment.status)}
-                                color={getStatusColor(appointment.status) as any}
-                                size="small"
-                                variant="outlined"
+                              <Chip 
+                                label={doctor.specialty} 
+                                size="small" 
+                                sx={{ 
+                                  backgroundColor: `${colorPalette.info}15`,
+                                  color: colorPalette.info,
+                                  fontWeight: 600,
+                                }}
                               />
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2" fontWeight={600}>
+                                {doctor.appointments}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2" fontWeight={600} color="success.main">
+                                {doctor.completed}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2" fontWeight={600}>
+                                {doctor.efficiency}%
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <LinearProgress
+                                  variant="determinate"
+                                  value={doctor.efficiency}
+                                  sx={{
+                                    width: 80,
+                                    height: 8,
+                                    borderRadius: 4,
+                                    backgroundColor: '#e0e0e0',
+                                    '& .MuiLinearProgress-bar': {
+                                      backgroundColor: doctor.efficiency >= 80 ? colorPalette.success :
+                                                     doctor.efficiency >= 60 ? colorPalette.warning :
+                                                     colorPalette.error,
+                                    }
+                                  }}
+                                />
+                                <Chip 
+                                  label={doctor.efficiency >= 80 ? 'Excellent' : 
+                                        doctor.efficiency >= 60 ? 'Good' : 
+                                        doctor.appointments === 0 ? 'No Data' : 'Needs Attention'} 
+                                  size="small"
+                                  color={doctor.efficiency >= 80 ? 'success' : 
+                                        doctor.efficiency >= 60 ? 'warning' : 
+                                        doctor.appointments === 0 ? 'default' : 'error'}
+                                  variant="outlined"
+                                />
+                              </Box>
                             </TableCell>
                           </TableRow>
                         ))}

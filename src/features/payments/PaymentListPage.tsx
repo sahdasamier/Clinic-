@@ -131,8 +131,8 @@ const generateRecentDates = () => {
   };
 };
 
-// Default sample data to show when no saved data exists
-const defaultPayments = (() => {
+// EXPORT: Default sample data to show when no saved data exists
+export const defaultPayments = (() => {
   const dates = generateRecentDates();
   return [
     {
@@ -271,7 +271,8 @@ const defaultPayments = (() => {
 const STORAGE_KEY = 'clinic_payments_data';
 const PATIENTS_STORAGE_KEY = 'clinic_patients_data';
 
-const loadPaymentsFromStorage = (): any[] => {
+// EXPORT: Load payments from localStorage
+export const loadPaymentsFromStorage = (): any[] => {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
@@ -289,7 +290,8 @@ const loadPaymentsFromStorage = (): any[] => {
   return defaultPayments;
 };
 
-const savePaymentsToStorage = (payments: any[]) => {
+// EXPORT: Save payments to localStorage
+export const savePaymentsToStorage = (payments: any[]) => {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(payments));
   } catch (error) {
@@ -349,7 +351,8 @@ const defaultPatientsData = [
   },
 ];
 
-const loadPatientsFromStorage = (): any[] => {
+// EXPORT: Load patients from localStorage
+export const loadPatientsFromStorage = (): any[] => {
   try {
     const stored = localStorage.getItem(PATIENTS_STORAGE_KEY);
     if (stored) {

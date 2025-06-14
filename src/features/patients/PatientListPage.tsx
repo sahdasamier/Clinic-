@@ -75,6 +75,36 @@ import {
 import Header from '../../components/Header';
 import Sidebar from '../../components/Sidebar';
 
+// EXPORT: Storage key for patient data
+export const PATIENTS_STORAGE_KEY = 'clinic_patients_data';
+
+// EXPORT: Load patients from localStorage
+export const loadPatientsFromStorage = (): any[] => {
+  try {
+    const stored = localStorage.getItem(PATIENTS_STORAGE_KEY);
+    if (stored) {
+      const parsedData = JSON.parse(stored);
+      if (Array.isArray(parsedData) && parsedData.length > 0) {
+        return parsedData;
+      }
+    }
+  } catch (error) {
+    console.warn('Error loading patients from localStorage:', error);
+  }
+  
+  // Return default data if no stored data exists
+  return initialPatients;
+};
+
+// EXPORT: Save patients to localStorage
+export const savePatientsToStorage = (patients: any[]) => {
+  try {
+    localStorage.setItem(PATIENTS_STORAGE_KEY, JSON.stringify(patients));
+  } catch (error) {
+    console.warn('Error saving patients to localStorage:', error);
+  }
+};
+
 interface TabPanelProps {
   children?: React.ReactNode;
   index: number;
@@ -96,7 +126,8 @@ function TabPanel(props: TabPanelProps) {
   );
 }
 
-const initialPatients = [
+// EXPORT: Initial patients data
+export const initialPatients = [
   {
     id: 1,
     name: 'Ahmed Al-Rashid',
@@ -234,7 +265,22 @@ const PatientListPage: React.FC = () => {
   const [editingMedication, setEditingMedication] = useState<any>(null);
   const [editNoteOpen, setEditNoteOpen] = useState(false);
   const [editingNote, setEditingNote] = useState<any>(null);
-  const [patients, setPatients] = useState(initialPatients);
+  const [patients, setPatients] = useState<any[]>([]);
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
+
+  // Load data from localStorage on component mount
+  React.useEffect(() => {
+    const loadedPatients = loadPatientsFromStorage();
+    setPatients(loadedPatients);
+    setIsDataLoaded(true);
+  }, []);
+
+  // Save data to localStorage whenever patients change
+  React.useEffect(() => {
+    if (isDataLoaded && patients.length > 0) {
+      savePatientsToStorage(patients);
+    }
+  }, [patients, isDataLoaded]);
   const [uploadDocumentOpen, setUploadDocumentOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [documentTitle, setDocumentTitle] = useState('');

@@ -3,24 +3,33 @@ import { useTranslation } from 'react-i18next';
 import {
   Box,
   Container,
-  Grid,
+  Typography,
   Card,
   CardContent,
-  Typography,
-  Avatar,
-  Button,
+  Grid,
   TextField,
-  InputAdornment,
-  IconButton,
-  Chip,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Menu,
-  MenuItem,
+  Chip,
+  Avatar,
+  Paper,
+  Tabs,
+  Tab,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemAvatar,
+  Divider,
+  Alert,
+  LinearProgress,
+  Badge,
+  IconButton,
+  Tooltip,
+  Button,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -28,39 +37,50 @@ import {
   FormControl,
   InputLabel,
   Select,
-  Tabs,
-  Tab,
-  Divider,
-  List,
-  ListItem,
-  ListItemAvatar,
-  ListItemText,
+  MenuItem,
+  Menu,
   ListItemSecondaryAction,
-  Paper,
-  Badge,
-  Tooltip,
+  Snackbar,
+  Switch,
+  FormControlLabel,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  ToggleButton,
+  ToggleButtonGroup,
+  InputAdornment,
 } from '@mui/material';
 import {
-  Search,
-  Add,
-  FilterList,
   CalendarToday,
   Schedule,
-  People,
-  CheckCircle,
-  AccessTime,
-  Cancel,
+  Person,
+  EventAvailable,
+  EventBusy,
+  Groups,
+  Add,
   Edit,
   Delete,
+  MoreVert,
   Visibility,
   Phone,
   LocationOn,
-  TrendingUp,
-  Warning,
-  Today,
-  ViewWeek,
+  ExpandMore,
+  TableView,
   ViewModule,
+  DateRange,
+  FilterList,
+  AccessTime,
+  CheckCircle,
+  Cancel,
+  Schedule as ScheduleIcon,
+  Search,
+  Clear,
+  Today,
+  People,
+  TrendingUp,
   BarChart,
+  ViewWeek,
+  Warning,
 } from '@mui/icons-material';
 import Header from '../../components/Header';
 import Sidebar from '../../components/Sidebar';
@@ -73,6 +93,7 @@ interface TabPanelProps {
 
 function TabPanel(props: TabPanelProps) {
   const { children, value, index, ...other } = props;
+
   return (
     <div
       role="tabpanel"
@@ -89,8 +110,8 @@ function TabPanel(props: TabPanelProps) {
 // Storage key for appointments (same as notifications system)
 const APPOINTMENTS_STORAGE_KEY = 'clinic_appointments_data';
 
-// Load appointments from localStorage
-const loadAppointmentsFromStorage = (): any[] => {
+// EXPORT: Load appointments from localStorage
+export const loadAppointmentsFromStorage = (): any[] => {
   try {
     const stored = localStorage.getItem(APPOINTMENTS_STORAGE_KEY);
     if (stored) {
@@ -105,8 +126,8 @@ const loadAppointmentsFromStorage = (): any[] => {
   return getDefaultAppointments();
 };
 
-// Save appointments to localStorage
-const saveAppointmentsToStorage = (appointments: any[]) => {
+// EXPORT: Save appointments to localStorage
+export const saveAppointmentsToStorage = (appointments: any[]) => {
   try {
     localStorage.setItem(APPOINTMENTS_STORAGE_KEY, JSON.stringify(appointments));
     // Trigger storage event for other components (like notifications) to detect changes
@@ -116,8 +137,8 @@ const saveAppointmentsToStorage = (appointments: any[]) => {
   }
 };
 
-// Default appointments data
-const getDefaultAppointments = () => {
+// EXPORT: Default appointments data
+export const getDefaultAppointments = () => {
   const today = new Date();
   const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
   const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
@@ -213,7 +234,60 @@ const getDefaultAppointments = () => {
       priority: 'normal',
       createdAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
     },
-    // ... rest of default appointments
+    {
+      id: 6,
+      patient: 'Layla Al-Zahra',
+      patientAvatar: 'LZ',
+      date: tomorrow.toISOString().split('T')[0],
+      time: '10:30 AM',
+      timeSlot: '10:30',
+      duration: 20,
+      doctor: 'Dr. Sarah Ahmed',
+      type: 'Pediatrics',
+      status: 'confirmed',
+      location: 'Room 101',
+      phone: '+971 50 678 9012',
+      notes: 'Routine child checkup',
+      completed: false,
+      priority: 'normal',
+      createdAt: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
+    },
+    {
+      id: 7,
+      patient: 'Hassan Mahmoud',
+      patientAvatar: 'HM',
+      date: today.toISOString().split('T')[0],
+      time: '11:00 AM',
+      timeSlot: '11:00',
+      duration: 45,
+      doctor: 'Dr. Mohammed Ali',
+      type: 'Cardiology',
+      status: 'completed',
+      location: 'Room 103',
+      phone: '+971 50 789 0123',
+      notes: 'Heart checkup - all results normal',
+      completed: true,
+      priority: 'high',
+      createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
+    },
+    {
+      id: 8,
+      patient: 'Nadia Abdullah',
+      patientAvatar: 'NA',
+      date: yesterday.toISOString().split('T')[0],
+      time: '3:30 PM',
+      timeSlot: '15:30',
+      duration: 15,
+      doctor: 'Dr. Fatima Hassan',
+      type: 'Dermatology',
+      status: 'completed',
+      location: 'Room 104',
+      phone: '+971 50 890 1234',
+      notes: 'Skin treatment - excellent progress',
+      completed: true,
+      priority: 'normal',
+      createdAt: new Date(Date.now() - 26 * 60 * 60 * 1000).toISOString(),
+    },
   ];
 };
 
