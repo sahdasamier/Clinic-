@@ -14,7 +14,7 @@ import InventoryPage from "../features/inventory/InventoryPage";
 import NotificationsPage from "../features/notifications/NotificationsPage";
 
 import SettingsPage from "../features/settings/SettingsPage";
-import AppointmentSchedulingPage from "../features/chat/AppointmentSchedulingPage";
+import AppointmentSchedulingPage from "../features/DoctorScheduling";
 
 const Router: React.FC = () => {
   return (
@@ -42,7 +42,7 @@ const Router: React.FC = () => {
         <Route path="/inventory" element={<AuthGuard><InventoryPage /></AuthGuard>} />
         <Route path="/notifications" element={<AuthGuard><NotificationsPage /></AuthGuard>} />
 
-        <Route path="/chat" element={<AuthGuard><AppointmentSchedulingPage /></AuthGuard>} />
+        <Route path="/doctor-scheduling" element={<AuthGuard><AppointmentSchedulingPage /></AuthGuard>} />
         <Route path="/settings" element={<AuthGuard><SettingsPage /></AuthGuard>} />
       </Routes>
     </BrowserRouter>

@@ -35,7 +35,7 @@ const navLinks = [
   { to: '/payments', text: 'payments', icon: <Payment /> },
   { to: '/notifications', text: 'notifications', icon: <Notifications /> },
   
-  { to: '/chat', text: 'scheduling', icon: <Schedule /> },
+  { to: '/doctor-scheduling', text: 'Doctor Scheduling', icon: <Schedule /> },
   { to: '/settings', text: 'settings', icon: <Settings /> },
 ];
 
@@ -150,7 +150,7 @@ const Sidebar: React.FC = () => {
                       {link.icon}
                     </ListItemIcon>
                     <ListItemText
-                      primary={t(link.text)}
+                      primary={link.text === 'Doctor Scheduling' ? link.text : t(link.text)}
                       sx={{
                         '& .MuiListItemText-primary': {
                           fontWeight: isActive ? 600 : 500,

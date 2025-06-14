@@ -4170,141 +4170,88 @@ Dr. Clinic User
             {/* Live Chat Support */}
             <Box sx={{ mt: 4, mb: 4, p: 3, backgroundColor: 'success.light', borderRadius: 2 }}>
               <Typography variant="h6" sx={{ mb: 2, fontWeight: 600, color: 'success.contrastText' }}>
-                💬 Live Chat Support
+                💬 Instant Support
               </Typography>
               <Typography variant="body2" sx={{ mb: 3, color: 'success.contrastText' }}>
-                Get instant help from our support team. Available Monday-Friday, 9 AM - 6 PM (GMT+2)
+                Connect with our support team for immediate assistance. Available 24/7 for emergency support.
               </Typography>
-              <Grid container spacing={2}>
-                <Grid item xs={12} md={4}>
+              <Grid container spacing={3}>
+                <Grid item xs={12} md={6}>
                   <Button 
                     variant="contained" 
                     fullWidth
-                    sx={{ backgroundColor: 'white', color: 'success.main', '&:hover': { backgroundColor: 'grey.100' } }}
+                    size="large"
+                    sx={{ 
+                      backgroundColor: 'white', 
+                      color: 'success.main', 
+                      py: 2,
+                      '&:hover': { backgroundColor: 'grey.100' } 
+                    }}
                     onClick={() => {
-                      // Simulate opening live chat
-                      showSnackbar('Opening live chat window...', 'info');
-                      setTimeout(() => {
-                        showSnackbar('Live chat is currently unavailable. Please use email support.', 'warning');
-                      }, 2000);
+                      const subject = encodeURIComponent('Live Support Request - ClinicCare');
+                      const body = encodeURIComponent(`
+Dear Support Team,
+
+I need immediate assistance with ClinicCare.
+
+Support Type: [Technical/General/Emergency]
+
+Issue Details:
+[Please describe your issue or question]
+
+Urgency Level: [High/Medium/Low]
+
+Contact Information:
+- Name: [Your Name]
+- Phone: [Your Phone Number]
+- Best time to call: [Time preference]
+
+System Information:
+- Date: ${new Date().toLocaleDateString()}
+- Time: ${new Date().toLocaleTimeString()}
+- Browser: ${navigator.userAgent.split(' ')[0]}
+
+Thank you for your prompt attention.
+
+Best regards,
+Dr. Clinic User
+                      `);
+                      window.open(`mailto:drsuperclinic@gmail.com?subject=${subject}&body=${body}`);
+                      showSnackbar('Opening priority support email...', 'success');
                     }}
                   >
-                    💬 Start Live Chat
+                    📧 Priority Email Support
                   </Button>
                 </Grid>
-                <Grid item xs={12} md={4}>
+                <Grid item xs={12} md={6}>
                   <Button 
                     variant="outlined" 
                     fullWidth
-                    sx={{ borderColor: 'white', color: 'white', '&:hover': { backgroundColor: 'rgba(255,255,255,0.1)' } }}
+                    size="large"
+                    sx={{ 
+                      borderColor: 'white', 
+                      color: 'white', 
+                      py: 2,
+                      '&:hover': { backgroundColor: 'rgba(255,255,255,0.1)' } 
+                    }}
                     onClick={() => {
-                      window.open('https://wa.me/+201147299675?text=Hello, I need support with ClinicCare system');
-                      showSnackbar('Opening WhatsApp...', 'info');
+                      const message = encodeURIComponent('Hello! I need support with ClinicCare system. Please assist me with my inquiry.');
+                      window.open(`https://wa.me/201147299675?text=${message}`);
+                      showSnackbar('Opening WhatsApp support...', 'success');
                     }}
                   >
                     📱 WhatsApp Support
                   </Button>
                 </Grid>
-                <Grid item xs={12} md={4}>
-                  <Button 
-                    variant="outlined" 
-                    fullWidth
-                    sx={{ borderColor: 'white', color: 'white', '&:hover': { backgroundColor: 'rgba(255,255,255,0.1)' } }}
-                    onClick={() => {
-                      showSnackbar('Checking support availability...', 'info');
-                      setTimeout(() => {
-                        const isAvailable = new Date().getHours() >= 9 && new Date().getHours() < 18;
-                        if (isAvailable) {
-                          showSnackbar('Support team is online and ready to help!', 'success');
-                        } else {
-                          showSnackbar('Support team is offline. Please email us or try during business hours.', 'warning');
-                        }
-                      }, 1000);
-                    }}
-                  >
-                    🟢 Check Availability
-                  </Button>
-                </Grid>
               </Grid>
+              <Box sx={{ mt: 3, p: 2, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 1 }}>
+                <Typography variant="body2" sx={{ color: 'success.contrastText', textAlign: 'center' }}>
+                  💡 <strong>Pro Tip:</strong> For faster support, include screenshots and detailed descriptions of your issue.
+                </Typography>
+              </Box>
             </Box>
 
-            {/* Additional Resources */}
-            <Box sx={{ mt: 4, p: 3, backgroundColor: 'grey.50', borderRadius: 2 }}>
-              <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-                📚 Additional Resources
-              </Typography>
-              <List sx={{ p: 0 }}>
-                <ListItem sx={{ px: 0, py: 1 }}>
-                  <ListItemIcon>
-                    <Info color="primary" />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary="User Documentation"
-                    secondary="Complete guides and tutorials for using ClinicCare"
-                  />
-                  <Button 
-                    size="small" 
-                    variant="text"
-                    onClick={() => {
-                      showSnackbar('Opening user documentation...', 'info');
-                      // Simulate opening documentation
-                      setTimeout(() => {
-                        showSnackbar('Documentation is being prepared. Please contact support for immediate help.', 'warning');
-                      }, 1500);
-                    }}
-                  >
-                    View Docs
-                  </Button>
-                </ListItem>
-                <ListItem sx={{ px: 0, py: 1 }}>
-                  <ListItemIcon>
-                    <Visibility color="primary" />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary="Video Tutorials"
-                    secondary="Step-by-step video guides for common tasks"
-                  />
-                  <Button 
-                    size="small" 
-                    variant="text"
-                    onClick={() => {
-                      showSnackbar('Loading video tutorials...', 'info');
-                      setTimeout(() => {
-                        showSnackbar('Video tutorials are coming soon! Contact support for personalized guidance.', 'info');
-                      }, 1500);
-                    }}
-                  >
-                    Watch Videos
-                  </Button>
-                </ListItem>
-                <ListItem sx={{ px: 0, py: 1 }}>
-                  <ListItemIcon>
-                    <History color="primary" />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary="System Status"
-                    secondary="Check our system status and maintenance updates"
-                  />
-                  <Button 
-                    size="small" 
-                    variant="text"
-                    onClick={() => {
-                      showSnackbar('Checking system status...', 'info');
-                      setTimeout(() => {
-                        const status = Math.random() > 0.2 ? 'operational' : 'maintenance';
-                        if (status === 'operational') {
-                          showSnackbar('✅ All systems operational', 'success');
-                        } else {
-                          showSnackbar('🔧 System maintenance in progress. Some features may be temporarily unavailable.', 'warning');
-                        }
-                      }, 2000);
-                    }}
-                  >
-                    Check Status
-                  </Button>
-                </ListItem>
-              </List>
-            </Box>
+
           </Box>
             {/* Feedback Section */}
             <Box sx={{ mt: 4, p: 3, backgroundColor: 'warning.light', borderRadius: 2 }}>
