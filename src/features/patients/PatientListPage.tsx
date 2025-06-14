@@ -71,9 +71,17 @@ import {
   PictureAsPdf,
   Image,
   Description,
+  CheckCircle,
+  Schedule,
 } from '@mui/icons-material';
 import Header from '../../components/Header';
 import Sidebar from '../../components/Sidebar';
+import { 
+  organizeAppointmentsByCompletion, 
+  getPatientsOrganizedByAppointmentStatus,
+  sendAppointmentDataToPatients,
+  PatientWithAppointments 
+} from '../../utils/appointmentPatientSync';
 
 // EXPORT: Storage key for patient data
 export const PATIENTS_STORAGE_KEY = 'clinic_patients_data';
@@ -267,6 +275,9 @@ const PatientListPage: React.FC = () => {
   const [editingNote, setEditingNote] = useState<any>(null);
   const [patients, setPatients] = useState<any[]>([]);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const [organizedAppointmentData, setOrganizedAppointmentData] = useState<any>(null);
+  const [patientsWithAppointments, setPatientsWithAppointments] = useState<PatientWithAppointments[]>([]);
+  const [patientOrganizationMode, setPatientOrganizationMode] = useState<'reservation' | 'completion' | 'all'>('all');
 
   // Load data from localStorage on component mount
   React.useEffect(() => {
@@ -281,6 +292,39 @@ const PatientListPage: React.FC = () => {
       savePatientsToStorage(patients);
     }
   }, [patients, isDataLoaded]);
+
+  // Load organized appointment data
+  React.useEffect(() => {
+    const loadOrganizedData = () => {
+      const organizedData = organizeAppointmentsByCompletion();
+      const organizedPatients = getPatientsOrganizedByAppointmentStatus();
+      
+      setOrganizedAppointmentData(organizedData);
+      setPatientsWithAppointments(organizedPatients.allPatients);
+      
+      console.log('🔄 Loaded Organized Appointment Data:', {
+        completedAppointments: organizedData.completed.length,
+        notCompletedAppointments: organizedData.notCompleted.length,
+        totalPatients: organizedPatients.allPatients.length,
+        patientsWithCompleted: organizedPatients.patientsWithCompleted.length,
+        patientsWithPending: organizedPatients.patientsWithPending.length
+      });
+    };
+
+    loadOrganizedData();
+
+    // Listen for appointment-patient sync events
+    const handleSync = () => {
+      console.log('🔄 Received appointment sync event, reloading data...');
+      loadOrganizedData();
+    };
+
+    window.addEventListener('appointmentPatientSync', handleSync);
+    
+    return () => {
+      window.removeEventListener('appointmentPatientSync', handleSync);
+    };
+  }, []);
   const [uploadDocumentOpen, setUploadDocumentOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [documentTitle, setDocumentTitle] = useState('');
@@ -316,6 +360,20 @@ const PatientListPage: React.FC = () => {
   });
   const [statusEditPatient, setStatusEditPatient] = useState<any>(null);
   const [statusMenuAnchor, setStatusMenuAnchor] = useState<null | HTMLElement>(null);
+  
+  // New Patient Form State
+  const [newPatientData, setNewPatientData] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    age: '',
+    gender: '',
+    address: '',
+    emergencyContact: '',
+    bloodType: '',
+    condition: '',
+    status: 'new'
+  });
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
@@ -583,25 +641,54 @@ const PatientListPage: React.FC = () => {
     }
   };
 
-  const handleAddNewPatient = (newPatientData: any) => {
+  const handleAddNewPatient = () => {
+    if (!newPatientData.name.trim() || !newPatientData.phone.trim()) {
+      alert('Please fill in at least the name and phone number');
+      return;
+    }
+
     const newPatient = {
-      ...newPatientData,
-      id: Math.max(...patients.map(p => p.id)) + 1,
+      id: patients.length > 0 ? Math.max(...patients.map(p => p.id)) + 1 : 1,
+      name: newPatientData.name,
+      phone: newPatientData.phone,
+      email: newPatientData.email || `${newPatientData.name.toLowerCase().replace(/\s+/g, '.')}@example.com`,
+      age: parseInt(newPatientData.age) || 30,
+      gender: newPatientData.gender || 'Unknown',
+      address: newPatientData.address || 'Address not provided',
+      emergencyContact: newPatientData.emergencyContact || 'Not provided',
+      bloodType: newPatientData.bloodType || 'Unknown',
+      condition: newPatientData.condition || 'Initial consultation',
+      status: newPatientData.status || 'new',
       avatar: newPatientData.name.split(' ').map((n: string) => n[0]).join('').toUpperCase(),
-      status: 'new',
       lastVisit: 'N/A',
       nextAppointment: 'Not scheduled',
-      condition: newPatientData.condition || 'Initial consultation',
-      visitNotes: [],
-      medications: [],
+      allergies: [],
       medicalHistory: [],
+      medications: [],
+      visitNotes: [],
       vitalSigns: [],
       documents: [],
-      allergies: []
     };
-
+    
     setPatients([...patients, newPatient]);
     setAddPatientOpen(false);
+    
+    // Reset form data
+    setNewPatientData({
+      name: '',
+      phone: '',
+      email: '',
+      age: '',
+      gender: '',
+      address: '',
+      emergencyContact: '',
+      bloodType: '',
+      condition: '',
+      status: 'new'
+    });
+    
+    // Show success message
+    console.log('New patient added:', newPatient);
   };
 
   const handleCompleteMedicationDetails = (medicationDetails: any) => {
@@ -895,7 +982,55 @@ const PatientListPage: React.FC = () => {
   };
 
   const getFilteredPatients = () => {
-    let filtered = patients.filter(patient => {
+    let filtered = patients;
+
+    // Apply organization mode filtering first
+    if (patientOrganizationMode === 'reservation' && organizedAppointmentData) {
+      // Filter patients based on appointment reservation status
+      const organizedPatients = getPatientsOrganizedByAppointmentStatus();
+      const patientsWithReservations = organizedPatients.patientsWithPending.concat(organizedPatients.patientsWithCompleted);
+      const patientsWithoutReservations = organizedPatients.patientsWithNoAppointments;
+      
+      // Show patients grouped by reservation status - with reservations first
+      filtered = [
+        ...patientsWithReservations.map(p => ({ 
+          ...p, 
+          _organizationGroup: 'With Appointments',
+          _appointmentCount: p.appointmentData?.totalAppointments || 0
+        })),
+        ...patientsWithoutReservations.map(p => ({ 
+          ...p, 
+          _organizationGroup: 'No Appointments',
+          _appointmentCount: 0
+        }))
+      ];
+    } else if (patientOrganizationMode === 'completion' && organizedAppointmentData) {
+      // Filter patients based on appointment completion status
+      const organizedPatients = getPatientsOrganizedByAppointmentStatus();
+      
+      // Show patients grouped by completion status - completed first
+      filtered = [
+        ...organizedPatients.patientsWithCompleted.map(p => ({ 
+          ...p, 
+          _organizationGroup: 'With Completed Appointments',
+          _completedCount: p.appointmentData?.completed?.length || 0
+        })),
+        ...organizedPatients.patientsWithPending.map(p => ({ 
+          ...p, 
+          _organizationGroup: 'With Pending Appointments',
+          _pendingCount: p.appointmentData?.notCompleted?.length || 0
+        })),
+        ...organizedPatients.patientsWithNoAppointments.map(p => ({ 
+          ...p, 
+          _organizationGroup: 'No Appointments',
+          _completedCount: 0,
+          _pendingCount: 0
+        }))
+      ];
+    }
+
+    // Now apply filters to the organized list
+    filtered = filtered.filter(patient => {
       // Search query filter
       const matchesSearch = searchQuery === '' || 
         patient.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -930,28 +1065,30 @@ const PatientListPage: React.FC = () => {
       return matchesSearch && matchesGender && matchesAge && matchesCondition && matchesStatus;
     });
 
-    // Apply tab-specific filtering
-    switch (tabValue) {
-      case 1: // New patients
-        filtered = filtered.filter(patient => patient.status === 'new');
-        break;
-      case 2: // Follow-up patients
-        filtered = filtered.filter(patient => patient.status === 'follow-up');
-        break;
-      case 3: // Old patients
-        filtered = filtered.filter(patient => patient.status === 'old');
-        break;
-      case 4: // Under Observation patients
-        filtered = filtered.filter(patient => patient.status === 'admitted');
-        break;
-      case 5: // Transferred patients
-        filtered = filtered.filter(patient => patient.status === 'transferred');
-        break;
-      case 6: // Discharged patients
-        filtered = filtered.filter(patient => patient.status === 'discharged');
-        break;
-      default: // All patients
-        break;
+    // Apply tab-specific filtering (skip for appointment data tab)
+    if (tabValue !== 7) {
+      switch (tabValue) {
+        case 1: // New patients
+          filtered = filtered.filter(patient => patient.status === 'new');
+          break;
+        case 2: // Follow-up patients
+          filtered = filtered.filter(patient => patient.status === 'follow-up');
+          break;
+        case 3: // Old patients
+          filtered = filtered.filter(patient => patient.status === 'old');
+          break;
+        case 4: // Under Observation patients
+          filtered = filtered.filter(patient => patient.status === 'admitted');
+          break;
+        case 5: // Transferred patients
+          filtered = filtered.filter(patient => patient.status === 'transferred');
+          break;
+        case 6: // Discharged patients
+          filtered = filtered.filter(patient => patient.status === 'discharged');
+          break;
+        default: // All patients
+          break;
+      }
     }
 
     return filtered;
@@ -988,134 +1125,392 @@ const PatientListPage: React.FC = () => {
       <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <Header />
         <Container maxWidth="xl" sx={{ mt: 4, mb: 4, flex: 1, overflow: 'auto' }}>
-          {/* Header Section */}
-          <Box sx={{ mb: 4 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <People sx={{ fontSize: 32, color: 'primary.main', mr: 2 }} />
-                <Box>
-                  <Typography variant="h4" sx={{ fontWeight: 700, color: 'text.primary' }}>
-                    {t('patients')}
-                  </Typography>
-                  <Typography variant="body1" color="text.secondary">
-                    Manage and track all patient information
-                  </Typography>
+          {/* Enhanced Auto-sync Info Card */}
+          <Card 
+            sx={{ 
+              mb: 3,
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: 'white',
+              position: 'relative',
+              overflow: 'hidden',
+              boxShadow: '0 8px 32px rgba(102, 126, 234, 0.25)',
+            }}
+          >
+            <CardContent sx={{ p: 3, position: 'relative', zIndex: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Box
+                    sx={{
+                      width: 56,
+                      height: 56,
+                      borderRadius: '16px',
+                      backgroundColor: 'rgba(255,255,255,0.2)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backdropFilter: 'blur(10px)',
+                    }}
+                  >
+                    <CalendarToday sx={{ fontSize: 28, color: 'white' }} />
+                  </Box>
+                  <Box>
+                    <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>
+                      🔄 Automatic Patient-Appointment Sync Active
+                    </Typography>
+                    <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                      All people from appointments are automatically added to the patient database. 
+                      Smart sync keeps everything up-to-date in real-time.
+                    </Typography>
+                  </Box>
                 </Box>
-              </Box>
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <Button
-                  variant="outlined"
-                  startIcon={<WhatsApp />}
-                  onClick={handleWhatsAppAll}
-                  sx={{ borderRadius: 3, color: '#25D366', borderColor: '#25D366' }}
-                >
-                  WhatsApp All
-                </Button>
                 <Button
                   variant="contained"
-                  startIcon={<PersonAdd />}
-                  onClick={() => setAddPatientOpen(true)}
-                  sx={{ borderRadius: 3 }}
+                  onClick={() => {
+                    const syncedPatients = sendAppointmentDataToPatients();
+                    setPatients(syncedPatients);
+                    const organizedData = organizeAppointmentsByCompletion();
+                    const organizedPatients = getPatientsOrganizedByAppointmentStatus();
+                    setOrganizedAppointmentData(organizedData);
+                    setPatientsWithAppointments(organizedPatients.allPatients);
+                  }}
+                  startIcon={<CheckCircle />}
+                  sx={{
+                    backgroundColor: 'rgba(255,255,255,0.2)',
+                    color: 'white',
+                    fontWeight: 700,
+                    borderRadius: 3,
+                    backdropFilter: 'blur(10px)',
+                    '&:hover': {
+                      backgroundColor: 'rgba(255,255,255,0.3)',
+                    }
+                  }}
                 >
-                  Add New Patient
+                  SYNC NOW
                 </Button>
               </Box>
-            </Box>
-          </Box>
+            </CardContent>
+            {/* Decorative background elements */}
+            <Box sx={{
+              position: 'absolute',
+              top: -30,
+              right: -30,
+              width: 120,
+              height: 120,
+              borderRadius: '50%',
+              backgroundColor: 'rgba(255,255,255,0.1)',
+              zIndex: 1,
+            }} />
+            <Box sx={{
+              position: 'absolute',
+              bottom: -20,
+              left: -20,
+              width: 80,
+              height: 80,
+              borderRadius: '50%',
+              backgroundColor: 'rgba(255,255,255,0.05)',
+              zIndex: 1,
+            }} />
+          </Card>
+
+          {/* Enhanced Header Section */}
+          <Card sx={{ 
+            mb: 4, 
+            background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+            borderRadius: 4,
+            boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+            position: 'relative',
+            overflow: 'hidden'
+          }}>
+            <CardContent sx={{ p: 4, position: 'relative', zIndex: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Box
+                    sx={{
+                      width: 64,
+                      height: 64,
+                      borderRadius: '20px',
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      mr: 3,
+                      boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)',
+                    }}
+                  >
+                    <People sx={{ fontSize: 32, color: 'white' }} />
+                  </Box>
+                  <Box>
+                    <Typography variant="h3" sx={{ fontWeight: 800, color: 'text.primary', mb: 0.5 }}>
+                      Patient Management
+                    </Typography>
+                    <Typography variant="h6" color="text.secondary" sx={{ fontWeight: 400 }}>
+                      🏥 Comprehensive patient care & medical records management
+                    </Typography>
+                  </Box>
+                </Box>
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                  <Button
+                    variant="outlined"
+                    startIcon={<WhatsApp />}
+                    onClick={handleWhatsAppAll}
+                    sx={{ 
+                      borderRadius: 3, 
+                      color: '#25D366', 
+                      borderColor: '#25D366',
+                      fontWeight: 600,
+                      px: 3,
+                      py: 1.5,
+                      '&:hover': {
+                        backgroundColor: 'rgba(37, 211, 102, 0.1)',
+                        borderColor: '#25D366',
+                        transform: 'translateY(-2px)',
+                      },
+                      transition: 'all 0.3s ease'
+                    }}
+                  >
+                    WhatsApp All
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    startIcon={<Schedule />}
+                    onClick={() => {
+                      // Force sync appointments to patients
+                      const syncedPatients = sendAppointmentDataToPatients();
+                      setPatients(syncedPatients);
+                      
+                      // Refresh organized data
+                      const organizedData = organizeAppointmentsByCompletion();
+                      const organizedPatients = getPatientsOrganizedByAppointmentStatus();
+                      setOrganizedAppointmentData(organizedData);
+                      setPatientsWithAppointments(organizedPatients.allPatients);
+                      
+                      console.log('🔄 Manual sync completed!');
+                    }}
+                    sx={{ 
+                      borderRadius: 3, 
+                      color: '#2196f3', 
+                      borderColor: '#2196f3',
+                      fontWeight: 600,
+                      px: 3,
+                      py: 1.5,
+                      '&:hover': {
+                        backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                        borderColor: '#2196f3',
+                        transform: 'translateY(-2px)',
+                      },
+                      transition: 'all 0.3s ease'
+                    }}
+                  >
+                    Sync Appointments
+                  </Button>
+                  <Button
+                    variant="contained"
+                    startIcon={<PersonAdd />}
+                    onClick={() => setAddPatientOpen(true)}
+                    sx={{ 
+                      borderRadius: 3,
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      fontWeight: 700,
+                      px: 4,
+                      py: 1.5,
+                      boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)',
+                      '&:hover': {
+                        background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
+                        transform: 'translateY(-2px)',
+                        boxShadow: '0 12px 40px rgba(102, 126, 234, 0.4)',
+                      },
+                      transition: 'all 0.3s ease'
+                    }}
+                  >
+                    Add New Patient
+                  </Button>
+                </Box>
+              </Box>
+              
+              {/* Stats Overview */}
+              <Grid container spacing={3}>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Box sx={{ 
+                    textAlign: 'center', 
+                    p: 2, 
+                    backgroundColor: 'rgba(255,255,255,0.8)', 
+                    borderRadius: 3,
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255,255,255,0.2)'
+                  }}>
+                    <Typography variant="h4" sx={{ fontWeight: 800, color: 'primary.main', mb: 0.5 }}>
+                      {patients.length}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+                      Total Patients
+                    </Typography>
+                  </Box>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Box sx={{ 
+                    textAlign: 'center', 
+                    p: 2, 
+                    backgroundColor: 'rgba(255,255,255,0.8)', 
+                    borderRadius: 3,
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255,255,255,0.2)'
+                  }}>
+                    <Typography variant="h4" sx={{ fontWeight: 800, color: 'success.main', mb: 0.5 }}>
+                      {patients.filter(p => p.status === 'new').length}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+                      New Patients
+                    </Typography>
+                  </Box>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Box sx={{ 
+                    textAlign: 'center', 
+                    p: 2, 
+                    backgroundColor: 'rgba(255,255,255,0.8)', 
+                    borderRadius: 3,
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255,255,255,0.2)'
+                  }}>
+                    <Typography variant="h4" sx={{ fontWeight: 800, color: 'warning.main', mb: 0.5 }}>
+                      {patients.filter(p => p.status === 'follow-up').length}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+                      Follow-up
+                    </Typography>
+                  </Box>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Box sx={{ 
+                    textAlign: 'center', 
+                    p: 2, 
+                    backgroundColor: 'rgba(255,255,255,0.8)', 
+                    borderRadius: 3,
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255,255,255,0.2)'
+                  }}>
+                    <Typography variant="h4" sx={{ fontWeight: 800, color: 'info.main', mb: 0.5 }}>
+                      {patients.filter(p => p._createdFromAppointment).length || 0}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+                      From Appointments
+                    </Typography>
+                  </Box>
+                </Grid>
+              </Grid>
+            </CardContent>
+            {/* Decorative elements */}
+            <Box sx={{
+              position: 'absolute',
+              top: -40,
+              right: -40,
+              width: 120,
+              height: 120,
+              borderRadius: '50%',
+              backgroundColor: 'rgba(102, 126, 234, 0.1)',
+              zIndex: 1,
+            }} />
+            <Box sx={{
+              position: 'absolute',
+              bottom: -30,
+              left: -30,
+              width: 80,
+              height: 80,
+              borderRadius: '50%',
+              backgroundColor: 'rgba(118, 75, 162, 0.1)',
+              zIndex: 1,
+            }} />
+          </Card>
 
 
 
-          {/* Main Content */}
-          <Card>
+          {/* Enhanced Main Content */}
+          <Card sx={{ 
+            borderRadius: 4,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
+            border: '1px solid rgba(0,0,0,0.05)',
+            overflow: 'hidden'
+          }}>
             <CardContent sx={{ p: 0 }}>
-              {/* Search and Filters */}
-              <Box sx={{ p: 3, borderBottom: 1, borderColor: 'divider' }}>
-                <Grid container spacing={2} alignItems="center">
-                  <Grid item xs={12} md={6}>
-                    <TextField
-                      fullWidth
-                      placeholder="Search patients by name, email, phone, or condition..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      InputProps={{
-                        startAdornment: (
-                          <InputAdornment position="start">
-                            <Search color="action" />
-                          </InputAdornment>
-                        ),
-                      }}
-                      sx={{ '& .MuiOutlinedInput-root': { borderRadius: 3 } }}
-                    />
-                    
-                    {/* Active Filters Display */}
-                    {getActiveFilterCount() > 0 && (
-                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
-                        {searchQuery && (
-                          <Chip
-                            label={`Search: "${searchQuery}"`}
-                            size="small"
-                            onDelete={() => setSearchQuery('')}
-                            color="primary"
-                            variant="outlined"
-                          />
-                        )}
-                        {activeFilters.gender && (
-                          <Chip
-                            label={`Gender: ${activeFilters.gender}`}
-                            size="small"
-                            onDelete={() => handleFilterSelect('gender', '')}
-                            color="primary"
-                            variant="outlined"
-                          />
-                        )}
-                        {activeFilters.ageRange && (
-                          <Chip
-                            label={`Age: ${activeFilters.ageRange}`}
-                            size="small"
-                            onDelete={() => handleFilterSelect('ageRange', '')}
-                            color="primary"
-                            variant="outlined"
-                          />
-                        )}
-                        {activeFilters.status && (
-                          <Chip
-                            label={`Status: ${activeFilters.status}`}
-                            size="small"
-                            onDelete={() => handleFilterSelect('status', '')}
-                            color="primary"
-                            variant="outlined"
-                          />
-                        )}
-                        {activeFilters.condition && (
-                          <Chip
-                            label={`Condition: ${activeFilters.condition}`}
-                            size="small"
-                            onDelete={() => handleFilterSelect('condition', '')}
-                            color="primary"
-                            variant="outlined"
-                          />
-                        )}
-                      </Box>
-                    )}
+                            {/* Enhanced Search and Filters - Improved Layout */}
+              <Box sx={{ 
+                p: 4, 
+                borderBottom: 1, 
+                borderColor: 'divider',
+                background: 'linear-gradient(135deg, #fafbfc 0%, #f0f2f5 100%)'
+              }}>
+                {/* Search Row */}
+                <Grid container spacing={3} alignItems="center" sx={{ mb: 3 }}>
+                  <Grid item xs={12} lg={8}>
+                    <Box sx={{ position: 'relative' }}>
+                      <TextField
+                        fullWidth
+                        placeholder="🔍 Search patients by name, email, phone, or condition..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        InputProps={{
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              <Search sx={{ color: 'primary.main', fontSize: 24 }} />
+                            </InputAdornment>
+                          ),
+                        }}
+                        sx={{ 
+                          '& .MuiOutlinedInput-root': { 
+                            borderRadius: 4,
+                            backgroundColor: 'white',
+                            boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                            border: '2px solid transparent',
+                            transition: 'all 0.3s ease',
+                            '&:hover': {
+                              boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
+                              transform: 'translateY(-1px)',
+                            },
+                            '&.Mui-focused': {
+                              border: '2px solid #667eea',
+                              boxShadow: '0 8px 32px rgba(102, 126, 234, 0.2)',
+                            }
+                          },
+                          '& .MuiInputBase-input': {
+                            padding: '16px 14px',
+                            fontSize: '1rem',
+                            fontWeight: 500,
+                          }
+                        }}
+                      />
+                    </Box>
                   </Grid>
-                  <Grid item xs={12} md={6}>
-                    <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                  <Grid item xs={12} lg={4}>
+                    <Box sx={{ display: 'flex', gap: 2, justifyContent: { xs: 'flex-start', lg: 'flex-end' } }}>
                       <Button
                         variant="outlined"
                         startIcon={<FilterList />}
                         onClick={(e) => setFilterAnchor(e.currentTarget)}
                         sx={{ 
-                          position: 'relative',
+                          borderRadius: 3,
+                          fontWeight: 600,
+                          backgroundColor: 'white',
+                          boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                          border: '1px solid rgba(0,0,0,0.05)',
+                          minWidth: 120,
+                          '&:hover': {
+                            transform: 'translateY(-1px)',
+                            boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
+                          },
+                          transition: 'all 0.3s ease',
                           ...(getActiveFilterCount() > 0 && {
-                            backgroundColor: 'primary.main',
+                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                             color: 'white',
+                            border: 'none',
                             '&:hover': {
-                              backgroundColor: 'primary.dark'
+                              background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
+                              transform: 'translateY(-1px)',
+                              boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)',
                             }
                           })
                         }}
                       >
-                        Filter
+                        🔽 Filter
                         {getActiveFilterCount() > 0 && (
                           <Chip
                             label={getActiveFilterCount()}
@@ -1123,29 +1518,373 @@ const PatientListPage: React.FC = () => {
                             sx={{
                               ml: 1,
                               height: 20,
-                              backgroundColor: 'white',
+                              backgroundColor: 'rgba(255,255,255,0.9)',
                               color: 'primary.main',
-                              fontSize: '0.75rem'
+                              fontSize: '0.75rem',
+                              fontWeight: 700
                             }}
                           />
                         )}
                       </Button>
-                      <Button
-                        variant={viewMode === 'table' ? 'contained' : 'outlined'}
-                        onClick={() => setViewMode('table')}
-                      >
-                        Table
-                      </Button>
-                      <Button
-                        variant={viewMode === 'cards' ? 'contained' : 'outlined'}
-                        onClick={() => setViewMode('cards')}
-                      >
-                        Cards
-                      </Button>
                     </Box>
                   </Grid>
                 </Grid>
+
+                {/* Controls Row */}
+                <Grid container spacing={2} alignItems="center">
+                  <Grid item xs={12} lg={8}>
+                    {/* Enhanced Organization Mode Controls */}
+                    <Card sx={{ 
+                      display: 'flex', 
+                      gap: 1, 
+                      p: 2, 
+                      backgroundColor: 'white',
+                      borderRadius: 3,
+                      boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                      border: '1px solid rgba(0,0,0,0.05)',
+                      flexWrap: 'wrap',
+                      alignItems: 'center'
+                    }}>
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          fontWeight: 700, 
+                          color: 'text.primary',
+                          minWidth: 'fit-content',
+                          mr: 1
+                        }}
+                      >
+                        📊 Organize:
+                      </Typography>
+                      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                        <Button
+                          size="small"
+                          variant={patientOrganizationMode === 'all' ? 'contained' : 'outlined'}
+                          onClick={() => setPatientOrganizationMode('all')}
+                          startIcon={<People />}
+                          sx={{
+                            borderRadius: 2,
+                            fontWeight: 600,
+                            fontSize: '0.8rem',
+                            px: 2,
+                            minWidth: 'fit-content',
+                            ...(patientOrganizationMode === 'all' && {
+                              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                              boxShadow: '0 4px 16px rgba(102, 126, 234, 0.3)',
+                            }),
+                            '&:hover': {
+                              transform: 'translateY(-1px)',
+                            },
+                            transition: 'all 0.2s ease'
+                          }}
+                        >
+                          All
+                        </Button>
+                        <Button
+                          size="small"
+                          variant={patientOrganizationMode === 'reservation' ? 'contained' : 'outlined'}
+                          onClick={() => setPatientOrganizationMode('reservation')}
+                          startIcon={<CalendarToday />}
+                          sx={{
+                            borderRadius: 2,
+                            fontWeight: 600,
+                            fontSize: '0.8rem',
+                            px: 2,
+                            minWidth: 'fit-content',
+                            ...(patientOrganizationMode === 'reservation' && {
+                              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                              boxShadow: '0 4px 16px rgba(102, 126, 234, 0.3)',
+                            }),
+                            '&:hover': {
+                              transform: 'translateY(-1px)',
+                            },
+                            transition: 'all 0.2s ease'
+                          }}
+                        >
+                          Reservations
+                        </Button>
+                        <Button
+                          size="small"
+                          variant={patientOrganizationMode === 'completion' ? 'contained' : 'outlined'}
+                          onClick={() => setPatientOrganizationMode('completion')}
+                          startIcon={<CheckCircle />}
+                          sx={{
+                            borderRadius: 2,
+                            fontWeight: 600,
+                            fontSize: '0.8rem',
+                            px: 2,
+                            minWidth: 'fit-content',
+                            ...(patientOrganizationMode === 'completion' && {
+                              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                              boxShadow: '0 4px 16px rgba(102, 126, 234, 0.3)',
+                            }),
+                            '&:hover': {
+                              transform: 'translateY(-1px)',
+                            },
+                            transition: 'all 0.2s ease'
+                          }}
+                        >
+                          Completion
+                        </Button>
+                      </Box>
+                    </Card>
+                  </Grid>
+                  
+                  <Grid item xs={12} lg={4}>
+                    <Box sx={{ display: 'flex', justifyContent: { xs: 'flex-start', lg: 'flex-end' } }}>
+                      {/* Enhanced View Mode Controls */}
+                      <Card sx={{ 
+                        display: 'flex', 
+                        gap: 1, 
+                        p: 1.5, 
+                        backgroundColor: 'white',
+                        borderRadius: 3,
+                        boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                        border: '1px solid rgba(0,0,0,0.05)'
+                      }}>
+                        <Button
+                          size="small"
+                          variant={viewMode === 'table' ? 'contained' : 'outlined'}
+                          onClick={() => setViewMode('table')}
+                          startIcon={<Assignment />}
+                          sx={{
+                            borderRadius: 2,
+                            fontWeight: 600,
+                            fontSize: '0.8rem',
+                            px: 2,
+                            minWidth: 'fit-content',
+                            ...(viewMode === 'table' && {
+                              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                              boxShadow: '0 4px 16px rgba(102, 126, 234, 0.3)',
+                            }),
+                            '&:hover': {
+                              transform: 'translateY(-1px)',
+                            },
+                            transition: 'all 0.2s ease'
+                          }}
+                        >
+                          Table
+                        </Button>
+                        <Button
+                          size="small"
+                          variant={viewMode === 'cards' ? 'contained' : 'outlined'}
+                          onClick={() => setViewMode('cards')}
+                          startIcon={<MedicalServices />}
+                          sx={{
+                            borderRadius: 2,
+                            fontWeight: 600,
+                            fontSize: '0.8rem',
+                            px: 2,
+                            minWidth: 'fit-content',
+                            ...(viewMode === 'cards' && {
+                              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                              boxShadow: '0 4px 16px rgba(102, 126, 234, 0.3)',
+                            }),
+                            '&:hover': {
+                              transform: 'translateY(-1px)',
+                            },
+                            transition: 'all 0.2s ease'
+                          }}
+                        >
+                          Cards
+                        </Button>
+                      </Card>
+                    </Box>
+                  </Grid>
+                </Grid>
+
+                {/* Active Filters Display */}
+                {getActiveFilterCount() > 0 && (
+                  <Box sx={{ mt: 3, pt: 2, borderTop: '1px solid rgba(0,0,0,0.1)' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 600, mb: 1, color: 'text.secondary' }}>
+                      Active Filters:
+                    </Typography>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                      {searchQuery && (
+                        <Chip
+                          label={`Search: "${searchQuery}"`}
+                          size="small"
+                          onDelete={() => setSearchQuery('')}
+                          color="primary"
+                          variant="outlined"
+                        />
+                      )}
+                      {activeFilters.gender && (
+                        <Chip
+                          label={`Gender: ${activeFilters.gender}`}
+                          size="small"
+                          onDelete={() => handleFilterSelect('gender', '')}
+                          color="primary"
+                          variant="outlined"
+                        />
+                      )}
+                      {activeFilters.ageRange && (
+                        <Chip
+                          label={`Age: ${activeFilters.ageRange}`}
+                          size="small"
+                          onDelete={() => handleFilterSelect('ageRange', '')}
+                          color="primary"
+                          variant="outlined"
+                        />
+                      )}
+                      {activeFilters.status && (
+                        <Chip
+                          label={`Status: ${activeFilters.status}`}
+                          size="small"
+                          onDelete={() => handleFilterSelect('status', '')}
+                          color="primary"
+                          variant="outlined"
+                        />
+                      )}
+                      {activeFilters.condition && (
+                        <Chip
+                          label={`Condition: ${activeFilters.condition}`}
+                          size="small"
+                          onDelete={() => handleFilterSelect('condition', '')}
+                          color="primary"
+                          variant="outlined"
+                        />
+                      )}
+                      <Button
+                        size="small"
+                        onClick={clearAllFilters}
+                        sx={{ 
+                          fontSize: '0.75rem',
+                          color: 'error.main',
+                          '&:hover': { backgroundColor: 'error.light', color: 'white' }
+                        }}
+                      >
+                        Clear All
+                      </Button>
+                    </Box>
+                  </Box>
+                )}
               </Box>
+
+              {/* Enhanced Organization Summary */}
+              {patientOrganizationMode !== 'all' && organizedAppointmentData && (
+                <Box sx={{ 
+                  px: 4, 
+                  py: 3, 
+                  background: 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)', 
+                  borderBottom: 1, 
+                  borderColor: 'divider' 
+                }}>
+                  <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, textAlign: 'center', color: 'primary.main' }}>
+                    📊 Organization Summary - {patientOrganizationMode === 'reservation' ? 'By Reservation Status' : 'By Completion Status'}
+                  </Typography>
+                  <Grid container spacing={3}>
+                    <Grid item xs={12} md={4}>
+                      <Card sx={{ 
+                        textAlign: 'center', 
+                        p: 3, 
+                        backgroundColor: 'white', 
+                        borderRadius: 3,
+                        boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+                        border: '2px solid #4caf50',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        '&:hover': {
+                          transform: 'translateY(-4px)',
+                          boxShadow: '0 12px 40px rgba(0,0,0,0.15)',
+                        },
+                        transition: 'all 0.3s ease'
+                      }}>
+                        <Typography variant="h3" sx={{ fontWeight: 800, color: 'success.main', mb: 1 }}>
+                          {patientOrganizationMode === 'reservation' ? 
+                            getPatientsOrganizedByAppointmentStatus().patientsWithPending.concat(getPatientsOrganizedByAppointmentStatus().patientsWithCompleted).length :
+                            getPatientsOrganizedByAppointmentStatus().patientsWithCompleted.length
+                          }
+                        </Typography>
+                        <Typography variant="body1" color="text.secondary" sx={{ fontWeight: 600 }}>
+                          {patientOrganizationMode === 'reservation' ? '📅 With Appointments' : '✅ With Completed'}
+                        </Typography>
+                        <Box sx={{
+                          position: 'absolute',
+                          top: -10,
+                          right: -10,
+                          width: 40,
+                          height: 40,
+                          borderRadius: '50%',
+                          backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                        }} />
+                      </Card>
+                    </Grid>
+                    <Grid item xs={12} md={4}>
+                      <Card sx={{ 
+                        textAlign: 'center', 
+                        p: 3, 
+                        backgroundColor: 'white', 
+                        borderRadius: 3,
+                        boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+                        border: '2px solid #ff9800',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        '&:hover': {
+                          transform: 'translateY(-4px)',
+                          boxShadow: '0 12px 40px rgba(0,0,0,0.15)',
+                        },
+                        transition: 'all 0.3s ease'
+                      }}>
+                        <Typography variant="h3" sx={{ fontWeight: 800, color: 'warning.main', mb: 1 }}>
+                          {patientOrganizationMode === 'reservation' ? 
+                            getPatientsOrganizedByAppointmentStatus().patientsWithNoAppointments.length :
+                            getPatientsOrganizedByAppointmentStatus().patientsWithPending.length
+                          }
+                        </Typography>
+                        <Typography variant="body1" color="text.secondary" sx={{ fontWeight: 600 }}>
+                          {patientOrganizationMode === 'reservation' ? '❌ No Appointments' : '⏳ With Pending'}
+                        </Typography>
+                        <Box sx={{
+                          position: 'absolute',
+                          top: -10,
+                          right: -10,
+                          width: 40,
+                          height: 40,
+                          borderRadius: '50%',
+                          backgroundColor: 'rgba(255, 152, 0, 0.1)',
+                        }} />
+                      </Card>
+                    </Grid>
+                    <Grid item xs={12} md={4}>
+                      <Card sx={{ 
+                        textAlign: 'center', 
+                        p: 3, 
+                        backgroundColor: 'white', 
+                        borderRadius: 3,
+                        boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+                        border: '2px solid #2196f3',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        '&:hover': {
+                          transform: 'translateY(-4px)',
+                          boxShadow: '0 12px 40px rgba(0,0,0,0.15)',
+                        },
+                        transition: 'all 0.3s ease'
+                      }}>
+                        <Typography variant="h3" sx={{ fontWeight: 800, color: 'primary.main', mb: 1 }}>
+                          {patientOrganizationMode === 'completion' ? 
+                            getPatientsOrganizedByAppointmentStatus().patientsWithNoAppointments.length :
+                            organizedAppointmentData.completed.length + organizedAppointmentData.notCompleted.length
+                          }
+                        </Typography>
+                        <Typography variant="body1" color="text.secondary" sx={{ fontWeight: 600 }}>
+                          {patientOrganizationMode === 'completion' ? '🚫 No Appointments' : '📊 Total Appointments'}
+                        </Typography>
+                        <Box sx={{
+                          position: 'absolute',
+                          top: -10,
+                          right: -10,
+                          width: 40,
+                          height: 40,
+                          borderRadius: '50%',
+                          backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                        }} />
+                      </Card>
+                    </Grid>
+                  </Grid>
+                </Box>
+              )}
 
               {/* Results Summary */}
               {(getActiveFilterCount() > 0 || searchQuery) && (
@@ -1153,20 +1892,96 @@ const PatientListPage: React.FC = () => {
                   <Typography variant="body2" color="text.secondary">
                     Showing {filteredPatients.length} of {patients.length} patients
                     {getActiveFilterCount() > 0 && ` with ${getActiveFilterCount()} filter(s) applied`}
+                    {patientOrganizationMode !== 'all' && ` • Organized by ${patientOrganizationMode}`}
                   </Typography>
                 </Box>
               )}
 
-              {/* Tabs */}
-              <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 3 }}>
-                <Tabs value={tabValue} onChange={handleTabChange} variant="scrollable" scrollButtons="auto">
-                  <Tab label={`All Patients (${filteredPatients.length})`} />
-                  <Tab label={`New (${filteredPatients.filter(p => p.status === 'new').length})`} />
-                  <Tab label={`Follow-up (${filteredPatients.filter(p => p.status === 'follow-up').length})`} />
-                  <Tab label={`Old (${filteredPatients.filter(p => p.status === 'old').length})`} />
-                  <Tab label={`Under Observation (${filteredPatients.filter(p => p.status === 'admitted').length})`} />
-                  <Tab label={`Transferred (${filteredPatients.filter(p => p.status === 'transferred').length})`} />
-                  <Tab label={`Discharged (${filteredPatients.filter(p => p.status === 'discharged').length})`} />
+              {/* Enhanced Tabs */}
+              <Box sx={{ 
+                borderBottom: 1, 
+                borderColor: 'divider', 
+                px: 4, 
+                py: 2,
+                background: 'linear-gradient(to right, #fafbfc, #f8f9fa)'
+              }}>
+                <Tabs 
+                  value={tabValue} 
+                  onChange={handleTabChange} 
+                  variant="scrollable" 
+                  scrollButtons="auto"
+                  sx={{
+                    '& .MuiTab-root': {
+                      fontWeight: 600,
+                      fontSize: '0.9rem',
+                      borderRadius: 3,
+                      margin: '0 4px',
+                      minHeight: 48,
+                      transition: 'all 0.3s ease',
+                      '&:hover': {
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        transform: 'translateY(-2px)',
+                      },
+                      '&.Mui-selected': {
+                        backgroundColor: 'white',
+                        color: 'primary.main',
+                        boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
+                        border: '1px solid rgba(102, 126, 234, 0.2)',
+                      }
+                    },
+                    '& .MuiTabs-indicator': {
+                      display: 'none'
+                    }
+                  }}
+                >
+                  <Tab 
+                    label={`👥 All Patients (${filteredPatients.length})`} 
+                    icon={<People />}
+                    iconPosition="start"
+                  />
+                  <Tab 
+                    label={`🆕 New (${filteredPatients.filter(p => p.status === 'new').length})`} 
+                    icon={<PersonAdd />}
+                    iconPosition="start"
+                  />
+                  <Tab 
+                    label={`📋 Follow-up (${filteredPatients.filter(p => p.status === 'follow-up').length})`} 
+                    icon={<Assignment />}
+                    iconPosition="start"
+                  />
+                  <Tab 
+                    label={`👴 Old (${filteredPatients.filter(p => p.status === 'old').length})`} 
+                    icon={<History />}
+                    iconPosition="start"
+                  />
+                  <Tab 
+                    label={`🏥 Under Observation (${filteredPatients.filter(p => p.status === 'admitted').length})`} 
+                    icon={<MedicalServices />}
+                    iconPosition="start"
+                  />
+                  <Tab 
+                    label={`↗️ Transferred (${filteredPatients.filter(p => p.status === 'transferred').length})`} 
+                    icon={<LocationOn />}
+                    iconPosition="start"
+                  />
+                  <Tab 
+                    label={`✅ Discharged (${filteredPatients.filter(p => p.status === 'discharged').length})`} 
+                    icon={<CheckCircle />}
+                    iconPosition="start"
+                  />
+                  <Tab 
+                    label={`📅 Appointment Data (${organizedAppointmentData ? organizedAppointmentData.completed.length + organizedAppointmentData.notCompleted.length : 0})`} 
+                    icon={<CalendarToday />} 
+                    iconPosition="start"
+                    sx={{ 
+                      color: 'primary.main',
+                      fontWeight: 700,
+                      '&.Mui-selected': {
+                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        color: 'white',
+                      }
+                    }}
+                  />
                 </Tabs>
               </Box>
 
@@ -1175,6 +1990,16 @@ const PatientListPage: React.FC = () => {
                 <>
                   {/* All Patients Tab */}
                   <TabPanel value={tabValue} index={0}>
+                    {/* Organization Mode Info */}
+                    {patientOrganizationMode !== 'all' && (
+                      <Alert severity="info" sx={{ m: 3, mb: 2 }}>
+                        <Typography variant="body2">
+                          Patients are organized by {patientOrganizationMode === 'reservation' ? 'appointment reservations' : 'appointment completion status'}. 
+                          {patientOrganizationMode === 'reservation' && ' Patients with appointments are listed first.'}
+                          {patientOrganizationMode === 'completion' && ' Patients with completed appointments are listed first.'}
+                        </Typography>
+                      </Alert>
+                    )}
                     <TableContainer>
                       <Table>
                         <TableHead>
@@ -2299,6 +3124,210 @@ const PatientListPage: React.FC = () => {
                       </Table>
                     </TableContainer>
                   </TabPanel>
+
+                  {/* Appointment Data Tab */}
+                  <TabPanel value={tabValue} index={7}>
+                    {organizedAppointmentData ? (
+                      <Box sx={{ p: 3 }}>
+                        <Alert severity="info" sx={{ mb: 3 }}>
+                          <Typography variant="body2">
+                            This tab shows appointment data organized by completion status, automatically synced from the Appointment page.
+                          </Typography>
+                        </Alert>
+
+                        {/* Summary Cards */}
+                        <Grid container spacing={3} sx={{ mb: 4 }}>
+                          <Grid item xs={12} md={6}>
+                            <Card sx={{ p: 3, backgroundColor: '#e8f5e8' }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                                <CheckCircle sx={{ color: '#4caf50', mr: 1 }} />
+                                <Typography variant="h6" sx={{ color: '#4caf50', fontWeight: 700 }}>
+                                  Completed Appointments
+                                </Typography>
+                              </Box>
+                              <Typography variant="h3" sx={{ fontWeight: 800, color: '#4caf50', mb: 1 }}>
+                                {organizedAppointmentData.completed.length}
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                Successfully completed appointments
+                              </Typography>
+                            </Card>
+                          </Grid>
+                          <Grid item xs={12} md={6}>
+                            <Card sx={{ p: 3, backgroundColor: '#fff3e0' }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                                <Schedule sx={{ color: '#ff9800', mr: 1 }} />
+                                <Typography variant="h6" sx={{ color: '#ff9800', fontWeight: 700 }}>
+                                  Pending/Not Completed
+                                </Typography>
+                              </Box>
+                              <Typography variant="h3" sx={{ fontWeight: 800, color: '#ff9800', mb: 1 }}>
+                                {organizedAppointmentData.notCompleted.length}
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                Appointments awaiting completion
+                              </Typography>
+                            </Card>
+                          </Grid>
+                        </Grid>
+
+                        {/* Completed Appointments Table */}
+                        <Card sx={{ mb: 4 }}>
+                          <CardContent>
+                            <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, color: '#4caf50' }}>
+                              ✅ Completed Appointments ({organizedAppointmentData.completed.length})
+                            </Typography>
+                            <TableContainer>
+                              <Table>
+                                <TableHead>
+                                  <TableRow>
+                                    <TableCell sx={{ fontWeight: 600 }}>Patient</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }}>Date</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }}>Time</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }}>Doctor</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }}>Type</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }}>Duration</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
+                                  </TableRow>
+                                </TableHead>
+                                <TableBody>
+                                  {organizedAppointmentData.completed.length === 0 ? (
+                                    <TableRow>
+                                      <TableCell colSpan={7} sx={{ textAlign: 'center', py: 4 }}>
+                                        <Typography variant="body2" color="text.secondary">
+                                          No completed appointments found
+                                        </Typography>
+                                      </TableCell>
+                                    </TableRow>
+                                  ) : (
+                                    organizedAppointmentData.completed.map((appointment: any) => (
+                                      <TableRow key={appointment.id} hover>
+                                        <TableCell>
+                                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                            <Avatar sx={{ width: 32, height: 32, mr: 2, fontSize: '0.75rem' }}>
+                                              {appointment.patientAvatar || appointment.patient.substring(0, 2).toUpperCase()}
+                                            </Avatar>
+                                            <Typography variant="body2" fontWeight={600}>
+                                              {appointment.patient}
+                                            </Typography>
+                                          </Box>
+                                        </TableCell>
+                                        <TableCell>
+                                          <Typography variant="body2">{appointment.date}</Typography>
+                                        </TableCell>
+                                        <TableCell>
+                                          <Typography variant="body2">{appointment.time}</Typography>
+                                        </TableCell>
+                                        <TableCell>
+                                          <Typography variant="body2">{appointment.doctor}</Typography>
+                                        </TableCell>
+                                        <TableCell>
+                                          <Chip label={appointment.type} size="small" variant="outlined" />
+                                        </TableCell>
+                                        <TableCell>
+                                          <Typography variant="body2">{appointment.duration || 30} min</Typography>
+                                        </TableCell>
+                                        <TableCell>
+                                          <Chip 
+                                            label="Completed" 
+                                            color="success" 
+                                            size="small"
+                                            icon={<CheckCircle />}
+                                          />
+                                        </TableCell>
+                                      </TableRow>
+                                    ))
+                                  )}
+                                </TableBody>
+                              </Table>
+                            </TableContainer>
+                          </CardContent>
+                        </Card>
+
+                        {/* Not Completed Appointments Table */}
+                        <Card>
+                          <CardContent>
+                            <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, color: '#ff9800' }}>
+                              ⏳ Pending/Not Completed Appointments ({organizedAppointmentData.notCompleted.length})
+                            </Typography>
+                            <TableContainer>
+                              <Table>
+                                <TableHead>
+                                  <TableRow>
+                                    <TableCell sx={{ fontWeight: 600 }}>Patient</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }}>Date</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }}>Time</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }}>Doctor</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }}>Type</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }}>Duration</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
+                                  </TableRow>
+                                </TableHead>
+                                <TableBody>
+                                  {organizedAppointmentData.notCompleted.length === 0 ? (
+                                    <TableRow>
+                                      <TableCell colSpan={7} sx={{ textAlign: 'center', py: 4 }}>
+                                        <Typography variant="body2" color="text.secondary">
+                                          No pending appointments found
+                                        </Typography>
+                                      </TableCell>
+                                    </TableRow>
+                                  ) : (
+                                    organizedAppointmentData.notCompleted.map((appointment: any) => (
+                                      <TableRow key={appointment.id} hover>
+                                        <TableCell>
+                                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                            <Avatar sx={{ width: 32, height: 32, mr: 2, fontSize: '0.75rem' }}>
+                                              {appointment.patientAvatar || appointment.patient.substring(0, 2).toUpperCase()}
+                                            </Avatar>
+                                            <Typography variant="body2" fontWeight={600}>
+                                              {appointment.patient}
+                                            </Typography>
+                                          </Box>
+                                        </TableCell>
+                                        <TableCell>
+                                          <Typography variant="body2">{appointment.date}</Typography>
+                                        </TableCell>
+                                        <TableCell>
+                                          <Typography variant="body2">{appointment.time}</Typography>
+                                        </TableCell>
+                                        <TableCell>
+                                          <Typography variant="body2">{appointment.doctor}</Typography>
+                                        </TableCell>
+                                        <TableCell>
+                                          <Chip label={appointment.type} size="small" variant="outlined" />
+                                        </TableCell>
+                                        <TableCell>
+                                          <Typography variant="body2">{appointment.duration || 30} min</Typography>
+                                        </TableCell>
+                                        <TableCell>
+                                          <Chip 
+                                            label={appointment.status} 
+                                            color={appointment.status === 'confirmed' ? 'primary' : appointment.status === 'pending' ? 'warning' : 'error'} 
+                                            size="small"
+                                          />
+                                        </TableCell>
+                                      </TableRow>
+                                    ))
+                                  )}
+                                </TableBody>
+                              </Table>
+                            </TableContainer>
+                          </CardContent>
+                        </Card>
+                      </Box>
+                    ) : (
+                      <Box sx={{ p: 6, textAlign: 'center' }}>
+                        <CalendarToday sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+                        <Typography variant="h5" color="text.secondary" sx={{ mb: 1 }}>
+                          Loading Appointment Data...
+                        </Typography>
+                        <Typography variant="body1" color="text.secondary">
+                          Syncing appointment data from the appointment page
+                        </Typography>
+                      </Box>
+                    )}
+                  </TabPanel>
                 </>
               )}
 
@@ -3268,6 +4297,188 @@ const PatientListPage: React.FC = () => {
                       )}
                     </Grid>
                   </TabPanel>
+
+                  {/* Appointment Data Tab - Cards View */}
+                  <TabPanel value={tabValue} index={7}>
+                    {organizedAppointmentData ? (
+                      <Box sx={{ p: 3 }}>
+                        <Alert severity="info" sx={{ mb: 3 }}>
+                          <Typography variant="body2">
+                            This tab shows appointment data organized by completion status, automatically synced from the Appointment page.
+                          </Typography>
+                        </Alert>
+
+                        {/* Summary Cards */}
+                        <Grid container spacing={3} sx={{ mb: 4 }}>
+                          <Grid item xs={12} md={6}>
+                            <Card sx={{ p: 3, backgroundColor: '#e8f5e8' }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                                <CheckCircle sx={{ color: '#4caf50', mr: 1 }} />
+                                <Typography variant="h6" sx={{ color: '#4caf50', fontWeight: 700 }}>
+                                  Completed Appointments
+                                </Typography>
+                              </Box>
+                              <Typography variant="h3" sx={{ fontWeight: 800, color: '#4caf50', mb: 1 }}>
+                                {organizedAppointmentData.completed.length}
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                Successfully completed appointments
+                              </Typography>
+                            </Card>
+                          </Grid>
+                          <Grid item xs={12} md={6}>
+                            <Card sx={{ p: 3, backgroundColor: '#fff3e0' }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                                <Schedule sx={{ color: '#ff9800', mr: 1 }} />
+                                <Typography variant="h6" sx={{ color: '#ff9800', fontWeight: 700 }}>
+                                  Pending/Not Completed
+                                </Typography>
+                              </Box>
+                              <Typography variant="h3" sx={{ fontWeight: 800, color: '#ff9800', mb: 1 }}>
+                                {organizedAppointmentData.notCompleted.length}
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                Appointments awaiting completion
+                              </Typography>
+                            </Card>
+                          </Grid>
+                        </Grid>
+
+                        {/* Completed Appointments Cards */}
+                        <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, color: '#4caf50' }}>
+                          ✅ Completed Appointments ({organizedAppointmentData.completed.length})
+                        </Typography>
+                        <Grid container spacing={3} sx={{ mb: 4 }}>
+                          {organizedAppointmentData.completed.length === 0 ? (
+                            <Grid item xs={12}>
+                              <Card sx={{ p: 4, textAlign: 'center' }}>
+                                <CheckCircle sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+                                <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
+                                  No completed appointments
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                  Completed appointments will appear here
+                                </Typography>
+                              </Card>
+                            </Grid>
+                          ) : (
+                            organizedAppointmentData.completed.map((appointment: any) => (
+                              <Grid item xs={12} sm={6} md={4} key={appointment.id}>
+                                <Card sx={{ height: '100%', border: '2px solid #e8f5e8' }}>
+                                  <CardContent sx={{ p: 3 }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                                      <Avatar sx={{ width: 40, height: 40, mr: 2, backgroundColor: '#4caf50' }}>
+                                        {appointment.patientAvatar || appointment.patient.substring(0, 2).toUpperCase()}
+                                      </Avatar>
+                                      <Box sx={{ flexGrow: 1 }}>
+                                        <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>
+                                          {appointment.patient}
+                                        </Typography>
+                                        <Typography variant="body2" color="text.secondary">
+                                          {appointment.date} at {appointment.time}
+                                        </Typography>
+                                      </Box>
+                                      <Chip 
+                                        label="Completed" 
+                                        color="success" 
+                                        size="small"
+                                        icon={<CheckCircle />}
+                                      />
+                                    </Box>
+                                    
+                                    <Divider sx={{ my: 2 }} />
+                                    
+                                    <Box sx={{ mb: 2 }}>
+                                      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                        Doctor: {appointment.doctor}
+                                      </Typography>
+                                      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                        Type: {appointment.type}
+                                      </Typography>
+                                      <Typography variant="body2" color="text.secondary">
+                                        Duration: {appointment.duration || 30} minutes
+                                      </Typography>
+                                    </Box>
+                                  </CardContent>
+                                </Card>
+                              </Grid>
+                            ))
+                          )}
+                        </Grid>
+
+                        {/* Not Completed Appointments Cards */}
+                        <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, color: '#ff9800' }}>
+                          ⏳ Pending/Not Completed Appointments ({organizedAppointmentData.notCompleted.length})
+                        </Typography>
+                        <Grid container spacing={3}>
+                          {organizedAppointmentData.notCompleted.length === 0 ? (
+                            <Grid item xs={12}>
+                              <Card sx={{ p: 4, textAlign: 'center' }}>
+                                <Schedule sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+                                <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
+                                  No pending appointments
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                  Pending appointments will appear here
+                                </Typography>
+                              </Card>
+                            </Grid>
+                          ) : (
+                            organizedAppointmentData.notCompleted.map((appointment: any) => (
+                              <Grid item xs={12} sm={6} md={4} key={appointment.id}>
+                                <Card sx={{ height: '100%', border: '2px solid #fff3e0' }}>
+                                  <CardContent sx={{ p: 3 }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                                      <Avatar sx={{ width: 40, height: 40, mr: 2, backgroundColor: '#ff9800' }}>
+                                        {appointment.patientAvatar || appointment.patient.substring(0, 2).toUpperCase()}
+                                      </Avatar>
+                                      <Box sx={{ flexGrow: 1 }}>
+                                        <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>
+                                          {appointment.patient}
+                                        </Typography>
+                                        <Typography variant="body2" color="text.secondary">
+                                          {appointment.date} at {appointment.time}
+                                        </Typography>
+                                      </Box>
+                                      <Chip 
+                                        label={appointment.status} 
+                                        color={appointment.status === 'confirmed' ? 'primary' : appointment.status === 'pending' ? 'warning' : 'error'} 
+                                        size="small"
+                                      />
+                                    </Box>
+                                    
+                                    <Divider sx={{ my: 2 }} />
+                                    
+                                    <Box sx={{ mb: 2 }}>
+                                      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                        Doctor: {appointment.doctor}
+                                      </Typography>
+                                      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                        Type: {appointment.type}
+                                      </Typography>
+                                      <Typography variant="body2" color="text.secondary">
+                                        Duration: {appointment.duration || 30} minutes
+                                      </Typography>
+                                    </Box>
+                                  </CardContent>
+                                </Card>
+                              </Grid>
+                            ))
+                          )}
+                        </Grid>
+                      </Box>
+                    ) : (
+                      <Box sx={{ p: 6, textAlign: 'center' }}>
+                        <CalendarToday sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+                        <Typography variant="h5" color="text.secondary" sx={{ mb: 1 }}>
+                          Loading Appointment Data...
+                        </Typography>
+                        <Typography variant="body1" color="text.secondary">
+                          Syncing appointment data from the appointment page
+                        </Typography>
+                      </Box>
+                    )}
+                  </TabPanel>
                 </>
               )}
             </CardContent>
@@ -3783,7 +4994,12 @@ const PatientListPage: React.FC = () => {
                                       {selectedPatient?.medications?.length > 0 && (
                                         selectedPatient.medications.map((medication: any) => (
                                           <MenuItem key={medication.id} value={medication.name}>
-                                            {medication.name} - {medication.dosage}
+                                            <Box>
+                                              <Typography variant="body2">{medication.name}</Typography>
+                                              <Typography variant="caption" color="text.secondary">
+                                                {medication.dosage}, {medication.frequency}
+                                              </Typography>
+                                            </Box>
                                           </MenuItem>
                                         ))
                                       )}
@@ -4179,66 +5395,186 @@ const PatientListPage: React.FC = () => {
             )}
           </Dialog>
 
-          {/* Add Patient Dialog */}
+          {/* Enhanced Add Patient Dialog */}
           <Dialog
             open={addPatientOpen}
-            onClose={() => setAddPatientOpen(false)}
-            maxWidth="md"
+            onClose={() => {
+              setAddPatientOpen(false);
+              // Reset form when closing
+              setNewPatientData({
+                name: '',
+                phone: '',
+                email: '',
+                age: '',
+                gender: '',
+                address: '',
+                emergencyContact: '',
+                bloodType: '',
+                condition: '',
+                status: 'new'
+              });
+            }}
+            maxWidth="lg"
             fullWidth
+            sx={{ '& .MuiDialog-paper': { maxHeight: '90vh' } }}
           >
-            <DialogTitle>Add New Patient</DialogTitle>
-            <DialogContent>
-              <Grid container spacing={2} sx={{ mt: 1 }}>
+            <DialogTitle sx={{ 
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
+              color: 'white',
+              fontWeight: 700,
+              fontSize: '1.5rem'
+            }}>
+              ➕ Add New Patient
+            </DialogTitle>
+            <DialogContent sx={{ py: 3 }}>
+              <Grid container spacing={3} sx={{ mt: 1 }}>
+                {/* Basic Information Section */}
+                <Grid item xs={12}>
+                  <Divider sx={{ my: 2 }}>
+                    <Chip 
+                      label="👤 Basic Information" 
+                      sx={{ 
+                        fontWeight: 600, 
+                        backgroundColor: 'primary.main', 
+                        color: 'white',
+                        '& .MuiChip-label': { px: 3 }
+                      }} 
+                    />
+                  </Divider>
+                </Grid>
+                
                 <Grid item xs={12} md={6}>
-                  <TextField fullWidth label="Full Name" />
+                  <TextField 
+                    fullWidth 
+                    label="Full Name *" 
+                    value={newPatientData.name}
+                    onChange={(e) => setNewPatientData({ ...newPatientData, name: e.target.value })}
+                    required
+                    error={!newPatientData.name.trim()}
+                    helperText={!newPatientData.name.trim() ? "Name is required" : ""}
+                  />
                 </Grid>
                 <Grid item xs={12} md={6}>
-                  <TextField fullWidth label="Phone Number" />
+                  <TextField 
+                    fullWidth 
+                    label="Phone Number *" 
+                    value={newPatientData.phone}
+                    onChange={(e) => setNewPatientData({ ...newPatientData, phone: e.target.value })}
+                    required
+                    error={!newPatientData.phone.trim()}
+                    helperText={!newPatientData.phone.trim() ? "Phone number is required" : ""}
+                  />
                 </Grid>
                 <Grid item xs={12} md={6}>
-                  <TextField fullWidth label="Email" />
+                  <TextField 
+                    fullWidth 
+                    label="Email" 
+                    type="email"
+                    value={newPatientData.email}
+                    onChange={(e) => setNewPatientData({ ...newPatientData, email: e.target.value })}
+                    placeholder="patient@example.com"
+                  />
                 </Grid>
                 <Grid item xs={12} md={6}>
-                  <TextField fullWidth label="Age" type="number" />
+                  <TextField 
+                    fullWidth 
+                    label="Age" 
+                    type="number" 
+                    value={newPatientData.age}
+                    onChange={(e) => setNewPatientData({ ...newPatientData, age: e.target.value })}
+                    inputProps={{ min: 0, max: 150 }}
+                  />
                 </Grid>
                 <Grid item xs={12} md={6}>
                   <FormControl fullWidth>
                     <InputLabel>Gender</InputLabel>
-                    <Select label="Gender">
-                      <MenuItem value="male">Male</MenuItem>
-                      <MenuItem value="female">Female</MenuItem>
+                    <Select 
+                      label="Gender"
+                      value={newPatientData.gender}
+                      onChange={(e) => setNewPatientData({ ...newPatientData, gender: e.target.value })}
+                    >
+                      <MenuItem value="Male">Male</MenuItem>
+                      <MenuItem value="Female">Female</MenuItem>
+                      <MenuItem value="Other">Other</MenuItem>
                     </Select>
                   </FormControl>
                 </Grid>
                 <Grid item xs={12} md={6}>
-                  <TextField fullWidth label="Emergency Contact" />
+                  <TextField 
+                    fullWidth 
+                    label="Blood Type" 
+                    value={newPatientData.bloodType}
+                    onChange={(e) => setNewPatientData({ ...newPatientData, bloodType: e.target.value })}
+                    placeholder="e.g., A+, B-, O+, AB-"
+                  />
                 </Grid>
                 <Grid item xs={12}>
-                  <TextField fullWidth label="Address" multiline rows={2} />
+                  <TextField 
+                    fullWidth 
+                    label="Address" 
+                    multiline 
+                    rows={2}
+                    value={newPatientData.address}
+                    onChange={(e) => setNewPatientData({ ...newPatientData, address: e.target.value })}
+                    placeholder="Patient's full address..."
+                  />
                 </Grid>
-                <Grid item xs={12}>
-                  <TextField fullWidth label="Medical History" multiline rows={3} />
+                <Grid item xs={12} md={6}>
+                  <TextField 
+                    fullWidth 
+                    label="Emergency Contact" 
+                    value={newPatientData.emergencyContact}
+                    onChange={(e) => setNewPatientData({ ...newPatientData, emergencyContact: e.target.value })}
+                    placeholder="Name and phone number"
+                  />
                 </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField 
+                    fullWidth 
+                    label="Initial Condition" 
+                    value={newPatientData.condition}
+                    onChange={(e) => setNewPatientData({ ...newPatientData, condition: e.target.value })}
+                    placeholder="e.g., Routine checkup, Follow-up visit"
+                  />
+                </Grid>
+
+
               </Grid>
             </DialogContent>
-            <DialogActions>
-              <Button onClick={() => setAddPatientOpen(false)}>Cancel</Button>
+            <DialogActions sx={{ px: 3, py: 2, gap: 2 }}>
+              <Button 
+                onClick={() => {
+                  setAddPatientOpen(false);
+                  // Reset form when canceling
+                  setNewPatientData({
+                    name: '',
+                    phone: '',
+                    email: '',
+                    age: '',
+                    gender: '',
+                    address: '',
+                    emergencyContact: '',
+                    bloodType: '',
+                    condition: '',
+                    status: 'new'
+                  });
+                }}
+                sx={{ borderRadius: 3 }}
+              >
+                Cancel
+              </Button>
               <Button 
                 variant="contained" 
-                onClick={() => {
-                  // Get form data (you would normally get this from form state)
-                  const formData = {
-                    name: 'New Patient', // This should come from form
-                    phone: '+971 50 XXX XXXX',
-                    email: 'patient@email.com',
-                    age: 30,
-                    gender: 'Male',
-                    address: 'Dubai, UAE',
-                    emergencyContact: 'Emergency Contact',
-                    bloodType: 'O+',
-                    condition: 'Initial consultation'
-                  };
-                  handleAddNewPatient(formData);
+                onClick={handleAddNewPatient}
+                disabled={!newPatientData.name.trim() || !newPatientData.phone.trim()}
+                sx={{ 
+                  borderRadius: 3,
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  fontWeight: 700,
+                  px: 4,
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
+                  }
                 }}
               >
                 Add Patient
@@ -4328,6 +5664,8 @@ const PatientListPage: React.FC = () => {
                     onChange={(e) => setEditingPatient({ ...editingPatient, emergencyContact: e.target.value })}
                   />
                 </Grid>
+                
+
                 <Grid item xs={12} md={6}>
                   <TextField 
                     fullWidth 

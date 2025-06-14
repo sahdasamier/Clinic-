@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Box,
@@ -56,6 +56,7 @@ import {
 } from '@mui/icons-material';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
+import { loadAppointmentsFromStorage, saveAppointmentsToStorage } from './appointments/AppointmentListPage';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -121,34 +122,31 @@ export const doctorSchedules = [
   },
 ];
 
-// Appointment interface
+// Appointment interface (compatible with appointment page)
 interface Appointment {
   id?: number;
-  doctorId: number;
+  patient?: string;
+  patientAvatar?: string;
   date: string;
   time: string;
-  patient?: string;
+  timeSlot: string;
   duration: number;
+  doctor: string;
+  type?: string;
+  status?: string;
+  location?: string;
+  phone?: string;
+  notes?: string;
+  completed?: boolean;
+  priority?: string;
+  createdAt?: string;
   isAvailableSlot?: boolean; // New field to distinguish available slots from actual appointments
 }
 
-// EXPORT: Sample appointments data (these are REAL appointments with patients)
-export const initialAppointments: Appointment[] = [
-  // Dr. Ahmed Omar - Monday 4-6 PM has 4 patients (RESERVED)
-  { id: 1, doctorId: 1, date: '2024-01-15', time: '16:00', patient: 'Ahmed Al-Rashid', duration: 30 },
-  { id: 2, doctorId: 1, date: '2024-01-15', time: '16:30', patient: 'Fatima Hassan', duration: 30 },
-  { id: 3, doctorId: 1, date: '2024-01-15', time: '17:00', patient: 'Omar Khalil', duration: 30 },
-  { id: 4, doctorId: 1, date: '2024-01-15', time: '17:30', patient: 'Sara Ahmed', duration: 30 },
-  
-  // Dr. Sarah Ahmed - Tuesday appointments (RESERVED)
-  { id: 5, doctorId: 2, date: '2024-01-16', time: '09:00', patient: 'Ali Hassan', duration: 20 },
-  { id: 6, doctorId: 2, date: '2024-01-16', time: '09:20', patient: 'Noor Ahmed', duration: 20 },
-  { id: 7, doctorId: 2, date: '2024-01-16', time: '10:00', patient: 'Layla Omar', duration: 20 },
-  
-  // Dr. Mohammed Ali - Wednesday appointments (RESERVED)
-  { id: 8, doctorId: 3, date: '2024-01-17', time: '10:00', patient: 'Hassan Mahmoud', duration: 45 },
-  { id: 9, doctorId: 3, date: '2024-01-17', time: '11:00', patient: 'Nadia Abdullah', duration: 45 },
-];
+// Helper function to map doctor name to doctor object
+const findDoctorByName = (doctorName: string) => {
+  return doctorSchedules.find(doc => doc.name === doctorName);
+};
 
 const daysOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 const timeSlots = [
@@ -163,7 +161,30 @@ const DoctorSchedulingPage: React.FC = () => {
   const { t } = useTranslation();
   const [tabValue, setTabValue] = useState(0);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [appointments, setAppointments] = useState<Appointment[]>(initialAppointments);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+
+  // Load appointments from shared storage on component mount
+  useEffect(() => {
+    const loadAppointments = () => {
+      const appointmentData = loadAppointmentsFromStorage();
+      setAppointments(appointmentData);
+    };
+
+    // Load initial data
+    loadAppointments();
+
+    // Listen for appointment updates from other components
+    const handleAppointmentUpdate = () => {
+      loadAppointments();
+    };
+
+    window.addEventListener('appointmentsUpdated', handleAppointmentUpdate);
+    
+    // Cleanup
+    return () => {
+      window.removeEventListener('appointmentsUpdated', handleAppointmentUpdate);
+    };
+  }, []);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
@@ -181,6 +202,8 @@ const DoctorSchedulingPage: React.FC = () => {
   // New state for doctor management
   const [doctors, setDoctors] = useState(doctorSchedules);
   const [addDoctorDialogOpen, setAddDoctorDialogOpen] = useState(false);
+  const [editDoctorDialogOpen, setEditDoctorDialogOpen] = useState(false);
+  const [selectedDoctorForEdit, setSelectedDoctorForEdit] = useState<any>(null);
   const [doctorFormData, setDoctorFormData] = useState({
     name: '',
     specialty: '',
@@ -231,7 +254,9 @@ const DoctorSchedulingPage: React.FC = () => {
 
   // Get appointments for a doctor on selected date
   const getDoctorAppointments = (doctorId: number, date: string) => {
-    return appointments.filter((apt: Appointment) => apt.doctorId === doctorId && apt.date === date);
+    const doctor = doctors.find(d => d.id === doctorId);
+    if (!doctor) return [];
+    return appointments.filter((apt: Appointment) => apt.doctor === doctor.name && apt.date === date);
   };
 
   // Doctor interface
@@ -255,6 +280,9 @@ const DoctorSchedulingPage: React.FC = () => {
     const doctor = doctors.find(d => d.id === doctorId);
     if (!doctor) return [];
     
+    // Get doctor appointments for the selected date
+    const doctorAppointments = getDoctorAppointments(doctorId, selectedDate);
+    
     // Get regular working hour slots
     const regularSlots: string[] = [];
     const startHour = parseInt(doctor.workingHours.start.split(':')[0]);
@@ -272,24 +300,19 @@ const DoctorSchedulingPage: React.FC = () => {
       regularSlots.push(timeSlot);
     }
     
-    // Get custom time slots from appointments
-    const customSlots = appointments
-      .filter(apt => apt.doctorId === doctorId && apt.date === selectedDate)
-      .map(apt => apt.time)
-      .filter(time => !regularSlots.includes(time));
+    // Get custom time slots from appointments (using timeSlot field)
+    const customSlots = doctorAppointments
+      .map(apt => apt.timeSlot)
+      .filter(timeSlot => !regularSlots.includes(timeSlot));
     
     // Combine and sort all slots
     const allSlots = [...regularSlots, ...customSlots].sort();
     
     return allSlots.map(timeSlot => {
-      const appointment = appointments.find(apt => 
-        apt.doctorId === doctorId && 
-        apt.date === selectedDate && 
-        apt.time === timeSlot
-      );
+      const appointment = doctorAppointments.find(apt => apt.timeSlot === timeSlot);
       
-      // Only mark as reserved if it has a real patient (not just an available slot)
-      const isReserved = !!(appointment && appointment.patient && !appointment.isAvailableSlot);
+      // Only mark as reserved if it has a real patient and is not just an available slot
+      const isReserved = !!(appointment && appointment.patient && !appointment.isAvailableSlot && appointment.status !== 'cancelled');
       const isAvailableSlot = !!(appointment && appointment.isAvailableSlot);
       
       return {
@@ -312,14 +335,16 @@ const DoctorSchedulingPage: React.FC = () => {
   // Handle edit appointment
   const handleEditAppointment = (appointment: Appointment) => {
     setSelectedAppointment(appointment);
-    setFormData({ time: appointment.time });
+    setFormData({ time: appointment.timeSlot });
     setEditDialogOpen(true);
     setMenuAnchor(null);
   };
 
   // Handle delete appointment
   const handleDeleteAppointment = (appointment: Appointment) => {
-    setAppointments(prev => prev.filter(apt => apt.id !== appointment.id));
+    const updatedAppointments = appointments.filter(apt => apt.id !== appointment.id);
+    setAppointments(updatedAppointments);
+    saveAppointmentsToStorage(updatedAppointments); // Save to shared storage
     setMenuAnchor(null);
   };
 
@@ -334,15 +359,17 @@ const DoctorSchedulingPage: React.FC = () => {
       return;
     }
 
+    const doctor = doctors.find(d => d.id === selectedDoctorForAdd);
+    if (!doctor) return;
+
     // Check if time slot is already taken
     const existingAppointment = appointments.find(apt => 
-      apt.doctorId === selectedDoctorForAdd && 
+      apt.doctor === doctor.name && 
       apt.date === selectedDate && 
-      apt.time === formData.time
+      apt.timeSlot === formData.time
     );
 
     if (existingAppointment) {
-      const doctor = doctors.find(d => d.id === selectedDoctorForAdd);
       const slotType = existingAppointment.patient && !existingAppointment.isAvailableSlot 
         ? 'reserved appointment' 
         : existingAppointment.isAvailableSlot 
@@ -351,34 +378,51 @@ const DoctorSchedulingPage: React.FC = () => {
       
       setSnackbar({
         open: true,
-        message: `❌ Time slot ${formData.time} already exists as a ${slotType} for ${doctor?.name}. Please choose a different time.`,
+        message: `❌ Time slot ${formData.time} already exists as a ${slotType} for ${doctor.name}. Please choose a different time.`,
         severity: 'error'
       });
       return;
     }
 
-    const doctor = doctors.find(d => d.id === selectedDoctorForAdd);
+    // Convert 24-hour format to 12-hour format for display
+    const timeDisplay = new Date(`2024-01-01T${formData.time}`).toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+
     const newAppointment: Appointment = {
       id: Math.max(...appointments.map(a => a.id || 0)) + 1,
-      doctorId: selectedDoctorForAdd,
+      doctor: doctor.name,
       date: selectedDate,
-      time: formData.time,
+      time: timeDisplay,
+      timeSlot: formData.time,
       patient: '', // No patient - this is just an available slot
-      duration: doctor?.consultationDuration || 30,
+      duration: doctor.consultationDuration || 30,
+      type: 'Available Slot',
+      status: 'available',
+      location: `Room ${100 + doctor.id}`,
+      phone: '',
+      notes: 'Available time slot created from doctor scheduling',
+      completed: false,
+      priority: 'normal',
+      createdAt: new Date().toISOString(),
       isAvailableSlot: true,
     };
 
-    setAppointments(prev => [...prev, newAppointment]);
+    const updatedAppointments = [...appointments, newAppointment];
+    setAppointments(updatedAppointments);
+    saveAppointmentsToStorage(updatedAppointments); // Save to shared storage
     setAddDialogOpen(false);
     
     // Success notification
     const existingAppointmentsCount = appointments.filter(apt => 
-      apt.doctorId === selectedDoctorForAdd && apt.date === selectedDate
+      apt.doctor === doctor.name && apt.date === selectedDate
     ).length;
     
     setSnackbar({
       open: true,
-      message: `✅ Available time slot ${formData.time} added for ${doctor?.name} on ${selectedDate}. Doctor now has ${existingAppointmentsCount + 1} time slots.`,
+      message: `✅ Available time slot ${timeDisplay} added for ${doctor.name} on ${selectedDate}. Doctor now has ${existingAppointmentsCount + 1} time slots.`,
       severity: 'success'
     });
 
@@ -396,9 +440,9 @@ const DoctorSchedulingPage: React.FC = () => {
 
     // Check if new time slot is already taken (excluding current appointment)
     const existingAppointment = appointments.find(apt => 
-      apt.doctorId === selectedAppointment.doctorId && 
+      apt.doctor === selectedAppointment.doctor && 
       apt.date === selectedDate && 
-      apt.time === formData.time &&
+      apt.timeSlot === formData.time &&
       apt.id !== selectedAppointment.id
     );
 
@@ -407,11 +451,21 @@ const DoctorSchedulingPage: React.FC = () => {
       return;
     }
 
-    setAppointments(prev => prev.map(apt => 
+    // Convert 24-hour format to 12-hour format for display
+    const timeDisplay = new Date(`2024-01-01T${formData.time}`).toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+
+    const updatedAppointments = appointments.map(apt => 
       apt.id === selectedAppointment.id 
-        ? { ...apt, time: formData.time }
+        ? { ...apt, time: timeDisplay, timeSlot: formData.time }
         : apt
-    ));
+    );
+    
+    setAppointments(updatedAppointments);
+    saveAppointmentsToStorage(updatedAppointments); // Save to shared storage
     setEditDialogOpen(false);
     setSelectedAppointment(null);
     setFormData({ time: '' });
@@ -436,6 +490,21 @@ const DoctorSchedulingPage: React.FC = () => {
       maxPatientsPerHour: 2,
     });
     setAddDoctorDialogOpen(true);
+  };
+
+  // Handle edit doctor
+  const handleEditDoctor = (doctor: any) => {
+    setSelectedDoctorForEdit(doctor);
+    setDoctorFormData({
+      name: doctor.name,
+      specialty: doctor.specialty,
+      workingHoursStart: doctor.workingHours.start,
+      workingHoursEnd: doctor.workingHours.end,
+      offDays: doctor.offDays,
+      consultationDuration: doctor.consultationDuration,
+      maxPatientsPerHour: doctor.maxPatientsPerHour,
+    });
+    setEditDoctorDialogOpen(true);
   };
 
   // Handle save new doctor
@@ -477,6 +546,41 @@ const DoctorSchedulingPage: React.FC = () => {
       message: `✅ Doctor ${doctorFormData.name} added successfully!`,
       severity: 'success'
         });
+  };
+
+  // Handle save edited doctor
+  const handleSaveEditedDoctor = () => {
+    if (!doctorFormData.name.trim() || !doctorFormData.specialty.trim()) {
+      setSnackbar({
+        open: true,
+        message: '❌ Please fill in doctor name and specialty',
+        severity: 'error'
+      });
+      return;
+    }
+
+    const updatedDoctor = {
+      ...selectedDoctorForEdit,
+      name: doctorFormData.name.trim(),
+      specialty: doctorFormData.specialty.trim(),
+      workingHours: { 
+        start: doctorFormData.workingHoursStart, 
+        end: doctorFormData.workingHoursEnd 
+      },
+      offDays: doctorFormData.offDays,
+      maxPatientsPerHour: doctorFormData.maxPatientsPerHour,
+      consultationDuration: doctorFormData.consultationDuration,
+    };
+
+    setDoctors(prev => prev.map(doc => doc.id === selectedDoctorForEdit.id ? updatedDoctor : doc));
+    setEditDoctorDialogOpen(false);
+    setSelectedDoctorForEdit(null);
+    
+    setSnackbar({
+      open: true,
+      message: `✅ Doctor ${doctorFormData.name} updated successfully!`,
+      severity: 'success'
+    });
   };
 
   // Handle time slot click for editing
@@ -526,27 +630,50 @@ const DoctorSchedulingPage: React.FC = () => {
     }
 
     const doctor = doctors.find(d => d.id === selectedTimeSlot.doctorId);
+    if (!doctor) return;
     
     // Remove any existing appointment for this time slot and date
-    setAppointments(prev => prev.filter(apt => 
-      !(apt.doctorId === selectedTimeSlot.doctorId && 
+    const filteredAppointments = appointments.filter(apt => 
+      !(apt.doctor === doctor.name && 
         apt.date === selectedDate && 
-        apt.time === selectedTimeSlot.time)
-    ));
+        apt.timeSlot === selectedTimeSlot.time)
+    );
 
     // Add new appointment based on type (only for available and reserved)
     if (timeSlotFormData.type === 'available' || timeSlotFormData.type === 'reserved') {
+      // Convert 24-hour format to 12-hour format for display
+      const timeDisplay = new Date(`2024-01-01T${selectedTimeSlot.time}`).toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      });
+
       const newAppointment: Appointment = {
         id: Math.max(...(appointments.length > 0 ? appointments.map(a => a.id || 0) : [0])) + 1,
-        doctorId: selectedTimeSlot.doctorId,
+        doctor: doctor.name,
         date: selectedDate,
-        time: selectedTimeSlot.time,
+        time: timeDisplay,
+        timeSlot: selectedTimeSlot.time,
         patient: timeSlotFormData.type === 'reserved' ? timeSlotFormData.patientName.trim() : '',
-        duration: doctor?.consultationDuration || 30,
+        duration: doctor.consultationDuration || 30,
+        type: timeSlotFormData.type === 'reserved' ? timeSlotFormData.appointmentType : 'Available Slot',
+        status: timeSlotFormData.type === 'reserved' ? 'confirmed' : 'available',
+        location: `Room ${100 + doctor.id}`,
+        phone: timeSlotFormData.patientPhone || '',
+        notes: timeSlotFormData.notes || (timeSlotFormData.type === 'available' ? 'Available time slot' : ''),
+        completed: false,
+        priority: 'normal',
+        createdAt: new Date().toISOString(),
         isAvailableSlot: timeSlotFormData.type === 'available',
       };
       
-      setAppointments(prev => [...prev, newAppointment]);
+      const updatedAppointments = [...filteredAppointments, newAppointment];
+      setAppointments(updatedAppointments);
+      saveAppointmentsToStorage(updatedAppointments); // Save to shared storage
+    } else {
+      // Just remove the appointment for 'regular' type
+      setAppointments(filteredAppointments);
+      saveAppointmentsToStorage(filteredAppointments); // Save to shared storage
     }
     // If type is 'regular', we just remove the appointment (already done above)
 
@@ -579,143 +706,274 @@ const DoctorSchedulingPage: React.FC = () => {
       <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <Header />
         <Container maxWidth="xl" sx={{ mt: 4, mb: 4, flex: 1, overflow: 'auto' }}>
-          {/* Header Section */}
-          <Box sx={{ 
+          {/* Enhanced Header Section */}
+          <Card sx={{ 
             mb: 4, 
-            p: 4,
-            background: 'linear-gradient(135deg, #1976d2 0%, #42a5f5 100%)',
-            borderRadius: 3,
-            color: 'white',
+            background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+            borderRadius: 4,
+            boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+            position: 'relative',
+            overflow: 'hidden'
           }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <Schedule sx={{ fontSize: 40, mr: 2 }} />
-                <Box>
-                  <Typography variant="h3" sx={{ fontWeight: 800, mb: 1 }}>
-                    Doctor Scheduling
-                  </Typography>
-                  <Typography variant="h6" sx={{ opacity: 0.9 }}>
-                    Manage doctor schedules, working hours, and patient appointments
-                  </Typography>
+            <CardContent sx={{ p: 4, position: 'relative', zIndex: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Box
+                    sx={{
+                      width: 64,
+                      height: 64,
+                      borderRadius: '20px',
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      mr: 3,
+                      boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)',
+                    }}
+                  >
+                    <Schedule sx={{ fontSize: 32, color: 'white' }} />
+                  </Box>
+                  <Box>
+                    <Typography variant="h3" sx={{ fontWeight: 800, color: 'text.primary', mb: 0.5 }}>
+                      Doctor Scheduling
+                    </Typography>
+                    <Typography variant="h6" color="text.secondary" sx={{ fontWeight: 400 }}>
+                      🩺 Professional doctor schedule & appointment time management
+                    </Typography>
+                  </Box>
+                </Box>
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                  <Button
+                    variant="outlined"
+                    startIcon={<Schedule />}
+                    onClick={() => setSelectedDate(new Date().toISOString().split('T')[0])}
+                    sx={{ 
+                      borderRadius: 3, 
+                      color: '#2196f3', 
+                      borderColor: '#2196f3',
+                      fontWeight: 600,
+                      px: 3,
+                      py: 1.5,
+                      '&:hover': {
+                        backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                        borderColor: '#2196f3',
+                        transform: 'translateY(-2px)',
+                      },
+                      transition: 'all 0.3s ease'
+                    }}
+                  >
+                    Today's Schedule
+                  </Button>
+                  <Button
+                    variant="contained"
+                    startIcon={<Add />}
+                    onClick={handleAddDoctor}
+                    sx={{ 
+                      borderRadius: 3,
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      fontWeight: 700,
+                      px: 4,
+                      py: 1.5,
+                      boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)',
+                      '&:hover': {
+                        background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
+                        transform: 'translateY(-2px)',
+                        boxShadow: '0 12px 40px rgba(102, 126, 234, 0.4)',
+                      },
+                      transition: 'all 0.3s ease'
+                    }}
+                  >
+                    Add New Doctor
+                  </Button>
                 </Box>
               </Box>
-              <Box sx={{ display: 'flex', gap: 2 }}>
-                <Button
-                  variant="contained"
-                  size="large"
-                  startIcon={<Add />}
-                  onClick={handleAddDoctor}
-                  sx={{
-                    background: 'linear-gradient(135deg, #4caf50 0%, #66bb6a 100%)',
-                    color: 'white',
-                    '&:hover': { 
-                      background: 'linear-gradient(135deg, #388e3c 0%, #4caf50 100%)',
-                      transform: 'translateY(-2px)',
-                      boxShadow: '0 8px 25px rgba(76, 175, 80, 0.3)',
-                    },
-                    borderRadius: 3,
-                    px: 4,
-                    py: 1.5,
-                    fontWeight: 600,
-                    fontSize: '1.1rem',
-                    boxShadow: '0 4px 15px rgba(76, 175, 80, 0.2)',
-                    transition: 'all 0.3s ease',
-                  }}
-                >
-                  Add New Doctor
-                </Button>
-              </Box>
-            </Box>
-          </Box>
+            </CardContent>
+            {/* Decorative elements */}
+            <Box sx={{
+              position: 'absolute',
+              top: -40,
+              right: -40,
+              width: 120,
+              height: 120,
+              borderRadius: '50%',
+              backgroundColor: 'rgba(102, 126, 234, 0.1)',
+              zIndex: 1,
+            }} />
+            <Box sx={{
+              position: 'absolute',
+              bottom: -30,
+              left: -30,
+              width: 80,
+              height: 80,
+              borderRadius: '50%',
+              backgroundColor: 'rgba(118, 75, 162, 0.1)',
+              zIndex: 1,
+            }} />
+          </Card>
 
-          {/* Date Selection */}
-          <Box sx={{ mb: 3 }}>
-            <TextField
-              type="date"
-              label="Select Date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              InputLabelProps={{ shrink: true }}
-              sx={{ mr: 2 }}
-            />
-            <Chip 
-              label={`${getSelectedDayOfWeek().charAt(0).toUpperCase() + getSelectedDayOfWeek().slice(1)}`}
-              color="primary"
-              sx={{ ml: 1, textTransform: 'capitalize' }}
-            />
-          </Box>
-
-          {/* Stats Cards */}
-          <Grid container spacing={3} sx={{ mb: 4 }}>
-            <Grid item xs={12} sm={6} md={3}>
-              <Card sx={{ background: 'linear-gradient(135deg, #4caf50 0%, #81c784 100%)', color: 'white' }}>
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Box>
-                      <Typography variant="h4" sx={{ fontWeight: 700 }}>
-                        {totalWorkingDoctors}
-                      </Typography>
-                      <Typography variant="body1">Working Today</Typography>
-                    </Box>
-                    <LocalHospital sx={{ fontSize: 40, opacity: 0.8 }} />
-                  </Box>
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <Card sx={{ background: 'linear-gradient(135deg, #2196f3 0%, #64b5f6 100%)', color: 'white' }}>
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Box>
-                      <Typography variant="h4" sx={{ fontWeight: 700 }}>
-                        {totalAppointmentsToday}
-                      </Typography>
-                      <Typography variant="body1">Total Appointments</Typography>
-                    </Box>
-                    <Groups sx={{ fontSize: 40, opacity: 0.8 }} />
-                  </Box>
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <Card sx={{ background: 'linear-gradient(135deg, #ff9800 0%, #ffb74d 100%)', color: 'white' }}>
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Box>
-                      <Typography variant="h4" sx={{ fontWeight: 700 }}>
-                        {busyDoctors}
-                      </Typography>
-                      <Typography variant="body1">Doctors with Patients</Typography>
-                    </Box>
-                    <EventBusy sx={{ fontSize: 40, opacity: 0.8 }} />
-                  </Box>
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <Card sx={{ background: 'linear-gradient(135deg, #9c27b0 0%, #ba68c8 100%)', color: 'white' }}>
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Box>
-                      <Typography variant="h4" sx={{ fontWeight: 700 }}>
-                        {totalWorkingDoctors - busyDoctors}
-                      </Typography>
-                      <Typography variant="body1">Available Doctors</Typography>
-                    </Box>
-                    <EventAvailable sx={{ fontSize: 40, opacity: 0.8 }} />
-                  </Box>
-                </CardContent>
-              </Card>
-            </Grid>
-          </Grid>
-
-          {/* Time Slot Legend */}
-          <Card sx={{ mb: 4 }}>
+          {/* Enhanced Date Selection */}
+          <Card sx={{ 
+            mb: 4, 
+            background: 'linear-gradient(135deg, #fafbfc 0%, #f0f2f5 100%)',
+            borderRadius: 3,
+            boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+            border: '1px solid rgba(0,0,0,0.05)',
+          }}>
             <CardContent sx={{ p: 3 }}>
-              <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
-                📊 Time Slot Color Guide
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.primary' }}>
+                  📅 Schedule Date:
+                </Typography>
+                <TextField
+                  type="date"
+                  label="Select Date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  sx={{ 
+                    '& .MuiOutlinedInput-root': { 
+                      borderRadius: 3,
+                      backgroundColor: 'white',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                      '&:hover': {
+                        boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+                      },
+                    }
+                  }}
+                />
+                <Chip 
+                  label={`${getSelectedDayOfWeek().charAt(0).toUpperCase() + getSelectedDayOfWeek().slice(1)}`}
+                  sx={{ 
+                    textTransform: 'capitalize',
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    color: 'white',
+                    fontWeight: 600,
+                  }}
+                />
+              </Box>
+            </CardContent>
+          </Card>
+
+          {/* Enhanced Statistics Overview */}
+          <Card sx={{ 
+            mb: 4, 
+            background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+            borderRadius: 4,
+            boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+            position: 'relative',
+            overflow: 'hidden'
+          }}>
+            <CardContent sx={{ p: 4, position: 'relative', zIndex: 2 }}>
+              <Typography variant="h5" sx={{ fontWeight: 700, mb: 3, color: 'text.primary' }}>
+                📊 Doctor Schedule Statistics
               </Typography>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+              <Grid container spacing={3}>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Box sx={{ 
+                    textAlign: 'center', 
+                    p: 2, 
+                    backgroundColor: 'rgba(255,255,255,0.8)', 
+                    borderRadius: 3,
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255,255,255,0.2)'
+                  }}>
+                    <Typography variant="h4" sx={{ fontWeight: 800, color: 'primary.main', mb: 0.5 }}>
+                      {totalWorkingDoctors}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+                      Working Today
+                    </Typography>
+                  </Box>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Box sx={{ 
+                    textAlign: 'center', 
+                    p: 2, 
+                    backgroundColor: 'rgba(255,255,255,0.8)', 
+                    borderRadius: 3,
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255,255,255,0.2)'
+                  }}>
+                    <Typography variant="h4" sx={{ fontWeight: 800, color: 'success.main', mb: 0.5 }}>
+                      {totalAppointmentsToday}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+                      Total Appointments
+                    </Typography>
+                  </Box>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Box sx={{ 
+                    textAlign: 'center', 
+                    p: 2, 
+                    backgroundColor: 'rgba(255,255,255,0.8)', 
+                    borderRadius: 3,
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255,255,255,0.2)'
+                  }}>
+                    <Typography variant="h4" sx={{ fontWeight: 800, color: 'warning.main', mb: 0.5 }}>
+                      {busyDoctors}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+                      Busy Doctors
+                    </Typography>
+                  </Box>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Box sx={{ 
+                    textAlign: 'center', 
+                    p: 2, 
+                    backgroundColor: 'rgba(255,255,255,0.8)', 
+                    borderRadius: 3,
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255,255,255,0.2)'
+                  }}>
+                    <Typography variant="h4" sx={{ fontWeight: 800, color: 'info.main', mb: 0.5 }}>
+                      {totalWorkingDoctors - busyDoctors}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+                      Available Doctors
+                    </Typography>
+                  </Box>
+                </Grid>
+              </Grid>
+            </CardContent>
+            {/* Decorative elements */}
+            <Box sx={{
+              position: 'absolute',
+              top: -40,
+              right: -40,
+              width: 120,
+              height: 120,
+              borderRadius: '50%',
+              backgroundColor: 'rgba(102, 126, 234, 0.1)',
+              zIndex: 1,
+            }} />
+            <Box sx={{
+              position: 'absolute',
+              bottom: -30,
+              left: -30,
+              width: 80,
+              height: 80,
+              borderRadius: '50%',
+              backgroundColor: 'rgba(118, 75, 162, 0.1)',
+              zIndex: 1,
+            }} />
+          </Card>
+
+          {/* Enhanced Time Slot Legend */}
+          <Card sx={{ 
+            mb: 4,
+            borderRadius: 4,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
+            border: '1px solid rgba(0,0,0,0.05)',
+            overflow: 'hidden'
+          }}>
+            <CardContent sx={{ p: 4 }}>
+              <Typography variant="h6" sx={{ fontWeight: 700, mb: 3, color: 'text.primary' }}>
+                🎨 Time Slot Color Guide
+              </Typography>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mb: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Chip 
                     label="✅ 10:00" 
@@ -729,7 +987,7 @@ const DoctorSchedulingPage: React.FC = () => {
                       boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
                     }}
                   />
-                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
                     ✅ Regular Working Hours
                   </Typography>
                 </Box>
@@ -746,7 +1004,7 @@ const DoctorSchedulingPage: React.FC = () => {
                       boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
                     }}
                   />
-                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
                     ⏰ Available Slot (Added Manually)
                   </Typography>
                 </Box>
@@ -764,50 +1022,120 @@ const DoctorSchedulingPage: React.FC = () => {
                       boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
                     }}
                   />
-                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
                     🔒 Reserved (Patient Appointment)
                   </Typography>
                 </Box>
               </Box>
-              <Box sx={{ mt: 2, p: 2, backgroundColor: '#f0f7ff', borderRadius: 2, border: '1px solid #2196f3' }}>
-                <Typography variant="body2" color="primary.main" sx={{ fontWeight: 600 }}>
-                  💡 Click on any time slot to edit its type or add patient details!
+              <Box sx={{ 
+                p: 3, 
+                background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)', 
+                borderRadius: 3, 
+                border: '1px solid rgba(102, 126, 234, 0.2)',
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                <Box sx={{
+                  position: 'absolute',
+                  top: -10,
+                  right: -10,
+                  width: 40,
+                  height: 40,
+                  borderRadius: '50%',
+                  backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                  zIndex: 1,
+                }} />
+                <Typography variant="body1" sx={{ fontWeight: 700, color: 'primary.main', position: 'relative', zIndex: 2 }}>
+                  💡 Interactive Time Slots
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, mt: 0.5, position: 'relative', zIndex: 2 }}>
+                  Click on any time slot to edit its type, add patient details, or modify the schedule!
                 </Typography>
               </Box>
             </CardContent>
           </Card>
 
-          {/* Main Content */}
-          <Card>
-            <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 3 }}>
-              <Tabs value={tabValue} onChange={handleTabChange}>
-                <Tab label="Doctor Schedules" />
-                <Tab label="Weekly Overview" />
-                <Tab label="All Doctors" />
+          {/* Enhanced Main Content */}
+          <Card sx={{ 
+            borderRadius: 4,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
+            border: '1px solid rgba(0,0,0,0.05)',
+            overflow: 'hidden'
+          }}>
+            <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 4 }}>
+              <Tabs 
+                value={tabValue} 
+                onChange={handleTabChange}
+                sx={{
+                  '& .MuiTab-root': {
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    fontSize: '0.95rem',
+                    minWidth: 'auto',
+                    padding: '12px 16px',
+                    borderRadius: '8px 8px 0 0',
+                    margin: '0 2px',
+                    '&.Mui-selected': {
+                      color: 'white',
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      boxShadow: '0 4px 16px rgba(102, 126, 234, 0.3)',
+                    },
+                    '&:hover': {
+                      backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                    }
+                  },
+                  '& .MuiTabs-indicator': {
+                    height: 4,
+                    borderRadius: '4px 4px 0 0',
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  },
+                }}
+              >
+                <Tab label="📅 Doctor Schedules" />
+                <Tab label="📊 Weekly Overview" />
+                <Tab label="👥 All Doctors" />
               </Tabs>
             </Box>
 
             <TabPanel value={tabValue} index={0}>
-              <Box sx={{ p: 3 }}>
-                <Typography variant="h6" gutterBottom sx={{ mb: 2 }}>
-                  Doctor Schedules for {new Date(selectedDate).toLocaleDateString()}
+              <Box sx={{ p: 4 }}>
+                <Typography variant="h5" sx={{ fontWeight: 700, mb: 3, color: 'text.primary' }}>
+                  📋 Doctor Schedules for {new Date(selectedDate).toLocaleDateString()}
                 </Typography>
                 
-                {/* Helpful notice */}
-                <Alert severity="info" sx={{ mb: 3, borderRadius: 2 }}>
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                    💡 <strong>How to add time slots:</strong>
+                {/* Enhanced Helpful Notice */}
+                <Box sx={{ 
+                  mb: 4, 
+                  p: 3, 
+                  background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%)', 
+                  borderRadius: 3, 
+                  border: '1px solid rgba(102, 126, 234, 0.2)',
+                  position: 'relative',
+                  overflow: 'hidden'
+                }}>
+                  <Box sx={{
+                    position: 'absolute',
+                    top: -20,
+                    right: -20,
+                    width: 60,
+                    height: 60,
+                    borderRadius: '50%',
+                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                    zIndex: 1,
+                  }} />
+                  <Typography variant="body1" sx={{ fontWeight: 700, color: 'primary.main', mb: 1, position: 'relative', zIndex: 2 }}>
+                    💡 How to manage time slots:
                   </Typography>
-                  <Typography variant="body2" sx={{ mt: 0.5 }}>
-                    • Click the <strong>+ button</strong> next to any doctor to add time slots
+                  <Typography variant="body2" sx={{ mb: 0.5, color: 'text.secondary', fontWeight: 500, position: 'relative', zIndex: 2 }}>
+                    • Click the <strong>+ button</strong> next to any doctor to add available time slots
                   </Typography>
-                  <Typography variant="body2">
-                    • You can add multiple time slots to the same doctor, even if they already have appointments
+                  <Typography variant="body2" sx={{ mb: 0.5, color: 'text.secondary', fontWeight: 500, position: 'relative', zIndex: 2 }}>
+                    • Add multiple time slots to any doctor, even if they already have appointments
                   </Typography>
-                  <Typography variant="body2">
-                    • Only the exact same time slot will be blocked - different times are always allowed
+                  <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 500, position: 'relative', zIndex: 2 }}>
+                    • Click any time slot chip to edit, reserve, or convert to different types
                   </Typography>
-                </Alert>
+                </Box>
 
                 <Grid container spacing={3}>
                   {getWorkingDoctors().map((doctor) => {
@@ -821,8 +1149,23 @@ const DoctorSchedulingPage: React.FC = () => {
                       <Grid item xs={12} md={6} key={doctor.id}>
                         <Card sx={{ 
                           height: '100%',
-                          border: doctorAppointments.length > 0 ? '2px solid #4caf50' : '2px solid #e0e0e0',
-                          '&:hover': { boxShadow: 4 }
+                          borderRadius: 4,
+                          boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                          border: '2px solid',
+                          borderColor: doctorAppointments.length > 0 
+                            ? 'rgba(102, 126, 234, 0.3)' 
+                            : 'rgba(0,0,0,0.1)',
+                          position: 'relative',
+                          overflow: 'hidden',
+                          '&:hover': { 
+                            boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
+                            transform: 'translateY(-2px)',
+                            borderColor: 'rgba(102, 126, 234, 0.5)'
+                          },
+                          transition: 'all 0.3s ease',
+                          ...(doctorAppointments.length > 0 && {
+                            background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.02) 0%, rgba(118, 75, 162, 0.02) 100%)',
+                          })
                         }}>
                           <CardContent sx={{ p: 3 }}>
                             {/* Doctor Header */}
@@ -830,12 +1173,14 @@ const DoctorSchedulingPage: React.FC = () => {
                               <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
                                 <Avatar 
                                   sx={{ 
-                                    width: 56, 
-                                    height: 56, 
-                                    mr: 2, 
-                                    backgroundColor: doctorAppointments.length > 0 ? '#4caf50' : '#2196f3',
-                                    fontSize: '1.2rem',
-                                    fontWeight: 'bold'
+                                    width: 64, 
+                                    height: 64, 
+                                    mr: 3, 
+                                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                    fontSize: '1.3rem',
+                                    fontWeight: 'bold',
+                                    boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)',
+                                    color: 'white'
                                   }}
                                 >
                                   {doctor.avatar}
@@ -853,10 +1198,20 @@ const DoctorSchedulingPage: React.FC = () => {
                                 </Box>
                               </Box>
                               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <Tooltip title="Add Appointment">
+                                <Tooltip title="Add Time Slot">
                                   <IconButton 
-                                    color="primary"
                                     onClick={() => handleAddAppointment(doctor.id)}
+                                    sx={{
+                                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                      color: 'white',
+                                      boxShadow: '0 4px 16px rgba(102, 126, 234, 0.3)',
+                                      '&:hover': {
+                                        background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
+                                        transform: 'scale(1.1)',
+                                        boxShadow: '0 6px 20px rgba(102, 126, 234, 0.4)',
+                                      },
+                                      transition: 'all 0.3s ease'
+                                    }}
                                     size="small"
                                   >
                                     <Add />
@@ -864,10 +1219,21 @@ const DoctorSchedulingPage: React.FC = () => {
                                 </Tooltip>
                                 <Badge 
                                   badgeContent={doctorAppointments.length} 
-                                  color="primary"
                                   max={99}
+                                  sx={{
+                                    '& .MuiBadge-badge': {
+                                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                      color: 'white',
+                                      fontWeight: 700,
+                                      fontSize: '0.75rem',
+                                      boxShadow: '0 2px 8px rgba(102, 126, 234, 0.3)',
+                                    }
+                                  }}
                                 >
-                                  <Person sx={{ color: 'text.secondary' }} />
+                                  <Person sx={{ 
+                                    color: 'text.secondary',
+                                    fontSize: 28
+                                  }} />
                                 </Badge>
                               </Box>
                             </Box>
@@ -1077,29 +1443,81 @@ const DoctorSchedulingPage: React.FC = () => {
                   })}
                 </Grid>
 
-                {/* Doctors Off Today */}
+                {/* Enhanced Doctors Off Today */}
                 {doctors.filter(doctor => !isDoctorWorking(doctor)).length > 0 && (
                   <Box sx={{ mt: 4 }}>
-                    <Typography variant="h6" gutterBottom sx={{ color: 'text.secondary' }}>
-                      Doctors Off Today ({getSelectedDayOfWeek()}):
+                    <Typography variant="h5" sx={{ fontWeight: 700, mb: 3, color: 'text.primary' }}>
+                      👥 Doctors Off Today ({getSelectedDayOfWeek()}):
                     </Typography>
-                    <Grid container spacing={2}>
+                    <Grid container spacing={3}>
                       {doctors.filter(doctor => !isDoctorWorking(doctor)).map((doctor) => (
                         <Grid item xs={12} sm={6} md={4} key={doctor.id}>
-                          <Card sx={{ backgroundColor: '#f5f5f5', opacity: 0.7 }}>
-                            <CardContent sx={{ p: 2 }}>
-                              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                <Avatar sx={{ width: 40, height: 40, mr: 2, backgroundColor: '#bdbdbd' }}>
-                                  {doctor.avatar}
-                                </Avatar>
-                                <Box>
-                                  <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                                    {doctor.name}
-                                  </Typography>
-                                  <Typography variant="caption" color="text.secondary">
-                                    {doctor.specialty} • Day Off
-                                  </Typography>
+                          <Card sx={{ 
+                            borderRadius: 4,
+                            boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                            border: '2px solid rgba(0,0,0,0.1)',
+                            position: 'relative',
+                            overflow: 'hidden',
+                            '&:hover': { 
+                              boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
+                              transform: 'translateY(-2px)',
+                              borderColor: 'rgba(102, 126, 234, 0.3)'
+                            },
+                            transition: 'all 0.3s ease',
+                            background: 'linear-gradient(135deg, rgba(0,0,0,0.02) 0%, rgba(0,0,0,0.05) 100%)',
+                          }}>
+                            <CardContent sx={{ p: 3 }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
+                                  <Avatar sx={{ 
+                                    width: 48, 
+                                    height: 48, 
+                                    mr: 2, 
+                                    backgroundColor: '#bdbdbd',
+                                    fontSize: '1.1rem',
+                                    fontWeight: 'bold'
+                                  }}>
+                                    {doctor.avatar}
+                                  </Avatar>
+                                  <Box sx={{ flex: 1 }}>
+                                    <Typography variant="body1" sx={{ fontWeight: 700 }}>
+                                      {doctor.name}
+                                    </Typography>
+                                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+                                      {doctor.specialty}
+                                    </Typography>
+                                    <Typography variant="caption" sx={{ 
+                                      color: 'warning.main', 
+                                      fontWeight: 600,
+                                      backgroundColor: 'rgba(255, 152, 0, 0.1)',
+                                      padding: '2px 8px',
+                                      borderRadius: '12px',
+                                      display: 'inline-block',
+                                      mt: 0.5
+                                    }}>
+                                      📅 Day Off
+                                    </Typography>
+                                  </Box>
                                 </Box>
+                                <Tooltip title="Edit Doctor Schedule">
+                                  <IconButton 
+                                    onClick={() => handleEditDoctor(doctor)}
+                                    sx={{
+                                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                      color: 'white',
+                                      boxShadow: '0 4px 16px rgba(102, 126, 234, 0.3)',
+                                      '&:hover': {
+                                        background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
+                                        transform: 'scale(1.05)',
+                                        boxShadow: '0 6px 20px rgba(102, 126, 234, 0.4)',
+                                      },
+                                      transition: 'all 0.3s ease'
+                                    }}
+                                    size="small"
+                                  >
+                                    <Edit fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
                               </Box>
                             </CardContent>
                           </Card>
@@ -1112,36 +1530,73 @@ const DoctorSchedulingPage: React.FC = () => {
             </TabPanel>
 
             <TabPanel value={tabValue} index={1}>
-              <Box sx={{ p: 3 }}>
-                <Alert severity="info" sx={{ mb: 3 }}>
-                  Weekly schedule overview showing all doctors' working patterns.
-                </Alert>
+              <Box sx={{ p: 4 }}>
+                <Typography variant="h5" sx={{ fontWeight: 700, mb: 3, color: 'text.primary' }}>
+                  📊 Weekly Schedule Overview
+                </Typography>
                 
-                <TableContainer component={Paper}>
+                <Box sx={{ 
+                  mb: 4, 
+                  p: 3, 
+                  background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%)', 
+                  borderRadius: 3, 
+                  border: '1px solid rgba(102, 126, 234, 0.2)'
+                }}>
+                  <Typography variant="body1" sx={{ fontWeight: 600, color: 'primary.main', mb: 1 }}>
+                    📅 Weekly Working Patterns
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+                    Complete overview of all doctors' working schedules throughout the week. Click edit to modify any doctor's schedule.
+                  </Typography>
+                </Box>
+                
+                <TableContainer component={Paper} sx={{ 
+                  borderRadius: 4,
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
+                  border: '1px solid rgba(0,0,0,0.05)',
+                  overflow: 'hidden'
+                }}>
                   <Table>
-                    <TableHead>
+                    <TableHead sx={{ 
+                      background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)'
+                    }}>
                       <TableRow>
-                        <TableCell sx={{ fontWeight: 600 }}>Doctor</TableCell>
+                        <TableCell sx={{ fontWeight: 700, fontSize: '0.95rem' }}>Doctor</TableCell>
                         {daysOfWeek.map((day) => (
-                          <TableCell key={day} sx={{ fontWeight: 600, textTransform: 'capitalize' }}>
+                          <TableCell key={day} sx={{ fontWeight: 700, textTransform: 'capitalize', fontSize: '0.95rem' }}>
                             {day.substring(0, 3)}
                           </TableCell>
                         ))}
+                        <TableCell sx={{ fontWeight: 700, fontSize: '0.95rem', textAlign: 'center' }}>
+                          Actions
+                        </TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
                       {doctors.map((doctor) => (
-                        <TableRow key={doctor.id} hover>
+                        <TableRow key={doctor.id} hover sx={{
+                          '&:hover': {
+                            backgroundColor: 'rgba(102, 126, 234, 0.02)',
+                          }
+                        }}>
                           <TableCell>
                             <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                              <Avatar sx={{ width: 32, height: 32, mr: 1.5, backgroundColor: 'primary.main' }}>
+                              <Avatar sx={{ 
+                                width: 40, 
+                                height: 40, 
+                                mr: 2, 
+                                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                color: 'white',
+                                fontWeight: 'bold',
+                                fontSize: '1rem'
+                              }}>
                                 {doctor.avatar}
                               </Avatar>
                               <Box>
-                                <Typography variant="body2" fontWeight={600}>
+                                <Typography variant="body2" fontWeight={700}>
                                   {doctor.name}
                                 </Typography>
-                                <Typography variant="caption" color="text.secondary">
+                                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
                                   {doctor.specialty}
                                 </Typography>
                               </Box>
@@ -1150,14 +1605,64 @@ const DoctorSchedulingPage: React.FC = () => {
                           {daysOfWeek.map((day) => (
                             <TableCell key={day}>
                               {doctor.offDays.includes(day) ? (
-                                <Chip label="OFF" size="small" color="error" variant="outlined" />
+                                <Chip 
+                                  label="OFF" 
+                                  size="small" 
+                                  sx={{
+                                    backgroundColor: 'rgba(244, 67, 54, 0.1)',
+                                    color: '#d32f2f',
+                                    border: '1px solid rgba(244, 67, 54, 0.3)',
+                                    fontWeight: 600
+                                  }}
+                                />
                               ) : (
-                                <Typography variant="caption" sx={{ fontWeight: 600 }}>
-                                  {doctor.workingHours.start} - {doctor.workingHours.end}
-                                </Typography>
+                                <Box sx={{
+                                  p: 1,
+                                  backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                                  borderRadius: 2,
+                                  border: '1px solid rgba(76, 175, 80, 0.3)'
+                                }}>
+                                  <Typography variant="caption" sx={{ 
+                                    fontWeight: 700,
+                                    color: '#2e7d32',
+                                    display: 'block',
+                                    textAlign: 'center'
+                                  }}>
+                                    {doctor.workingHours.start}
+                                  </Typography>
+                                  <Typography variant="caption" sx={{ 
+                                    fontWeight: 500,
+                                    color: '#2e7d32',
+                                    display: 'block',
+                                    textAlign: 'center'
+                                  }}>
+                                    {doctor.workingHours.end}
+                                  </Typography>
+                                </Box>
                               )}
                             </TableCell>
                           ))}
+                          <TableCell sx={{ textAlign: 'center' }}>
+                            <Tooltip title="Edit Doctor Schedule">
+                              <IconButton 
+                                onClick={() => handleEditDoctor(doctor)}
+                                sx={{
+                                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                  color: 'white',
+                                  boxShadow: '0 4px 16px rgba(102, 126, 234, 0.3)',
+                                  '&:hover': {
+                                    background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
+                                    transform: 'scale(1.05)',
+                                    boxShadow: '0 6px 20px rgba(102, 126, 234, 0.4)',
+                                  },
+                                  transition: 'all 0.3s ease'
+                                }}
+                                size="small"
+                              >
+                                <Edit fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -1691,6 +2196,292 @@ const DoctorSchedulingPage: React.FC = () => {
               </Button>
             </DialogActions>
                     </Dialog>
+
+          {/* Enhanced Edit Doctor Dialog */}
+          <Dialog 
+            open={editDoctorDialogOpen} 
+            onClose={() => setEditDoctorDialogOpen(false)}
+            maxWidth="lg"
+            fullWidth
+            PaperProps={{
+              sx: {
+                borderRadius: 4,
+                background: 'linear-gradient(145deg, #fff8e1 0%, #e8f5e8 25%, #ffffff 100%)',
+                boxShadow: '0 24px 50px rgba(102, 126, 234, 0.15)',
+                overflow: 'hidden',
+              }
+            }}
+          >
+            <DialogTitle sx={{ 
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: 'white',
+              borderRadius: 0,
+              position: 'relative',
+              overflow: 'hidden',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'radial-gradient(circle at 20% 20%, rgba(255,255,255,0.2) 0%, transparent 50%)',
+              }
+            }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, position: 'relative', zIndex: 1 }}>
+                <Box sx={{
+                  p: 2,
+                  backgroundColor: 'rgba(255,255,255,0.2)',
+                  borderRadius: '50%',
+                  backdropFilter: 'blur(10px)',
+                }}>
+                  <Edit sx={{ fontSize: 36, color: 'white' }} />
+                </Box>
+                <Box>
+                  <Typography variant="h4" sx={{ fontWeight: 800, mb: 0.5, fontSize: '1.8rem' }}>
+                    Edit Doctor Information
+                  </Typography>
+                  <Typography variant="h6" sx={{ opacity: 0.9, fontWeight: 400 }}>
+                    🩺 Update {selectedDoctorForEdit?.name || 'doctor'}'s profile and schedule settings
+                  </Typography>
+                </Box>
+              </Box>
+            </DialogTitle>
+            
+            <DialogContent sx={{ p: 5, backgroundColor: '#fafafa' }}>
+              <Grid container spacing={4}>
+                <Grid item xs={12}>
+                  <Typography variant="h6" sx={{ fontWeight: 700, color: '#667eea', mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Person />
+                    Personal Information
+                  </Typography>
+                </Grid>
+                
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Doctor Name"
+                    value={doctorFormData.name}
+                    onChange={(e) => setDoctorFormData({ ...doctorFormData, name: e.target.value })}
+                    required
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 3,
+                        backgroundColor: 'white',
+                        '&:hover fieldset': { borderColor: '#667eea' },
+                        '&.Mui-focused fieldset': { borderColor: '#667eea', borderWidth: 2 },
+                      },
+                      '& .MuiInputLabel-root.Mui-focused': { color: '#667eea' },
+                    }}
+                  />
+                </Grid>
+                
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 3,
+                      backgroundColor: 'white',
+                      '&:hover fieldset': { borderColor: '#667eea' },
+                      '&.Mui-focused fieldset': { borderColor: '#667eea', borderWidth: 2 },
+                    },
+                    '& .MuiInputLabel-root.Mui-focused': { color: '#667eea' },
+                  }}>
+                    <InputLabel>Medical Specialty</InputLabel>
+                    <Select
+                      value={doctorFormData.specialty}
+                      label="Medical Specialty"
+                      onChange={(e) => setDoctorFormData({ ...doctorFormData, specialty: e.target.value })}
+                      required
+                    >
+                      <MenuItem value="General Medicine">General Medicine</MenuItem>
+                      <MenuItem value="Cardiology">Cardiology</MenuItem>
+                      <MenuItem value="Pediatrics">Pediatrics</MenuItem>
+                      <MenuItem value="Dermatology">Dermatology</MenuItem>
+                      <MenuItem value="Orthopedics">Orthopedics</MenuItem>
+                      <MenuItem value="Neurology">Neurology</MenuItem>
+                      <MenuItem value="Gastroenterology">Gastroenterology</MenuItem>
+                      <MenuItem value="Ophthalmology">Ophthalmology</MenuItem>
+                      <MenuItem value="ENT">ENT (Ear, Nose, Throat)</MenuItem>
+                      <MenuItem value="Psychiatry">Psychiatry</MenuItem>
+                      <MenuItem value="Other">Other</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+
+                <Grid item xs={12}>
+                  <Typography variant="h6" sx={{ fontWeight: 700, color: '#667eea', mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Schedule />
+                    Working Hours & Schedule
+                  </Typography>
+                </Grid>
+                
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Working Hours Start"
+                    type="time"
+                    value={doctorFormData.workingHoursStart}
+                    onChange={(e) => setDoctorFormData({ ...doctorFormData, workingHoursStart: e.target.value })}
+                    InputLabelProps={{ shrink: true }}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 3,
+                        backgroundColor: 'white',
+                        '&:hover fieldset': { borderColor: '#667eea' },
+                        '&.Mui-focused fieldset': { borderColor: '#667eea', borderWidth: 2 },
+                      },
+                      '& .MuiInputLabel-root.Mui-focused': { color: '#667eea' },
+                    }}
+                  />
+                </Grid>
+                
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Working Hours End"
+                    type="time"
+                    value={doctorFormData.workingHoursEnd}
+                    onChange={(e) => setDoctorFormData({ ...doctorFormData, workingHoursEnd: e.target.value })}
+                    InputLabelProps={{ shrink: true }}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 3,
+                        backgroundColor: 'white',
+                        '&:hover fieldset': { borderColor: '#667eea' },
+                        '&.Mui-focused fieldset': { borderColor: '#667eea', borderWidth: 2 },
+                      },
+                      '& .MuiInputLabel-root.Mui-focused': { color: '#667eea' },
+                    }}
+                  />
+                </Grid>
+                
+                <Grid item xs={12}>
+                  <FormControl fullWidth sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 3,
+                      backgroundColor: 'white',
+                      '&:hover fieldset': { borderColor: '#667eea' },
+                      '&.Mui-focused fieldset': { borderColor: '#667eea', borderWidth: 2 },
+                    },
+                    '& .MuiInputLabel-root.Mui-focused': { color: '#667eea' },
+                  }}>
+                    <InputLabel>Off Days</InputLabel>
+                    <Select
+                      multiple
+                      value={doctorFormData.offDays}
+                      onChange={(e) => setDoctorFormData({ ...doctorFormData, offDays: e.target.value as string[] })}
+                      label="Off Days"
+                      renderValue={(selected) => selected.map(day => day.charAt(0).toUpperCase() + day.slice(1)).join(', ')}
+                    >
+                      {daysOfWeek.map((day) => (
+                        <MenuItem key={day} value={day}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Box sx={{ 
+                              width: 8, 
+                              height: 8, 
+                              borderRadius: '50%', 
+                              backgroundColor: doctorFormData.offDays.includes(day) ? '#667eea' : '#e0e0e0' 
+                            }} />
+                            {day.charAt(0).toUpperCase() + day.slice(1)}
+                          </Box>
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Consultation Duration (minutes)"
+                    type="number"
+                    value={doctorFormData.consultationDuration}
+                    onChange={(e) => setDoctorFormData({ ...doctorFormData, consultationDuration: parseInt(e.target.value) || 30 })}
+                    inputProps={{ min: 15, max: 120, step: 15 }}
+                    helperText="Typical: 15-60 minutes"
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 3,
+                        backgroundColor: 'white',
+                        '&:hover fieldset': { borderColor: '#667eea' },
+                        '&.Mui-focused fieldset': { borderColor: '#667eea', borderWidth: 2 },
+                      },
+                      '& .MuiInputLabel-root.Mui-focused': { color: '#667eea' },
+                    }}
+                  />
+                </Grid>
+                
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Max Patients Per Hour"
+                    type="number"
+                    value={doctorFormData.maxPatientsPerHour}
+                    onChange={(e) => setDoctorFormData({ ...doctorFormData, maxPatientsPerHour: parseInt(e.target.value) || 2 })}
+                    inputProps={{ min: 1, max: 10 }}
+                    helperText="Recommended: 2-4 patients"
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 3,
+                        backgroundColor: 'white',
+                        '&:hover fieldset': { borderColor: '#667eea' },
+                        '&.Mui-focused fieldset': { borderColor: '#667eea', borderWidth: 2 },
+                      },
+                      '& .MuiInputLabel-root.Mui-focused': { color: '#667eea' },
+                    }}
+                  />
+                </Grid>
+              </Grid>
+            </DialogContent>
+            
+            <DialogActions sx={{ 
+              p: 4, 
+              gap: 3, 
+              backgroundColor: '#f8f9fa',
+              borderTop: '1px solid #e0e0e0' 
+            }}>
+              <Button 
+                onClick={() => setEditDoctorDialogOpen(false)}
+                variant="outlined"
+                size="large"
+                sx={{ 
+                  borderRadius: 3, 
+                  px: 5,
+                  py: 1.5,
+                  borderColor: '#bdbdbd',
+                  color: '#757575',
+                  '&:hover': { 
+                    borderColor: '#9e9e9e',
+                    backgroundColor: '#f5f5f5',
+                  }
+                }}
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleSaveEditedDoctor}
+                variant="contained"
+                size="large"
+                sx={{ 
+                  borderRadius: 3, 
+                  px: 6,
+                  py: 1.5,
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)',
+                  fontWeight: 600,
+                  fontSize: '1.1rem',
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
+                    boxShadow: '0 12px 40px rgba(102, 126, 234, 0.4)',
+                    transform: 'translateY(-2px)',
+                  },
+                  transition: 'all 0.3s ease',
+                }}
+              >
+                ✨ Update Doctor
+              </Button>
+            </DialogActions>
+          </Dialog>
 
           {/* Edit Time Slot Dialog */}
           <Dialog 

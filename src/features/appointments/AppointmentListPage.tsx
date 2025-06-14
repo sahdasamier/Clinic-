@@ -81,9 +81,15 @@ import {
   BarChart,
   ViewWeek,
   Warning,
+  MedicalServices,
+  LocalHospital,
+  Assignment,
 } from '@mui/icons-material';
 import Header from '../../components/Header';
 import Sidebar from '../../components/Sidebar';
+import { syncAppointmentChangesToPatients, setupAppointmentPatientSync } from '../../utils/appointmentPatientSync';
+import { doctorSchedules } from '../DoctorScheduling';
+import { loadPatientsFromStorage } from '../patients/PatientListPage';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -132,6 +138,8 @@ export const saveAppointmentsToStorage = (appointments: any[]) => {
     localStorage.setItem(APPOINTMENTS_STORAGE_KEY, JSON.stringify(appointments));
     // Trigger storage event for other components (like notifications) to detect changes
     window.dispatchEvent(new Event('appointmentsUpdated'));
+    // Sync appointment data to patients
+    syncAppointmentChangesToPatients();
   } catch (error) {
     console.warn('Error saving appointments to localStorage:', error);
   }
@@ -300,28 +308,49 @@ const StatCard: React.FC<{
   color: string;
   subtitle?: string;
 }> = ({ title, value, icon, color, subtitle }) => (
-  <Card sx={{ height: '100%' }}>
-    <CardContent sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-        <Box
-          sx={{
-            width: 48,
-            height: 48,
-            borderRadius: '12px',
-            backgroundColor: `${color}15`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: color,
-          }}
-        >
-          {icon}
-        </Box>
+  <Card sx={{ 
+    height: '100%',
+    borderRadius: 3,
+    boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+    border: '1px solid rgba(0,0,0,0.05)',
+    '&:hover': {
+      transform: 'translateY(-2px)',
+      boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
+    },
+    transition: 'all 0.3s ease'
+  }}>
+    <CardContent sx={{ 
+      p: 3,
+      textAlign: 'center'
+    }}>
+      <Box
+        sx={{
+          width: 56,
+          height: 56,
+          borderRadius: '16px',
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: 'white',
+          margin: '0 auto 16px auto',
+          boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)',
+        }}
+      >
+        {icon}
       </Box>
-      <Typography variant="h3" sx={{ fontWeight: 700, mb: 0.5, color: 'text.primary' }}>
+      <Typography variant="h3" sx={{ 
+        fontWeight: 800, 
+        mb: 0.5, 
+        color: 'primary.main',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        WebkitBackgroundClip: 'text',
+        WebkitTextFillColor: 'transparent',
+        backgroundClip: 'text'
+      }}>
         {value}
       </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontWeight: 600 }}>
         {title}
       </Typography>
       {subtitle && (
@@ -343,10 +372,16 @@ const AppointmentListPage: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [appointmentList, setAppointmentList] = useState<any[]>([]);
 
-  // Load appointments from localStorage on component mount
+  // Load appointments from localStorage on component mount and setup sync
   useEffect(() => {
     const savedAppointments = loadAppointmentsFromStorage();
     setAppointmentList(savedAppointments);
+    // Setup automatic syncing between appointments and patients
+    setupAppointmentPatientSync();
+    
+    // Load available patients for autocomplete
+    const patients = loadPatientsFromStorage();
+    setAvailablePatients(patients);
   }, []);
   const [doctorStartTime] = useState('15:00'); // 3:00 PM start time
   const [activeFilters, setActiveFilters] = useState({
@@ -366,6 +401,8 @@ const AppointmentListPage: React.FC = () => {
     doctor: '',
     date: selectedDate,
     time: '',
+    hour: '',
+    minute: '',
     type: '',
     duration: 25,
     priority: 'normal',
@@ -373,6 +410,10 @@ const AppointmentListPage: React.FC = () => {
     notes: '',
     phone: ''
   });
+  
+  // Load available doctors and patients
+  const [availableDoctors] = useState(doctorSchedules);
+  const [availablePatients, setAvailablePatients] = useState<any[]>([]);
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
@@ -466,11 +507,27 @@ const AppointmentListPage: React.FC = () => {
 
   const handleEditAppointment = (appointment: any) => {
     setSelectedAppointment(appointment);
+    // Extract hour and minute from existing time
+    const timeParts = appointment.time?.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+    let hour = '';
+    let minute = '';
+    if (timeParts) {
+      hour = timeParts[1];
+      minute = timeParts[2];
+      if (timeParts[3] && timeParts[3].toUpperCase() === 'PM' && hour !== '12') {
+        hour = (parseInt(hour) + 12).toString();
+      } else if (timeParts[3] && timeParts[3].toUpperCase() === 'AM' && hour === '12') {
+        hour = '0';
+      }
+    }
+    
     setNewAppointment({
       patient: appointment.patient,
       doctor: appointment.doctor,
       date: appointment.date,
       time: appointment.time,
+      hour: hour,
+      minute: minute,
       type: appointment.type,
       duration: appointment.duration,
       priority: appointment.priority,
@@ -509,28 +566,41 @@ const AppointmentListPage: React.FC = () => {
   };
 
   const handleSaveAppointment = () => {
+    // Validate required fields
+    if (!newAppointment.patient || !newAppointment.doctor || !newAppointment.date || !newAppointment.time) {
+      alert('Please fill in all required fields: Patient, Doctor, Date, and Time');
+      return;
+    }
+    
     let updatedList;
+    
+    // Create timeSlot from hour and minute for sorting
+    const timeSlot = newAppointment.hour && newAppointment.minute 
+      ? `${newAppointment.hour.padStart(2, '0')}:${newAppointment.minute.padStart(2, '0')}`
+      : newAppointment.time;
     
     if (selectedAppointment) {
       // Edit existing appointment
       updatedList = appointmentList.map(apt => 
         apt.id === selectedAppointment.id 
-          ? { ...apt, ...newAppointment }
+          ? { 
+              ...apt, 
+              ...newAppointment,
+              timeSlot: timeSlot,
+              // Preserve original patient avatar if patient name unchanged
+              patientAvatar: apt.patient === newAppointment.patient 
+                ? apt.patientAvatar 
+                : newAppointment.patient.split(' ').map(n => n[0]).join('').toUpperCase()
+            }
           : apt
       );
       setEditDialogOpen(false);
     } else {
       // Add new appointment
-      const timeSlot = new Date(`2024-01-01T${newAppointment.time}`).toLocaleTimeString('en-GB', { 
-        hour: '2-digit', 
-        minute: '2-digit',
-        hour12: false 
-      });
-      
       const newApt = {
-        id: Math.max(...appointmentList.map(a => a.id)) + 1,
+        id: appointmentList.length > 0 ? Math.max(...appointmentList.map(a => a.id)) + 1 : 1,
         patient: newAppointment.patient,
-        patientAvatar: newAppointment.patient.split(' ').map(n => n[0]).join(''),
+        patientAvatar: newAppointment.patient.split(' ').map(n => n[0]).join('').toUpperCase(),
         date: newAppointment.date,
         time: newAppointment.time,
         timeSlot: timeSlot,
@@ -538,7 +608,7 @@ const AppointmentListPage: React.FC = () => {
         doctor: newAppointment.doctor,
         type: newAppointment.type,
         status: 'confirmed',
-        location: newAppointment.location,
+        location: newAppointment.location || 'TBD',
         phone: newAppointment.phone,
         notes: newAppointment.notes,
         completed: false,
@@ -559,6 +629,8 @@ const AppointmentListPage: React.FC = () => {
       doctor: '',
       date: selectedDate,
       time: '',
+      hour: '',
+      minute: '',
       type: '',
       duration: 25,
       priority: 'normal',
@@ -567,6 +639,14 @@ const AppointmentListPage: React.FC = () => {
       phone: ''
     });
     setSelectedAppointment(null);
+    
+    // Show success message
+    console.log('✅ Appointment saved successfully!', {
+      patient: newAppointment.patient,
+      doctor: newAppointment.doctor,
+      datetime: `${newAppointment.date} at ${newAppointment.time}`,
+      type: newAppointment.type
+    });
   };
 
   const clearAllFilters = () => {
@@ -705,105 +785,330 @@ const AppointmentListPage: React.FC = () => {
       <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <Header />
         <Container maxWidth="xl" sx={{ mt: 4, mb: 4, flex: 1, overflow: 'auto' }}>
-          {/* Header Section */}
-          <Box sx={{ mb: 4 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <CalendarToday sx={{ fontSize: 32, color: 'primary.main', mr: 2 }} />
-                <Box>
-                  <Typography variant="h4" sx={{ fontWeight: 700, color: 'text.primary' }}>
-                    {t('appointments')}
-                  </Typography>
-                  <Typography variant="body1" color="text.secondary">
-                    Manage and schedule patient appointments
+          {/* Enhanced Auto-sync Info Card */}
+          <Card 
+            sx={{ 
+              mb: 3,
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: 'white',
+              position: 'relative',
+              overflow: 'hidden',
+              boxShadow: '0 8px 32px rgba(102, 126, 234, 0.25)',
+            }}
+          >
+            <CardContent sx={{ p: 3, position: 'relative', zIndex: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Box
+                    sx={{
+                      width: 56,
+                      height: 56,
+                      borderRadius: '16px',
+                      backgroundColor: 'rgba(255,255,255,0.2)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backdropFilter: 'blur(10px)',
+                    }}
+                  >
+                    <CalendarToday sx={{ fontSize: 32, color: 'white' }} />
+                  </Box>
+                  <Box>
+                    <Typography variant="h3" sx={{ fontWeight: 800, mb: 1 }}>
+                      Appointment Management 📅
+                    </Typography>
+                    <Typography variant="h6" sx={{ opacity: 0.9, fontWeight: 400 }}>
+                      Real-time scheduling & patient appointment coordination
+                    </Typography>
+                  </Box>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Typography variant="body2" sx={{ opacity: 0.8 }}>
+                    Auto-sync with Patient Database
                   </Typography>
                 </Box>
               </Box>
-              <Button
-                variant="contained"
-                size="large"
-                startIcon={<Add />}
-                onClick={() => setAddAppointmentOpen(true)}
-                sx={{ 
-                  borderRadius: 3,
-                  px: 4,
-                  py: 1.5,
-                  background: 'linear-gradient(45deg, #FE6B8B 30%, #FF8E53 90%)',
-                  boxShadow: '0 3px 5px 2px rgba(255, 105, 135, .3)',
-                  '&:hover': {
-                    background: 'linear-gradient(45deg, #FE6B8B 60%, #FF8E53 100%)',
-                    transform: 'translateY(-1px)',
-                    boxShadow: '0 6px 10px 2px rgba(255, 105, 135, .3)',
-                  },
-                  transition: 'all 0.3s ease'
-                }}
-              >
-                Schedule New Appointment
-              </Button>
-            </Box>
-          </Box>
+            </CardContent>
+            {/* Decorative background */}
+            <Box sx={{
+              position: 'absolute',
+              top: -50,
+              right: -50,
+              width: 200,
+              height: 200,
+              borderRadius: '50%',
+              backgroundColor: 'rgba(255,255,255,0.1)',
+              zIndex: 1,
+            }} />
+          </Card>
 
-          {/* Stats Cards */}
-          <Grid container spacing={3} sx={{ mb: 4 }}>
-            <Grid item xs={12} sm={6} md={3}>
-              <StatCard
-                title="Today's Schedule"
-                value={`${completedToday}/${todayAppointments.length}`}
-                icon={<Today />}
-                color="#3B82F6"
-                subtitle={`${pendingToday} remaining`}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <StatCard
-                title="Doctor Hours"
-                value="3PM - 8PM"
-                icon={<Schedule />}
-                color="#10B981"
-                subtitle="5 hours available"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <StatCard
-                title="Estimated Finish"
-                value={calculateEstimatedFinishTime()}
-                icon={<AccessTime />}
-                color="#F59E0B"
-                subtitle={getRemainingTime()}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <StatCard
-                title="Available Slots"
-                value={generateAvailableTimeSlots().filter(slot => slot.available).length}
-                icon={<CalendarToday />}
-                color="#8B5CF6"
-                subtitle="20-min intervals"
-              />
-            </Grid>
-          </Grid>
+          {/* Enhanced Header Section */}
+          <Card sx={{ 
+            mb: 4, 
+            background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+            borderRadius: 4,
+            boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+            position: 'relative',
+            overflow: 'hidden'
+          }}>
+            <CardContent sx={{ p: 4, position: 'relative', zIndex: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Box
+                    sx={{
+                      width: 64,
+                      height: 64,
+                      borderRadius: '20px',
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      mr: 3,
+                      boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)',
+                    }}
+                  >
+                    <CalendarToday sx={{ fontSize: 32, color: 'white' }} />
+                  </Box>
+                  <Box>
+                    <Typography variant="h3" sx={{ fontWeight: 800, color: 'text.primary', mb: 0.5 }}>
+                      Appointment Scheduling
+                    </Typography>
+                    <Typography variant="h6" color="text.secondary" sx={{ fontWeight: 400 }}>
+                      🩺 Professional patient appointment management & scheduling
+                    </Typography>
+                  </Box>
+                </Box>
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                  <Button
+                    variant="outlined"
+                    startIcon={<Today />}
+                    onClick={() => setSelectedDate(new Date().toISOString().split('T')[0])}
+                    sx={{ 
+                      borderRadius: 3, 
+                      color: '#2196f3', 
+                      borderColor: '#2196f3',
+                      fontWeight: 600,
+                      px: 3,
+                      py: 1.5,
+                      '&:hover': {
+                        backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                        borderColor: '#2196f3',
+                        transform: 'translateY(-2px)',
+                      },
+                      transition: 'all 0.3s ease'
+                    }}
+                  >
+                    Today's Schedule
+                  </Button>
+                  <Button
+                    variant="contained"
+                    startIcon={<Add />}
+                    onClick={() => setAddAppointmentOpen(true)}
+                    sx={{ 
+                      borderRadius: 3,
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      fontWeight: 700,
+                      px: 4,
+                      py: 1.5,
+                      boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)',
+                      '&:hover': {
+                        background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
+                        transform: 'translateY(-2px)',
+                        boxShadow: '0 12px 40px rgba(102, 126, 234, 0.4)',
+                      },
+                      transition: 'all 0.3s ease'
+                    }}
+                  >
+                    Schedule New Appointment
+                  </Button>
+                </Box>
+              </Box>
+            </CardContent>
+            {/* Decorative elements */}
+            <Box sx={{
+              position: 'absolute',
+              top: -40,
+              right: -40,
+              width: 120,
+              height: 120,
+              borderRadius: '50%',
+              backgroundColor: 'rgba(102, 126, 234, 0.1)',
+              zIndex: 1,
+            }} />
+            <Box sx={{
+              position: 'absolute',
+              bottom: -30,
+              left: -30,
+              width: 80,
+              height: 80,
+              borderRadius: '50%',
+              backgroundColor: 'rgba(118, 75, 162, 0.1)',
+              zIndex: 1,
+            }} />
+          </Card>
 
-          {/* Main Appointments Table - Full Width */}
-          <Card sx={{ borderRadius: 3, boxShadow: 3, mb: 4 }}>
+          {/* Enhanced Stats Overview */}
+          <Card sx={{ 
+            mb: 4, 
+            background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+            borderRadius: 4,
+            boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+            position: 'relative',
+            overflow: 'hidden'
+          }}>
+            <CardContent sx={{ p: 4, position: 'relative', zIndex: 2 }}>
+              <Typography variant="h5" sx={{ fontWeight: 700, mb: 3, color: 'text.primary' }}>
+                📊 Appointment Statistics
+              </Typography>
+              <Grid container spacing={3}>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Box sx={{ 
+                    textAlign: 'center', 
+                    p: 2, 
+                    backgroundColor: 'rgba(255,255,255,0.8)', 
+                    borderRadius: 3,
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255,255,255,0.2)'
+                  }}>
+                    <Typography variant="h4" sx={{ fontWeight: 800, color: 'primary.main', mb: 0.5 }}>
+                      {`${completedToday}/${todayAppointments.length}`}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+                      Today's Progress
+                    </Typography>
+                  </Box>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Box sx={{ 
+                    textAlign: 'center', 
+                    p: 2, 
+                    backgroundColor: 'rgba(255,255,255,0.8)', 
+                    borderRadius: 3,
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255,255,255,0.2)'
+                  }}>
+                    <Typography variant="h4" sx={{ fontWeight: 800, color: 'success.main', mb: 0.5 }}>
+                      3PM - 8PM
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+                      Doctor Hours
+                    </Typography>
+                  </Box>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Box sx={{ 
+                    textAlign: 'center', 
+                    p: 2, 
+                    backgroundColor: 'rgba(255,255,255,0.8)', 
+                    borderRadius: 3,
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255,255,255,0.2)'
+                  }}>
+                    <Typography variant="h4" sx={{ fontWeight: 800, color: 'warning.main', mb: 0.5 }}>
+                      {appointmentList.filter(apt => apt.status === 'confirmed').length}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+                      Confirmed Today
+                    </Typography>
+                  </Box>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Box sx={{ 
+                    textAlign: 'center', 
+                    p: 2, 
+                    backgroundColor: 'rgba(255,255,255,0.8)', 
+                    borderRadius: 3,
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255,255,255,0.2)'
+                  }}>
+                    <Typography variant="h4" sx={{ fontWeight: 800, color: 'info.main', mb: 0.5 }}>
+                      {generateAvailableTimeSlots().filter(slot => slot.available).length}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+                      Available Slots
+                    </Typography>
+                  </Box>
+                </Grid>
+              </Grid>
+            </CardContent>
+            {/* Decorative elements */}
+            <Box sx={{
+              position: 'absolute',
+              top: -40,
+              right: -40,
+              width: 120,
+              height: 120,
+              borderRadius: '50%',
+              backgroundColor: 'rgba(102, 126, 234, 0.1)',
+              zIndex: 1,
+            }} />
+            <Box sx={{
+              position: 'absolute',
+              bottom: -30,
+              left: -30,
+              width: 80,
+              height: 80,
+              borderRadius: '50%',
+              backgroundColor: 'rgba(118, 75, 162, 0.1)',
+              zIndex: 1,
+            }} />
+          </Card>
+
+          {/* Enhanced Main Appointments Table */}
+          <Card sx={{ 
+            borderRadius: 4,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
+            border: '1px solid rgba(0,0,0,0.05)',
+            overflow: 'hidden',
+            mb: 4
+          }}>
             <CardContent sx={{ p: 0 }}>
-                  {/* Search and Filters */}
-                  <Box sx={{ p: 3, borderBottom: 1, borderColor: 'divider' }}>
+                  {/* Enhanced Search and Filters */}
+                  <Box sx={{ 
+                    p: 4, 
+                    borderBottom: 1, 
+                    borderColor: 'divider',
+                    background: 'linear-gradient(135deg, #fafbfc 0%, #f0f2f5 100%)'
+                  }}>
                     <Grid container spacing={2} alignItems="center">
                       <Grid item xs={12} md={6}>
-                        <TextField
-                          fullWidth
-                          placeholder="Search appointments by patient, doctor, type, or phone..."
-                          value={searchQuery}
-                          onChange={(e) => setSearchQuery(e.target.value)}
-                          InputProps={{
-                            startAdornment: (
-                              <InputAdornment position="start">
-                                <Search color="action" />
-                              </InputAdornment>
-                            ),
-                          }}
-                          sx={{ '& .MuiOutlinedInput-root': { borderRadius: 3 } }}
-                        />
+                        <Box sx={{ position: 'relative' }}>
+                          <TextField
+                            fullWidth
+                            placeholder="🔍 Search appointments by patient, doctor, type, or phone..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            InputProps={{
+                              startAdornment: (
+                                <InputAdornment position="start">
+                                  <Search sx={{ color: 'primary.main', fontSize: 24 }} />
+                                </InputAdornment>
+                              ),
+                            }}
+                            sx={{ 
+                              '& .MuiOutlinedInput-root': { 
+                                borderRadius: 4,
+                                backgroundColor: 'white',
+                                boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                                border: '2px solid transparent',
+                                transition: 'all 0.3s ease',
+                                '&:hover': {
+                                  boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
+                                  transform: 'translateY(-1px)',
+                                },
+                                '&.Mui-focused': {
+                                  border: '2px solid #667eea',
+                                  boxShadow: '0 8px 32px rgba(102, 126, 234, 0.2)',
+                                }
+                              },
+                              '& .MuiInputBase-input': {
+                                padding: '16px 14px',
+                                fontSize: '1rem',
+                                fontWeight: 500,
+                              }
+                            }}
+                          />
+                        </Box>
                         
                         {/* Active Filters Display */}
                         {getActiveFilterCount() > 0 && (
@@ -878,17 +1183,30 @@ const AppointmentListPage: React.FC = () => {
                             startIcon={<FilterList />}
                             onClick={(e) => setFilterAnchor(e.currentTarget)}
                             sx={{ 
-                              position: 'relative',
+                              borderRadius: 3,
+                              fontWeight: 600,
+                              backgroundColor: 'white',
+                              boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                              border: '1px solid rgba(0,0,0,0.05)',
+                              minWidth: 120,
+                              '&:hover': {
+                                transform: 'translateY(-1px)',
+                                boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
+                              },
+                              transition: 'all 0.3s ease',
                               ...(getActiveFilterCount() > 0 && {
-                                backgroundColor: 'primary.main',
+                                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                                 color: 'white',
+                                border: 'none',
                                 '&:hover': {
-                                  backgroundColor: 'primary.dark'
+                                  background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
+                                  transform: 'translateY(-1px)',
+                                  boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)',
                                 }
                               })
                             }}
                           >
-                            Filter
+                            🔽 Filter
                             {getActiveFilterCount() > 0 && (
                               <Chip
                                 label={getActiveFilterCount()}
@@ -896,44 +1214,110 @@ const AppointmentListPage: React.FC = () => {
                                 sx={{
                                   ml: 1,
                                   height: 20,
-                                  backgroundColor: 'white',
+                                  backgroundColor: 'rgba(255,255,255,0.9)',
                                   color: 'primary.main',
-                                  fontSize: '0.75rem'
+                                  fontSize: '0.75rem',
+                                  fontWeight: 700
                                 }}
                               />
                             )}
                           </Button>
-                          <Button
-                            variant={viewMode === 'table' ? 'contained' : 'outlined'}
-                            onClick={() => setViewMode('table')}
-                            startIcon={<ViewWeek />}
-                          >
-                            Table
-                          </Button>
-                          <Button
-                            variant={viewMode === 'cards' ? 'contained' : 'outlined'}
-                            onClick={() => setViewMode('cards')}
-                            startIcon={<ViewModule />}
-                          >
-                            Cards
-                          </Button>
+                          <Card sx={{ 
+                            display: 'flex', 
+                            gap: 1, 
+                            p: 1.5, 
+                            backgroundColor: 'white',
+                            borderRadius: 3,
+                            boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                            border: '1px solid rgba(0,0,0,0.05)'
+                          }}>
+                            <Button
+                              size="small"
+                              variant={viewMode === 'table' ? 'contained' : 'outlined'}
+                              onClick={() => setViewMode('table')}
+                              startIcon={<ViewWeek />}
+                              sx={{
+                                borderRadius: 2,
+                                fontWeight: 600,
+                                fontSize: '0.8rem',
+                                px: 2,
+                                minWidth: 'fit-content',
+                                ...(viewMode === 'table' && {
+                                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                  boxShadow: '0 4px 16px rgba(102, 126, 234, 0.3)',
+                                }),
+                                '&:hover': {
+                                  transform: 'translateY(-1px)',
+                                },
+                                transition: 'all 0.2s ease'
+                              }}
+                            >
+                              Table
+                            </Button>
+                            <Button
+                              size="small"
+                              variant={viewMode === 'cards' ? 'contained' : 'outlined'}
+                              onClick={() => setViewMode('cards')}
+                              startIcon={<ViewModule />}
+                              sx={{
+                                borderRadius: 2,
+                                fontWeight: 600,
+                                fontSize: '0.8rem',
+                                px: 2,
+                                minWidth: 'fit-content',
+                                ...(viewMode === 'cards' && {
+                                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                  boxShadow: '0 4px 16px rgba(102, 126, 234, 0.3)',
+                                }),
+                                '&:hover': {
+                                  transform: 'translateY(-1px)',
+                                },
+                                transition: 'all 0.2s ease'
+                              }}
+                            >
+                              Cards
+                            </Button>
+                          </Card>
                         </Box>
                       </Grid>
                     </Grid>
                   </Box>
 
-                  {/* Results Summary */}
+                  {/* Enhanced Results Summary */}
                   {(getActiveFilterCount() > 0 || searchQuery) && (
-                    <Box sx={{ px: 3, py: 2, backgroundColor: '#f8f9fa', borderBottom: 1, borderColor: 'divider' }}>
-                      <Typography variant="body2" color="text.secondary">
-                        Showing {filteredAppointments.length} of {appointmentList.length} appointments
-                        {getActiveFilterCount() > 0 && ` with ${getActiveFilterCount()} filter(s) applied`}
-                      </Typography>
+                    <Box sx={{ 
+                      px: 4, 
+                      py: 3, 
+                      background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%)', 
+                      borderBottom: 1, 
+                      borderColor: 'divider',
+                      borderRadius: '0 0 16px 16px'
+                    }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Box
+                          sx={{
+                            width: 32,
+                            height: 32,
+                            borderRadius: '8px',
+                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: 'white',
+                          }}
+                        >
+                          <Search sx={{ fontSize: 18 }} />
+                        </Box>
+                        <Typography variant="body1" sx={{ fontWeight: 600, color: 'text.primary' }}>
+                          Showing {filteredAppointments.length} of {appointmentList.length} appointments
+                          {getActiveFilterCount() > 0 && ` with ${getActiveFilterCount()} filter(s) applied`}
+                        </Typography>
+                      </Box>
                     </Box>
                   )}
 
                   {/* Enhanced Tabs */}
-                  <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 3 }}>
+                  <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 4 }}>
                     <Tabs 
                       value={tabValue} 
                       onChange={handleTabChange}
@@ -947,13 +1331,21 @@ const AppointmentListPage: React.FC = () => {
                           fontSize: '0.95rem',
                           minWidth: 'auto',
                           padding: '12px 16px',
+                          borderRadius: '8px 8px 0 0',
+                          margin: '0 2px',
                           '&.Mui-selected': {
-                            color: 'primary.main',
+                            color: 'white',
+                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                            boxShadow: '0 4px 16px rgba(102, 126, 234, 0.3)',
+                          },
+                          '&:hover': {
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
                           }
                         },
                         '& .MuiTabs-indicator': {
-                          height: 3,
-                          borderRadius: '3px 3px 0 0',
+                          height: 4,
+                          borderRadius: '4px 4px 0 0',
+                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                         },
                         '& .MuiTabs-scrollButtons': {
                           color: 'primary.main',
@@ -2080,7 +2472,7 @@ const AppointmentListPage: React.FC = () => {
             </Box>
           </Menu>
 
-          {/* Add/Edit Appointment Dialog */}
+          {/* Enhanced Add/Edit Appointment Dialog */}
           <Dialog
             open={addAppointmentOpen || editDialogOpen}
             onClose={() => {
@@ -2088,30 +2480,88 @@ const AppointmentListPage: React.FC = () => {
               setEditDialogOpen(false);
               setSelectedAppointment(null);
             }}
-            maxWidth="md"
+            maxWidth="lg"
             fullWidth
           >
-            <DialogTitle>{selectedAppointment ? 'Edit Appointment' : 'Schedule New Appointment'}</DialogTitle>
+            <DialogTitle>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <CalendarToday sx={{ color: 'primary.main' }} />
+                <Typography variant="h6">
+                  {selectedAppointment ? 'Edit Appointment' : 'Schedule New Appointment'}
+                </Typography>
+              </Box>
+            </DialogTitle>
             <DialogContent>
-              <Grid container spacing={2} sx={{ mt: 1 }}>
+              <Grid container spacing={3} sx={{ mt: 1 }}>
+                {/* Patient Selection */}
                 <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Patient Name"
-                    value={newAppointment.patient}
-                    onChange={(e) => setNewAppointment(prev => ({ ...prev, patient: e.target.value }))}
-                    placeholder="e.g., Ahmed Al-Rashid"
-                  />
+                  <FormControl fullWidth>
+                    <InputLabel>Patient Name</InputLabel>
+                    <Select
+                      label="Patient Name"
+                      value={newAppointment.patient}
+                      onChange={(e) => {
+                        const selectedPatient = availablePatients.find(p => p.name === e.target.value);
+                        setNewAppointment(prev => ({ 
+                          ...prev, 
+                          patient: e.target.value,
+                          phone: selectedPatient?.phone || prev.phone
+                        }));
+                      }}
+                    >
+                      {availablePatients.map((patient) => (
+                        <MenuItem key={patient.id} value={patient.name}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <Avatar sx={{ width: 32, height: 32, fontSize: '0.75rem' }}>
+                              {patient.avatar}
+                            </Avatar>
+                            <Box>
+                              <Typography variant="body2">{patient.name}</Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                {patient.phone} • {patient.condition}
+                              </Typography>
+                            </Box>
+                          </Box>
+                        </MenuItem>
+                      ))}
+                      <MenuItem value="">
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'primary.main' }}>
+                          <Add fontSize="small" />
+                          <Typography variant="body2">Add New Patient</Typography>
+                        </Box>
+                      </MenuItem>
+                    </Select>
+                  </FormControl>
                 </Grid>
+
+                {/* Manual Patient Name (if not in list) */}
+                {!availablePatients.find(p => p.name === newAppointment.patient) && newAppointment.patient !== '' && (
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      fullWidth
+                      label="Custom Patient Name"
+                      value={newAppointment.patient}
+                      onChange={(e) => setNewAppointment(prev => ({ ...prev, patient: e.target.value }))}
+                      placeholder="Enter patient name manually"
+                    />
+                  </Grid>
+                )}
+
+                {/* Phone Number */}
                 <Grid item xs={12} md={6}>
                   <TextField
                     fullWidth
                     label="Phone Number"
                     value={newAppointment.phone}
                     onChange={(e) => setNewAppointment(prev => ({ ...prev, phone: e.target.value }))}
-                    placeholder="e.g., +971 50 123 4567"
+                    placeholder="e.g., +20 10 1234 5678"
+                    InputProps={{
+                      startAdornment: <InputAdornment position="start">📞</InputAdornment>
+                    }}
                   />
                 </Grid>
+
+                {/* Doctor Selection */}
                 <Grid item xs={12} md={6}>
                   <FormControl fullWidth>
                     <InputLabel>Doctor</InputLabel>
@@ -2120,61 +2570,164 @@ const AppointmentListPage: React.FC = () => {
                       value={newAppointment.doctor}
                       onChange={(e) => setNewAppointment(prev => ({ ...prev, doctor: e.target.value }))}
                     >
-                      <MenuItem value="Dr. Sarah Ahmed">Dr. Sarah Ahmed</MenuItem>
-                      <MenuItem value="Dr. Ahmed Ali">Dr. Ahmed Ali</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Date"
-                    type="date"
-                    value={newAppointment.date}
-                    onChange={(e) => setNewAppointment(prev => ({ ...prev, date: e.target.value }))}
-                    InputLabelProps={{ shrink: true }}
-                  />
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <FormControl fullWidth>
-                    <InputLabel>Available Time Slots</InputLabel>
-                    <Select 
-                      label="Available Time Slots"
-                      value={newAppointment.time}
-                      onChange={(e) => setNewAppointment(prev => ({ ...prev, time: e.target.value }))}
-                    >
-                      {generateAvailableTimeSlots().map((slot) => (
-                        <MenuItem 
-                          key={slot.value} 
-                          value={slot.label}
-                          disabled={!slot.available && !selectedAppointment}
-                          sx={{ 
-                            color: slot.available || selectedAppointment ? 'text.primary' : 'text.disabled',
-                            backgroundColor: slot.available || selectedAppointment ? 'inherit' : '#f5f5f5'
-                          }}
-                        >
-                          {slot.label} {!slot.available && !selectedAppointment && '(Booked)'}
+                      {availableDoctors.map((doctor) => (
+                        <MenuItem key={doctor.id} value={doctor.name}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <Avatar sx={{ width: 32, height: 32, backgroundColor: 'primary.main' }}>
+                              {doctor.avatar}
+                            </Avatar>
+                            <Box>
+                              <Typography variant="body2" fontWeight={600}>
+                                {doctor.name}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                {doctor.specialty} • {doctor.workingHours?.start || '09:00'} - {doctor.workingHours?.end || '17:00'}
+                              </Typography>
+                            </Box>
+                          </Box>
                         </MenuItem>
                       ))}
                     </Select>
                   </FormControl>
                 </Grid>
+
+                {/* Date Selection */}
                 <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Appointment Date"
+                    type="date"
+                    value={newAppointment.date}
+                    onChange={(e) => setNewAppointment(prev => ({ ...prev, date: e.target.value }))}
+                    InputLabelProps={{ shrink: true }}
+                    inputProps={{
+                      min: new Date().toISOString().split('T')[0] // No past dates
+                    }}
+                  />
+                </Grid>
+
+                {/* Hour Selection */}
+                <Grid item xs={12} md={3}>
                   <FormControl fullWidth>
-                    <InputLabel>Type</InputLabel>
+                    <InputLabel>Hour</InputLabel>
                     <Select 
-                      label="Type"
-                      value={newAppointment.type}
-                      onChange={(e) => setNewAppointment(prev => ({ ...prev, type: e.target.value }))}
+                      label="Hour"
+                      value={newAppointment.hour}
+                      onChange={(e) => {
+                        const hour = e.target.value;
+                        const minute = newAppointment.minute;
+                        let timeDisplay = '';
+                        if (hour && minute) {
+                          const hourNum = parseInt(hour);
+                          const displayHour = hourNum > 12 ? hourNum - 12 : hourNum === 0 ? 12 : hourNum;
+                          const ampm = hourNum >= 12 ? 'PM' : 'AM';
+                          timeDisplay = `${displayHour}:${minute} ${ampm}`;
+                        }
+                        setNewAppointment(prev => ({ 
+                          ...prev, 
+                          hour: e.target.value,
+                          time: timeDisplay
+                        }));
+                      }}
                     >
-                      <MenuItem value="Consultation">Consultation</MenuItem>
-                      <MenuItem value="Check-up">Check-up</MenuItem>
-                      <MenuItem value="Follow-up">Follow-up</MenuItem>
-                      <MenuItem value="Surgery Consultation">Surgery Consultation</MenuItem>
+                      {Array.from({length: 24}, (_, i) => (
+                        <MenuItem key={i} value={i.toString().padStart(2, '0')}>
+                          {i.toString().padStart(2, '0')}:00 ({i < 12 ? 'AM' : 'PM'})
+                        </MenuItem>
+                      ))}
                     </Select>
                   </FormControl>
                 </Grid>
-                <Grid item xs={12} md={4}>
+
+                {/* Minute Selection */}
+                <Grid item xs={12} md={3}>
+                  <FormControl fullWidth>
+                    <InputLabel>Minutes</InputLabel>
+                    <Select 
+                      label="Minutes"
+                      value={newAppointment.minute}
+                      onChange={(e) => {
+                        const hour = newAppointment.hour;
+                        const minute = e.target.value;
+                        let timeDisplay = '';
+                        if (hour && minute) {
+                          const hourNum = parseInt(hour);
+                          const displayHour = hourNum > 12 ? hourNum - 12 : hourNum === 0 ? 12 : hourNum;
+                          const ampm = hourNum >= 12 ? 'PM' : 'AM';
+                          timeDisplay = `${displayHour}:${minute} ${ampm}`;
+                        }
+                        setNewAppointment(prev => ({ 
+                          ...prev, 
+                          minute: e.target.value,
+                          time: timeDisplay
+                        }));
+                      }}
+                    >
+                      {['00', '15', '30', '45'].map((minute) => (
+                        <MenuItem key={minute} value={minute}>
+                          {minute}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+
+                {/* Time Display */}
+                {newAppointment.time && (
+                  <Grid item xs={12} md={6}>
+                    <Alert severity="info" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <AccessTime fontSize="small" />
+                      <Typography variant="body2">
+                        Selected Time: <strong>{newAppointment.time}</strong>
+                      </Typography>
+                    </Alert>
+                  </Grid>
+                )}
+                {/* Appointment Type */}
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth>
+                    <InputLabel>Appointment Type</InputLabel>
+                    <Select 
+                      label="Appointment Type"
+                      value={newAppointment.type}
+                      onChange={(e) => setNewAppointment(prev => ({ ...prev, type: e.target.value }))}
+                    >
+                      <MenuItem value="Consultation">
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <MedicalServices fontSize="small" color="primary" />
+                          Consultation
+                        </Box>
+                      </MenuItem>
+                      <MenuItem value="Check-up">
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Assignment fontSize="small" color="info" />
+                          Check-up
+                        </Box>
+                      </MenuItem>
+                      <MenuItem value="Follow-up">
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Schedule fontSize="small" color="warning" />
+                          Follow-up
+                        </Box>
+                      </MenuItem>
+                      <MenuItem value="Surgery Consultation">
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <LocalHospital fontSize="small" color="error" />
+                          Surgery Consultation
+                        </Box>
+                      </MenuItem>
+                      <MenuItem value="Emergency">
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Warning fontSize="small" color="error" />
+                          Emergency
+                        </Box>
+                      </MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+
+                {/* Duration */}
+                <Grid item xs={12} md={3}>
                   <FormControl fullWidth>
                     <InputLabel>Duration</InputLabel>
                     <Select 
@@ -2182,13 +2735,18 @@ const AppointmentListPage: React.FC = () => {
                       value={newAppointment.duration}
                       onChange={(e) => setNewAppointment(prev => ({ ...prev, duration: Number(e.target.value) }))}
                     >
+                      <MenuItem value={15}>15 minutes</MenuItem>
                       <MenuItem value={20}>20 minutes</MenuItem>
                       <MenuItem value={25}>25 minutes</MenuItem>
                       <MenuItem value={30}>30 minutes</MenuItem>
+                      <MenuItem value={45}>45 minutes</MenuItem>
+                      <MenuItem value={60}>1 hour</MenuItem>
                     </Select>
                   </FormControl>
                 </Grid>
-                <Grid item xs={12} md={4}>
+
+                {/* Priority */}
+                <Grid item xs={12} md={3}>
                   <FormControl fullWidth>
                     <InputLabel>Priority</InputLabel>
                     <Select 
@@ -2196,37 +2754,132 @@ const AppointmentListPage: React.FC = () => {
                       value={newAppointment.priority}
                       onChange={(e) => setNewAppointment(prev => ({ ...prev, priority: e.target.value }))}
                     >
-                      <MenuItem value="normal">Normal</MenuItem>
-                      <MenuItem value="high">High</MenuItem>
-                      <MenuItem value="urgent">Urgent</MenuItem>
+                      <MenuItem value="normal">
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          🟢 Normal
+                        </Box>
+                      </MenuItem>
+                      <MenuItem value="high">
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          🟡 High Priority
+                        </Box>
+                      </MenuItem>
+                      <MenuItem value="urgent">
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          🔴 Urgent
+                        </Box>
+                      </MenuItem>
                     </Select>
                   </FormControl>
                 </Grid>
-                <Grid item xs={12} md={4}>
-                  <Box sx={{ pt: 2 }}>
-                    <Typography variant="caption" color="text.secondary">
-                      Doctor Hours: 3:00 PM - 8:00 PM
-                    </Typography>
-                  </Box>
-                </Grid>
-                <Grid item xs={12}>
+
+                {/* Doctor Schedule Info */}
+                {newAppointment.doctor && (
+                  <Grid item xs={12}>
+                    <Alert severity="info" sx={{ mt: 1 }}>
+                      <Typography variant="body2">
+                        <strong>📅 Doctor Schedule:</strong> {
+                          availableDoctors.find(d => d.name === newAppointment.doctor)?.workingHours?.start || '09:00'
+                        } - {
+                          availableDoctors.find(d => d.name === newAppointment.doctor)?.workingHours?.end || '17:00'
+                        }
+                        <br />
+                        <strong>🚫 Off Days:</strong> {
+                          availableDoctors.find(d => d.name === newAppointment.doctor)?.offDays?.join(', ') || 'None'
+                        }
+                        <br />
+                        <strong>🏥 Specialty:</strong> {
+                          availableDoctors.find(d => d.name === newAppointment.doctor)?.specialty || 'General Practice'
+                        }
+                      </Typography>
+                    </Alert>
+                  </Grid>
+                )}
+
+                {/* Time Conflict Check */}
+                {newAppointment.date && newAppointment.time && newAppointment.doctor && (
+                  <Grid item xs={12}>
+                    {appointmentList.some(apt => 
+                      apt.date === newAppointment.date && 
+                      apt.doctor === newAppointment.doctor && 
+                      apt.time === newAppointment.time &&
+                      apt.id !== selectedAppointment?.id
+                    ) ? (
+                      <Alert severity="warning">
+                        <Typography variant="body2">
+                          ⚠️ <strong>Time Conflict:</strong> {newAppointment.doctor} already has an appointment at {newAppointment.time} on {newAppointment.date}
+                        </Typography>
+                      </Alert>
+                    ) : (
+                      <Alert severity="success">
+                        <Typography variant="body2">
+                          ✅ <strong>Time Available:</strong> {newAppointment.doctor} is free at {newAppointment.time} on {newAppointment.date}
+                        </Typography>
+                      </Alert>
+                    )}
+                  </Grid>
+                )}
+
+                {/* Location/Room */}
+                <Grid item xs={12} md={6}>
                   <TextField 
                     fullWidth 
                     label="Location/Room" 
-                    placeholder="e.g., Room 101"
+                    placeholder="e.g., Room 101, Consultation Room A"
                     value={newAppointment.location}
                     onChange={(e) => setNewAppointment(prev => ({ ...prev, location: e.target.value }))}
+                    InputProps={{
+                      startAdornment: <InputAdornment position="start">🏥</InputAdornment>
+                    }}
                   />
                 </Grid>
+
+                {/* Appointment Summary */}
+                {newAppointment.patient && newAppointment.doctor && newAppointment.date && newAppointment.time && (
+                  <Grid item xs={12}>
+                    <Card sx={{ p: 2, backgroundColor: '#f0f7ff', border: '1px solid #2196f3' }}>
+                      <Typography variant="h6" color="primary.main" sx={{ mb: 1 }}>
+                        📅 Appointment Summary
+                      </Typography>
+                      <Grid container spacing={2}>
+                        <Grid item xs={12} sm={6}>
+                          <Typography variant="body2">
+                            <strong>Patient:</strong> {newAppointment.patient}
+                          </Typography>
+                        </Grid>
+                        <Grid item xs={12} sm={6}>
+                          <Typography variant="body2">
+                            <strong>Doctor:</strong> {newAppointment.doctor}
+                          </Typography>
+                        </Grid>
+                        <Grid item xs={12} sm={6}>
+                          <Typography variant="body2">
+                            <strong>Date & Time:</strong> {newAppointment.date} at {newAppointment.time}
+                          </Typography>
+                        </Grid>
+                        <Grid item xs={12} sm={6}>
+                          <Typography variant="body2">
+                            <strong>Duration:</strong> {newAppointment.duration} minutes
+                          </Typography>
+                        </Grid>
+                      </Grid>
+                    </Card>
+                  </Grid>
+                )}
+
+                {/* Notes */}
                 <Grid item xs={12}>
                   <TextField
                     fullWidth
-                    label="Notes"
+                    label="Additional Notes"
                     multiline
                     rows={3}
-                    placeholder="Additional notes about the appointment..."
+                    placeholder="Enter any additional notes about the appointment, medical history, or special requirements..."
                     value={newAppointment.notes}
                     onChange={(e) => setNewAppointment(prev => ({ ...prev, notes: e.target.value }))}
+                    InputProps={{
+                      startAdornment: <InputAdornment position="start">📝</InputAdornment>
+                    }}
                   />
                 </Grid>
               </Grid>

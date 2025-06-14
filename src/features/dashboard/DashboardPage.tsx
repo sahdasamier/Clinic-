@@ -59,6 +59,11 @@ import {
 import { loadPatientsFromStorage } from '../patients/PatientListPage';
 import { doctorSchedules } from '../DoctorScheduling';
 import { loadPaymentsFromStorage } from '../payments/PaymentListPage';
+import { 
+  organizeAppointmentsByCompletion,
+  getPatientsOrganizedByAppointmentStatus,
+  setupAppointmentPatientSync 
+} from '../../utils/appointmentPatientSync';
 
 // Professional Color Palette
 const colorPalette = {
@@ -179,7 +184,7 @@ const DashboardPage: React.FC = () => {
   const [payments, setPayments] = useState<any[]>([]);
   const doctors = doctorSchedules;
 
-  // Load all data directly from the pages
+  // Load all data directly from the pages and setup sync
   useEffect(() => {
     const loadedAppointments = loadAppointmentsFromStorage();
     setAppointments(loadedAppointments.length > 0 ? loadedAppointments : getDefaultAppointments());
@@ -189,6 +194,9 @@ const DashboardPage: React.FC = () => {
     
     const loadedPayments = loadPaymentsFromStorage();
     setPayments(loadedPayments);
+    
+    // Setup appointment-patient sync on dashboard load
+    setupAppointmentPatientSync();
   }, [refreshKey]);
 
   // Refresh function
