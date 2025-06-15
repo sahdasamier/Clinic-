@@ -301,6 +301,10 @@ const resources = {
       'successfully_completed_appointments': 'Successfully completed appointments',
       'loading_appointment_data': 'Loading Appointment Data...',
       'syncing_appointment_data': 'Syncing appointment data from the appointment page',
+      'completed_status': 'Completed',
+      'total_patients': 'Total Patients',
+      'comprehensive_patient_care': '🏥 Comprehensive Patient Care',
+      'sync_appointments': 'Sync Appointments',
     }
   },
   ar: {
@@ -601,6 +605,10 @@ const resources = {
       'successfully_completed_appointments': 'تم إكمال المواعيد بنجاح',
       'loading_appointment_data': 'جاري تحميل بيانات الموعد...',
       'syncing_appointment_data': 'مزامنة بيانات المواعيد من صفحة المواعيد',
+      'completed_status': 'مكتمل',
+      'total_patients': 'إجمالي المرضى',
+      'comprehensive_patient_care': '🏥 صحة المريض الشاملة',
+      'sync_appointments': 'مزامنة المواعيد',
     }
   }
 };
