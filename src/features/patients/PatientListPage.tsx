@@ -3230,7 +3230,7 @@ const PatientListPage: React.FC = () => {
                                         </TableCell>
                                         <TableCell>
                                           <Chip 
-                                            label="Completed" 
+                                            label={t('completed')} 
                                             color="success" 
                                             size="small"
                                             icon={<CheckCircle />}
@@ -4380,7 +4380,7 @@ const PatientListPage: React.FC = () => {
                                         </Typography>
                                       </Box>
                                       <Chip 
-                                        label="Completed" 
+                                        label={t('completed')} 
                                         color="success" 
                                         size="small"
                                         icon={<CheckCircle />}
