@@ -1162,10 +1162,6 @@ const PatientListPage: React.FC = () => {
                     <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>
                       🔄 {t('automatic_sync_active')}
                     </Typography>
-                    <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                      {t('all_people_from_appointments')}. 
-                      {t('smart_sync_realtime')}.
-                    </Typography>
                   </Box>
                 </Box>
                 <Button

@@ -242,6 +242,10 @@ const resources = {
       'waiting': 'Waiting',
       'in-progress': 'In Progress',
       'scheduled': 'Scheduled',
+      
+      // Additional status terms
+      'active': 'Active',
+      'none_today': 'None Today',
     }
   },
   ar: {
@@ -483,6 +487,10 @@ const resources = {
       'waiting': 'في الانتظار',
       'in-progress': 'قيد التنفيذ',
       'scheduled': 'مجدول',
+      
+      // Additional status terms - مصطلحات حالة إضافية
+      'active': 'نشط',
+      'none_today': 'لا يوجد اليوم',
     }
   }
 };

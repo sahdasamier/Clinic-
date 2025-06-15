@@ -426,9 +426,7 @@ const DashboardPage: React.FC = () => {
                       <Refresh />
                     </IconButton>
                   </Tooltip>
-                  <Typography variant="body2" sx={{ opacity: 0.8 }}>
-                    {t('data_source_direct_imports')}
-                  </Typography>
+               
                 </Box>
               </Box>
             </Box>
