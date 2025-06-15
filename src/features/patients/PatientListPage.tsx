@@ -1995,9 +1995,9 @@ const PatientListPage: React.FC = () => {
                     {patientOrganizationMode !== 'all' && (
                       <Alert severity="info" sx={{ m: 3, mb: 2 }}>
                         <Typography variant="body2">
-                          Patients are organized by {patientOrganizationMode === 'reservation' ? 'appointment reservations' : 'appointment completion status'}. 
-                          {patientOrganizationMode === 'reservation' && ' Patients with appointments are listed first.'}
-                          {patientOrganizationMode === 'completion' && ' Patients with completed appointments are listed first.'}
+                                                  {t('organized_by_text')} {patientOrganizationMode === 'reservation' ? t('appointment_reservations') : t('appointment_completion_status')}. 
+                        {patientOrganizationMode === 'reservation' && ` ${t('patients_with_appointments_listed_first')}`}
+                        {patientOrganizationMode === 'completion' && ` ${t('patients_with_completed_listed_first')}`}
                         </Typography>
                       </Alert>
                     )}
@@ -3132,7 +3132,7 @@ const PatientListPage: React.FC = () => {
                       <Box sx={{ p: 3 }}>
                         <Alert severity="info" sx={{ mb: 3 }}>
                           <Typography variant="body2">
-                            This tab shows appointment data organized by completion status, automatically synced from the Appointment page.
+                            {t('appointment_data_organized_by_completion')}
                           </Typography>
                         </Alert>
 
@@ -3150,7 +3150,7 @@ const PatientListPage: React.FC = () => {
                                 {organizedAppointmentData.completed.length}
                               </Typography>
                               <Typography variant="body2" color="text.secondary">
-                                Successfully completed appointments
+                                {t('successfully_completed_appointments')}
                               </Typography>
                             </Card>
                           </Grid>
@@ -3159,14 +3159,14 @@ const PatientListPage: React.FC = () => {
                               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                                 <Schedule sx={{ color: '#ff9800', mr: 1 }} />
                                 <Typography variant="h6" sx={{ color: '#ff9800', fontWeight: 700 }}>
-                                  Pending/Not Completed
+                                  {t('pending_not_completed')}
                                 </Typography>
                               </Box>
                               <Typography variant="h3" sx={{ fontWeight: 800, color: '#ff9800', mb: 1 }}>
                                 {organizedAppointmentData.notCompleted.length}
                               </Typography>
                               <Typography variant="body2" color="text.secondary">
-                                Appointments awaiting completion
+                                {t('appointments_awaiting_completion')}
                               </Typography>
                             </Card>
                           </Grid>
@@ -3196,7 +3196,7 @@ const PatientListPage: React.FC = () => {
                                     <TableRow>
                                       <TableCell colSpan={7} sx={{ textAlign: 'center', py: 4 }}>
                                         <Typography variant="body2" color="text.secondary">
-                                          No completed appointments found
+                                          {t('no_completed_appointments_found')}
                                         </Typography>
                                       </TableCell>
                                     </TableRow>
@@ -3269,7 +3269,7 @@ const PatientListPage: React.FC = () => {
                                     <TableRow>
                                       <TableCell colSpan={7} sx={{ textAlign: 'center', py: 4 }}>
                                         <Typography variant="body2" color="text.secondary">
-                                          No pending appointments found
+                                          {t('no_pending_appointments_found')}
                                         </Typography>
                                       </TableCell>
                                     </TableRow>
@@ -3321,10 +3321,10 @@ const PatientListPage: React.FC = () => {
                       <Box sx={{ p: 6, textAlign: 'center' }}>
                         <CalendarToday sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
                         <Typography variant="h5" color="text.secondary" sx={{ mb: 1 }}>
-                          Loading Appointment Data...
+                          {t('loading_appointment_data')}
                         </Typography>
                         <Typography variant="body1" color="text.secondary">
-                          Syncing appointment data from the appointment page
+                          {t('syncing_appointment_data')}
                         </Typography>
                       </Box>
                     )}
@@ -4305,7 +4305,7 @@ const PatientListPage: React.FC = () => {
                       <Box sx={{ p: 3 }}>
                         <Alert severity="info" sx={{ mb: 3 }}>
                           <Typography variant="body2">
-                            This tab shows appointment data organized by completion status, automatically synced from the Appointment page.
+                            {t('appointment_data_organized_by_completion')}
                           </Typography>
                         </Alert>
 
@@ -4323,7 +4323,7 @@ const PatientListPage: React.FC = () => {
                                 {organizedAppointmentData.completed.length}
                               </Typography>
                               <Typography variant="body2" color="text.secondary">
-                                Successfully completed appointments
+                                {t('successfully_completed_appointments')}
                               </Typography>
                             </Card>
                           </Grid>
@@ -4332,14 +4332,14 @@ const PatientListPage: React.FC = () => {
                               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                                 <Schedule sx={{ color: '#ff9800', mr: 1 }} />
                                 <Typography variant="h6" sx={{ color: '#ff9800', fontWeight: 700 }}>
-                                  Pending/Not Completed
+                                  {t('pending_not_completed')}
                                 </Typography>
                               </Box>
                               <Typography variant="h3" sx={{ fontWeight: 800, color: '#ff9800', mb: 1 }}>
                                 {organizedAppointmentData.notCompleted.length}
                               </Typography>
                               <Typography variant="body2" color="text.secondary">
-                                Appointments awaiting completion
+                                {t('appointments_awaiting_completion')}
                               </Typography>
                             </Card>
                           </Grid>
@@ -4409,7 +4409,7 @@ const PatientListPage: React.FC = () => {
 
                         {/* Not Completed Appointments Cards */}
                         <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, color: '#ff9800' }}>
-                          ⏳ Pending/Not Completed Appointments ({organizedAppointmentData.notCompleted.length})
+                          ⏳ {t('pending_not_completed')} Appointments ({organizedAppointmentData.notCompleted.length})
                         </Typography>
                         <Grid container spacing={3}>
                           {organizedAppointmentData.notCompleted.length === 0 ? (
@@ -4472,10 +4472,10 @@ const PatientListPage: React.FC = () => {
                       <Box sx={{ p: 6, textAlign: 'center' }}>
                         <CalendarToday sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
                         <Typography variant="h5" color="text.secondary" sx={{ mb: 1 }}>
-                          Loading Appointment Data...
+                          {t('loading_appointment_data')}
                         </Typography>
                         <Typography variant="body1" color="text.secondary">
-                          Syncing appointment data from the appointment page
+                          {t('syncing_appointment_data')}
                         </Typography>
                       </Box>
                     )}

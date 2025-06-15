@@ -744,7 +744,7 @@ const DoctorSchedulingPage: React.FC = () => {
                   </Box>
                   <Box>
                     <Typography variant="h3" sx={{ fontWeight: 800, color: 'text.primary', mb: 0.5 }}>
-                      Doctor Scheduling
+                      {t('doctor_scheduling')}
                     </Typography>
                     <Typography variant="h6" color="text.secondary" sx={{ fontWeight: 400 }}>
                       🩺 Professional doctor schedule & appointment time management

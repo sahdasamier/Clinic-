@@ -227,6 +227,19 @@ const resources = {
       'anemia': 'Anemia',
       'thyroid disorder': 'Thyroid Disorder',
       
+      // Medical Specialties
+      'general_medicine': 'General Medicine',
+      'cardiology': 'Cardiology',
+      'pediatrics': 'Pediatrics',
+      'dermatology': 'Dermatology',
+      'orthopedics': 'Orthopedics',
+      'neurology': 'Neurology',
+      'gastroenterology': 'Gastroenterology',
+      'ophthalmology': 'Ophthalmology',
+      'ent': 'ENT (Ear, Nose, Throat)',
+      'psychiatry': 'Psychiatry',
+      'other': 'Other',
+      
       // Tab Categories
       'all patients': 'All Patients',
       'new patients': 'New Patients',
@@ -246,6 +259,48 @@ const resources = {
       // Additional status terms
       'active': 'Active',
       'none_today': 'None Today',
+      
+      // Doctor Scheduling terms
+      'add_time_slot': 'Add Time Slot',
+      'edit_doctor_schedule': 'Edit Doctor Schedule',
+      'working_hours_start': 'Working Hours Start',
+      'working_hours_end': 'Working Hours End',
+      'off_days': 'Off Days',
+      'available_slot': 'Available Slot',
+      'regular_working_hours': 'Regular Working Hours',
+      'please_fill_all_fields': 'Please fill all fields',
+      'time_slot_already_exists': 'Time slot already exists',
+      'time_slot_already_reserved': 'Time slot is already reserved',
+      'edit_doctor_information': 'Edit Doctor Information',
+      'working_hours_schedule': 'Working Hours & Schedule',
+      'consultation_duration': 'Consultation Duration',
+      'max_patients_per_hour': 'Max Patients Per Hour',
+      'available_slots': 'Available Slots',
+      'reserved_for_patient': 'Reserved for Patient',
+      'standard_doctor_availability': 'Standard doctor availability during working hours',
+      'manually_added_slot': 'Available Slot (Added Manually)',
+      
+      // Patient page sync and organization terms
+      'automatic_sync_active': '🔄 Automatic Patient-Appointment Sync Active',
+      'sync_now': 'Sync Now',
+      'from_appointments': 'From Appointments',
+      'follow_up': 'Follow-up',
+      'completion': 'Completion',
+      'reservation': 'Reservation',
+      'reservations': 'Reservations',
+      'appointment_reservations': 'appointment reservations',
+      'appointment_completion_status': 'appointment completion status',
+      'patients_with_appointments_listed_first': 'Patients with appointments are listed first.',
+      'patients_with_completed_listed_first': 'Patients with completed appointments are listed first.',
+      'organized_by_text': 'Patients are organized by',
+      'appointment_data_organized_by_completion': 'This tab shows appointment data organized by completion status, automatically synced from the Appointment page.',
+      'appointments_awaiting_completion': 'Appointments awaiting completion',
+      'pending_not_completed': 'Pending/Not Completed',
+      'no_completed_appointments_found': 'No completed appointments found',
+      'no_pending_appointments_found': 'No pending appointments found',
+      'successfully_completed_appointments': 'Successfully completed appointments',
+      'loading_appointment_data': 'Loading Appointment Data...',
+      'syncing_appointment_data': 'Syncing appointment data from the appointment page',
     }
   },
   ar: {
@@ -472,7 +527,20 @@ const resources = {
       'anemia': 'فقر الدم',
       'thyroid disorder': 'اضطراب الغدة الدرقية',
       
-      // Tab Categories - فئات التبويبات
+      // Medical Specialties
+      'general_medicine': 'طب عام',
+      'cardiology': 'أمراض القلب',
+      'pediatrics': 'طب الأطفال',
+      'dermatology': 'الأمراض الجلدية',
+      'orthopedics': 'العظام',
+      'neurology': 'الأعصاب',
+      'gastroenterology': 'الجهاز الهضمي',
+      'ophthalmology': 'طب العيون',
+      'ent': 'أنف وأذن وحنجرة',
+      'psychiatry': 'الطب النفسي',
+      'other': 'أخرى',
+      
+      // Tab Categories
       'all patients': 'جميع المرضى',
       'new patients': 'مرضى جدد',
       'follow-up patients': 'مرضى متابعة',
@@ -491,6 +559,48 @@ const resources = {
       // Additional status terms - مصطلحات حالة إضافية
       'active': 'نشط',
       'none_today': 'لا يوجد اليوم',
+      
+      // Doctor Scheduling terms
+      'add_time_slot': 'إضافة جدول زمني',
+      'edit_doctor_schedule': 'تعديل جدول الطبيب',
+      'working_hours_start': 'بدء ساعات العمل',
+      'working_hours_end': 'نهاية ساعات العمل',
+      'off_days': 'أيام الراحة',
+      'available_slot': 'جدول متاح',
+      'regular_working_hours': 'ساعات عمل ثابتة',
+      'please_fill_all_fields': 'من فضلك أملأ جميع الحقون',
+      'time_slot_already_exists': 'جدول زمني موجود بالفعل',
+      'time_slot_already_reserved': 'جدول زمني محجوز بالفعل',
+      'edit_doctor_information': 'تعديل معلومات الطبيب',
+      'working_hours_schedule': 'جدول ساعات العمل والجدول',
+      'consultation_duration': 'مدة الاستشارة',
+      'max_patients_per_hour': 'أقصى عدد مرضى في الساعة',
+      'available_slots': 'جدول ساعات متاحة',
+      'reserved_for_patient': 'محجوز للمريض',
+      'standard_doctor_availability': 'التواجد الطبي المعتمد خلال ساعات العمل',
+      'manually_added_slot': 'جدول ساعات متاح (إضافة جديدة)',
+      
+      // Patient page sync and organization terms
+      'automatic_sync_active': '🔄 مزامنة تلقائية نشطة للمريض والموعد',
+      'sync_now': 'مزامنة الآن',
+      'from_appointments': 'من المواعيد',
+      'follow_up': 'متابعة',
+      'completion': 'الإنجاز',
+      'reservation': 'الحجز',
+      'reservations': 'الحجوزات',
+      'appointment_reservations': 'حجوزات المواعيد',
+      'appointment_completion_status': 'حالة إنجاز المواعيد',
+      'patients_with_appointments_listed_first': 'المرضى الذين لديهم مواعيد مدرجون أولاً.',
+      'patients_with_completed_listed_first': 'المرضى الذين لديهم مواعيد مكتملة مدرجون أولاً.',
+      'organized_by_text': 'المرضى منظمون حسب',
+      'appointment_data_organized_by_completion': 'تُظهر هذه التبويبة بيانات المواعيد منظمة حسب حالة الإنجاز، مزامنة تلقائياً من صفحة المواعيد.',
+      'appointments_awaiting_completion': 'المواعيد في انتظار الإنجاز',
+      'pending_not_completed': 'قيد الانتظار/غير مكتمل',
+      'no_completed_appointments_found': 'لم يتم العثور على مواعيد مكتملة',
+      'no_pending_appointments_found': 'لم يتم العثور على مواعيد قيد الانتظار',
+      'successfully_completed_appointments': 'تم إكمال المواعيد بنجاح',
+      'loading_appointment_data': 'جاري تحميل بيانات الموعد...',
+      'syncing_appointment_data': 'مزامنة بيانات المواعيد من صفحة المواعيد',
     }
   }
 };
