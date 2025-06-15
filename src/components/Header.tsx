@@ -187,7 +187,7 @@ const Header: React.FC = () => {
           {/* Current Date/Time */}
           <Box sx={{ mx: 2, display: { xs: 'none', md: 'block' } }}>
             <Typography variant="body2" color="text.secondary">
-              {new Date().toLocaleDateString(i18n.language === 'ar' ? 'ar' : 'en', {
+              {new Date().toLocaleDateString(undefined, {
                 weekday: 'long',
                 year: 'numeric',
                 month: 'long',
@@ -203,7 +203,7 @@ const Header: React.FC = () => {
                 {getUserDisplayName()}
               </Typography>
               <Typography variant="caption" color="text.secondary">
-                General Practitioner
+                {t('general_practitioner')}
               </Typography>
             </Box>
             <IconButton
@@ -261,7 +261,7 @@ const Header: React.FC = () => {
                   {getUserDisplayName()}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  General Practitioner
+                  {t('general_practitioner')}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
                   {user?.email}
@@ -273,14 +273,14 @@ const Header: React.FC = () => {
                 <ListItemIcon>
                   <Person fontSize="small" />
                 </ListItemIcon>
-                <ListItemText>Profile & Settings</ListItemText>
+                <ListItemText>{t('profile_settings')}</ListItemText>
               </MenuItem>
               
               <MenuItem onClick={() => { setUserAnchorEl(null); navigate('/dashboard'); }} sx={{ py: 1.5 }}>
                 <ListItemIcon>
                   <AdminPanelSettings fontSize="small" />
                 </ListItemIcon>
-                <ListItemText>Dashboard</ListItemText>
+                <ListItemText>{t('dashboard')}</ListItemText>
               </MenuItem>
               
               <Divider />
@@ -299,7 +299,7 @@ const Header: React.FC = () => {
                 <ListItemIcon>
                   <Logout fontSize="small" sx={{ color: 'inherit' }} />
                 </ListItemIcon>
-                <ListItemText>Sign Out</ListItemText>
+                <ListItemText>{t('sign_out')}</ListItemText>
               </MenuItem>
             </Menu>
           </Box>

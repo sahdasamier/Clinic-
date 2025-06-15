@@ -80,7 +80,7 @@ const Sidebar: React.FC = () => {
               ClinicCare
             </Typography>
             <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
-              Management System
+              {t('management_system')}
             </Typography>
           </Box>
         </Box>
@@ -167,9 +167,9 @@ const Sidebar: React.FC = () => {
 
         {/* Footer */}
         <Box sx={{ p: 3, pt: 2 }}>
-          <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.5)' }}>
-            ClinicCare v1.0.0
-          </Typography>
+                  <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.5)' }}>
+          {t('clinic_care')} {t('version')}
+        </Typography>
         </Box>
       </Box>
     </Drawer>

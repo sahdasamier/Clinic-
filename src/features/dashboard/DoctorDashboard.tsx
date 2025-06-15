@@ -188,10 +188,10 @@ const DoctorDashboard: React.FC = () => {
           {/* Welcome Section */}
           <Box sx={{ mb: 4 }}>
             <Typography variant="h4" sx={{ fontWeight: 700, mb: 1, color: 'text.primary' }}>
-              Good morning, Dr. Ahmed! 👨‍⚕️
+              {t('good_morning_doctor')} 👨‍⚕️
             </Typography>
             <Typography variant="body1" color="text.secondary">
-              You have 8 appointments today and 3 follow-ups pending.
+              {t('appointments_and_followups')}
             </Typography>
           </Box>
 
@@ -199,7 +199,7 @@ const DoctorDashboard: React.FC = () => {
           <Grid container spacing={3} sx={{ mb: 4 }}>
             <Grid item xs={12} sm={6} md={3}>
               <StatCard
-                title="Today's Patients"
+                title={t('todays_patients')}
                 value="8"
                 icon={<People />}
                 color="#3B82F6"
@@ -209,7 +209,7 @@ const DoctorDashboard: React.FC = () => {
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
               <StatCard
-                title="Active Treatments"
+                title={t('active_treatments')}
                 value="24"
                 icon={<MedicalServices />}
                 color="#10B981"
@@ -219,7 +219,7 @@ const DoctorDashboard: React.FC = () => {
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
               <StatCard
-                title="Completed Consultations"
+                title={t('completed_consultations')}
                 value="156"
                 icon={<CheckCircle />}
                 color="#F59E0B"
@@ -229,7 +229,7 @@ const DoctorDashboard: React.FC = () => {
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
               <StatCard
-                title="Reports to Review"
+                title={t('reports_to_review')}
                 value="5"
                 icon={<Assignment />}
                 color="#8B5CF6"
@@ -246,11 +246,11 @@ const DoctorDashboard: React.FC = () => {
                 <CardContent sx={{ p: 3 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
                     <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                      Weekly Patient Overview
+                      {t('weekly_patient_overview')}
                     </Typography>
-                    <Button variant="outlined" size="small" startIcon={<TrendingUp />}>
-                      View Analytics
-                    </Button>
+                                          <Button variant="outlined" size="small" startIcon={<TrendingUp />}>
+                        {t('view_analytics')}
+                      </Button>
                   </Box>
                   <Box sx={{ height: 300 }}>
                     <ResponsiveContainer width="100%" height="100%">
@@ -269,22 +269,22 @@ const DoctorDashboard: React.FC = () => {
                 <CardContent sx={{ p: 3 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
                     <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                      My Patients
+                      {t('my_patients')}
                     </Typography>
                     <Button variant="contained" size="small" startIcon={<Add />}>
-                      Add Patient
+                      {t('add_patient')}
                     </Button>
                   </Box>
                   <TableContainer>
                     <Table>
                       <TableHead>
                         <TableRow>
-                          <TableCell sx={{ fontWeight: 600 }}>Patient</TableCell>
-                          <TableCell sx={{ fontWeight: 600 }}>Age</TableCell>
-                          <TableCell sx={{ fontWeight: 600 }}>Condition</TableCell>
-                          <TableCell sx={{ fontWeight: 600 }}>Last Visit</TableCell>
-                          <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
-                          <TableCell sx={{ fontWeight: 600 }}>Actions</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>{t('patient')}</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>{t('patient_age')}</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>{t('patient_condition')}</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>{t('last_visit')}</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>{t('status')}</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>{t('table_actions')}</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
@@ -308,13 +308,13 @@ const DoctorDashboard: React.FC = () => {
                                     {patient.name}
                                   </Typography>
                                   <Typography variant="caption" color="text.secondary">
-                                    Next: {patient.nextAppointment}
+                                    {t('next')}: {patient.nextAppointment}
                                   </Typography>
                                 </Box>
                               </Box>
                             </TableCell>
                             <TableCell>
-                              <Typography variant="body2">{patient.age} years</Typography>
+                              <Typography variant="body2">{patient.age} {t('years')}</Typography>
                             </TableCell>
                             <TableCell>
                               <Typography variant="body2" color="text.secondary">
@@ -360,7 +360,7 @@ const DoctorDashboard: React.FC = () => {
                   <CardContent sx={{ p: 3 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
                       <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                        Today's Schedule
+                        {t('todays_schedule')}
                       </Typography>
                       <IconButton size="small">
                         <CalendarToday fontSize="small" />
@@ -404,7 +404,7 @@ const DoctorDashboard: React.FC = () => {
                       ))}
                     </List>
                     <Button variant="text" size="small" fullWidth sx={{ mt: 2 }}>
-                      View Full Schedule
+                      {t('view_full_schedule')}
                     </Button>
                   </CardContent>
                 </Card>
@@ -413,7 +413,7 @@ const DoctorDashboard: React.FC = () => {
                 <Card>
                   <CardContent sx={{ p: 3 }}>
                     <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
-                      Quick Actions
+                      {t('quick_actions')}
                     </Typography>
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                       <Button
@@ -422,7 +422,7 @@ const DoctorDashboard: React.FC = () => {
                         startIcon={<Add />}
                         sx={{ textTransform: 'none' }}
                       >
-                        Add New Patient
+                        {t('add_new_patient')}
                       </Button>
                       <Button
                         variant="outlined"
@@ -430,7 +430,7 @@ const DoctorDashboard: React.FC = () => {
                         startIcon={<Schedule />}
                         sx={{ textTransform: 'none' }}
                       >
-                        Schedule Appointment
+                        {t('schedule_appointment')}
                       </Button>
                       <Button
                         variant="outlined"
@@ -438,7 +438,7 @@ const DoctorDashboard: React.FC = () => {
                         startIcon={<Assignment />}
                         sx={{ textTransform: 'none' }}
                       >
-                        Create Prescription
+                        {t('create_prescription')}
                       </Button>
                       <Button
                         variant="outlined"
@@ -446,7 +446,7 @@ const DoctorDashboard: React.FC = () => {
                         startIcon={<MedicalServices />}
                         sx={{ textTransform: 'none' }}
                       >
-                        Medical Records
+                        {t('medical_records_quick_action')}
                       </Button>
                     </Box>
                   </CardContent>
@@ -456,7 +456,7 @@ const DoctorDashboard: React.FC = () => {
                 <Card>
                   <CardContent sx={{ p: 3 }}>
                     <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
-                      Recent Activity
+                      {t('recent_activity')}
                     </Typography>
                     <List sx={{ p: 0 }}>
                       <ListItem sx={{ px: 0, py: 1 }}>
@@ -466,8 +466,8 @@ const DoctorDashboard: React.FC = () => {
                           </Avatar>
                         </ListItemAvatar>
                         <ListItemText
-                          primary="Consultation completed"
-                          secondary="Ahmed Al-Rashid • 2 hours ago"
+                          primary={t('consultation_completed')}
+                          secondary={`Ahmed Al-Rashid • 2 ${t('hours_ago')}`}
                           primaryTypographyProps={{ variant: 'body2', fontWeight: 600 }}
                           secondaryTypographyProps={{ variant: 'caption' }}
                         />
@@ -479,8 +479,8 @@ const DoctorDashboard: React.FC = () => {
                           </Avatar>
                         </ListItemAvatar>
                         <ListItemText
-                          primary="Lab report reviewed"
-                          secondary="Fatima Hassan • 4 hours ago"
+                          primary={t('lab_report_reviewed')}
+                          secondary={`Fatima Hassan • 4 ${t('hours_ago')}`}
                           primaryTypographyProps={{ variant: 'body2', fontWeight: 600 }}
                           secondaryTypographyProps={{ variant: 'caption' }}
                         />
@@ -492,8 +492,8 @@ const DoctorDashboard: React.FC = () => {
                           </Avatar>
                         </ListItemAvatar>
                         <ListItemText
-                          primary="Follow-up scheduled"
-                          secondary="Mohammed Ali • 6 hours ago"
+                          primary={t('followup_scheduled')}
+                          secondary={`Mohammed Ali • 6 ${t('hours_ago')}`}
                           primaryTypographyProps={{ variant: 'body2', fontWeight: 600 }}
                           secondaryTypographyProps={{ variant: 'caption' }}
                         />

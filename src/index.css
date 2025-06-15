@@ -1,3 +1,35 @@
 @tailwind base;
 @tailwind components;
-@tailwind utilities; 
+@tailwind utilities;
+
+/* RTL Support */
+[dir="rtl"] {
+  text-align: right;
+}
+
+[dir="rtl"] .MuiTableCell-root {
+  text-align: right;
+}
+
+[dir="rtl"] .MuiTypography-root {
+  text-align: inherit;
+}
+
+/* Ensure numbers stay LTR even in RTL context */
+[dir="rtl"] .number,
+[dir="rtl"] .MuiChip-label,
+[dir="rtl"] .stat-value {
+  direction: ltr;
+  text-align: center;
+}
+
+/* Fix Material-UI components for RTL */
+[dir="rtl"] .MuiDrawer-paperAnchorLeft {
+  right: 0;
+  left: auto;
+}
+
+[dir="rtl"] .MuiDrawer-paperAnchorRight {
+  left: 0;
+  right: auto;
+} 

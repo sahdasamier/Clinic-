@@ -19,15 +19,15 @@ const PatientDashboard: React.FC = () => {
             {/* Next Appointment */}
             <div className="p-6 bg-white rounded-lg shadow-md">
               <h3 className="text-lg font-medium text-gray-900">{t('next_appointment')}</h3>
-              <p className="mt-4">Date: 2024-07-20</p>
-              <p>Time: 10:30 AM</p>
-              <p>Doctor: Dr. Smith</p>
+                        <p className="mt-4">{t('date')}: 2024-07-20</p>
+          <p>{t('time')}: 10:30 AM</p>
+          <p>{t('doctor')}: Dr. Smith</p>
             </div>
 
             {/* Medical Records */}
             <div className="p-6 bg-white rounded-lg shadow-md">
               <h3 className="text-lg font-medium text-gray-900">{t('medical_records')}</h3>
-              <p className="mt-4">View your medical history, test results, and more.</p>
+              <p className="mt-4">{t('view_records')}</p>
               <Link to="/patient/records">
                 <button className="w-full mt-4 px-4 py-2 font-medium text-white rounded-md bg-primary hover:bg-secondary">
                   {t('view_records')}
@@ -38,7 +38,7 @@ const PatientDashboard: React.FC = () => {
             {/* Billing Information */}
             <div className="p-6 bg-white rounded-lg shadow-md">
               <h3 className="text-lg font-medium text-gray-900">{t('billing_information')}</h3>
-              <p className="mt-4">Check your invoices and payment history.</p>
+              <p className="mt-4">{t('view_billing')}</p>
               <Link to="/patient/billing">
                 <button className="w-full mt-4 px-4 py-2 font-medium text-white rounded-md bg-primary hover:bg-secondary">
                   {t('view_billing')}
@@ -49,7 +49,7 @@ const PatientDashboard: React.FC = () => {
             {/* Loyalty Program */}
             <div className="p-6 bg-white rounded-lg shadow-md">
               <h3 className="text-lg font-medium text-gray-900">{t('loyalty_program')}</h3>
-              <p className="mt-4">You have 250 points.</p>
+              <p className="mt-4">{t('view_loyalty_status')}</p>
                <Link to="/patient/loyalty">
                 <button className="w-full mt-4 px-4 py-2 font-medium text-white rounded-md bg-primary hover:bg-secondary">
                   {t('view_loyalty_status')}

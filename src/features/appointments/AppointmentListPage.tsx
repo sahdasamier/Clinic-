@@ -2136,7 +2136,7 @@ const AppointmentListPage: React.FC = () => {
                 <CardContent sx={{ p: 4 }}>
                   <Typography variant="h6" sx={{ fontWeight: 700, mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
                     <BarChart sx={{ color: 'primary.main' }} />
-                    Clinic Analytics Overview
+                    {t('clinic_analytics_overview')}
                   </Typography>
                   
                   <Grid container spacing={3}>

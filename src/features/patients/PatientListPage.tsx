@@ -251,6 +251,11 @@ export const initialPatients = [
 
 const PatientListPage: React.FC = () => {
   const { t } = useTranslation();
+
+  // Helper function to translate patient status and conditions
+  const translatePatientData = (text: string) => {
+    return t(text.toLowerCase()) || text;
+  };
   const [tabValue, setTabValue] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterAnchor, setFilterAnchor] = useState<null | HTMLElement>(null);
@@ -1155,11 +1160,11 @@ const PatientListPage: React.FC = () => {
                   </Box>
                   <Box>
                     <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>
-                      🔄 Automatic Patient-Appointment Sync Active
+                      🔄 {t('automatic_sync_active')}
                     </Typography>
                     <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                      All people from appointments are automatically added to the patient database. 
-                      Smart sync keeps everything up-to-date in real-time.
+                      {t('all_people_from_appointments')}. 
+                      {t('smart_sync_realtime')}.
                     </Typography>
                   </Box>
                 </Box>
@@ -1185,7 +1190,7 @@ const PatientListPage: React.FC = () => {
                     }
                   }}
                 >
-                  SYNC NOW
+                  {t('sync_now')}
                 </Button>
               </Box>
             </CardContent>
@@ -1241,10 +1246,10 @@ const PatientListPage: React.FC = () => {
                   </Box>
                   <Box>
                     <Typography variant="h3" sx={{ fontWeight: 800, color: 'text.primary', mb: 0.5 }}>
-                      Patient Management
+                      {t('patient_management')}
                     </Typography>
                     <Typography variant="h6" color="text.secondary" sx={{ fontWeight: 400 }}>
-                      🏥 Comprehensive patient care & medical records management
+                      🏥 {t('comprehensive_patient_care')}
                     </Typography>
                   </Box>
                 </Box>
@@ -1268,7 +1273,7 @@ const PatientListPage: React.FC = () => {
                       transition: 'all 0.3s ease'
                     }}
                   >
-                    WhatsApp All
+                    {t('whatsapp_all')}
                   </Button>
                   <Button
                     variant="outlined"
@@ -1301,7 +1306,7 @@ const PatientListPage: React.FC = () => {
                       transition: 'all 0.3s ease'
                     }}
                   >
-                    Sync Appointments
+                    {t('sync_appointments')}
                   </Button>
                   <Button
                     variant="contained"
@@ -1322,7 +1327,7 @@ const PatientListPage: React.FC = () => {
                       transition: 'all 0.3s ease'
                     }}
                   >
-                    Add New Patient
+                    {t('add_new_patient')}
                   </Button>
                 </Box>
               </Box>
@@ -1342,7 +1347,7 @@ const PatientListPage: React.FC = () => {
                       {patients.length}
                     </Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
-                      Total Patients
+                      {t('total_patients')}
                     </Typography>
                   </Box>
                 </Grid>
@@ -1359,7 +1364,7 @@ const PatientListPage: React.FC = () => {
                       {patients.filter(p => p.status === 'new').length}
                     </Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
-                      New Patients
+                      {t('new_patients')}
                     </Typography>
                   </Box>
                 </Grid>
@@ -1376,7 +1381,7 @@ const PatientListPage: React.FC = () => {
                       {patients.filter(p => p.status === 'follow-up').length}
                     </Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
-                      Follow-up
+                      {t('follow_up')}
                     </Typography>
                   </Box>
                 </Grid>
@@ -1393,7 +1398,7 @@ const PatientListPage: React.FC = () => {
                       {patients.filter(p => p._createdFromAppointment).length || 0}
                     </Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
-                      From Appointments
+                      {t('from_appointments')}
                     </Typography>
                   </Box>
                 </Grid>
@@ -1445,7 +1450,7 @@ const PatientListPage: React.FC = () => {
                     <Box sx={{ position: 'relative' }}>
                       <TextField
                         fullWidth
-                        placeholder="🔍 Search patients by name, email, phone, or condition..."
+                        placeholder={`🔍 ${t('search_patients_placeholder')}`}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         InputProps={{
@@ -1510,7 +1515,7 @@ const PatientListPage: React.FC = () => {
                           })
                         }}
                       >
-                        🔽 Filter
+                        🔽 {t('filter')}
                         {getActiveFilterCount() > 0 && (
                           <Chip
                             label={getActiveFilterCount()}
@@ -1554,7 +1559,7 @@ const PatientListPage: React.FC = () => {
                           mr: 1
                         }}
                       >
-                        📊 Organize:
+                        📊 {t('organize')}:
                       </Typography>
                       <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                         <Button
@@ -1578,7 +1583,7 @@ const PatientListPage: React.FC = () => {
                             transition: 'all 0.2s ease'
                           }}
                         >
-                          All
+                          {t('all')}
                         </Button>
                         <Button
                           size="small"
@@ -1601,7 +1606,7 @@ const PatientListPage: React.FC = () => {
                             transition: 'all 0.2s ease'
                           }}
                         >
-                          Reservations
+                          {t('reservations')}
                         </Button>
                         <Button
                           size="small"
@@ -1624,7 +1629,7 @@ const PatientListPage: React.FC = () => {
                             transition: 'all 0.2s ease'
                           }}
                         >
-                          Completion
+                          {t('completion')}
                         </Button>
                       </Box>
                     </Card>
@@ -1663,7 +1668,7 @@ const PatientListPage: React.FC = () => {
                             transition: 'all 0.2s ease'
                           }}
                         >
-                          Table
+                          {t('table')}
                         </Button>
                         <Button
                           size="small"
@@ -1686,7 +1691,7 @@ const PatientListPage: React.FC = () => {
                             transition: 'all 0.2s ease'
                           }}
                         >
-                          Cards
+                          {t('cards')}
                         </Button>
                       </Card>
                     </Box>
@@ -1697,12 +1702,12 @@ const PatientListPage: React.FC = () => {
                 {getActiveFilterCount() > 0 && (
                   <Box sx={{ mt: 3, pt: 2, borderTop: '1px solid rgba(0,0,0,0.1)' }}>
                     <Typography variant="body2" sx={{ fontWeight: 600, mb: 1, color: 'text.secondary' }}>
-                      Active Filters:
+                      {t('active_filters')}:
                     </Typography>
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                       {searchQuery && (
                         <Chip
-                          label={`Search: "${searchQuery}"`}
+                          label={`${t('search')}: "${searchQuery}"`}
                           size="small"
                           onDelete={() => setSearchQuery('')}
                           color="primary"
@@ -1711,7 +1716,7 @@ const PatientListPage: React.FC = () => {
                       )}
                       {activeFilters.gender && (
                         <Chip
-                          label={`Gender: ${activeFilters.gender}`}
+                          label={`${t('gender')}: ${activeFilters.gender}`}
                           size="small"
                           onDelete={() => handleFilterSelect('gender', '')}
                           color="primary"
@@ -1720,7 +1725,7 @@ const PatientListPage: React.FC = () => {
                       )}
                       {activeFilters.ageRange && (
                         <Chip
-                          label={`Age: ${activeFilters.ageRange}`}
+                          label={`${t('age')}: ${activeFilters.ageRange}`}
                           size="small"
                           onDelete={() => handleFilterSelect('ageRange', '')}
                           color="primary"
@@ -1729,7 +1734,7 @@ const PatientListPage: React.FC = () => {
                       )}
                       {activeFilters.status && (
                         <Chip
-                          label={`Status: ${activeFilters.status}`}
+                          label={`${t('status')}: ${activeFilters.status}`}
                           size="small"
                           onDelete={() => handleFilterSelect('status', '')}
                           color="primary"
@@ -1738,7 +1743,7 @@ const PatientListPage: React.FC = () => {
                       )}
                       {activeFilters.condition && (
                         <Chip
-                          label={`Condition: ${activeFilters.condition}`}
+                          label={`${t('condition')}: ${activeFilters.condition}`}
                           size="small"
                           onDelete={() => handleFilterSelect('condition', '')}
                           color="primary"
@@ -1754,7 +1759,7 @@ const PatientListPage: React.FC = () => {
                           '&:hover': { backgroundColor: 'error.light', color: 'white' }
                         }}
                       >
-                        Clear All
+                        {t('clear_all')}
                       </Button>
                     </Box>
                   </Box>
@@ -1771,7 +1776,7 @@ const PatientListPage: React.FC = () => {
                   borderColor: 'divider' 
                 }}>
                   <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, textAlign: 'center', color: 'primary.main' }}>
-                    📊 Organization Summary - {patientOrganizationMode === 'reservation' ? 'By Reservation Status' : 'By Completion Status'}
+                    📊 {t('organization_summary')} - {patientOrganizationMode === 'reservation' ? t('by_reservation_status') : t('by_completion_status')}
                   </Typography>
                   <Grid container spacing={3}>
                     <Grid item xs={12} md={4}>
@@ -1797,7 +1802,7 @@ const PatientListPage: React.FC = () => {
                           }
                         </Typography>
                         <Typography variant="body1" color="text.secondary" sx={{ fontWeight: 600 }}>
-                          {patientOrganizationMode === 'reservation' ? '📅 With Appointments' : '✅ With Completed'}
+                          {patientOrganizationMode === 'reservation' ? `📅 ${t('with_appointments')}` : `✅ ${t('with_completed')}`}
                         </Typography>
                         <Box sx={{
                           position: 'absolute',
@@ -1833,7 +1838,7 @@ const PatientListPage: React.FC = () => {
                           }
                         </Typography>
                         <Typography variant="body1" color="text.secondary" sx={{ fontWeight: 600 }}>
-                          {patientOrganizationMode === 'reservation' ? '❌ No Appointments' : '⏳ With Pending'}
+                          {patientOrganizationMode === 'reservation' ? `❌ ${t('no_appointments')}` : `⏳ ${t('with_pending')}`}
                         </Typography>
                         <Box sx={{
                           position: 'absolute',
@@ -1869,7 +1874,7 @@ const PatientListPage: React.FC = () => {
                           }
                         </Typography>
                         <Typography variant="body1" color="text.secondary" sx={{ fontWeight: 600 }}>
-                          {patientOrganizationMode === 'completion' ? '🚫 No Appointments' : '📊 Total Appointments'}
+                          {patientOrganizationMode === 'completion' ? `🚫 ${t('no_appointments')}` : `📊 ${t('total_appointments')}`}
                         </Typography>
                         <Box sx={{
                           position: 'absolute',
@@ -1890,9 +1895,9 @@ const PatientListPage: React.FC = () => {
               {(getActiveFilterCount() > 0 || searchQuery) && (
                 <Box sx={{ px: 3, py: 2, backgroundColor: '#f8f9fa', borderBottom: 1, borderColor: 'divider' }}>
                   <Typography variant="body2" color="text.secondary">
-                    Showing {filteredPatients.length} of {patients.length} patients
-                    {getActiveFilterCount() > 0 && ` with ${getActiveFilterCount()} filter(s) applied`}
-                    {patientOrganizationMode !== 'all' && ` • Organized by ${patientOrganizationMode}`}
+                    {t('showing_patients')} {filteredPatients.length} {t('of_patients')} {patients.length} {t('patients')}
+                    {getActiveFilterCount() > 0 && ` ${t('with')} ${getActiveFilterCount()} ${t('filters_applied')}`}
+                    {patientOrganizationMode !== 'all' && ` • ${t('organized_by')} ${patientOrganizationMode}`}
                   </Typography>
                 </Box>
               )}
@@ -1935,42 +1940,42 @@ const PatientListPage: React.FC = () => {
                   }}
                 >
                   <Tab 
-                    label={`👥 All Patients (${filteredPatients.length})`} 
+                    label={`👥 ${t('all patients')} (${filteredPatients.length})`} 
                     icon={<People />}
                     iconPosition="start"
                   />
                   <Tab 
-                    label={`🆕 New (${filteredPatients.filter(p => p.status === 'new').length})`} 
+                    label={`🆕 ${t('new')} (${filteredPatients.filter(p => p.status === 'new').length})`} 
                     icon={<PersonAdd />}
                     iconPosition="start"
                   />
                   <Tab 
-                    label={`📋 Follow-up (${filteredPatients.filter(p => p.status === 'follow-up').length})`} 
+                    label={`📋 ${t('follow-up')} (${filteredPatients.filter(p => p.status === 'follow-up').length})`} 
                     icon={<Assignment />}
                     iconPosition="start"
                   />
                   <Tab 
-                    label={`👴 Old (${filteredPatients.filter(p => p.status === 'old').length})`} 
+                    label={`👴 ${t('old')} (${filteredPatients.filter(p => p.status === 'old').length})`} 
                     icon={<History />}
                     iconPosition="start"
                   />
                   <Tab 
-                    label={`🏥 Under Observation (${filteredPatients.filter(p => p.status === 'admitted').length})`} 
+                    label={`🏥 ${t('under observation')} (${filteredPatients.filter(p => p.status === 'admitted').length})`} 
                     icon={<MedicalServices />}
                     iconPosition="start"
                   />
                   <Tab 
-                    label={`↗️ Transferred (${filteredPatients.filter(p => p.status === 'transferred').length})`} 
+                    label={`↗️ ${t('transferred')} (${filteredPatients.filter(p => p.status === 'transferred').length})`} 
                     icon={<LocationOn />}
                     iconPosition="start"
                   />
                   <Tab 
-                    label={`✅ Discharged (${filteredPatients.filter(p => p.status === 'discharged').length})`} 
+                    label={`✅ ${t('discharged')} (${filteredPatients.filter(p => p.status === 'discharged').length})`} 
                     icon={<CheckCircle />}
                     iconPosition="start"
                   />
                   <Tab 
-                    label={`📅 Appointment Data (${organizedAppointmentData ? organizedAppointmentData.completed.length + organizedAppointmentData.notCompleted.length : 0})`} 
+                    label={`📅 ${t('appointment data')} (${organizedAppointmentData ? organizedAppointmentData.completed.length + organizedAppointmentData.notCompleted.length : 0})`} 
                     icon={<CalendarToday />} 
                     iconPosition="start"
                     sx={{ 
@@ -2004,13 +2009,13 @@ const PatientListPage: React.FC = () => {
                       <Table>
                         <TableHead>
                           <TableRow>
-                            <TableCell sx={{ fontWeight: 600 }}>Patient</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Contact</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Last Visit</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Next Appointment</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Condition</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Actions</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>{t('patient')}</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>{t('contact')}</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>{t('last_visit')}</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>{t('next_appointment')}</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>{t('condition')}</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>{t('status')}</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>{t('actions')}</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
@@ -2020,17 +2025,17 @@ const PatientListPage: React.FC = () => {
                                 <Box>
                                   <FilterList sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
                                   <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
-                                    No patients match your filters
+                                    {t('no_patients_match_filters')}
                                   </Typography>
                                   <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                                    Try adjusting your search criteria or clearing some filters
+                                    {t('try_adjusting_criteria')}
                                   </Typography>
                                   <Button 
                                     variant="outlined" 
                                     onClick={clearAllFilters}
                                     startIcon={<FilterList />}
                                   >
-                                    Clear All Filters
+                                    {t('clear_all_filters')}
                                   </Button>
                                 </Box>
                               </TableCell>
@@ -2041,10 +2046,10 @@ const PatientListPage: React.FC = () => {
                                 <Box>
                                   <People sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
                                   <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
-                                    No patients found
+                                    {t('no_patients_found')}
                                   </Typography>
                                   <Typography variant="body2" color="text.secondary">
-                                    Add your first patient to get started
+                                    {t('add_first_patient')}
                                   </Typography>
                                 </Box>
                               </TableCell>
@@ -2104,12 +2109,12 @@ const PatientListPage: React.FC = () => {
                                 </Typography>
                               </TableCell>
                               <TableCell>
-                                <Typography variant="body2">{patient.condition}</Typography>
+                                <Typography variant="body2">{translatePatientData(patient.condition)}</Typography>
                               </TableCell>
                               <TableCell>
                                 <Tooltip title="Click to change status" arrow>
                                   <Chip
-                                    label={patient.status}
+                                    label={translatePatientData(patient.status)}
                                     color={getStatusColor(patient.status) as any}
                                     size="small"
                                     variant="outlined"
@@ -2180,13 +2185,13 @@ const PatientListPage: React.FC = () => {
                       <Table>
                         <TableHead>
                           <TableRow>
-                            <TableCell sx={{ fontWeight: 600 }}>Patient</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Contact</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Last Visit</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Next Appointment</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Condition</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Actions</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>{t('patient')}</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>{t('contact')}</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>{t('last_visit')}</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>{t('next_appointment')}</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>{t('condition')}</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>{t('status')}</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>{t('actions')}</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
@@ -2196,10 +2201,10 @@ const PatientListPage: React.FC = () => {
                                 <Box>
                                   <People sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
                                   <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
-                                    No new patients found
+                                    {t('no_new_patients')}
                                   </Typography>
                                   <Typography variant="body2" color="text.secondary">
-                                    All new patients will appear here
+                                    {t('all_new_patients_appear')}
                                   </Typography>
                                 </Box>
                               </TableCell>
@@ -2259,12 +2264,12 @@ const PatientListPage: React.FC = () => {
                                 </Typography>
                               </TableCell>
                               <TableCell>
-                                <Typography variant="body2">{patient.condition}</Typography>
+                                <Typography variant="body2">{translatePatientData(patient.condition)}</Typography>
                               </TableCell>
                               <TableCell>
                                 <Tooltip title="Click to change status" arrow>
                                   <Chip
-                                    label={patient.status}
+                                    label={translatePatientData(patient.status)}
                                     color={getStatusColor(patient.status) as any}
                                     size="small"
                                     variant="outlined"
@@ -2335,13 +2340,13 @@ const PatientListPage: React.FC = () => {
                       <Table>
                         <TableHead>
                           <TableRow>
-                            <TableCell sx={{ fontWeight: 600 }}>Patient</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Contact</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Last Visit</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Next Appointment</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Condition</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Actions</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>{t('patient')}</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>{t('contact')}</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>{t('last_visit')}</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>{t('next_appointment')}</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>{t('condition')}</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>{t('status')}</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>{t('actions')}</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
@@ -2351,10 +2356,10 @@ const PatientListPage: React.FC = () => {
                                 <Box>
                                   <People sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
                                   <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
-                                    No follow-up patients found
+                                    {t('no_follow_up_patients')}
                                   </Typography>
                                   <Typography variant="body2" color="text.secondary">
-                                    Patients requiring follow-up will appear here
+                                    {t('follow_up_patients_appear')}
                                   </Typography>
                                 </Box>
                               </TableCell>
@@ -2414,12 +2419,12 @@ const PatientListPage: React.FC = () => {
                                 </Typography>
                               </TableCell>
                               <TableCell>
-                                <Typography variant="body2">{patient.condition}</Typography>
+                                <Typography variant="body2">{translatePatientData(patient.condition)}</Typography>
                               </TableCell>
                               <TableCell>
                                 <Tooltip title="Click to change status" arrow>
                                   <Chip
-                                    label={patient.status}
+                                    label={translatePatientData(patient.status)}
                                     color={getStatusColor(patient.status) as any}
                                     size="small"
                                     variant="outlined"
@@ -2490,13 +2495,13 @@ const PatientListPage: React.FC = () => {
                     <Table>
                       <TableHead>
                         <TableRow>
-                          <TableCell sx={{ fontWeight: 600 }}>Patient</TableCell>
-                          <TableCell sx={{ fontWeight: 600 }}>Contact</TableCell>
-                          <TableCell sx={{ fontWeight: 600 }}>Last Visit</TableCell>
-                          <TableCell sx={{ fontWeight: 600 }}>Next Appointment</TableCell>
-                          <TableCell sx={{ fontWeight: 600 }}>Condition</TableCell>
-                          <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
-                          <TableCell sx={{ fontWeight: 600 }}>Actions</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>{t('patient')}</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>{t('contact')}</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>{t('last_visit')}</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>{t('next_appointment')}</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>{t('condition')}</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>{t('status')}</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>{t('actions')}</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
@@ -2590,12 +2595,12 @@ const PatientListPage: React.FC = () => {
                               </Typography>
                             </TableCell>
                             <TableCell>
-                              <Typography variant="body2">{patient.condition}</Typography>
+                              <Typography variant="body2">{translatePatientData(patient.condition)}</Typography>
                             </TableCell>
                             <TableCell>
                               <Tooltip title="Click to change status" arrow>
                                 <Chip
-                                  label={patient.status}
+                                  label={translatePatientData(patient.status)}
                                   color={getStatusColor(patient.status) as any}
                                   size="small"
                                   variant="outlined"
@@ -2666,13 +2671,13 @@ const PatientListPage: React.FC = () => {
                       <Table>
                         <TableHead>
                           <TableRow>
-                            <TableCell sx={{ fontWeight: 600 }}>Patient</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Contact</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Last Visit</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Next Appointment</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Condition</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Actions</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>{t('patient')}</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>{t('contact')}</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>{t('last_visit')}</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>{t('next_appointment')}</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>{t('condition')}</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>{t('status')}</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>{t('actions')}</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
@@ -2745,12 +2750,12 @@ const PatientListPage: React.FC = () => {
                                 </Typography>
                               </TableCell>
                               <TableCell>
-                                <Typography variant="body2">{patient.condition}</Typography>
+                                <Typography variant="body2">{translatePatientData(patient.condition)}</Typography>
                               </TableCell>
                               <TableCell>
                                 <Tooltip title="Click to change status" arrow>
                                   <Chip
-                                    label={patient.status}
+                                    label={translatePatientData(patient.status)}
                                     color={getStatusColor(patient.status) as any}
                                     size="small"
                                     variant="outlined"
@@ -2821,13 +2826,13 @@ const PatientListPage: React.FC = () => {
                       <Table>
                         <TableHead>
                           <TableRow>
-                            <TableCell sx={{ fontWeight: 600 }}>Patient</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Contact</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Last Visit</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Next Appointment</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Condition</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Actions</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>{t('patient')}</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>{t('contact')}</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>{t('last_visit')}</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>{t('next_appointment')}</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>{t('condition')}</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>{t('status')}</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>{t('actions')}</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
@@ -2900,12 +2905,12 @@ const PatientListPage: React.FC = () => {
                                 </Typography>
                               </TableCell>
                               <TableCell>
-                                <Typography variant="body2">{patient.condition}</Typography>
+                                <Typography variant="body2">{translatePatientData(patient.condition)}</Typography>
                               </TableCell>
                               <TableCell>
                                 <Tooltip title="Click to change status" arrow>
                                   <Chip
-                                    label={patient.status}
+                                    label={translatePatientData(patient.status)}
                                     color={getStatusColor(patient.status) as any}
                                     size="small"
                                     variant="outlined"
@@ -2976,13 +2981,13 @@ const PatientListPage: React.FC = () => {
                       <Table>
                         <TableHead>
                           <TableRow>
-                            <TableCell sx={{ fontWeight: 600 }}>Patient</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Contact</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Last Visit</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Next Appointment</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Condition</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Actions</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>{t('patient')}</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>{t('contact')}</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>{t('last_visit')}</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>{t('next_appointment')}</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>{t('condition')}</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>{t('status')}</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>{t('actions')}</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
@@ -3055,12 +3060,12 @@ const PatientListPage: React.FC = () => {
                                 </Typography>
                               </TableCell>
                               <TableCell>
-                                <Typography variant="body2">{patient.condition}</Typography>
+                                <Typography variant="body2">{translatePatientData(patient.condition)}</Typography>
                               </TableCell>
                               <TableCell>
                                 <Tooltip title="Click to change status" arrow>
                                   <Chip
-                                    label={patient.status}
+                                    label={translatePatientData(patient.status)}
                                     color={getStatusColor(patient.status) as any}
                                     size="small"
                                     variant="outlined"
@@ -3175,19 +3180,19 @@ const PatientListPage: React.FC = () => {
                         <Card sx={{ mb: 4 }}>
                           <CardContent>
                             <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, color: '#4caf50' }}>
-                              ✅ Completed Appointments ({organizedAppointmentData.completed.length})
+                              ✅ {t('completed_appointments')} ({organizedAppointmentData.completed.length})
                             </Typography>
                             <TableContainer>
                               <Table>
                                 <TableHead>
                                   <TableRow>
-                                    <TableCell sx={{ fontWeight: 600 }}>Patient</TableCell>
-                                    <TableCell sx={{ fontWeight: 600 }}>Date</TableCell>
-                                    <TableCell sx={{ fontWeight: 600 }}>Time</TableCell>
-                                    <TableCell sx={{ fontWeight: 600 }}>Doctor</TableCell>
-                                    <TableCell sx={{ fontWeight: 600 }}>Type</TableCell>
-                                    <TableCell sx={{ fontWeight: 600 }}>Duration</TableCell>
-                                    <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }}>{t('patient')}</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }}>{t('date')}</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }}>{t('time')}</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }}>{t('doctor')}</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }}>{t('type')}</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }}>{t('duration')}</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }}>{t('status')}</TableCell>
                                   </TableRow>
                                 </TableHead>
                                 <TableBody>
@@ -3248,19 +3253,19 @@ const PatientListPage: React.FC = () => {
                         <Card>
                           <CardContent>
                             <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, color: '#ff9800' }}>
-                              ⏳ Pending/Not Completed Appointments ({organizedAppointmentData.notCompleted.length})
+                              ⏳ {t('pending_not_completed')} ({organizedAppointmentData.notCompleted.length})
                             </Typography>
                             <TableContainer>
                               <Table>
                                 <TableHead>
                                   <TableRow>
-                                    <TableCell sx={{ fontWeight: 600 }}>Patient</TableCell>
-                                    <TableCell sx={{ fontWeight: 600 }}>Date</TableCell>
-                                    <TableCell sx={{ fontWeight: 600 }}>Time</TableCell>
-                                    <TableCell sx={{ fontWeight: 600 }}>Doctor</TableCell>
-                                    <TableCell sx={{ fontWeight: 600 }}>Type</TableCell>
-                                    <TableCell sx={{ fontWeight: 600 }}>Duration</TableCell>
-                                    <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }}>{t('patient')}</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }}>{t('date')}</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }}>{t('time')}</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }}>{t('doctor')}</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }}>{t('type')}</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }}>{t('duration')}</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }}>{t('status')}</TableCell>
                                   </TableRow>
                                 </TableHead>
                                 <TableBody>
@@ -3411,7 +3416,7 @@ const PatientListPage: React.FC = () => {
                                 </Box>
                                 <Tooltip title="Click to change status" arrow>
                                   <Chip
-                                    label={patient.status}
+                                    label={translatePatientData(patient.status)}
                                     color={getStatusColor(patient.status) as any}
                                     size="small"
                                     variant="outlined"
@@ -3438,7 +3443,7 @@ const PatientListPage: React.FC = () => {
                                   <WhatsApp sx={{ fontSize: 14, color: '#25D366' }} />
                                 </Box>
                                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                                  Condition: {patient.condition}
+                                  Condition: {translatePatientData(patient.condition)}
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                                   Last Visit: {patient.lastVisit}
@@ -3545,7 +3550,7 @@ const PatientListPage: React.FC = () => {
                                 </Box>
                                 <Tooltip title="Click to change status" arrow>
                                   <Chip
-                                    label={patient.status}
+                                    label={translatePatientData(patient.status)}
                                     color={getStatusColor(patient.status) as any}
                                     size="small"
                                     variant="outlined"
@@ -3572,7 +3577,7 @@ const PatientListPage: React.FC = () => {
                                   <WhatsApp sx={{ fontSize: 14, color: '#25D366' }} />
                                 </Box>
                                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                                  Condition: {patient.condition}
+                                  Condition: {translatePatientData(patient.condition)}
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                                   Last Visit: {patient.lastVisit}
@@ -3679,7 +3684,7 @@ const PatientListPage: React.FC = () => {
                                 </Box>
                                 <Tooltip title="Click to change status" arrow>
                                   <Chip
-                                    label={patient.status}
+                                    label={translatePatientData(patient.status)}
                                     color={getStatusColor(patient.status) as any}
                                     size="small"
                                     variant="outlined"
@@ -3706,7 +3711,7 @@ const PatientListPage: React.FC = () => {
                                   <WhatsApp sx={{ fontSize: 14, color: '#25D366' }} />
                                 </Box>
                                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                                  Condition: {patient.condition}
+                                  Condition: {translatePatientData(patient.condition)}
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                                   Last Visit: {patient.lastVisit}
@@ -3813,7 +3818,7 @@ const PatientListPage: React.FC = () => {
                                 </Box>
                                 <Tooltip title="Click to change status" arrow>
                                   <Chip
-                                    label={patient.status}
+                                    label={translatePatientData(patient.status)}
                                     color={getStatusColor(patient.status) as any}
                                     size="small"
                                     variant="outlined"
@@ -3840,7 +3845,7 @@ const PatientListPage: React.FC = () => {
                                   <WhatsApp sx={{ fontSize: 14, color: '#25D366' }} />
                                 </Box>
                                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                                  Condition: {patient.condition}
+                                  Condition: {translatePatientData(patient.condition)}
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                                   Last Visit: {patient.lastVisit}
@@ -3947,7 +3952,7 @@ const PatientListPage: React.FC = () => {
                                 </Box>
                                 <Tooltip title="Click to change status" arrow>
                                   <Chip
-                                    label={patient.status}
+                                    label={translatePatientData(patient.status)}
                                     color={getStatusColor(patient.status) as any}
                                     size="small"
                                     variant="outlined"
@@ -3974,7 +3979,7 @@ const PatientListPage: React.FC = () => {
                                   <WhatsApp sx={{ fontSize: 14, color: '#25D366' }} />
                                 </Box>
                                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                                  Condition: {patient.condition}
+                                  Condition: {translatePatientData(patient.condition)}
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                                   Last Visit: {patient.lastVisit}
@@ -4081,7 +4086,7 @@ const PatientListPage: React.FC = () => {
                                 </Box>
                                 <Tooltip title="Click to change status" arrow>
                                   <Chip
-                                    label={patient.status}
+                                    label={translatePatientData(patient.status)}
                                     color={getStatusColor(patient.status) as any}
                                     size="small"
                                     variant="outlined"
@@ -4108,7 +4113,7 @@ const PatientListPage: React.FC = () => {
                                   <WhatsApp sx={{ fontSize: 14, color: '#25D366' }} />
                                 </Box>
                                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                                  Condition: {patient.condition}
+                                  Condition: {translatePatientData(patient.condition)}
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                                   Last Visit: {patient.lastVisit}
@@ -4215,7 +4220,7 @@ const PatientListPage: React.FC = () => {
                                 </Box>
                                 <Tooltip title="Click to change status" arrow>
                                   <Chip
-                                    label={patient.status}
+                                    label={translatePatientData(patient.status)}
                                     color={getStatusColor(patient.status) as any}
                                     size="small"
                                     variant="outlined"
@@ -4242,7 +4247,7 @@ const PatientListPage: React.FC = () => {
                                   <WhatsApp sx={{ fontSize: 14, color: '#25D366' }} />
                                 </Box>
                                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                                  Condition: {patient.condition}
+                                  Condition: {translatePatientData(patient.condition)}
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                                   Last Visit: {patient.lastVisit}
@@ -4617,14 +4622,14 @@ const PatientListPage: React.FC = () => {
                 selected={activeFilters.status === 'follow-up'}
                 dense
               >
-                Follow-up Required
+                                      {t('follow-up')}
               </MenuItem>
               <MenuItem 
                 onClick={() => handleFilterSelect('status', 'admitted')}
                 selected={activeFilters.status === 'admitted'}
                 dense
               >
-                Under Observation
+                                      {t('under observation')}
               </MenuItem>
             </Box>
 
@@ -4723,11 +4728,11 @@ const PatientListPage: React.FC = () => {
                 <DialogContent sx={{ p: 0 }}>
                   <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 3 }}>
                     <Tabs value={profileTab} onChange={handleProfileTabChange}>
-                      <Tab label="Overview" icon={<Visibility />} iconPosition="start" />
-                      <Tab label="Medical History" icon={<History />} iconPosition="start" />
-                      <Tab label="Medications" icon={<LocalPharmacy />} iconPosition="start" />
-                      <Tab label="Visit Notes" icon={<NoteAdd />} iconPosition="start" />
-                      <Tab label="Documents" icon={<AttachFile />} iconPosition="start" />
+                                              <Tab label={t('overview')} icon={<Visibility />} iconPosition="start" />
+                      <Tab label={t('medical_history')} icon={<History />} iconPosition="start" />
+                                              <Tab label={t('medications')} icon={<LocalPharmacy />} iconPosition="start" />
+                                              <Tab label={t('visit_notes')} icon={<NoteAdd />} iconPosition="start" />
+                                              <Tab label={t('documents')} icon={<AttachFile />} iconPosition="start" />
                     </Tabs>
                   </Box>
 
@@ -4743,19 +4748,19 @@ const PatientListPage: React.FC = () => {
                               </Typography>
                               <List sx={{ p: 0 }}>
                                 <ListItem sx={{ px: 0 }}>
-                                  <ListItemText primary="Phone" secondary={selectedPatient.phone} />
+                                  <ListItemText primary={t('phone')} secondary={selectedPatient.phone} />
                                 </ListItem>
                                 <ListItem sx={{ px: 0 }}>
-                                  <ListItemText primary="Email" secondary={selectedPatient.email} />
+                                  <ListItemText primary={t('email')} secondary={selectedPatient.email} />
                                 </ListItem>
                                 <ListItem sx={{ px: 0 }}>
-                                  <ListItemText primary="Address" secondary={selectedPatient.address} />
+                                  <ListItemText primary={t('address')} secondary={selectedPatient.address} />
                                 </ListItem>
                                 <ListItem sx={{ px: 0 }}>
-                                  <ListItemText primary="Emergency Contact" secondary={selectedPatient.emergencyContact} />
+                                  <ListItemText primary={t('emergency_contact')} secondary={selectedPatient.emergencyContact} />
                                 </ListItem>
                                 <ListItem sx={{ px: 0 }}>
-                                  <ListItemText primary="Blood Type" secondary={selectedPatient.bloodType} />
+                                  <ListItemText primary={t('blood_type')} secondary={selectedPatient.bloodType} />
                                 </ListItem>
                               </List>
                             </CardContent>
@@ -4769,7 +4774,7 @@ const PatientListPage: React.FC = () => {
                               </Typography>
                               <Box sx={{ mb: 2 }}>
                                 <Typography variant="body2" color="text.secondary">Current Condition</Typography>
-                                <Typography variant="body1" fontWeight={600}>{selectedPatient.condition}</Typography>
+                                <Typography variant="body1" fontWeight={600}>{translatePatientData(selectedPatient.condition)}</Typography>
                               </Box>
                               <Box sx={{ mb: 2 }}>
                                 <Typography variant="body2" color="text.secondary">Allergies</Typography>
@@ -5682,12 +5687,12 @@ const PatientListPage: React.FC = () => {
                       value={editingPatient?.status || ''}
                       onChange={(e) => setEditingPatient({ ...editingPatient, status: e.target.value })}
                     >
-                      <MenuItem value="new">New Patient</MenuItem>
+                      <MenuItem value="new">{t('new')}</MenuItem>
                       <MenuItem value="active">Active</MenuItem>
-                      <MenuItem value="follow-up">Follow-up Required</MenuItem>
-                      <MenuItem value="admitted">Under Observation</MenuItem>
-                      <MenuItem value="transferred">Transferred</MenuItem>
-                      <MenuItem value="discharged">Discharged</MenuItem>
+                      <MenuItem value="follow-up">{t('follow-up')}</MenuItem>
+                                              <MenuItem value="admitted">{t('under observation')}</MenuItem>
+                        <MenuItem value="transferred">{t('transferred')}</MenuItem>
+                        <MenuItem value="discharged">{t('discharged')}</MenuItem>
                     </Select>
                   </FormControl>
                 </Grid>
@@ -6614,7 +6619,7 @@ const PatientListPage: React.FC = () => {
                   size="small" 
                   variant="outlined" 
                 />
-                <Typography variant="body2">Follow-up Required</Typography>
+                                      <Typography variant="body2">{t('follow-up')}</Typography>
               </Box>
             </MenuItem>
             
@@ -6624,12 +6629,12 @@ const PatientListPage: React.FC = () => {
             >
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Chip 
-                  label="Under Observation" 
+                                      label={t('under observation')} 
                   color="secondary" 
                   size="small" 
                   variant="outlined" 
                 />
-                <Typography variant="body2">Under Observation / Admitted for Delivery</Typography>
+                                      <Typography variant="body2">{t('under observation')}</Typography>
               </Box>
             </MenuItem>
             
@@ -6639,12 +6644,12 @@ const PatientListPage: React.FC = () => {
             >
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Chip 
-                  label="Transferred" 
+                                      label={t('transferred')} 
                   color="secondary" 
                   size="small" 
                   variant="outlined" 
                 />
-                <Typography variant="body2">Transferred</Typography>
+                                      <Typography variant="body2">{t('transferred')}</Typography>
               </Box>
             </MenuItem>
             
@@ -6654,12 +6659,12 @@ const PatientListPage: React.FC = () => {
             >
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Chip 
-                  label="Discharged" 
+                                      label={t('discharged')} 
                   color="default" 
                   size="small" 
                   variant="outlined" 
                 />
-                <Typography variant="body2">Discharged</Typography>
+                                      <Typography variant="body2">{t('discharged')}</Typography>
               </Box>
             </MenuItem>
           </Menu>

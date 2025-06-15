@@ -162,7 +162,7 @@ const ReceptionistDashboard: React.FC = () => {
               {t('receptionist_dashboard')} 📋
             </Typography>
             <Typography variant="body1" color="text.secondary">
-              Manage appointments, payments, and patient check-ins
+              {t('manage_appointments_payments')}
             </Typography>
           </Box>
 
@@ -174,16 +174,16 @@ const ReceptionistDashboard: React.FC = () => {
                 value="12"
                 icon={<CalendarToday />}
                 color="#3B82F6"
-                subtitle="4 pending check-in"
+                subtitle={`4 ${t('pending_checkin')}`}
               />
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
               <StatCard
-                title="Walk-ins Today"
+                title={t('walk_ins_today')}
                 value="3"
                 icon={<PersonAdd />}
                 color="#10B981"
-                subtitle="2 waiting"
+                subtitle={`2 ${t('waiting')}`}
               />
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
@@ -192,16 +192,16 @@ const ReceptionistDashboard: React.FC = () => {
                 value="8"
                 icon={<Payment />}
                 color="#F59E0B"
-                subtitle="$1,250 total"
+                subtitle={`$1,250 ${t('total')}`}
               />
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
               <StatCard
-                title="Inventory Alerts"
+                title={t('inventory_alerts')}
                 value="5"
                 icon={<Warning />}
                 color="#EF4444"
-                subtitle="Low stock items"
+                subtitle={t('low_stock_items')}
               />
             </Grid>
           </Grid>
@@ -213,21 +213,21 @@ const ReceptionistDashboard: React.FC = () => {
                 <CardContent sx={{ p: 3 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
                     <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                      Today's Appointments
+                      {t('todays_appointments')}
                     </Typography>
                     <Button variant="outlined" size="small" startIcon={<CalendarToday />}>
-                      View Calendar
+                      {t('view_calendar')}
                     </Button>
                   </Box>
                   <TableContainer>
                     <Table>
                       <TableHead>
                         <TableRow>
-                          <TableCell sx={{ fontWeight: 600 }}>Time</TableCell>
-                          <TableCell sx={{ fontWeight: 600 }}>Patient</TableCell>
-                          <TableCell sx={{ fontWeight: 600 }}>Doctor</TableCell>
-                          <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
-                          <TableCell sx={{ fontWeight: 600 }}>Actions</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>{t('time')}</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>{t('patient')}</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>{t('doctor')}</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>{t('status')}</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>{t('table_actions')}</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
@@ -261,7 +261,7 @@ const ReceptionistDashboard: React.FC = () => {
                             </TableCell>
                             <TableCell>
                               <Chip
-                                label={appointment.status.replace('-', ' ')}
+                                label={t(appointment.status.replace('-', '_'))}
                                 color={getAppointmentStatusColor(appointment.status) as any}
                                 size="small"
                                 variant="outlined"
@@ -319,7 +319,7 @@ const ReceptionistDashboard: React.FC = () => {
                       ))}
                     </List>
                     <Button variant="text" size="small" fullWidth sx={{ mt: 1 }}>
-                      View All Payments
+                      {t('view_all_payments')}
                     </Button>
                   </CardContent>
                 </Card>
@@ -342,11 +342,11 @@ const ReceptionistDashboard: React.FC = () => {
                                 {item.item}
                               </Typography>
                               <Typography variant="caption" color="text.secondary">
-                                {item.stock} left (min: {item.minStock})
+                                {item.stock} {t('left')} ({t('min')}: {item.minStock})
                               </Typography>
                             </Box>
                             <Chip
-                              label={item.status}
+                              label={t(item.status)}
                               size="small"
                               color={item.status === 'critical' ? 'error' : 'warning'}
                               variant="outlined"
@@ -362,7 +362,7 @@ const ReceptionistDashboard: React.FC = () => {
                       ))}
                     </List>
                     <Button variant="text" size="small" fullWidth sx={{ mt: 1 }}>
-                      Manage Inventory
+                      {t('manage_inventory')}
                     </Button>
                   </CardContent>
                 </Card>

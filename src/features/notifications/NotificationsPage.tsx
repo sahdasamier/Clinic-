@@ -190,7 +190,7 @@ const NotificationsPage: React.FC = () => {
       setNotificationSettings(settings);
     } catch (error) {
       console.error('Error loading settings:', error);
-      showSnackbar('Failed to load settings', 'error');
+      showSnackbar(t('failed_to_load_settings'), 'error');
     }
   };
 
@@ -205,7 +205,7 @@ const NotificationsPage: React.FC = () => {
       );
     } catch (error) {
       console.error('Error refreshing notifications:', error);
-      showSnackbar('Failed to refresh notifications', 'error');
+      showSnackbar(t('failed_to_refresh_notifications'), 'error');
     } finally {
       setRefreshing(false);
     }
@@ -220,10 +220,10 @@ const NotificationsPage: React.FC = () => {
     try {
       setUpdating(true);
       await contextMarkAsRead(id);
-      showSnackbar('Notification marked as read');
+      showSnackbar(t('notification_marked_as_read'));
     } catch (error) {
       console.error('Error marking as read:', error);
-      showSnackbar('Failed to mark as read', 'error');
+      showSnackbar(t('failed_to_mark_as_read'), 'error');
     } finally {
       setUpdating(false);
     }
@@ -233,10 +233,10 @@ const NotificationsPage: React.FC = () => {
     try {
       setUpdating(true);
       await contextDeleteNotification(id);
-      showSnackbar('Notification deleted');
+      showSnackbar(t('notification_deleted'));
     } catch (error) {
       console.error('Error deleting notification:', error);
-      showSnackbar('Failed to delete notification', 'error');
+      showSnackbar(t('failed_to_delete_notification'), 'error');
     } finally {
       setUpdating(false);
     }
@@ -246,10 +246,10 @@ const NotificationsPage: React.FC = () => {
     try {
       setUpdating(true);
       await contextMarkAllAsRead();
-      showSnackbar('All notifications marked as read');
+      showSnackbar(t('all_notifications_marked_as_read'));
     } catch (error) {
       console.error('Error marking all as read:', error);
-      showSnackbar('Failed to mark all as read', 'error');
+      showSnackbar(t('failed_to_mark_all_as_read'), 'error');
     } finally {
       setUpdating(false);
     }
@@ -273,10 +273,10 @@ const NotificationsPage: React.FC = () => {
     try {
       setSettingsLoading(true);
       await notificationSettingsApi.update(currentUser.id, notificationSettings);
-      showSnackbar('Settings saved successfully');
+      showSnackbar(t('settings_saved_successfully'));
     } catch (error) {
       console.error('Error saving settings:', error);
-      showSnackbar('Failed to save settings', 'error');
+      showSnackbar(t('failed_to_save_settings'), 'error');
     } finally {
       setSettingsLoading(false);
     }
@@ -457,7 +457,7 @@ const NotificationsPage: React.FC = () => {
 
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                             {!notification.read && (
-                              <Tooltip title="Mark as read" placement="top">
+                              <Tooltip title={t('mark_as_read')} placement="top">
                                 <IconButton
                                   size="small"
                                   onClick={(e) => {
@@ -481,7 +481,7 @@ const NotificationsPage: React.FC = () => {
                               </Tooltip>
                             )}
                             
-                            <Tooltip title="Delete notification" placement="top">
+                            <Tooltip title={t('delete_notification')} placement="top">
                               <IconButton
                                 size="small"
                                 onClick={(e) => {

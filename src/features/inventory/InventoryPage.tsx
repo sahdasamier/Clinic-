@@ -29,20 +29,19 @@ const InventoryPage: React.FC = () => {
                 {t('inventory')}
               </Typography>
             </Box>
-            <Typography variant="body1" color="text.secondary">
-              Manage medical supplies and equipment inventory
-            </Typography>
+                      <Typography variant="body1" color="text.secondary">
+            {t('manage_inventory')}
+          </Typography>
           </Box>
 
           <Card>
             <CardContent sx={{ p: 4, textAlign: 'center' }}>
               <Inventory sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
               <Typography variant="h5" sx={{ fontWeight: 600, mb: 2 }}>
-                Inventory Management
+                {t('coming_soon')}
               </Typography>
               <Typography variant="body1" color="text.secondary">
-                Track and manage your medical supplies, equipment, and medications.
-                This feature is currently under development.
+                {t('feature_under_development')}
               </Typography>
             </CardContent>
           </Card>

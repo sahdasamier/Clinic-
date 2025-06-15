@@ -125,7 +125,7 @@ const LoginPage: React.FC = () => {
               {t('login')}
             </Typography>
             <Typography variant="body2" sx={{ opacity: 0.9 }}>
-              ClinicCare Management System
+              {t('clinic_care')} {t('management_system')}
             </Typography>
           </Box>
 
@@ -158,7 +158,7 @@ const LoginPage: React.FC = () => {
               <Box sx={{ mb: 3 }}>
                 <TextField
                   fullWidth
-                  label="Email Address"
+                  label={t('email_address')}
                   type="email"
                   variant="outlined"
                   value={email}
@@ -183,7 +183,7 @@ const LoginPage: React.FC = () => {
               <Box sx={{ mb: 4 }}>
                 <TextField
                   fullWidth
-                  label="Password"
+                  label={t('password')}
                   type={showPassword ? 'text' : 'password'}
                   variant="outlined"
                   value={password}
@@ -231,20 +231,20 @@ const LoginPage: React.FC = () => {
                   mb: 3,
                 }}
               >
-                {loading ? (
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <CircularProgress size={20} color="inherit" />
-                    Signing in...
-                  </Box>
-                ) : (
-                  'Sign In'
-                )}
+                              {loading ? (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <CircularProgress size={20} color="inherit" />
+                  {t('signing_in')}
+                </Box>
+              ) : (
+                t('sign_in')
+              )}
               </Button>
             </form>
 
             <Box sx={{ textAlign: 'center', mt: 2 }}>
               <Typography variant="body2" color="text.secondary">
-                Authorized access only
+                {t('authorized_access_only')}
               </Typography>
             </Box>
           </CardContent>

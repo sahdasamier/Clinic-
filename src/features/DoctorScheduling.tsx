@@ -78,25 +78,25 @@ function TabPanel(props: TabPanelProps) {
   );
 }
 
-// EXPORT: Doctor schedules with working hours and off days
-export const doctorSchedules = [
+// Base doctor schedules data (without translations)
+const baseDoctorSchedules = [
   {
     id: 1,
     name: 'Dr. Ahmed Omar',
     avatar: 'AO',
-    specialty: 'General Medicine',
-    workingHours: { start: '16:00', end: '20:00' }, // 4 PM to 8 PM
-    offDays: ['friday'], // Off on Friday
+    specialty: 'general_medicine',
+    workingHours: { start: '16:00', end: '20:00' },
+    offDays: ['friday'],
     maxPatientsPerHour: 2,
-    consultationDuration: 30, // minutes
+    consultationDuration: 30,
   },
   {
     id: 2,
     name: 'Dr. Sarah Ahmed',
     avatar: 'SA',
-    specialty: 'Pediatrics',
-    workingHours: { start: '09:00', end: '17:00' }, // 9 AM to 5 PM
-    offDays: ['friday', 'saturday'], // Off on weekends
+    specialty: 'pediatrics',
+    workingHours: { start: '09:00', end: '17:00' },
+    offDays: ['friday', 'saturday'],
     maxPatientsPerHour: 3,
     consultationDuration: 20,
   },
@@ -104,8 +104,8 @@ export const doctorSchedules = [
     id: 3,
     name: 'Dr. Mohammed Ali',
     avatar: 'MA',
-    specialty: 'Cardiology',
-    workingHours: { start: '10:00', end: '18:00' }, // 10 AM to 6 PM
+    specialty: 'cardiology',
+    workingHours: { start: '10:00', end: '18:00' },
     offDays: ['friday'],
     maxPatientsPerHour: 2,
     consultationDuration: 45,
@@ -114,13 +114,16 @@ export const doctorSchedules = [
     id: 4,
     name: 'Dr. Fatima Hassan',
     avatar: 'FH',
-    specialty: 'Dermatology',
-    workingHours: { start: '14:00', end: '22:00' }, // 2 PM to 10 PM
+    specialty: 'dermatology',
+    workingHours: { start: '14:00', end: '22:00' },
     offDays: ['friday', 'sunday'],
     maxPatientsPerHour: 4,
     consultationDuration: 15,
   },
 ];
+
+// Export the base doctor schedules for use in other components
+export const doctorSchedules = baseDoctorSchedules;
 
 // Appointment interface (compatible with appointment page)
 interface Appointment {
@@ -144,8 +147,8 @@ interface Appointment {
 }
 
 // Helper function to map doctor name to doctor object
-const findDoctorByName = (doctorName: string) => {
-  return doctorSchedules.find(doc => doc.name === doctorName);
+const findDoctorByName = (doctorName: string, doctors: any[]) => {
+  return doctors.find((doc: any) => doc.name === doctorName);
 };
 
 const daysOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
@@ -199,6 +202,12 @@ const DoctorSchedulingPage: React.FC = () => {
     severity: 'success' as 'success' | 'error'
   });
 
+  // Translate doctor specialties and initialize state
+  const doctorSchedules = baseDoctorSchedules.map(doctor => ({
+    ...doctor,
+    specialty: t(doctor.specialty)
+  }));
+  
   // New state for doctor management
   const [doctors, setDoctors] = useState(doctorSchedules);
   const [addDoctorDialogOpen, setAddDoctorDialogOpen] = useState(false);

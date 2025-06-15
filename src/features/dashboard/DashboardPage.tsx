@@ -372,10 +372,10 @@ const DashboardPage: React.FC = () => {
       
       // Status distribution for pie chart
       statusDistribution: [
-        { name: 'Completed', value: completedAppointments.length, color: '#4caf50' },
-        { name: 'Confirmed', value: confirmedAppointments.length, color: '#2196f3' },
-        { name: 'Pending', value: pendingAppointments.length, color: '#ff9800' },
-        { name: 'Cancelled', value: cancelledAppointments.length, color: '#f44336' },
+            { name: t('completed'), value: completedAppointments.length, color: '#4caf50' },
+    { name: t('confirmed'), value: confirmedAppointments.length, color: '#2196f3' },
+    { name: t('pending'), value: pendingAppointments.length, color: '#ff9800' },
+    { name: t('cancelled'), value: cancelledAppointments.length, color: '#f44336' },
       ].filter(item => item.value > 0),
     };
   }, [appointments, patients, doctors, refreshKey]);
@@ -407,14 +407,14 @@ const DashboardPage: React.FC = () => {
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <Box>
                   <Typography variant="h3" sx={{ fontWeight: 800, mb: 1 }}>
-                    Clinical Dashboard 🏥
+                    {t('clinical_dashboard')} 🏥
                   </Typography>
                   <Typography variant="h6" sx={{ opacity: 0.9, fontWeight: 400 }}>
-                    Real-time data directly from AppointmentList, PatientList & DoctorScheduling pages
+                    {t('real_time_data_description')}
                   </Typography>
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <Tooltip title="Refresh Data">
+                  <Tooltip title={t('refresh_data')}>
                     <IconButton 
                       onClick={refreshData}
                       sx={{ 
@@ -427,7 +427,7 @@ const DashboardPage: React.FC = () => {
                     </IconButton>
                   </Tooltip>
                   <Typography variant="body2" sx={{ opacity: 0.8 }}>
-                    Data Source: Direct Page Imports
+                    {t('data_source_direct_imports')}
                   </Typography>
                 </Box>
               </Box>
@@ -449,39 +449,39 @@ const DashboardPage: React.FC = () => {
           <Grid container spacing={3} sx={{ mb: 4 }}>
             <Grid item xs={12} sm={6} lg={3}>
               <StatCard
-                title="Working Doctors Today"
+                title={t('working_doctors_today')}
                 value={`${stats.workingDoctors}/${stats.totalDoctors}`}
                 icon={<LocalHospital sx={{ fontSize: 32 }} />}
                 gradient={colorPalette.gradient.blue}
-                change={stats.workingDoctors > 0 ? `${stats.workingDoctors} active` : 'None today'}
+                change={stats.workingDoctors > 0 ? `${stats.workingDoctors} ${t('active')}` : t('none_today')}
               />
             </Grid>
             <Grid item xs={12} sm={6} lg={3}>
               <StatCard
-                title="Total Appointments"
+                title={t('total_appointments')}
                 value={stats.totalAppointments}
                 icon={<CalendarToday sx={{ fontSize: 32 }} />}
                 gradient={colorPalette.gradient.green}
-                change={stats.todayAppointments > 0 ? `${stats.todayAppointments} today` : 'None today'}
+                change={stats.todayAppointments > 0 ? `${stats.todayAppointments} ${t('today')}` : t('none_today')}
               />
             </Grid>
             <Grid item xs={12} sm={6} lg={3}>
               <StatCard
-                title="Completion Rate"
+                title={t('completion_rate')}
                 value={stats.totalAppointments > 0 ? `${Math.round((stats.completedAppointments / stats.totalAppointments) * 100)}%` : '0%'}
                 icon={<CheckCircle sx={{ fontSize: 32 }} />}
                 gradient={colorPalette.gradient.orange}
-                change={`${stats.completedAppointments} completed`}
-                subtitle={`${stats.pendingAppointments} pending completion`}
+                change={`${stats.completedAppointments} ${t('completed')}`}
+                subtitle={`${stats.pendingAppointments} ${t('pending_completion')}`}
               />
             </Grid>
             <Grid item xs={12} sm={6} lg={3}>
               <StatCard
-                title="Total Patients"
+                title={t('total_patients')}
                 value={stats.totalPatients}
                 icon={<Groups sx={{ fontSize: 32 }} />}
                 gradient={colorPalette.gradient.purple}
-                change={`${stats.newPatients} new patients`}
+                change={`${stats.newPatients} ${t('new_patients')}`}
               />
             </Grid>
           </Grid>
@@ -494,7 +494,7 @@ const DashboardPage: React.FC = () => {
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
                   <Analytics sx={{ fontSize: 28, color: colorPalette.primary, mr: 2 }} />
                   <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                    Revenue Analytics (EGP)
+                    {t('revenue_analytics_egp')}
                   </Typography>
                 </Box>
                 <Box sx={{ textAlign: 'center', mb: 2 }}>
@@ -502,31 +502,31 @@ const DashboardPage: React.FC = () => {
                     EGP {stats.totalRevenue.toLocaleString()}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Total Paid Revenue ({stats.paidPayments} invoices)
+                    {t('total_paid_revenue')} ({stats.paidPayments} {t('invoices')})
                   </Typography>
                 </Box>
                 <Divider sx={{ my: 2 }} />
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="body2">Avg. per Payment:</Typography>
+                  <Typography variant="body2">{t('avg_per_payment')}:</Typography>
                   <Typography variant="body2" fontWeight={600}>
                     EGP {stats.avgRevenuePerPayment}
                   </Typography>
                 </Box>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="body2">Pending ({stats.pendingPayments}):</Typography>
+                  <Typography variant="body2">{t('pending')} ({stats.pendingPayments}):</Typography>
                   <Typography variant="body2" fontWeight={600} color="warning.main">
                     EGP {stats.totalPendingRevenue.toLocaleString()}
                   </Typography>
                 </Box>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="body2">Overdue ({stats.overduePayments}):</Typography>
+                  <Typography variant="body2">{t('overdue')} ({stats.overduePayments}):</Typography>
                   <Typography variant="body2" fontWeight={600} color="error.main">
                     EGP {stats.totalOverdueRevenue.toLocaleString()}
                   </Typography>
                 </Box>
                 {stats.partialPayments > 0 && (
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                    <Typography variant="body2">Partial ({stats.partialPayments}):</Typography>
+                    <Typography variant="body2">{t('partial')} ({stats.partialPayments}):</Typography>
                     <Typography variant="body2" fontWeight={600} color="info.main">
                       EGP {stats.totalPartialRevenue.toLocaleString()}
                     </Typography>
@@ -534,14 +534,12 @@ const DashboardPage: React.FC = () => {
                 )}
                 <Divider sx={{ my: 1 }} />
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="body2" fontWeight={700}>Total Expected:</Typography>
+                  <Typography variant="body2" fontWeight={700}>{t('total_expected')}:</Typography>
                   <Typography variant="body2" fontWeight={700} color="primary.main">
                     EGP {(stats.totalRevenue + stats.totalPendingRevenue + stats.totalOverdueRevenue + stats.totalPartialRevenue).toLocaleString()}
                   </Typography>
                 </Box>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center', mt: 1 }}>
-                  Data source: PaymentListPage.tsx
-                </Typography>
+
               </Card>
             </Grid>
 
@@ -550,14 +548,14 @@ const DashboardPage: React.FC = () => {
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
                   <Timeline sx={{ fontSize: 28, color: colorPalette.info, mr: 2 }} />
                   <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                    Efficiency Metrics
+                    {t('efficiency_metrics')}
                   </Typography>
                 </Box>
                 <Box sx={{ mb: 3 }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                    <Typography variant="body2">Average Consultation</Typography>
+                    <Typography variant="body2">{t('average_consultation')}</Typography>
                     <Typography variant="body2" fontWeight={600}>
-                      {stats.avgConsultationTime} min
+                      {stats.avgConsultationTime} {t('min')}
                     </Typography>
                   </Box>
                   <LinearProgress 
@@ -568,7 +566,7 @@ const DashboardPage: React.FC = () => {
                 </Box>
                 <Box sx={{ mb: 2 }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                    <Typography variant="body2">Clinic Utilization</Typography>
+                    <Typography variant="body2">{t('clinic_utilization')}</Typography>
                     <Typography variant="body2" fontWeight={600}>
                       {stats.clinicUtilization}%
                     </Typography>
@@ -587,19 +585,19 @@ const DashboardPage: React.FC = () => {
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
                   <MedicalServices sx={{ fontSize: 28, color: colorPalette.success, mr: 2 }} />
                   <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                    Department Status
+                    {t('department_status')}
                   </Typography>
                 </Box>
                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
-                  Doctor specialties from DoctorScheduling matched with AppointmentList
+                  {t('doctor_specialties_description')}
                 </Typography>
                 {specialtyData.length > 0 && specialtyData.some(s => s.value > 0) ? (
                   specialtyData.filter(s => s.value > 0).map((specialty, index) => (
                     <Box key={index} sx={{ mb: 2 }}>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                        <Typography variant="body2" fontWeight={600}>{specialty.name}</Typography>
+                        <Typography variant="body2" fontWeight={600}>{t(specialty.name)}</Typography>
                         <Typography variant="body2" fontWeight={600} color="primary.main">
-                          {specialty.value} appointments
+                          {specialty.value} {t('appointments')}
                         </Typography>
                       </Box>
                       <LinearProgress 
@@ -620,10 +618,10 @@ const DashboardPage: React.FC = () => {
                 ) : (
                   <Alert severity="warning" sx={{ mt: 1 }}>
                     <Typography variant="body2">
-                      No appointments found matching doctors from DoctorScheduling
+                      {t('no_appointments_found')}
                     </Typography>
                     <Typography variant="caption" sx={{ display: 'block', mt: 1, opacity: 0.8 }}>
-                      Check that appointment doctors match exactly with doctor names in DoctorScheduling
+                      {t('check_appointment_doctors')}
                     </Typography>
                   </Alert>
                 )}
@@ -639,10 +637,10 @@ const DashboardPage: React.FC = () => {
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
                   <Typography variant="h6" sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
                     <ShowChart sx={{ color: colorPalette.primary }} />
-                    Weekly Appointment Trends
+                    {t('weekly_appointment_trends')}
                   </Typography>
                   <Alert severity="info">
-                    Last 7 days from real data
+                    {t('last_7_days_real_data')}
                   </Alert>
                 </Box>
                 <Box sx={{ height: 300 }}>
@@ -675,7 +673,7 @@ const DashboardPage: React.FC = () => {
               <Card sx={{ p: 3 }}>
                 <Typography variant="h6" sx={{ mb: 3, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Assignment sx={{ color: colorPalette.warning }} />
-                  Status Distribution
+                  {t('status_distribution')}
                 </Typography>
                 <Box sx={{ height: 200, mb: 2 }}>
                   <ResponsiveContainer width="100%" height="100%">
@@ -730,19 +728,19 @@ const DashboardPage: React.FC = () => {
                   <Box sx={{ p: 3, pb: 0 }}>
                     <Typography variant="h6" sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
                       <People sx={{ color: colorPalette.success }} />
-                      Doctor Performance Analytics (Real Data)
+                      {t('doctor_performance_analytics')}
                     </Typography>
                   </Box>
                   <TableContainer>
                     <Table>
                       <TableHead>
                         <TableRow sx={{ backgroundColor: '#f8fafc' }}>
-                          <TableCell sx={{ fontWeight: 700, py: 2 }}>Doctor</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>Specialty</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>Total Appointments</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>Completed</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>Efficiency Rate</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>Performance</TableCell>
+                          <TableCell sx={{ fontWeight: 700, py: 2 }}>{t('doctor')}</TableCell>
+                          <TableCell sx={{ fontWeight: 700 }}>{t('specialty')}</TableCell>
+                          <TableCell sx={{ fontWeight: 700 }}>{t('total_appointments')}</TableCell>
+                          <TableCell sx={{ fontWeight: 700 }}>{t('completed')}</TableCell>
+                          <TableCell sx={{ fontWeight: 700 }}>{t('efficiency_rate')}</TableCell>
+                          <TableCell sx={{ fontWeight: 700 }}>{t('performance')}</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
@@ -773,7 +771,7 @@ const DashboardPage: React.FC = () => {
                             </TableCell>
                             <TableCell>
                               <Chip 
-                                label={doctor.specialty} 
+                                label={t(doctor.specialty)} 
                                 size="small" 
                                 sx={{ 
                                   backgroundColor: `${colorPalette.info}15`,
@@ -815,9 +813,9 @@ const DashboardPage: React.FC = () => {
                                   }}
                                 />
                                 <Chip 
-                                  label={doctor.efficiency >= 80 ? 'Excellent' : 
-                                        doctor.efficiency >= 60 ? 'Good' : 
-                                        doctor.appointments === 0 ? 'No Data' : 'Needs Attention'} 
+                                  label={doctor.efficiency >= 80 ? t('excellent') : 
+                                        doctor.efficiency >= 60 ? t('good') : 
+                                        doctor.appointments === 0 ? t('no_data') : t('needs_attention')} 
                                   size="small"
                                   color={doctor.efficiency >= 80 ? 'success' : 
                                         doctor.efficiency >= 60 ? 'warning' : 
