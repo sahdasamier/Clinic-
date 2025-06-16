@@ -304,125 +304,189 @@ const resources = {
       'completed_status': 'Completed',
       'total_patients': 'Total Patients',
       'comprehensive_patient_care': '🏥 Comprehensive Patient Care',
-      'sync_appointments': 'Sync Appointments',
+      'sync_appointments': 'Sync Appointments'
     }
   },
   ar: {
     translation: {
-      // Basic Terms - الشروط الأساسية
-      'clinic_management': 'إدارة العيادة',
-      'login': 'تسجيل الدخول',
-      'email': 'البريد الإلكتروني',
-      'email_address': 'عنوان البريد الإلكتروني',
-      'password': 'كلمة المرور',
-      'sign_in': 'تسجيل الدخول',
-      'signing_in': 'جاري تسجيل الدخول...',
-      'forgot_password': 'هل نسيت كلمة المرور؟',
-      'no_account': 'ليس لديك حساب؟ اشترك الآن',
-      'authorized_access_only': 'وصول مخول فقط',
-      'management_system': 'نظام الإدارة',
-      'clinic_care': 'كلينيك كير',
-      'version': 'الإصدار 1.0.0',
+      // Appointment Management
+      "appointment_management": "إدارة المواعيد",
+      "realtime_scheduling_coordination": "جدولة في الوقت الفعلي وتنسيق مواعيد المرضى",
+      "auto_sync_patient_database": "مزامنة تلقائية مع قاعدة بيانات المرضى",
+      "appointment_scheduling": "جدولة المواعيد",
+      "professional_appointment_management": "إدارة مواعيد المرضى المهنية والجدولة",
+      "todays_schedule": "جدول اليوم",
+      "schedule_new_appointment": "جدولة موعد جديد",
+      "appointment_statistics": "إحصائيات المواعيد",
+      "todays_progress": "تقدم اليوم",
+      "doctor_hours": "ساعات الطبيب",
+      "doctor_hours_display": "3 مساءً - 8 مساءً",
+      "confirmed_today": "مؤكد اليوم",
+      "available_slots": "الفترات المتاحة",
       
-      // Profile & User - الملف الشخصي والمستخدم
-      'general_practitioner': 'طبيب عام',
-      'profile_settings': 'الملف الشخصي والإعدادات',
-      'sign_out': 'تسجيل الخروج',
-      'welcome_back': 'مرحباً بعودتك',
+      // Search & Filters
+      "search_appointments_placeholder": "🔍 البحث في المواعيد بالمريض أو الطبيب أو النوع أو الهاتف...",
+      "showing_appointments": "عرض {{showing}} من {{total}} موعد",
+      "with_filters_applied": "مع تطبيق {{count}} مرشح/مرشحات",
+      "filter": "تصفية",
+      "table": "جدول",
+      "cards": "بطاقات",
+      "all": "الكل",
+      "today": "اليوم",
+      "search": "بحث",
       
-      // Navigation & Dashboard - التنقل ولوحة القيادة
-      'dashboard': 'لوحة القيادة',
-      'patients': 'المرضى',
-      'appointments': 'المواعيد',
-      'inventory': 'المخزون',
-      'payments': 'المدفوعات',
-      'notifications': 'الإشعارات',
-      'scheduling': 'جدولة الأطباء',
-      'doctor_scheduling': 'جدولة الأطباء',
-      'settings': 'الإعدادات',
-      'language': 'اللغة',
+      // Status & States
+      "pending": "معلق",
+      "completed": "مكتمل",
+      "confirmed": "مؤكد",
+      "pending_confirmation": "في انتظار التأكيد",
+      "cancelled": "ملغي",
+      "rescheduled": "معاد جدولته",
+      "no_show": "لم يحضر",
+      "status": "الحالة",
       
-      // Clinic Setup - إعداد العيادة
-      'clinic_onboarding': 'إعداد العيادة',
-      'clinic_address': 'عنوان العيادة',
-      'clinic_phone': 'رقم هاتف العيادة',
-      'clinic_email': 'البريد الإلكتروني للعيادة',
-      'clinic_name': 'اسم العيادة',
-      'clinic_details': 'تفاصيل العيادة',
-      'operating_hours': 'ساعات العمل',
-      'clinic_list': 'قائمة العيادات',
-      'address': 'العنوان',
-      'phone': 'الهاتف',
+      // Basic Info
+      "patient": "المريض",
+      "doctor": "الطبيب",
+      "time": "الوقت",
+      "time_duration": "الوقت والمدة",
+      "type": "النوع",
+      "priority": "الأولوية",
+      "actions": "الإجراءات",
+      "duration": "المدة",
+      "minutes": "دقيقة",
+      "location": "الموقع",
+      "notes": "الملاحظات",
       
-      // Staff Management - إدارة الموظفين
-      'invite_staff': 'دعوة الموظفين',
-      'first_name': 'الاسم الأول',
-      'last_name': 'اسم العائلة',
-      'full_name': 'الاسم الكامل',
-      'role': 'الدور الوظيفي',
-      'doctor': 'طبيب',
-      'receptionist': 'موظف استقبال',
-      'send_invite': 'إرسال دعوة',
-      'invited_staff': 'الموظفون المدعوون',
-      'name': 'الاسم',
-      'status': 'الحالة',
-      'pending': 'قيد الانتظار',
-      'joined': 'انضم',
+      // Appointment Types
+      "consultation": "استشارة",
+      "check_up": "فحص",
+      "follow_up": "متابعة",
+      "surgery_consultation": "استشارة جراحية",
+      "emergency": "طارئ",
       
-      // Dashboard Stats - إحصائيات لوحة القيادة
-      'appointments_today': 'مواعيد اليوم',
-      'new_patients': 'مرضى جدد',
-      'completed_appointments': 'المواعيد المكتملة',
-      'upcoming_appointments': 'المواعيد القادمة',
-      'total_revenue': 'إجمالي الإيرادات',
-      'weekly_appointments': 'المواعيد الأسبوعية',
-      'payments_due': 'المدفوعات المستحقة',
-      'inventory_alerts': 'تنبيهات المخزون',
+      // Priority Levels
+      "normal": "عادي",
+      "high_priority": "أولوية عالية",
+      "urgent": "عاجل",
       
-      // Dashboard Types - أنواع لوحات القيادة
-      'receptionist_dashboard': 'لوحة قيادة موظف الاستقبال',
-      'patient_dashboard': 'لوحة قيادة المريض',
-      'doctor_dashboard': 'لوحة قيادة الطبيب',
+      // Actions
+      "mark_as_pending": "تحديد كمعلق",
+      "mark_as_completed": "تحديد كمكتمل",
+      "click_to_change_status": "انقر لتغيير الحالة",
+      "view_notes": "عرض الملاحظات",
+      "edit_appointment": "تحرير الموعد",
+      "create_appointment": "إنشاء موعد",
+      "save_appointment": "حفظ الموعد",
+      "book_edit_appointment": "حجز/تحرير موعد",
+      "cancel": "إلغاء",
+      "close": "إغلاق",
+      "back": "السابق",
+      "next": "التالي",
       
-      // Appointments - المواعيد
-      'patient': 'المريض',
-      'time': 'الوقت',
-      'confirmed': 'مؤكد',
-      'cancelled': 'ملغي',
-      'create_appointment': 'إنشاء موعد',
-      'edit_appointment': 'تعديل الموعد',
-      'book_edit_appointment': 'حجز أو تعديل موعد',
-      'patient_name': 'اسم المريض',
-      'appointment_date': 'تاريخ الموعد',
-      'appointment_time': 'وقت الموعد',
-      'appointment_details': 'تفاصيل الموعد',
-      'appointment_list': 'قائمة المواعيد',
-      'appointment_status': 'حالة الموعد',
-      'save_appointment': 'حفظ الموعد',
-      'next_appointment': 'الموعد القادم',
+      // WhatsApp Integration
+      "whatsapp_patient": "واتساب المريض",
+      "whatsapp": "واتساب",
+      "whatsapp_reminder_message": "مرحباً {{patient}}، هذا تذكير بموعدك {{type}} اليوم في {{time}}.",
+      "whatsapp_appointment_message": "مرحباً {{patient}}، هذا بخصوص موعدك {{type}} في {{date}} في {{time}}.",
       
-      // Patients - المرضى
-      'add_edit_patient': 'إضافة أو تعديل مريض',
-      'patient_profile': 'ملف المريض',
-      'patient_details': 'تفاصيل المريض',
-      'patient_documents': 'مستندات المريض',
-      'date_of_birth': 'تاريخ الميلاد',
-      'upload_document': 'تحميل مستند',
-      'document_name': 'اسم المستند',
-      'upload_date': 'تاريخ التحميل',
+      // Empty States & Messages
+      "no_appointments_match_filters": "لا توجد مواعيد تطابق المرشحات",
+      "try_adjusting_search_criteria": "جرب تعديل معايير البحث أو مسح بعض المرشحات",
+      "clear_all_filters": "مسح جميع المرشحات",
+      "no_appointments_today": "لا توجد مواعيد مجدولة لليوم",
+      "no_pending_appointments": "لا توجد مواعيد معلقة",
+      "no_completed_appointments": "لا توجد مواعيد مكتملة",
+      "no_confirmed_appointments": "لا توجد مواعيد مؤكدة",
+      "no_pending_confirmation_appointments": "لا توجد مواعيد في انتظار التأكيد",
+      "no_cancelled_appointments": "لا توجد مواعيد ملغاة",
+      "no_rescheduled_appointments": "لا توجد مواعيد معاد جدولتها",
+      "no_no_show_appointments": "لا توجد مواعيد لم يحضر إليها",
+      "no_appointments_found": "لم يتم العثور على مواعيد",
+      "schedule_appointments_today": "جدول بعض المواعيد لليوم",
+      "all_appointments_completed_confirmed": "جميع المواعيد مكتملة أو مؤكدة",
+      "complete_appointments_to_see_here": "أكمل بعض المواعيد لرؤيتها هنا",
+      "no_confirmed_status_yet": "لا توجد مواعيد بحالة مؤكدة بعد",
+      "all_appointments_confirmed": "تم تأكيد جميع المواعيد",
+      "no_appointments_cancelled": "لم يتم إلغاء أي مواعيد",
+      "no_appointments_rescheduled": "لم يتم إعادة جدولة أي مواعيد",
+      "no_patients_missed_appointments": "لم يفوت أي مرضى مواعيدهم",
+      "schedule_first_appointment": "جدول موعدك الأول للبدء",
       
-      // Medical Records - السجلات الطبية
-      'medical_records': 'السجلات الطبية',
-      'view_records': 'عرض السجلات',
-      'doctor_notes': 'ملاحظات الطبيب',
-      'add_note': 'إضافة ملاحظة',
-      'enter_note': 'أدخل ملاحظتك هنا...',
-      'save_note': 'حفظ الملاحظة',
-      'notes': 'الملاحظات',
-      'profile': 'الملف الشخصي',
-      'visits': 'الزيارات',
+      // Basic Terms
+      "clinic_management": "إدارة العيادة",
+      "login": "تسجيل الدخول",
+      "email": "البريد الإلكتروني",
+      "email_address": "عنوان البريد الإلكتروني",
+      "password": "كلمة المرور",
+      "sign_in": "تسجيل الدخول",
+      "signing_in": "جاري تسجيل الدخول...",
+      "forgot_password": "هل نسيت كلمة المرور؟",
+      "no_account": "ليس لديك حساب؟ اشترك الآن",
+      "authorized_access_only": "وصول مخول فقط",
+      "management_system": "نظام الإدارة",
+      "clinic_care": "كلينيك كير",
+      "version": "الإصدار 1.0.0",
       
-      // Billing & Payments - الفواتير والمدفوعات
+      // Navigation & Dashboard
+      "dashboard": "لوحة القيادة",
+      "patients": "المرضى",
+      "appointments": "المواعيد",
+      "inventory": "المخزون",
+      "payments": "المدفوعات",
+      "notifications": "الإشعارات",
+      "scheduling": "جدولة الأطباء",
+      "doctor_scheduling": "جدولة الأطباء",
+      "settings": "الإعدادات",
+      "language": "اللغة",
+      
+      // Form Fields
+      "patient_name": "اسم المريض",
+      "phone_number": "رقم الهاتف",
+      "appointment_date": "تاريخ الموعد",
+      "appointment_time": "وقت الموعد",
+      "appointment_details": "تفاصيل الموعد",
+      "appointment_type": "نوع الموعد",
+      "phone_placeholder": "مثال: +20 10 1234 5678",
+      "location_placeholder": "مثال: غرفة 101، غرفة استشارة أ",
+      "notes_placeholder": "أدخل أي ملاحظات إضافية حول الموعد أو التاريخ الطبي أو المتطلبات الخاصة...",
+      "appointment_notes_placeholder": "أدخل أي ملاحظات خاصة أو تعليمات لهذا الموعد...",
+      
+      // Medical Specialties
+      "general_practice": "طب عام",
+      "cardiology": "أمراض القلب",
+      "dermatology": "الأمراض الجلدية",
+      "orthopedics": "جراحة العظام",
+      "specialty": "التخصص",
+      
+      // Validation Messages
+      "patient_name_required": "اسم المريض مطلوب",
+      "phone_required": "رقم الهاتف مطلوب",
+      "date_required": "تاريخ الموعد مطلوب",
+      "time_required": "وقت الموعد مطلوب",
+      "type_required": "نوع الموعد مطلوب",
+      "doctor_required": "اختيار الطبيب مطلوب",
+      "fill_required_fields": "يرجى ملء جميع الحقون",
+      
+      // Success Messages
+      "appointment_saved_successfully": "تم حفظ الموعد بنجاح!",
+      "saving": "جاري الحفظ...",
+      "appointment_save_failed": "فشل في حفظ الموعد",
+      
+      // Missing Appointment Keys
+      "schedule": "جدولة",
+      "performance_today": "الأداء اليوم", 
+      "clinic_analytics_overview": "نظرة عامة على تحليلات العيادة",
+      "time_remaining": "الوقت المتبقي",
+      "avg_duration": "متوسط المدة",
+      "min": "د",
+      "schedule_appointment": "جدولة موعد",
+      "more_appointments": "مواعيد أخرى",
+      "appointments_finishing_at": "{{count}} مواعيد • تنتهي في {{time}}",
+      "done_count": "{{completed}}/{{total}} منجز",
+      "enjoy_free_day_or_schedule": "استمتع بيومك الحر أو جدول بعض المواعيد",
+        
+        // Billing & Payments - الفواتير والمدفوعات
       'billing_information': 'معلومات الفواتير',
       'view_billing': 'عرض الفواتير',
       'payment_list': 'قائمة المدفوعات',
@@ -446,54 +510,38 @@ const resources = {
       'coming_soon': 'قريباً',
       'feature_under_development': 'هذه الميزة قيد التطوير حالياً.',
       
-      // Common Actions - الإجراءات الشائعة
+      // Additional Terms
       'save': 'حفظ',
-      'close': 'إغلاق',
       'register': 'التسجيل',
       'already_have_account': 'هل لديك حساب بالفعل؟ تسجيل الدخول',
-      'type': 'النوع',
       'view': 'عرض',
       'edit': 'تعديل',
       'delete': 'حذف',
-      'cancel': 'إلغاء',
       'confirm': 'تأكيد',
       'loading': 'جاري التحميل...',
       'refresh': 'تحديث',
-      'search': 'بحث',
-      'filter': 'تصفية',
       'sort': 'ترتيب',
       'export': 'تصدير',
       'import': 'استيراد',
       'print': 'طباعة',
       
-      // Dashboard specific - خاص بلوحة القيادة
+      // Dashboard & Patient Management  
       'clinical_dashboard': 'لوحة القيادة الطبية',
       'working_doctors_today': 'الأطباء العاملون اليوم',
-      'completion_rate': 'معدل الإنجاز',
-      'total_appointments': 'إجمالي المواعيد',
-      'completed': 'مكتمل',
-      
-      // Patient Management specific - خاص بإدارة المرضى
       'patient_management': 'إدارة المرضى',
       'whatsapp_all': 'واتساب للجميع',
       'add_new_patient': 'إضافة مريض جديد',
       'search_patients_placeholder': 'البحث في المرضى بالاسم أو البريد الإلكتروني أو الهاتف أو الحالة...',
       'organize': 'تنظيم',
-      'all': 'الكل',
-      'table': 'جدول',
-      'cards': 'بطاقات',
       'active_filters': 'المرشحات النشطة',
       'gender': 'الجنس',
       'age': 'العمر',
       'condition': 'الحالة المرضية',
-      'clear_all_filters': 'مسح جميع المرشحات',
       'male': 'ذكر',
       'female': 'أنثى',
       'contact': 'جهة الاتصال',
       'last_visit': 'آخر زيارة',
-      'actions': 'الإجراءات',
       'years': 'سنة',
-      'duration': 'المدة',
       
       // Patient Status Values - قيم حالة المريض
       'old': 'مريض قديم',
@@ -531,12 +579,9 @@ const resources = {
       'anemia': 'فقر الدم',
       'thyroid disorder': 'اضطراب الغدة الدرقية',
       
-      // Medical Specialties
+      // Medical Specialties  
       'general_medicine': 'طب عام',
-      'cardiology': 'أمراض القلب',
       'pediatrics': 'طب الأطفال',
-      'dermatology': 'الأمراض الجلدية',
-      'orthopedics': 'العظام',
       'neurology': 'الأعصاب',
       'gastroenterology': 'الجهاز الهضمي',
       'ophthalmology': 'طب العيون',
@@ -579,7 +624,6 @@ const resources = {
       'working_hours_schedule': 'جدول ساعات العمل والجدول',
       'consultation_duration': 'مدة الاستشارة',
       'max_patients_per_hour': 'أقصى عدد مرضى في الساعة',
-      'available_slots': 'جدول ساعات متاحة',
       'reserved_for_patient': 'محجوز للمريض',
       'standard_doctor_availability': 'التواجد الطبي المعتمد خلال ساعات العمل',
       'manually_added_slot': 'جدول ساعات متاح (إضافة جديدة)',
@@ -588,7 +632,6 @@ const resources = {
       'automatic_sync_active': '🔄 مزامنة تلقائية نشطة للمريض والموعد',
       'sync_now': 'مزامنة الآن',
       'from_appointments': 'من المواعيد',
-      'follow_up': 'متابعة',
       'completion': 'الإنجاز',
       'reservation': 'الحجز',
       'reservations': 'الحجوزات',

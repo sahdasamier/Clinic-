@@ -26,3 +26,6 @@ const auth = getAuth(app);
 
 // Export for use in other files
 export { auth, firestore, analytics };
+
+// Export firestore as db for backward compatibility
+export const db = firestore;
