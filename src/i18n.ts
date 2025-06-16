@@ -661,11 +661,33 @@ i18n
   .use(initReactI18next)
   .init({
     resources,
-    lng: 'en',
     fallbackLng: 'en',
+    
+    detection: {
+      order: ['localStorage', 'navigator', 'htmlTag'],
+      
+      lookupLocalStorage: 'i18nextLng',
+      
+      caches: ['localStorage'],
+      
+      convertDetectedLanguage: (lng) => {
+        if (lng.startsWith('ar')) return 'ar';
+        return 'en';
+      },
+    },
+    
     interpolation: {
       escapeValue: false,
     },
+  })
+  .then(() => {
+    console.log('i18n initialized with language:', i18n.language);
+    console.log('localStorage language:', localStorage.getItem('i18nextLng'));
   });
+
+i18n.on('languageChanged', (lng) => {
+  console.log('Language changed to:', lng);
+  console.log('Saved to localStorage:', localStorage.getItem('i18nextLng'));
+});
 
 export default i18n; 
