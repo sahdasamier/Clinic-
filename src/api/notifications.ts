@@ -1,14 +1,18 @@
 import { Notification, NotificationSettings } from '../types/models';
+import {
+  getDefaultNotificationAppointments,
+  getDefaultNotificationPayments,
+  getDefaultNotificationPatients,
+  getDefaultInventory,
+  STORAGE_KEYS_DATA,
+  type NotificationAppointment,
+  type NotificationPayment,
+  type NotificationPatient,
+  type InventoryItem,
+} from '../data/mockData';
 
-// Storage keys for different modules
-const STORAGE_KEYS = {
-  NOTIFICATIONS: 'clinic_notifications_data',
-  APPOINTMENTS: 'clinic_appointments_data',
-  PAYMENTS: 'clinic_payments_data', 
-  PATIENTS: 'clinic_patients_data',
-  INVENTORY: 'clinic_inventory_data',
-  SETTINGS: 'clinic_notification_settings'
-};
+// Use imported storage keys
+const STORAGE_KEYS = STORAGE_KEYS_DATA;
 
 // Helper functions to load data from localStorage
 const loadDataFromStorage = (key: string, defaultData: any[] = []): any[] => {
@@ -26,170 +30,7 @@ const loadDataFromStorage = (key: string, defaultData: any[] = []): any[] => {
   return defaultData;
 };
 
-// Default data for different modules
-const getDefaultAppointments = () => {
-  const today = new Date();
-  const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
-  const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
-  
-  return [
-    {
-      id: 1,
-      patient: 'Ahmed Al-Rashid',
-      date: tomorrow.toISOString().split('T')[0],
-      time: '3:00 PM',
-      status: 'confirmed',
-      type: 'Consultation',
-      priority: 'normal',
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: 2,
-      patient: 'Fatima Hassan',
-      date: today.toISOString().split('T')[0],
-      time: '2:00 PM',
-      status: 'confirmed',
-      type: 'Check-up',
-      priority: 'normal',
-      createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
-    },
-    {
-      id: 3,
-      patient: 'Mohammed Ali',
-      date: yesterday.toISOString().split('T')[0],
-      time: '4:00 PM',
-      status: 'no-show',
-      type: 'Follow-up',
-      priority: 'normal',
-      createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-    },
-    {
-      id: 4,
-      patient: 'Sara Ahmed',
-      date: today.toISOString().split('T')[0],
-      time: '5:00 PM',
-      status: 'cancelled',
-      type: 'Surgery Consultation',
-      priority: 'high',
-      createdAt: new Date(Date.now() - 30 * 60 * 1000).toISOString()
-    }
-  ];
-};
 
-const getDefaultPayments = () => {
-  const today = new Date();
-  const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
-  const twoDaysAgo = new Date(today.getTime() - 2 * 24 * 60 * 60 * 1000);
-  
-  return [
-    {
-      id: 1,
-      invoiceId: 'INV-2024-001',
-      patient: 'Ahmed Al-Rashid',
-      amount: 450.00,
-      status: 'paid',
-      date: today.toISOString().split('T')[0],
-      method: 'Credit Card',
-      createdAt: new Date(Date.now() - 10 * 60 * 1000).toISOString()
-    },
-    {
-      id: 2,
-      invoiceId: 'INV-2024-002',
-      patient: 'Omar Khalil',
-      amount: 320.00,
-      status: 'overdue',
-      date: twoDaysAgo.toISOString().split('T')[0],
-      dueDate: yesterday.toISOString().split('T')[0],
-      method: 'Bank Transfer',
-      createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
-    },
-    {
-      id: 3,
-      invoiceId: 'INV-2024-003',
-      patient: 'Layla Hassan',
-      amount: 180.00,
-      status: 'pending',
-      date: yesterday.toISOString().split('T')[0],
-      dueDate: new Date(Date.now() + 13 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      method: 'Cash',
-      createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-    }
-  ];
-};
-
-const getDefaultPatients = () => {
-  const today = new Date();
-  const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
-  
-  return [
-    {
-      id: 1,
-      name: 'Ahmed Al-Rashid',
-      status: 'old',
-      lastVisit: today.toISOString().split('T')[0],
-      nextAppointment: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
-    },
-    {
-      id: 2,
-      name: 'Nadia Al-Mansoori',
-      status: 'new',
-      lastVisit: null,
-      nextAppointment: null,
-      createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
-    },
-    {
-      id: 3,
-      name: 'Hassan Al-Zahra',
-      status: 'follow-up',
-      lastVisit: yesterday.toISOString().split('T')[0],
-      nextAppointment: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      medications: [
-        { name: 'Metformin', status: 'Active', dateStarted: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] }
-      ],
-      createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
-    }
-  ];
-};
-
-const getDefaultInventory = () => [
-  {
-    id: 1,
-    name: 'Surgical Masks',
-    quantity: 5,
-    minQuantity: 50,
-    supplier: 'MedSupplies Inc.',
-    lastUpdated: new Date().toISOString(),
-    status: 'low'
-  },
-  {
-    id: 2,
-    name: 'Disposable Gloves',
-    quantity: 0,
-    minQuantity: 100,
-    supplier: 'Healthcare Essentials',
-    lastUpdated: new Date().toISOString(),
-    status: 'out_of_stock'
-  },
-  {
-    id: 3,
-    name: 'Bandages',
-    quantity: 15,
-    minQuantity: 25,
-    supplier: 'MedSupplies Inc.',
-    lastUpdated: new Date().toISOString(),
-    status: 'low'
-  },
-  {
-    id: 4,
-    name: 'Syringes',
-    quantity: 250,
-    minQuantity: 50,
-    supplier: 'MedSupplies Inc.',
-    lastUpdated: new Date().toISOString(),
-    status: 'normal'
-  }
-];
 
 // Notification generators
 const generateAppointmentNotifications = (appointments: any[]): Notification[] => {
@@ -533,9 +374,9 @@ const getTimeAgo = (date: Date): string => {
 // Main notification aggregator
 const aggregateAllNotifications = (): Notification[] => {
   // Load data from all modules
-  const appointments = loadDataFromStorage(STORAGE_KEYS.APPOINTMENTS, getDefaultAppointments());
-  const payments = loadDataFromStorage(STORAGE_KEYS.PAYMENTS, getDefaultPayments());
-  const patients = loadDataFromStorage(STORAGE_KEYS.PATIENTS, getDefaultPatients());
+  const appointments = loadDataFromStorage(STORAGE_KEYS.APPOINTMENTS, getDefaultNotificationAppointments());
+  const payments = loadDataFromStorage(STORAGE_KEYS.PAYMENTS, getDefaultNotificationPayments());
+  const patients = loadDataFromStorage(STORAGE_KEYS.PATIENTS, getDefaultNotificationPatients());
   const inventory = loadDataFromStorage(STORAGE_KEYS.INVENTORY, getDefaultInventory());
 
   // Generate notifications from each module

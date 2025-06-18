@@ -53,12 +53,12 @@ import { useTranslation } from 'react-i18next';
 
 // DIRECT IMPORTS from actual pages
 import { 
-  loadAppointmentsFromStorage, 
-  getDefaultAppointments 
+  loadAppointmentsFromStorage
 } from '../appointments/AppointmentListPage';
 import { loadPatientsFromStorage } from '../patients/PatientListPage';
 import { doctorSchedules } from '../DoctorScheduling';
 import { loadPaymentsFromStorage } from '../payments/PaymentListPage';
+import { getDefaultAppointments } from '../../data/mockData';
 import { 
   organizeAppointmentsByCompletion,
   getPatientsOrganizedByAppointmentStatus,
@@ -197,6 +197,22 @@ const DashboardPage: React.FC = () => {
     
     // Setup appointment-patient sync on dashboard load
     setupAppointmentPatientSync();
+
+    // Listen for user data clearing
+    const handleUserDataCleared = () => {
+      // Reset dashboard data
+      setAppointments(getDefaultAppointments());
+      setPatients([]);
+      setPayments([]);
+      setRefreshKey(prev => prev + 1);
+      console.log('✅ Dashboard reset to default state');
+    };
+
+    window.addEventListener('userDataCleared', handleUserDataCleared);
+    
+    return () => {
+      window.removeEventListener('userDataCleared', handleUserDataCleared);
+    };
   }, [refreshKey]);
 
   // Refresh function

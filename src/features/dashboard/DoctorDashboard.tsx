@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Box,
@@ -44,77 +44,14 @@ import {
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, LineChart, Line } from 'recharts';
 import Header from '../../components/Header';
 import Sidebar from '../../components/Sidebar';
+import {
+  doctorDashboardPatientsData,
+  doctorDashboardMyPatients,
+  doctorDashboardTodaysAppointments,
+  doctorDashboardRecentActivity,
+} from '../../data/mockData';
 
-// Mock data for doctor dashboard
-const patientsData = [
-  { name: 'Mon', patients: 15 },
-  { name: 'Tue', patients: 22 },
-  { name: 'Wed', patients: 18 },
-  { name: 'Thu', patients: 25 },
-  { name: 'Fri', patients: 20 },
-  { name: 'Sat', patients: 12 },
-  { name: 'Sun', patients: 8 },
-];
 
-const myPatients = [
-  {
-    id: 1,
-    name: 'Ahmed Al-Rashid',
-    age: 45,
-    condition: 'Diabetes',
-    lastVisit: '2024-01-10',
-    nextAppointment: '2024-01-20',
-    avatar: 'AR',
-    status: 'stable',
-  },
-  {
-    id: 2,
-    name: 'Fatima Hassan',
-    age: 32,
-    condition: 'Hypertension',
-    lastVisit: '2024-01-08',
-    nextAppointment: '2024-01-18',
-    avatar: 'FH',
-    status: 'monitoring',
-  },
-  {
-    id: 3,
-    name: 'Mohammed Ali',
-    age: 28,
-    condition: 'Asthma',
-    lastVisit: '2024-01-05',
-    nextAppointment: '2024-01-15',
-    avatar: 'MA',
-    status: 'follow-up',
-  },
-];
-
-const todaysAppointments = [
-  {
-    id: 1,
-    time: '09:00',
-    patient: 'Omar Khalil',
-    type: 'Consultation',
-    duration: '30 min',
-    avatar: 'OK',
-  },
-  {
-    id: 2,
-    time: '10:00',
-    patient: 'Sara Ahmed',
-    type: 'Follow-up',
-    duration: '20 min',
-    avatar: 'SA',
-  },
-  {
-    id: 3,
-    time: '11:00',
-    patient: 'Ali Hassan',
-    type: 'Check-up',
-    duration: '45 min',
-    avatar: 'AH',
-  },
-];
 
 const StatCard: React.FC<{
   title: string;
@@ -165,6 +102,30 @@ const StatCard: React.FC<{
 
 const DoctorDashboard: React.FC = () => {
   const { t } = useTranslation();
+  
+  // State management for dashboard data
+  const [patientsData, setPatientsData] = useState(doctorDashboardPatientsData);
+  const [myPatients, setMyPatients] = useState(doctorDashboardMyPatients);
+  const [todaysAppointments, setTodaysAppointments] = useState(doctorDashboardTodaysAppointments);
+  const [recentActivity, setRecentActivity] = useState(doctorDashboardRecentActivity);
+
+  // Reset functionality
+  useEffect(() => {
+    const handleUserDataCleared = () => {
+      // Reset to default data
+      setPatientsData(doctorDashboardPatientsData);
+      setMyPatients(doctorDashboardMyPatients);
+      setTodaysAppointments(doctorDashboardTodaysAppointments);
+      setRecentActivity(doctorDashboardRecentActivity);
+      console.log('✅ Doctor Dashboard reset to default state');
+    };
+
+    window.addEventListener('userDataCleared', handleUserDataCleared);
+    
+    return () => {
+      window.removeEventListener('userDataCleared', handleUserDataCleared);
+    };
+  }, []);
 
   const getPatientStatusColor = (status: string) => {
     switch (status) {
@@ -459,45 +420,23 @@ const DoctorDashboard: React.FC = () => {
                       {t('recent_activity')}
                     </Typography>
                     <List sx={{ p: 0 }}>
-                      <ListItem sx={{ px: 0, py: 1 }}>
-                        <ListItemAvatar>
-                          <Avatar sx={{ width: 32, height: 32, backgroundColor: 'success.main' }}>
-                            <CheckCircle fontSize="small" />
-                          </Avatar>
-                        </ListItemAvatar>
-                        <ListItemText
-                          primary={t('consultation_completed')}
-                          secondary={`Ahmed Al-Rashid • 2 ${t('hours_ago')}`}
-                          primaryTypographyProps={{ variant: 'body2', fontWeight: 600 }}
-                          secondaryTypographyProps={{ variant: 'caption' }}
-                        />
-                      </ListItem>
-                      <ListItem sx={{ px: 0, py: 1 }}>
-                        <ListItemAvatar>
-                          <Avatar sx={{ width: 32, height: 32, backgroundColor: 'info.main' }}>
-                            <Assignment fontSize="small" />
-                          </Avatar>
-                        </ListItemAvatar>
-                        <ListItemText
-                          primary={t('lab_report_reviewed')}
-                          secondary={`Fatima Hassan • 4 ${t('hours_ago')}`}
-                          primaryTypographyProps={{ variant: 'body2', fontWeight: 600 }}
-                          secondaryTypographyProps={{ variant: 'caption' }}
-                        />
-                      </ListItem>
-                      <ListItem sx={{ px: 0, py: 1 }}>
-                        <ListItemAvatar>
-                          <Avatar sx={{ width: 32, height: 32, backgroundColor: 'warning.main' }}>
-                            <Schedule fontSize="small" />
-                          </Avatar>
-                        </ListItemAvatar>
-                        <ListItemText
-                          primary={t('followup_scheduled')}
-                          secondary={`Mohammed Ali • 6 ${t('hours_ago')}`}
-                          primaryTypographyProps={{ variant: 'body2', fontWeight: 600 }}
-                          secondaryTypographyProps={{ variant: 'caption' }}
-                        />
-                      </ListItem>
+                      {recentActivity.map((activity) => (
+                        <ListItem key={activity.id} sx={{ px: 0, py: 1 }}>
+                          <ListItemAvatar>
+                            <Avatar sx={{ width: 32, height: 32, backgroundColor: activity.color }}>
+                              {activity.icon === 'CheckCircle' && <CheckCircle fontSize="small" />}
+                              {activity.icon === 'Assignment' && <Assignment fontSize="small" />}
+                              {activity.icon === 'Schedule' && <Schedule fontSize="small" />}
+                            </Avatar>
+                          </ListItemAvatar>
+                          <ListItemText
+                            primary={t(activity.type)}
+                            secondary={`${activity.patient} • ${activity.timeAgo} ${t('hours_ago')}`}
+                            primaryTypographyProps={{ variant: 'body2', fontWeight: 600 }}
+                            secondaryTypographyProps={{ variant: 'caption' }}
+                          />
+                        </ListItem>
+                      ))}
                     </List>
                   </CardContent>
                 </Card>

@@ -10,6 +10,7 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { getAppointmentsByDate, getAppointmentsByDoctor } from './appointments';
+import { getDefaultDoctorSchedulesData, type DoctorScheduleData } from '../data/mockData';
 
 // TODO: Implement doctor scheduling API functions (e.g., get doctor schedules, book appointments, update availability)
 
@@ -261,58 +262,9 @@ export const getDoctorDailySchedule = async (doctorId: string, date: string) => 
   }
 };
 
-// Default doctor schedules (fallback)
+// Default doctor schedules (fallback) - now uses imported data
 const getDefaultDoctorSchedules = (): DoctorSchedule[] => {
-  return [
-    {
-      id: 'dr_sarah_ahmed',
-      name: 'Dr. Sarah Ahmed',
-      specialty: 'General Practice',
-      workingHours: {
-        start: '08:00',
-        end: '17:00'
-      },
-      offDays: ['Friday', 'Saturday'],
-      maxPatientsPerHour: 3,
-      consultationDuration: 20
-    },
-    {
-      id: 'dr_ahmed_omar',
-      name: 'Dr. Ahmed Omar',
-      specialty: 'Cardiology',
-      workingHours: {
-        start: '09:00',
-        end: '16:00'
-      },
-      offDays: ['Friday', 'Saturday'],
-      maxPatientsPerHour: 2,
-      consultationDuration: 30
-    },
-    {
-      id: 'dr_fatima_hassan',
-      name: 'Dr. Fatima Hassan',
-      specialty: 'Dermatology',
-      workingHours: {
-        start: '10:00',
-        end: '18:00'
-      },
-      offDays: ['Friday', 'Saturday'],
-      maxPatientsPerHour: 4,
-      consultationDuration: 15
-    },
-    {
-      id: 'dr_mohammed_ali',
-      name: 'Dr. Mohammed Ali',
-      specialty: 'Orthopedics',
-      workingHours: {
-        start: '08:30',
-        end: '16:30'
-      },
-      offDays: ['Friday', 'Saturday'],
-      maxPatientsPerHour: 2,
-      consultationDuration: 25
-    }
-  ];
+  return getDefaultDoctorSchedulesData();
 };
 
 // Initialize default doctor schedules in Firebase (run once)

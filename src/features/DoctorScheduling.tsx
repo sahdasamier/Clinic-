@@ -57,6 +57,18 @@ import {
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
 import { loadAppointmentsFromStorage, saveAppointmentsToStorage } from './appointments/AppointmentListPage';
+import {
+  baseDoctorSchedules,
+  daysOfWeek,
+  timeSlots,
+  medicalSpecialties,
+  appointmentTypes,
+  defaultDoctorFormData,
+  defaultTimeSlotFormData,
+  doctorSchedules,
+  type Doctor,
+  type Appointment,
+} from '../data/mockData';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -78,87 +90,14 @@ function TabPanel(props: TabPanelProps) {
   );
 }
 
-// Base doctor schedules data (without translations)
-const baseDoctorSchedules = [
-  {
-    id: 1,
-    name: 'Dr. Ahmed Omar',
-    avatar: 'AO',
-    specialty: 'general_medicine',
-    workingHours: { start: '16:00', end: '20:00' },
-    offDays: ['friday'],
-    maxPatientsPerHour: 2,
-    consultationDuration: 30,
-  },
-  {
-    id: 2,
-    name: 'Dr. Sarah Ahmed',
-    avatar: 'SA',
-    specialty: 'pediatrics',
-    workingHours: { start: '09:00', end: '17:00' },
-    offDays: ['friday', 'saturday'],
-    maxPatientsPerHour: 3,
-    consultationDuration: 20,
-  },
-  {
-    id: 3,
-    name: 'Dr. Mohammed Ali',
-    avatar: 'MA',
-    specialty: 'cardiology',
-    workingHours: { start: '10:00', end: '18:00' },
-    offDays: ['friday'],
-    maxPatientsPerHour: 2,
-    consultationDuration: 45,
-  },
-  {
-    id: 4,
-    name: 'Dr. Fatima Hassan',
-    avatar: 'FH',
-    specialty: 'dermatology',
-    workingHours: { start: '14:00', end: '22:00' },
-    offDays: ['friday', 'sunday'],
-    maxPatientsPerHour: 4,
-    consultationDuration: 15,
-  },
-];
 
-// Export the base doctor schedules for use in other components
-export const doctorSchedules = baseDoctorSchedules;
-
-// Appointment interface (compatible with appointment page)
-interface Appointment {
-  id: number;
-  patient: string;
-  patientAvatar: string;
-  date: string;
-  time: string;
-  timeSlot: string;
-  duration: number;
-  doctor: string;
-  type: string;
-  status: 'confirmed' | 'pending' | 'cancelled' | 'rescheduled' | 'no-show' | 'completed';
-  location: string;
-  phone: string;
-  notes: string;
-  completed: boolean;
-  priority: 'normal' | 'high' | 'urgent';
-  createdAt: string;
-  isAvailableSlot?: boolean; // New field to distinguish available slots from actual appointments
-}
 
 // Helper function to map doctor name to doctor object
 const findDoctorByName = (doctorName: string, doctors: any[]) => {
   return doctors.find((doc: any) => doc.name === doctorName);
 };
 
-const daysOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-const timeSlots = [
-  '08:00', '08:30', '09:00', '09:30', '10:00', '10:30',
-  '11:00', '11:30', '12:00', '12:30', '13:00', '13:30',
-  '14:00', '14:30', '15:00', '15:30', '16:00', '16:30',
-  '17:00', '17:30', '18:00', '18:30', '19:00', '19:30',
-  '20:00', '20:30', '21:00', '21:30', '22:00'
-];
+
 
 const DoctorSchedulingPage: React.FC = () => {
   const { t } = useTranslation();
@@ -181,13 +120,44 @@ const DoctorSchedulingPage: React.FC = () => {
       loadAppointments();
     };
 
+    // Listen for user data clearing
+    const handleUserDataCleared = () => {
+      // Reset to default state
+      setAppointments([]);
+      setDoctors(baseDoctorSchedules.map(doctor => ({
+        ...doctor,
+        specialty: t(doctor.specialty)
+      })));
+      setTabValue(0);
+      setSelectedDate(new Date().toISOString().split('T')[0]);
+      setFormData({ time: '' });
+      setDoctorFormData(defaultDoctorFormData);
+      setTimeSlotFormData(defaultTimeSlotFormData);
+      setSelectedAppointment(null);
+      setSelectedDoctorForAdd(null);
+      setSelectedDoctorForEdit(null);
+      setSelectedTimeSlot(null);
+      
+      // Close any open dialogs
+      setAddDialogOpen(false);
+      setEditDialogOpen(false);
+      setAddDoctorDialogOpen(false);
+      setEditDoctorDialogOpen(false);
+      setEditTimeSlotDialogOpen(false);
+      setMenuAnchor(null);
+      
+      console.log('✅ Doctor scheduling reset to default state');
+    };
+
     window.addEventListener('appointmentsUpdated', handleAppointmentUpdate);
+    window.addEventListener('userDataCleared', handleUserDataCleared);
     
     // Cleanup
     return () => {
       window.removeEventListener('appointmentsUpdated', handleAppointmentUpdate);
+      window.removeEventListener('userDataCleared', handleUserDataCleared);
     };
-  }, []);
+  }, [t]);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
@@ -213,15 +183,7 @@ const DoctorSchedulingPage: React.FC = () => {
   const [addDoctorDialogOpen, setAddDoctorDialogOpen] = useState(false);
   const [editDoctorDialogOpen, setEditDoctorDialogOpen] = useState(false);
   const [selectedDoctorForEdit, setSelectedDoctorForEdit] = useState<any>(null);
-  const [doctorFormData, setDoctorFormData] = useState({
-    name: '',
-    specialty: '',
-    workingHoursStart: '09:00',
-    workingHoursEnd: '17:00',
-    offDays: [] as string[],
-    consultationDuration: 30,
-    maxPatientsPerHour: 2,
-  });
+  const [doctorFormData, setDoctorFormData] = useState(defaultDoctorFormData);
 
   // Time slot editing state
   const [editTimeSlotDialogOpen, setEditTimeSlotDialogOpen] = useState(false);
@@ -231,14 +193,7 @@ const DoctorSchedulingPage: React.FC = () => {
     type: 'regular' | 'available' | 'reserved';
     appointment?: Appointment;
   } | null>(null);
-  const [timeSlotFormData, setTimeSlotFormData] = useState({
-    time: '',
-    type: 'regular' as 'regular' | 'available' | 'reserved',
-    patientName: '',
-    patientPhone: '',
-    appointmentType: 'consultation',
-    notes: '',
-  });
+  const [timeSlotFormData, setTimeSlotFormData] = useState(defaultTimeSlotFormData);
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
@@ -268,16 +223,7 @@ const DoctorSchedulingPage: React.FC = () => {
     return appointments.filter((apt: Appointment) => apt.doctor === doctor.name && apt.date === date);
   };
 
-  // Doctor interface
-  interface Doctor {
-    id: number;
-    name: string;
-    avatar: string;
-    specialty: string;
-    workingHours: { start: string; end: string };
-    offDays: string[];
-    consultationDuration: number;
-  }
+
 
   // Generate time slots for a doctor (uses the new getAllTimeSlots function)
   const generateDoctorTimeSlots = (doctor: Doctor) => {
@@ -495,15 +441,7 @@ const DoctorSchedulingPage: React.FC = () => {
 
   // Handle add new doctor
   const handleAddDoctor = () => {
-    setDoctorFormData({
-      name: '',
-      specialty: '',
-      workingHoursStart: '09:00',
-      workingHoursEnd: '17:00',
-      offDays: [],
-      consultationDuration: 30,
-      maxPatientsPerHour: 2,
-    });
+    setDoctorFormData(defaultDoctorFormData);
     setAddDoctorDialogOpen(true);
   };
 
@@ -619,12 +557,10 @@ const DoctorSchedulingPage: React.FC = () => {
     });
     
     setTimeSlotFormData({
+      ...defaultTimeSlotFormData,
       time: timeSlot,
       type: actualSlotType,
       patientName: appointment?.patient || '',
-      patientPhone: '',
-      appointmentType: 'consultation',
-      notes: '',
     });
     
     setEditTimeSlotDialogOpen(true);
@@ -2023,17 +1959,11 @@ const DoctorSchedulingPage: React.FC = () => {
                      onChange={(e) => setDoctorFormData({ ...doctorFormData, specialty: e.target.value })}
                      required
                    >
-                     <MenuItem value="General Medicine">{t('general_medicine')}</MenuItem>
-                     <MenuItem value="Cardiology">{t('cardiology')}</MenuItem>
-                     <MenuItem value="Pediatrics">{t('pediatrics')}</MenuItem>
-                     <MenuItem value="Dermatology">{t('dermatology')}</MenuItem>
-                     <MenuItem value="Orthopedics">{t('orthopedics')}</MenuItem>
-                     <MenuItem value="Neurology">{t('neurology')}</MenuItem>
-                     <MenuItem value="Gastroenterology">{t('gastroenterology')}</MenuItem>
-                     <MenuItem value="Ophthalmology">{t('ophthalmology')}</MenuItem>
-                     <MenuItem value="ENT">{t('ent')}</MenuItem>
-                     <MenuItem value="Psychiatry">{t('psychiatry')}</MenuItem>
-                     <MenuItem value="Other">{t('other')}</MenuItem>
+                     {medicalSpecialties.map((specialty) => (
+                       <MenuItem key={specialty.value} value={specialty.value}>
+                         {t(specialty.key)}
+                       </MenuItem>
+                     ))}
                    </Select>
                  </FormControl>
                </Grid>
@@ -2310,17 +2240,11 @@ const DoctorSchedulingPage: React.FC = () => {
                      onChange={(e) => setDoctorFormData({ ...doctorFormData, specialty: e.target.value })}
                      required
                    >
-                     <MenuItem value="General Medicine">{t('general_medicine')}</MenuItem>
-                     <MenuItem value="Cardiology">{t('cardiology')}</MenuItem>
-                     <MenuItem value="Pediatrics">{t('pediatrics')}</MenuItem>
-                     <MenuItem value="Dermatology">{t('dermatology')}</MenuItem>
-                     <MenuItem value="Orthopedics">{t('orthopedics')}</MenuItem>
-                     <MenuItem value="Neurology">{t('neurology')}</MenuItem>
-                     <MenuItem value="Gastroenterology">{t('gastroenterology')}</MenuItem>
-                     <MenuItem value="Ophthalmology">{t('ophthalmology')}</MenuItem>
-                     <MenuItem value="ENT">{t('ent')}</MenuItem>
-                     <MenuItem value="Psychiatry">{t('psychiatry')}</MenuItem>
-                     <MenuItem value="Other">{t('other')}</MenuItem>
+                     {medicalSpecialties.map((specialty) => (
+                       <MenuItem key={specialty.value} value={specialty.value}>
+                         {t(specialty.key)}
+                       </MenuItem>
+                     ))}
                    </Select>
                  </FormControl>
                </Grid>
@@ -2657,11 +2581,11 @@ const DoctorSchedulingPage: React.FC = () => {
                            '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#ff9800' },
                          }}
                        >
-                         <MenuItem value="consultation">{t('consultation')}</MenuItem>
-                         <MenuItem value="follow-up">{t('follow_up')}</MenuItem>
-                         <MenuItem value="emergency">{t('emergency')}</MenuItem>
-                         <MenuItem value="routine-checkup">{t('routine_checkup')}</MenuItem>
-                         <MenuItem value="specialist-referral">{t('specialist_referral')}</MenuItem>
+                         {appointmentTypes.map((type) => (
+                           <MenuItem key={type.value} value={type.value}>
+                             {t(type.key)}
+                           </MenuItem>
+                         ))}
                        </Select>
                      </FormControl>
                    </Grid>
@@ -2737,3 +2661,6 @@ const DoctorSchedulingPage: React.FC = () => {
 };
 
 export default DoctorSchedulingPage;
+
+// Export the doctorSchedules for backwards compatibility
+export { doctorSchedules } from '../data/mockData';

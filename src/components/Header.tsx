@@ -184,6 +184,8 @@ const Header: React.FC = () => {
             </Badge>
           </IconButton>
 
+
+
           {/* Current Date/Time */}
           <Box sx={{ mx: 2, display: { xs: 'none', md: 'block' } }}>
             <Typography variant="body2" color="text.secondary">

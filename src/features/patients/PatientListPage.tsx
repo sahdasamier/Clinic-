@@ -82,6 +82,24 @@ import {
   sendAppointmentDataToPatients,
   PatientWithAppointments 
 } from '../../utils/appointmentPatientSync';
+import {
+  initialPatients,
+  defaultNewPatientData,
+  defaultMedicalHistoryData,
+  defaultMedicationData,
+  defaultAppointmentData,
+  patientStatusOptions,
+  bloodTypeOptions,
+  genderOptions,
+  commonConditions,
+  commonMedications,
+  type Patient,
+  type MedicalHistory,
+  type Medication,
+  type VisitNote,
+  type VitalSign,
+  type Document,
+} from '../../data/mockData';
 
 // EXPORT: Storage key for patient data
 export const PATIENTS_STORAGE_KEY = 'clinic_patients_data';
@@ -134,118 +152,7 @@ function TabPanel(props: TabPanelProps) {
   );
 }
 
-// EXPORT: Initial patients data
-export const initialPatients = [
-  {
-    id: 1,
-    name: 'Ahmed Al-Rashid',
-    age: 45,
-    gender: 'Male',
-    phone: '+20 10 1234 5678',
-    email: 'ahmed.rashid@email.com',
-    lastVisit: '2024-01-15',
-    nextAppointment: '2024-01-25',
-    condition: 'Diabetes',
-    status: 'old',
-    avatar: 'AR',
-    address: 'Cairo, Egypt',
-    bloodType: 'A+',
-    allergies: ['Penicillin', 'Shellfish'],
-    emergencyContact: 'Sara Al-Rashid (+20 10 9876 5432)',
-    medicalHistory: [
-      { date: '2024-01-15', condition: 'Diabetes Type 2', treatment: 'Metformin 500mg twice daily', doctor: 'Dr. Ahmed Ali' },
-      { date: '2023-12-10', condition: 'Hypertension', treatment: 'Lisinopril 10mg daily', doctor: 'Dr. Ahmed Ali' },
-    ],
-    medications: [
-      { id: 1, name: 'Metformin', dosage: '500mg', frequency: 'Twice daily', duration: '3 months', status: 'Active', prescribedBy: 'Dr. Ahmed Ali', dateStarted: '2024-01-15' },
-      { id: 2, name: 'Lisinopril', dosage: '10mg', frequency: 'Once daily', duration: 'Ongoing', status: 'Active', prescribedBy: 'Dr. Ahmed Ali', dateStarted: '2023-12-10' },
-    ],
-    visitNotes: [
-      { date: '2024-01-15', note: 'Patient reports good glucose control. HbA1c improved to 7.2%. Continue current medication.', doctor: 'Dr. Ahmed Ali' },
-      { date: '2023-12-10', note: 'Blood pressure elevated. Started on ACE inhibitor. Follow up in 6 weeks.', doctor: 'Dr. Ahmed Ali' },
-    ],
-    vitalSigns: [
-      { date: '2024-01-15', bp: '130/85', pulse: '72', weight: '78kg', height: '175cm' },
-    ],
-    documents: [],
-  },
-  {
-    id: 2,
-    name: 'Fatima Hassan',
-    age: 32,
-    gender: 'Female',
-    phone: '+20 11 2345 6789',
-    email: 'fatima.hassan@email.com',
-    lastVisit: '2024-01-12',
-    nextAppointment: '2024-01-22',
-    condition: 'Hypertension',
-    status: 'old',
-    avatar: 'FH',
-    address: 'Alexandria, Egypt',
-    bloodType: 'O+',
-    allergies: ['Aspirin'],
-    emergencyContact: 'Hassan Ali (+20 11 8765 4321)',
-    medicalHistory: [
-      { date: '2024-01-12', condition: 'Hypertension', treatment: 'Amlodipine 5mg daily', doctor: 'Dr. Ahmed Ali' },
-      { date: '2023-11-15', condition: 'Migraine', treatment: 'Sumatriptan as needed', doctor: 'Dr. Ahmed Ali' },
-    ],
-    medications: [
-      { id: 1, name: 'Amlodipine', dosage: '5mg', frequency: 'Once daily', duration: 'Ongoing', status: 'Active', prescribedBy: 'Dr. Ahmed Ali', dateStarted: '2024-01-12' },
-    ],
-    visitNotes: [
-      { date: '2024-01-12', note: 'Blood pressure well controlled. Patient reports no side effects. Continue current medication. Follow up in 3 months.', doctor: 'Dr. Ahmed Ali' },
-      { date: '2023-11-15', note: 'Patient presented with severe headache. Diagnosed with migraine. Prescribed sumatriptan for acute episodes.', doctor: 'Dr. Ahmed Ali' },
-    ],
-    vitalSigns: [
-      { date: '2024-01-12', bp: '125/80', pulse: '68', weight: '65kg', height: '162cm' },
-    ],
-    documents: [],
-  },
-  {
-    id: 3,
-    name: 'Mohammed Ali',
-    age: 28,
-    gender: 'Male',
-    phone: '+20 12 3456 7890',
-    email: 'mohammed.ali@email.com',
-    lastVisit: '2024-01-10',
-    nextAppointment: '2024-01-20',
-    condition: 'Asthma',
-    status: 'follow-up',
-    avatar: 'MA',
-    address: 'Giza, Egypt',
-    bloodType: 'B+',
-    allergies: [],
-    emergencyContact: 'Ali Hassan (+20 12 7654 3210)',
-    medicalHistory: [],
-    medications: [],
-    visitNotes: [],
-    vitalSigns: [],
-    documents: [],
-  },
-  {
-    id: 4,
-    name: 'Sara Ahmed',
-    age: 38,
-    gender: 'Female',
-    phone: '+20 15 4567 8901',
-    email: 'sara.ahmed@email.com',
-    lastVisit: '2024-01-08',
-    nextAppointment: '2024-01-18',
-    condition: 'Routine Checkup',
-    status: 'new',
-    avatar: 'SA',
-    address: 'Luxor, Egypt',
-    bloodType: 'AB+',
-    allergies: [],
-    emergencyContact: 'Ahmed Sara (+20 15 6543 2109)',
-    medicalHistory: [],
-    medications: [],
-    visitNotes: [],
-    vitalSigns: [],
-    documents: [],
-  },
-];
+
 
 
 
@@ -324,10 +231,71 @@ const PatientListPage: React.FC = () => {
       loadOrganizedData();
     };
 
+    // Listen for user data clearing
+    const handleUserDataCleared = () => {
+      // Reset to default state
+      setPatients(initialPatients);
+      setTabValue(0);
+      setSearchQuery('');
+      setActiveFilters({
+        gender: '',
+        ageRange: '',
+        condition: '',
+        status: ''
+      });
+      setNewPatientData(defaultNewPatientData);
+      setNewMedicalHistory(defaultMedicalHistoryData);
+      setNewTreatmentMedication(defaultMedicationData);
+      setAppointmentData(defaultAppointmentData);
+      setSelectedPatient(null);
+      setEditingPatient(null);
+      setEditingMedication(null);
+      setEditingNote(null);
+      setPendingMedication(null);
+      setAppointmentPatient(null);
+      setStatusEditPatient(null);
+      setViewingDocument(null);
+      
+      // Close all dialogs
+      setAddPatientOpen(false);
+      setPatientProfileOpen(false);
+      setEditPatientOpen(false);
+      setEditMedicationOpen(false);
+      setEditNoteOpen(false);
+      setUploadDocumentOpen(false);
+      setDocumentViewerOpen(false);
+      setAddMedicalHistoryOpen(false);
+      setMedicationDetailsPopup(false);
+      setScheduleAppointmentOpen(false);
+      
+      // Reset form states
+      setProfileTab(0);
+      setNewNote('');
+      setNewMedication(defaultMedicationData);
+      setDocumentTitle('');
+      setSelectedFile(null);
+      setTreatmentType('existing');
+      setSelectedMedication('');
+      setViewMode('table');
+      setPatientOrganizationMode('all');
+      
+      // Reset filter anchors
+      setFilterAnchor(null);
+      setStatusMenuAnchor(null);
+      
+      // Clear organized data
+      setOrganizedAppointmentData(null);
+      setPatientsWithAppointments([]);
+      
+      console.log('✅ Patient data reset to default state');
+    };
+
     window.addEventListener('appointmentPatientSync', handleSync);
+    window.addEventListener('userDataCleared', handleUserDataCleared);
     
     return () => {
       window.removeEventListener('appointmentPatientSync', handleSync);
+      window.removeEventListener('userDataCleared', handleUserDataCleared);
     };
   }, []);
   const [uploadDocumentOpen, setUploadDocumentOpen] = useState(false);
@@ -336,49 +304,20 @@ const PatientListPage: React.FC = () => {
   const [documentViewerOpen, setDocumentViewerOpen] = useState(false);
   const [viewingDocument, setViewingDocument] = useState<any>(null);
   const [addMedicalHistoryOpen, setAddMedicalHistoryOpen] = useState(false);
-  const [newMedicalHistory, setNewMedicalHistory] = useState({
-    date: new Date().toISOString().split('T')[0],
-    condition: '',
-    treatment: '',
-    doctor: 'Dr. Ahmed Ali',
-    notes: ''
-  });
+  const [newMedicalHistory, setNewMedicalHistory] = useState(defaultMedicalHistoryData);
   const [treatmentType, setTreatmentType] = useState<'existing' | 'new' | 'custom'>('existing');
   const [selectedMedication, setSelectedMedication] = useState('');
-  const [newTreatmentMedication, setNewTreatmentMedication] = useState({
-    name: '',
-    dosage: '',
-    frequency: '',
-    duration: ''
-  });
+  const [newTreatmentMedication, setNewTreatmentMedication] = useState(defaultMedicationData);
   const [medicationDetailsPopup, setMedicationDetailsPopup] = useState(false);
   const [pendingMedication, setPendingMedication] = useState<any>(null);
   const [scheduleAppointmentOpen, setScheduleAppointmentOpen] = useState(false);
   const [appointmentPatient, setAppointmentPatient] = useState<any>(null);
-  const [appointmentData, setAppointmentData] = useState({
-    date: '',
-    time: '',
-    type: 'Follow-up',
-    duration: '30',
-    notes: '',
-    priority: 'Normal'
-  });
+  const [appointmentData, setAppointmentData] = useState(defaultAppointmentData);
   const [statusEditPatient, setStatusEditPatient] = useState<any>(null);
   const [statusMenuAnchor, setStatusMenuAnchor] = useState<null | HTMLElement>(null);
   
   // New Patient Form State
-  const [newPatientData, setNewPatientData] = useState({
-    name: '',
-    phone: '',
-    email: '',
-    age: '',
-    gender: '',
-    address: '',
-    emergencyContact: '',
-    bloodType: '',
-    condition: '',
-    status: 'new'
-  });
+  const [newPatientData, setNewPatientData] = useState(defaultNewPatientData);
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
@@ -442,7 +381,7 @@ const PatientListPage: React.FC = () => {
     setPatientProfileOpen(false);
     setSelectedPatient(null);
     setNewNote('');
-    setNewMedication({ name: '', dosage: '', frequency: '', duration: '' });
+    setNewMedication(defaultMedicationData);
   };
 
   const handleProfileTabChange = (event: React.SyntheticEvent, newValue: number) => {
@@ -496,7 +435,7 @@ const PatientListPage: React.FC = () => {
       });
       
       setPatients(updatedPatients as any);
-      setNewMedication({ name: '', dosage: '', frequency: '', duration: '' });
+      setNewMedication(defaultMedicationData);
     }
   };
 
@@ -679,18 +618,7 @@ const PatientListPage: React.FC = () => {
     setAddPatientOpen(false);
     
     // Reset form data
-    setNewPatientData({
-      name: '',
-      phone: '',
-      email: '',
-      age: '',
-      gender: '',
-      address: '',
-      emergencyContact: '',
-      bloodType: '',
-      condition: '',
-      status: 'new'
-    });
+    setNewPatientData(defaultNewPatientData);
     
     // Show success message
     console.log('New patient added:', newPatient);
@@ -5494,9 +5422,12 @@ const PatientListPage: React.FC = () => {
                       value={newPatientData.gender}
                       onChange={(e) => setNewPatientData({ ...newPatientData, gender: e.target.value })}
                     >
-                      <MenuItem value="Male">Male</MenuItem>
-                      <MenuItem value="Female">Female</MenuItem>
-                      <MenuItem value="Other">Other</MenuItem>
+                      {genderOptions.map((option) => (
+                        <MenuItem key={option.value} value={option.value}>
+                          {t(option.key)}
+                        </MenuItem>
+                      ))}
+                      <MenuItem value="Other">{t('other')}</MenuItem>
                     </Select>
                   </FormControl>
                 </Grid>
@@ -5547,18 +5478,7 @@ const PatientListPage: React.FC = () => {
                 onClick={() => {
                   setAddPatientOpen(false);
                   // Reset form when canceling
-                  setNewPatientData({
-                    name: '',
-                    phone: '',
-                    email: '',
-                    age: '',
-                    gender: '',
-                    address: '',
-                    emergencyContact: '',
-                    bloodType: '',
-                    condition: '',
-                    status: 'new'
-                  });
+                  setNewPatientData(defaultNewPatientData);
                 }}
                 sx={{ borderRadius: 3 }}
               >
@@ -5634,8 +5554,12 @@ const PatientListPage: React.FC = () => {
                       value={editingPatient?.gender || ''}
                       onChange={(e) => setEditingPatient({ ...editingPatient, gender: e.target.value })}
                     >
-                      <MenuItem value="Male">Male</MenuItem>
-                      <MenuItem value="Female">Female</MenuItem>
+                      {genderOptions.map((option) => (
+                        <MenuItem key={option.value} value={option.value}>
+                          {t(option.key)}
+                        </MenuItem>
+                      ))}
+                      <MenuItem value="Other">{t('other')}</MenuItem>
                     </Select>
                   </FormControl>
                 </Grid>
@@ -6670,4 +6594,7 @@ const PatientListPage: React.FC = () => {
   );
 };
 
-export default PatientListPage; 
+export default PatientListPage;
+
+// Export the initialPatients for backwards compatibility
+export { initialPatients } from '../../data/mockData'; 

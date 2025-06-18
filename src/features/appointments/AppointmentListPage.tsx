@@ -90,6 +90,12 @@ import Sidebar from '../../components/Sidebar';
 import { syncAppointmentChangesToPatients, setupAppointmentPatientSync } from '../../utils/appointmentPatientSync';
 import { doctorSchedules } from '../DoctorScheduling';
 import { loadPatientsFromStorage } from '../patients/PatientListPage';
+import {
+  getDefaultAppointments,
+  appointmentTypesOptions,
+  priorityLevels,
+  type AppointmentData,
+} from '../../data/mockData';
 
 // Types
 interface TabPanelProps {
@@ -98,24 +104,7 @@ interface TabPanelProps {
   value: number;
 }
 
-interface Appointment {
-  id: number;
-  patient: string;
-  patientAvatar: string;
-  date: string;
-  time: string;
-  timeSlot: string;
-  duration: number;
-  doctor: string;
-  type: string;
-  status: 'confirmed' | 'pending' | 'cancelled' | 'rescheduled' | 'no-show' | 'completed';
-  location: string;
-  phone: string;
-  notes: string;
-  completed: boolean;
-  priority: 'normal' | 'high' | 'urgent';
-  createdAt: string;
-}
+type Appointment = AppointmentData;
 
 interface NewAppointment {
   patient: string;
@@ -186,51 +175,7 @@ export const saveAppointmentsToStorage = (appointments: Appointment[]) => {
   }
 };
 
-export const getDefaultAppointments = (): Appointment[] => {
-  const today = new Date();
-  const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
-  const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
-  
-  return [
-    {
-      id: 1,
-      patient: 'Ahmed Al-Rashid',
-      patientAvatar: 'AR',
-      date: tomorrow.toISOString().split('T')[0],
-      time: '3:00 PM',
-      timeSlot: '15:00',
-      duration: 25,
-      doctor: 'Dr. Sarah Ahmed',
-      type: 'Consultation',
-      status: 'confirmed',
-      location: 'Room 101',
-      phone: '+971 50 123 4567',
-      notes: 'Follow-up for diabetes management',
-      completed: false,
-      priority: 'normal',
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: 2,
-      patient: 'Fatima Hassan',
-      patientAvatar: 'FH',
-      date: today.toISOString().split('T')[0],
-      time: '4:00 PM',
-      timeSlot: '16:00',
-      duration: 30,
-      doctor: 'Dr. Ahmed Omar',
-      type: 'Check-up',
-      status: 'confirmed',
-      location: 'Room 102',
-      phone: '+971 50 234 5678',
-      notes: 'Routine blood pressure check',
-      completed: false,
-      priority: 'normal',
-      createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    },
-    // Add more default appointments as needed...
-  ];
-};
+
 
 // Statistics Card Component
 const StatCard: React.FC<{
@@ -348,6 +293,56 @@ const AppointmentListPage: React.FC = () => {
     
     const patients = loadPatientsFromStorage();
     setAvailablePatients(patients);
+
+    // Listen for user data clearing
+    const handleUserDataCleared = () => {
+      // Reset to default state
+      setAppointmentList(getDefaultAppointments());
+      setTabValue(0);
+      setSearchQuery('');
+      setActiveFilters({
+        status: '',
+        type: '',
+        priority: '',
+        completed: '',
+        doctor: ''
+      });
+      setSelectedDate(new Date().toISOString().split('T')[0]);
+      setNewAppointment({
+        patient: '',
+        doctor: '',
+        date: new Date().toISOString().split('T')[0],
+        time: '',
+        hour: '',
+        minute: '',
+        type: '',
+        duration: 25,
+        priority: 'normal',
+        location: '',
+        notes: '',
+        phone: ''
+      });
+      setSelectedAppointment(null);
+      setStatusEditAppointment(null);
+      
+      // Close all dialogs
+      setAddAppointmentOpen(false);
+      setEditDialogOpen(false);
+      setViewNotesOpen(false);
+      setFilterAnchor(null);
+      setStatusMenuAnchor(null);
+      
+      // Set view mode to default
+      setViewMode('table');
+      
+      console.log('✅ Appointments reset to default state');
+    };
+
+    window.addEventListener('userDataCleared', handleUserDataCleared);
+    
+    return () => {
+      window.removeEventListener('userDataCleared', handleUserDataCleared);
+    };
   }, []);
 
   // Event Handlers
@@ -2289,20 +2284,16 @@ const AppointmentListPage: React.FC = () => {
              >
                {t('all_doctors')}
              </MenuItem>
-             <MenuItem 
-               onClick={() => handleFilterSelect('doctor', 'Dr. Sarah Ahmed')}
-               selected={activeFilters.doctor === 'Dr. Sarah Ahmed'}
-               dense
-             >
-               Dr. Sarah Ahmed
-             </MenuItem>
-             <MenuItem 
-               onClick={() => handleFilterSelect('doctor', 'Dr. Ahmed Ali')}
-               selected={activeFilters.doctor === 'Dr. Ahmed Ali'}
-               dense
-             >
-               Dr. Ahmed Ali
-             </MenuItem>
+             {availableDoctors.map((doctor) => (
+               <MenuItem 
+                 key={doctor.id}
+                 onClick={() => handleFilterSelect('doctor', doctor.name)}
+                 selected={activeFilters.doctor === doctor.name}
+                 dense
+               >
+                 {doctor.name}
+               </MenuItem>
+             ))}
            </Box>
          </Menu>
 

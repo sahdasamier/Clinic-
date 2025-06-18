@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Box,
@@ -39,58 +39,13 @@ import {
 } from '@mui/icons-material';
 import Header from '../../components/Header';
 import Sidebar from '../../components/Sidebar';
+import {
+  receptionistDashboardTodayAppointments,
+  receptionistDashboardPaymentsDue,
+  receptionistDashboardInventoryAlerts,
+} from '../../data/mockData';
 
-// Mock data for receptionist dashboard
-const todayAppointments = [
-  {
-    id: 1,
-    time: '09:00',
-    patient: 'Ahmed Al-Mansouri',
-    doctor: 'Dr. Sarah Ahmed',
-    status: 'checked-in',
-    avatar: 'AM',
-    duration: 20,
-  },
-  {
-    id: 2,
-    time: '09:30',
-    patient: 'Fatima Hassan',
-    doctor: 'Dr. Ahmed Omar',
-    status: 'waiting',
-    avatar: 'FH',
-    duration: 30,
-  },
-  {
-    id: 3,
-    time: '10:00',
-    patient: 'Mohammed Ali',
-    doctor: 'Dr. Sarah Ahmed',
-    status: 'in-progress',
-    avatar: 'MA',
-    duration: 20,
-  },
-  {
-    id: 4,
-    time: '10:30',
-    patient: 'Sara Ahmed',
-    doctor: 'Dr. Ahmed Omar',
-    status: 'scheduled',
-    avatar: 'SA',
-    duration: 30,
-  },
-];
 
-const paymentsDue = [
-  { id: 1, patient: 'Ali Hassan', amount: '$150', dueDate: 'Today' },
-  { id: 2, patient: 'Noor Ahmed', amount: '$75', dueDate: 'Yesterday' },
-  { id: 3, patient: 'Omar Ali', amount: '$200', dueDate: '2 days ago' },
-];
-
-const inventoryAlerts = [
-  { id: 1, item: 'Bandages', stock: 5, minStock: 20, status: 'critical' },
-  { id: 2, item: 'Syringes', stock: 15, minStock: 50, status: 'low' },
-  { id: 3, item: 'Gloves', stock: 25, minStock: 100, status: 'low' },
-];
 
 const StatCard: React.FC<{
   title: string;
@@ -134,6 +89,28 @@ const StatCard: React.FC<{
 
 const ReceptionistDashboard: React.FC = () => {
   const { t } = useTranslation();
+  
+  // State management for dashboard data
+  const [todayAppointments, setTodayAppointments] = useState(receptionistDashboardTodayAppointments);
+  const [paymentsDue, setPaymentsDue] = useState(receptionistDashboardPaymentsDue);
+  const [inventoryAlerts, setInventoryAlerts] = useState(receptionistDashboardInventoryAlerts);
+
+  // Reset functionality
+  useEffect(() => {
+    const handleUserDataCleared = () => {
+      // Reset to default data
+      setTodayAppointments(receptionistDashboardTodayAppointments);
+      setPaymentsDue(receptionistDashboardPaymentsDue);
+      setInventoryAlerts(receptionistDashboardInventoryAlerts);
+      console.log('✅ Receptionist Dashboard reset to default state');
+    };
+
+    window.addEventListener('userDataCleared', handleUserDataCleared);
+    
+    return () => {
+      window.removeEventListener('userDataCleared', handleUserDataCleared);
+    };
+  }, []);
 
   const getAppointmentStatusColor = (status: string) => {
     switch (status) {

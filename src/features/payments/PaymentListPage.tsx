@@ -65,6 +65,15 @@ import {
 } from '@mui/icons-material';
 import Header from '../../components/Header';
 import Sidebar from '../../components/Sidebar';
+import {
+  generateDefaultPayments,
+  samplePaymentPatients,
+  paymentCategories,
+  paymentMethods,
+  paymentStatuses,
+  defaultNewInvoiceData,
+  type PaymentData,
+} from '../../data/mockData';
 import InvoiceGenerator from './InvoiceGenerator';
 
 interface TabPanelProps {
@@ -88,23 +97,7 @@ function TabPanel(props: TabPanelProps) {
   );
 }
 
-interface PaymentData {
-  id: number;
-  invoiceId: string;
-  patient: string;
-  patientAvatar: string;
-  amount: number;
-  currency: string;
-  date: string;
-  dueDate: string;
-  status: 'paid' | 'pending' | 'overdue' | 'partial';
-  method: string;
-  description: string;
-  category: string;
-  insurance: 'Yes' | 'No';
-  insuranceAmount: number;
-  paidAmount?: number;
-}
+
 
 interface NewInvoiceData {
   patient: string;
@@ -139,43 +132,7 @@ const generateRecentDates = () => {
   return dates;
 };
 
-// Sample data generator
-const generateDefaultPayments = (): PaymentData[] => {
-  const { t } = useTranslation();
-  const dates = generateRecentDates();
-  
-  const samplePatients = [
-    'Ahmed Al-Rashid',
-    'Fatima Hassan', 
-    'Mohammed Ali',
-    'Sara Ahmed',
-    'Omar Khalil',
-    'Layla Al-Zahra',
-    'Hassan Mahmoud',
-    'Nadia Abdullah'
-  ];
 
-  const categories = ['consultation', 'checkup', 'surgery', 'emergency', 'followup'];
-  const methods = ['Credit Card', 'Cash', 'Bank Transfer', 'Insurance'];
-  const statuses: ('paid' | 'pending' | 'overdue' | 'partial')[] = ['paid', 'pending', 'overdue', 'partial'];
-
-  return samplePatients.map((patient, index) => ({
-    id: index + 1,
-    invoiceId: `INV-2024-${String(index + 1).padStart(3, '0')}`,
-    patient,
-    patientAvatar: patient.split(' ').map(n => n[0]).join('').toUpperCase(),
-    amount: Math.floor(Math.random() * 500) + 150,
-    currency: 'EGP',
-    date: dates[index]?.date || dates[0].date,
-    dueDate: dates[index]?.dueDate || dates[0].dueDate,
-    status: statuses[Math.floor(Math.random() * statuses.length)],
-    method: methods[Math.floor(Math.random() * methods.length)],
-    description: `Medical service for ${patient.split(' ')[0]}`,
-    category: categories[Math.floor(Math.random() * categories.length)],
-    insurance: Math.random() > 0.5 ? 'Yes' : 'No',
-    insuranceAmount: Math.random() > 0.5 ? Math.floor(Math.random() * 200) + 50 : 0,
-  }));
-};
 
 // Data persistence utilities
 const STORAGE_KEY = 'clinic_payments_data';
@@ -354,22 +311,44 @@ const PaymentListPage: React.FC = () => {
   const [exportOptionsOpen, setExportOptionsOpen] = useState(false);
   const [payments, setPayments] = useState<PaymentData[]>([]);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
-  const [newInvoiceData, setNewInvoiceData] = useState<NewInvoiceData>({
-    patient: '',
-    amount: '',
-    category: '',
-    invoiceDate: new Date().toISOString().split('T')[0],
-    dueDate: '',
-    description: '',
-    method: '',
-    insuranceAmount: '',
-  });
+  const [newInvoiceData, setNewInvoiceData] = useState<NewInvoiceData>(defaultNewInvoiceData);
 
 // Load data from localStorage on component mount
 useEffect(() => {
   const loadedPayments = loadPaymentsFromStorage();
   setPayments(loadedPayments);
   setIsDataLoaded(true);
+
+  // Listen for user data clearing
+  const handleUserDataCleared = () => {
+    // Reset to default state
+    setPayments(generateDefaultPayments());
+    setTabValue(0);
+    setSearchQuery('');
+    setActiveFilter('all');
+    setNewInvoiceData(defaultNewInvoiceData);
+    setSelectedPayment(null);
+    setSelectedInvoiceForView(null);
+    setSelectedPaymentForStatusChange(null);
+    
+    // Close all dialogs
+    setAddPaymentOpen(false);
+    setInvoiceDialogOpen(false);
+    setExportOptionsOpen(false);
+    setFilterAnchor(null);
+    setStatusMenuAnchor(null);
+    
+    // Set view mode to default
+    setViewMode('table');
+    
+    console.log('✅ Payments reset to default state');
+  };
+
+  window.addEventListener('userDataCleared', handleUserDataCleared);
+  
+  return () => {
+    window.removeEventListener('userDataCleared', handleUserDataCleared);
+  };
 }, []);
 
 // Save data to localStorage whenever payments change
@@ -555,16 +534,7 @@ const handleCreatePayment = () => {
   setAddPaymentOpen(false);
   
   // Reset form
-  setNewInvoiceData({
-    patient: '',
-    amount: '',
-    category: '',
-    invoiceDate: new Date().toISOString().split('T')[0],
-    dueDate: '',
-    description: '',
-    method: '',
-    insuranceAmount: '',
-  });
+  setNewInvoiceData(defaultNewInvoiceData);
 
   setSnackbar({
     open: true,
