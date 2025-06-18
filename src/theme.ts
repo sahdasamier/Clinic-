@@ -1,6 +1,7 @@
-import { createTheme } from '@mui/material/styles';
+import { createTheme, Direction } from '@mui/material/styles';
 
-const theme = createTheme({
+const createAppTheme = (direction: Direction = 'ltr') => createTheme({
+  direction,
   palette: {
     primary: {
       main: '#1E3A8A', // Deep navy blue from Figma
@@ -42,44 +43,54 @@ const theme = createTheme({
     },
   },
   typography: {
-    fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
+    fontFamily: direction === 'rtl' 
+      ? '"Cairo", "Amiri", "Noto Sans Arabic", "Inter", "Roboto", "Helvetica", "Arial", sans-serif'
+      : '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
     h1: {
       fontSize: '2.25rem',
       fontWeight: 700,
       lineHeight: 1.2,
+      textAlign: direction === 'rtl' ? 'right' : 'left',
     },
     h2: {
       fontSize: '1.875rem',
       fontWeight: 600,
       lineHeight: 1.3,
+      textAlign: direction === 'rtl' ? 'right' : 'left',
     },
     h3: {
       fontSize: '1.5rem',
       fontWeight: 600,
       lineHeight: 1.4,
+      textAlign: direction === 'rtl' ? 'right' : 'left',
     },
     h4: {
       fontSize: '1.25rem',
       fontWeight: 600,
       lineHeight: 1.4,
+      textAlign: direction === 'rtl' ? 'right' : 'left',
     },
     h5: {
       fontSize: '1.125rem',
       fontWeight: 600,
       lineHeight: 1.4,
+      textAlign: direction === 'rtl' ? 'right' : 'left',
     },
     h6: {
       fontSize: '1rem',
       fontWeight: 600,
       lineHeight: 1.4,
+      textAlign: direction === 'rtl' ? 'right' : 'left',
     },
     body1: {
       fontSize: '1rem',
       lineHeight: 1.5,
+      textAlign: direction === 'rtl' ? 'right' : 'left',
     },
     body2: {
       fontSize: '0.875rem',
       lineHeight: 1.5,
+      textAlign: direction === 'rtl' ? 'right' : 'left',
     },
   },
   shape: {
@@ -147,7 +158,18 @@ const theme = createTheme({
         },
       },
     },
+    MuiTypography: {
+      styleOverrides: {
+        root: {
+          textAlign: 'inherit',
+        },
+      },
+    },
   },
 });
 
-export default theme; 
+// Default theme with LTR direction
+const theme = createAppTheme('ltr');
+
+export default theme;
+export { createAppTheme }; 

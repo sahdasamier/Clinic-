@@ -132,6 +132,39 @@ const getPriorityColor = (type: string) => {
 
 const NotificationsPage: React.FC = () => {
   const { t } = useTranslation();
+  
+  // Helper function to translate notification titles and messages
+  const translateNotificationText = (text: string, isMessage: boolean = false): string => {
+    // Check if it's a translation key
+    if (!text.includes(' ') && text.includes('_')) {
+      // For messages with parameters (format: "key|||param1|||param2|||param3")
+      if (isMessage && text.includes('|||')) {
+        const parts = text.split('|||');
+        const key = parts[0];
+        const params = parts.slice(1);
+        
+        if (key === 'low_stock_message') {
+          return t('low_stock_message', { 
+            itemName: params[0], 
+            quantity: params[1], 
+            minQuantity: params[2] 
+          });
+        } else if (key === 'out_of_stock_message') {
+          return t('out_of_stock_message', { 
+            itemName: params[0], 
+            supplier: params[1] 
+          });
+        }
+        return text; // Fallback if key not found
+      }
+      
+      // Simple translation key
+      return t(text);
+    }
+    
+    // Return original text if not a translation key
+    return text;
+  };
   const { 
     notifications, 
     unreadCount, 
@@ -200,7 +233,7 @@ const NotificationsPage: React.FC = () => {
       await contextRefreshNotifications();
       setDisplayCount(4); // Reset display count when refreshing
       showSnackbar(
-        `Notifications refreshed! Found ${notifications.length} total notifications (${unreadCount} unread) from all application data`, 
+        t('notifications_refreshed', { total: notifications.length, unread: unreadCount }), 
         'success'
       );
     } catch (error) {
@@ -260,10 +293,10 @@ const NotificationsPage: React.FC = () => {
       setUpdating(true);
       await notificationsApi.clearAll(currentUser.clinicId, currentUser.branchId);
       // Note: We would need to add clearAll to the context if we want to use it
-      showSnackbar('All notifications cleared');
+      showSnackbar(t('all_notifications_cleared'));
     } catch (error) {
       console.error('Error clearing notifications:', error);
-      showSnackbar('Failed to clear notifications', 'error');
+      showSnackbar(t('failed_to_clear_notifications'), 'error');
     } finally {
       setUpdating(false);
     }
@@ -294,10 +327,10 @@ const NotificationsPage: React.FC = () => {
       
       setDisplayCount(newDisplayCount);
       
-      showSnackbar(`Loaded ${notificationsToLoad} more notification${notificationsToLoad !== 1 ? 's' : ''}`, 'success');
+      showSnackbar(t('loaded_more_notifications', { count: notificationsToLoad }), 'success');
     } catch (error) {
       console.error('Error loading more:', error);
-      showSnackbar('Failed to load more notifications', 'error');
+      showSnackbar(t('failed_to_load_more'), 'error');
     } finally {
       setUpdating(false);
     }
@@ -338,10 +371,10 @@ const NotificationsPage: React.FC = () => {
             <Box sx={{ position: 'relative', zIndex: 1 }}>
               <NotificationsNone sx={{ fontSize: 64, mb: 2, opacity: 0.8 }} />
               <Typography variant="h5" sx={{ fontWeight: 600, mb: 1 }}>
-                No notifications found
+                {t('no_notifications_found')}
               </Typography>
               <Typography variant="body1" sx={{ opacity: 0.9, maxWidth: 400, mx: 'auto' }}>
-                You're all caught up! New notifications will appear here when there's something important to share.
+                {t('all_caught_up')}
               </Typography>
             </Box>
           </Box>
@@ -418,7 +451,7 @@ const NotificationsPage: React.FC = () => {
                               color: notification.read ? 'text.secondary' : 'text.primary'
                             }}
                           >
-                            {notification.title}
+                            {translateNotificationText(notification.title)}
                           </Typography>
                           {!notification.read && (
                             <FiberManualRecord 
@@ -440,7 +473,7 @@ const NotificationsPage: React.FC = () => {
                             fontWeight: notification.read ? 400 : 500
                           }}
                         >
-                          {notification.message}
+                          {translateNotificationText(notification.message, true)}
                         </Typography>
 
                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -511,10 +544,10 @@ const NotificationsPage: React.FC = () => {
                           <Slide direction="down" in={isExpanded} mountOnEnter unmountOnExit>
                             <Box sx={{ mt: 2, pt: 2, borderTop: 1, borderColor: 'divider' }}>
                               <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                                <strong>Type:</strong> {notification.type.charAt(0).toUpperCase() + notification.type.slice(1)}
+                                <strong>{t('type')}:</strong> {t(`notification_${notification.type}_type`)}
                               </Typography>
                               <Typography variant="body2" color="text.secondary">
-                                <strong>Created:</strong> {new Date(notification.createdAt).toLocaleString()}
+                                <strong>{t('created_at')}:</strong> {new Date(notification.createdAt).toLocaleString()}
                               </Typography>
                             </Box>
                           </Slide>
@@ -654,17 +687,17 @@ const NotificationsPage: React.FC = () => {
                           mb: 0.5
                         }}
                       >
-                        Notifications
+                        {t('notifications')}
                         
                       </Typography>
                       <Typography variant="h6" color="text.secondary" sx={{ fontWeight: 500 }}>
-                        Real-time updates from your clinic management system
+                        {t('realtime_updates')}
                       </Typography>
                     </Box>
                   </Box>
                   
                   <Stack direction="row" spacing={1}>
-                    <Tooltip title="Refresh notifications from all application data">
+                    <Tooltip title={t('refresh_from_all_data')}>
                       <IconButton
                         onClick={handleRefresh}
                         disabled={refreshing}
@@ -701,7 +734,7 @@ const NotificationsPage: React.FC = () => {
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                         <CircularProgress size={20} sx={{ color: '#667eea' }} />
                         <Typography variant="body1" sx={{ color: '#667eea', fontWeight: 600 }}>
-                          Refreshing notifications from all application modules...
+                          {t('refreshing_from_all_modules')}
                         </Typography>
                       </Box>
                     </Box>
@@ -764,8 +797,8 @@ const NotificationsPage: React.FC = () => {
                         <Tab 
                           label={
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                              <Notifications fontSize="small" />
-                              <span>All</span>
+                              <NotificationsActive fontSize="small" />
+                              <span>{t('notification_type_all')}</span>
                               <Chip 
                                 label={notifications.length} 
                                 size="small" 
@@ -783,7 +816,7 @@ const NotificationsPage: React.FC = () => {
                           label={
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                               <Schedule fontSize="small" />
-                              <span>Appointments</span>
+                              <span>{t('notification_type_appointment')}</span>
                               <Chip 
                                 label={getNotificationsByType('appointment').length} 
                                 size="small" 
@@ -801,7 +834,7 @@ const NotificationsPage: React.FC = () => {
                           label={
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                               <Payment fontSize="small" />
-                              <span>Payments</span>
+                              <span>{t('notification_type_payment')}</span>
                               <Chip 
                                 label={getNotificationsByType('payment').length} 
                                 size="small" 
@@ -819,7 +852,7 @@ const NotificationsPage: React.FC = () => {
                           label={
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                               <Warning fontSize="small" />
-                              <span>Inventory</span>
+                              <span>{t('notification_type_inventory')}</span>
                               <Chip 
                                 label={getNotificationsByType('inventory').length} 
                                 size="small" 
@@ -837,7 +870,7 @@ const NotificationsPage: React.FC = () => {
                           label={
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                               <Info fontSize="small" />
-                              <span>System</span>
+                              <span>{t('notification_type_system')}</span>
                               <Chip 
                                 label={getNotificationsByType('system').length} 
                                 size="small" 
@@ -895,8 +928,8 @@ const NotificationsPage: React.FC = () => {
                           }}
                         >
                           {updating 
-                            ? 'Loading...' 
-                            : `Load ${Math.min(4, notifications.length - displayCount)} More Notifications`
+                            ? t('loading_more') 
+                            : t('load_more_notifications')
                           }
                         </Button>
                       </Box>
@@ -906,7 +939,7 @@ const NotificationsPage: React.FC = () => {
                     {notifications.length > 0 && notifications.length <= displayCount && (
                       <Box sx={{ p: 3, pt: 2, textAlign: 'center' }}>
                         <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                          🎉 All notifications loaded ({notifications.length} total)
+                          {t('all_notifications_loaded', { count: notifications.length })}
                         </Typography>
                       </Box>
                     )}
@@ -935,21 +968,21 @@ const NotificationsPage: React.FC = () => {
                         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                           <Tune sx={{ mr: 2, fontSize: 28 }} />
                           <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                            Settings
+                            {t('notification_settings')}
                           </Typography>
                         </Box>
                         <Typography variant="body1" sx={{ opacity: 0.9 }}>
-                          Customize your notification preferences
+                          {t('customize_notification_preferences')}
                         </Typography>
                       </Box>
                       
                       <Box sx={{ p: 3 }}>
                         <Stack spacing={2.5}>
                           {[
-                            { key: 'appointments', label: 'Appointment Notifications', icon: <Schedule />, color: '#3B82F6' },
-                            { key: 'payments', label: 'Payment Notifications', icon: <Payment />, color: '#10B981' },
-                            { key: 'inventory', label: 'Inventory Alerts', icon: <Warning />, color: '#F59E0B' },
-                            { key: 'system', label: 'System Updates', icon: <Info />, color: '#8B5CF6' }
+                            { key: 'appointments', label: t('appointment_notifications'), icon: <Schedule />, color: '#3B82F6' },
+                            { key: 'payments', label: t('payment_notifications'), icon: <Payment />, color: '#10B981' },
+                            { key: 'inventory', label: t('inventory_alerts'), icon: <Warning />, color: '#F59E0B' },
+                            { key: 'system', label: t('system_updates'), icon: <Info />, color: '#8B5CF6' }
                           ].map((setting) => (
                             <Box 
                               key={setting.key}
@@ -1023,7 +1056,7 @@ const NotificationsPage: React.FC = () => {
                           disabled={settingsLoading}
                           startIcon={settingsLoading ? <CircularProgress size={20} sx={{ color: 'white' }} /> : <Settings />}
                         >
-                          {settingsLoading ? 'Saving...' : 'Save Settings'}
+                          {settingsLoading ? t('loading') : t('save_settings')}
                         </Button>
                       </Box>
                     </CardContent>
@@ -1047,11 +1080,11 @@ const NotificationsPage: React.FC = () => {
                         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                           <AutoAwesome sx={{ mr: 2, fontSize: 28 }} />
                           <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                            Quick Actions
+                            {t('quick_actions')}
                           </Typography>
                         </Box>
                         <Typography variant="body1" sx={{ opacity: 0.9 }}>
-                          Manage all notifications at once
+                          {t('manage_all_notifications')}
                         </Typography>
                       </Box>
                       
@@ -1078,7 +1111,7 @@ const NotificationsPage: React.FC = () => {
                               transition: 'all 0.3s ease'
                             }}
                           >
-                            {refreshing ? 'Refreshing...' : 'Refresh All Data'}
+                            {refreshing ? t('refreshing') : t('refresh_all_data')}
                           </Button>
                           
                           <Button 
@@ -1106,7 +1139,7 @@ const NotificationsPage: React.FC = () => {
                               transition: 'all 0.3s ease'
                             }}
                           >
-                            {updating ? 'Processing...' : `Mark All as Read ${unreadCount > 0 ? `(${unreadCount})` : ''}`}
+                            {updating ? t('processing') : `${t('mark_all_as_read')}${unreadCount > 0 ? ` (${unreadCount})` : ''}`}
                           </Button>
                           
                           <Button 
@@ -1134,7 +1167,7 @@ const NotificationsPage: React.FC = () => {
                               transition: 'all 0.3s ease'
                             }}
                           >
-                            {updating ? 'Processing...' : `Clear All (${notifications.length})`}
+                            {updating ? t('processing') : t('clear_all_with_count', { count: notifications.length })}
                           </Button>
                         </Stack>
                       </Box>

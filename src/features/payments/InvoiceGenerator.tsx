@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Paper,
@@ -12,8 +13,10 @@ import {
   TableHead,
   TableRow,
   Button,
+  Avatar,
+  Chip,
 } from '@mui/material';
-import { Download, Print, Share } from '@mui/icons-material';
+import { Download, Print, Share, CheckCircle } from '@mui/icons-material';
 
 interface InvoiceData {
   invoiceId: string;
@@ -23,11 +26,11 @@ interface InvoiceData {
   currency: string;
   date: string;
   dueDate: string;
-  status: string;
+  status: 'paid' | 'pending' | 'overdue' | 'partial';
   method: string;
   description: string;
   category: string;
-  insurance: string;
+  insurance: 'Yes' | 'No';
   insuranceAmount: number;
   clinicName?: string;
   clinicAddress?: string;
@@ -48,6 +51,9 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({
   onPrint,
   onShare,
 }) => {
+  const { t, i18n } = useTranslation();
+  const isRTL = i18n.language === 'ar';
+
   const {
     invoiceId,
     patient,
@@ -61,18 +67,42 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({
     category,
     insurance,
     insuranceAmount,
-    clinicName = "Modern Clinic",
-    clinicAddress = "123 Medical Street, Healthcare City",
-    clinicPhone = "+20 123 456 7890",
-    clinicEmail = "info@modernclinic.com"
+    clinicName = t('invoice.defaultClinic.name'),
+    clinicAddress = t('invoice.defaultClinic.address'),
+    clinicPhone = t('invoice.defaultClinic.phone'),
+    clinicEmail = t('invoice.defaultClinic.email')
   } = invoiceData;
 
+  // Financial calculations
   const subtotal = amount;
   const taxRate = 0.14; // 14% VAT
   const taxAmount = subtotal * taxRate;
   const totalAmount = subtotal + taxAmount;
   const insuranceCoverage = insuranceAmount || 0;
   const patientBalance = totalAmount - insuranceCoverage;
+
+  const getStatusColor = (status: string) => {
+    const colors = {
+      paid: 'success',
+      pending: 'warning',
+      overdue: 'error',
+      partial: 'info'
+    };
+    return colors[status as keyof typeof colors] || 'default';
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString(
+      isRTL ? 'ar-EG' : 'en-US'
+    );
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat(
+      isRTL ? 'ar-EG' : 'en-US',
+      { style: 'decimal', minimumFractionDigits: 2 }
+    ).format(amount);
+  };
 
   return (
     <Paper 
@@ -83,6 +113,7 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({
         p: 4,
         backgroundColor: '#fafafa',
         background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
+        direction: isRTL ? 'rtl' : 'ltr',
       }}
     >
       {/* Header */}
@@ -107,14 +138,17 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({
               {clinicAddress}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-              Phone: {clinicPhone}
+              {t('invoice.labels.phone')}: {clinicPhone}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Email: {clinicEmail}
+              {t('invoice.labels.email')}: {clinicEmail}
             </Typography>
           </Grid>
           
-          <Grid item xs={12} md={6} sx={{ textAlign: { xs: 'left', md: 'right' }, mt: { xs: 3, md: 0 } }}>
+          <Grid item xs={12} md={6} sx={{ 
+            textAlign: { xs: 'left', md: isRTL ? 'left' : 'right' }, 
+            mt: { xs: 3, md: 0 } 
+          }}>
             <Typography 
               variant="h4" 
               sx={{ 
@@ -123,7 +157,7 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({
                 mb: 2,
               }}
             >
-              INVOICE
+              {t('invoice.title')}
             </Typography>
             <Box sx={{ 
               p: 2, 
@@ -132,7 +166,7 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({
               border: '2px solid #1976d2',
             }}>
               <Typography variant="body2" color="text.secondary">
-                Invoice Number
+                {t('invoice.labels.invoiceNumber')}
               </Typography>
               <Typography variant="h6" sx={{ fontWeight: 700, color: '#1976d2' }}>
                 {invoiceId}
@@ -148,7 +182,7 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({
       <Grid container spacing={4} sx={{ mb: 4 }}>
         <Grid item xs={12} md={6}>
           <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, color: '#1976d2' }}>
-            Bill To:
+            {t('invoice.sections.billTo')}:
           </Typography>
           <Box sx={{ 
             p: 3, 
@@ -156,18 +190,33 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({
             borderRadius: 2,
             border: '1px solid #e0e0e0',
           }}>
-            <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
-              {patient}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Patient ID: {patient.split(' ').map(n => n[0]).join('')}-001
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+              <Avatar
+                sx={{
+                  width: 48,
+                  height: 48,
+                  backgroundColor: 'primary.main',
+                  fontSize: '1.2rem',
+                  fontWeight: 700,
+                }}
+              >
+                {invoiceData.patientAvatar}
+              </Avatar>
+              <Box>
+                <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+                  {patient}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {t('invoice.labels.patientId')}: {patient.split(' ').map(n => n[0]).join('')}-001
+                </Typography>
+              </Box>
+            </Box>
           </Box>
         </Grid>
         
         <Grid item xs={12} md={6}>
           <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, color: '#1976d2' }}>
-            Invoice Details:
+            {t('invoice.sections.invoiceDetails')}:
           </Typography>
           <Box sx={{ 
             p: 3, 
@@ -178,43 +227,39 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({
             <Grid container spacing={1}>
               <Grid item xs={6}>
                 <Typography variant="body2" color="text.secondary">
-                  Issue Date:
+                  {t('invoice.labels.issueDate')}:
                 </Typography>
               </Grid>
               <Grid item xs={6}>
                 <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                  {new Date(date).toLocaleDateString()}
+                  {formatDate(date)}
                 </Typography>
               </Grid>
               
               <Grid item xs={6}>
                 <Typography variant="body2" color="text.secondary">
-                  Due Date:
+                  {t('invoice.labels.dueDate')}:
                 </Typography>
               </Grid>
               <Grid item xs={6}>
                 <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                  {new Date(dueDate).toLocaleDateString()}
+                  {formatDate(dueDate)}
                 </Typography>
               </Grid>
               
               <Grid item xs={6}>
                 <Typography variant="body2" color="text.secondary">
-                  Status:
+                  {t('invoice.labels.status')}:
                 </Typography>
               </Grid>
               <Grid item xs={6}>
-                <Typography 
-                  variant="body2" 
-                  sx={{ 
-                    fontWeight: 700,
-                    color: status === 'paid' ? '#4caf50' : 
-                           status === 'pending' ? '#ff9800' : '#f44336',
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  {status}
-                </Typography>
+                <Chip
+                  label={t(`invoice.status.${status}`)}
+                  color={getStatusColor(status) as any}
+                  size="small"
+                  variant="filled"
+                  sx={{ fontWeight: 600 }}
+                />
               </Grid>
             </Grid>
           </Box>
@@ -223,7 +268,7 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({
 
       {/* Services Table */}
       <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, color: '#1976d2' }}>
-        Services & Procedures:
+        {t('invoice.sections.servicesAndProcedures')}:
       </Typography>
       
       <TableContainer 
@@ -238,10 +283,18 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({
         <Table>
           <TableHead sx={{ backgroundColor: '#1976d2' }}>
             <TableRow>
-              <TableCell sx={{ color: 'white', fontWeight: 700 }}>Description</TableCell>
-              <TableCell sx={{ color: 'white', fontWeight: 700 }} align="center">Category</TableCell>
-              <TableCell sx={{ color: 'white', fontWeight: 700 }} align="center">Payment Method</TableCell>
-              <TableCell sx={{ color: 'white', fontWeight: 700 }} align="right">Amount</TableCell>
+              <TableCell sx={{ color: 'white', fontWeight: 700 }}>
+                {t('invoice.table.description')}
+              </TableCell>
+              <TableCell sx={{ color: 'white', fontWeight: 700 }} align="center">
+                {t('invoice.table.category')}
+              </TableCell>
+              <TableCell sx={{ color: 'white', fontWeight: 700 }} align="center">
+                {t('invoice.table.paymentMethod')}
+              </TableCell>
+              <TableCell sx={{ color: 'white', fontWeight: 700 }} align="right">
+                {t('invoice.table.amount')}
+              </TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -252,14 +305,14 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({
                 </Typography>
               </TableCell>
               <TableCell align="center" sx={{ textTransform: 'capitalize' }}>
-                {category}
+                {t(`invoice.categories.${category}`)}
               </TableCell>
               <TableCell align="center">
-                {method}
+                {t(`invoice.paymentMethods.${method.toLowerCase().replace(' ', '_')}`)}
               </TableCell>
               <TableCell align="right">
                 <Typography variant="body2" sx={{ fontWeight: 700 }}>
-                  {currency} {amount.toLocaleString()}
+                  {currency} {formatCurrency(amount)}
                 </Typography>
               </TableCell>
             </TableRow>
@@ -282,57 +335,73 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({
                 backgroundColor: '#e8f5e8',
                 borderRadius: 1,
                 border: '1px solid #4caf50',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
               }}>
-                <Typography variant="body2" sx={{ fontWeight: 600, color: '#2e7d32' }}>
-                  ✓ Insurance Coverage Applied
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  This patient has active insurance coverage
-                </Typography>
+                <CheckCircle sx={{ color: '#2e7d32', fontSize: 20 }} />
+                <Box>
+                  <Typography variant="body2" sx={{ fontWeight: 600, color: '#2e7d32' }}>
+                    {t('invoice.insurance.coverageApplied')}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {t('invoice.insurance.activeDescription')}
+                  </Typography>
+                </Box>
               </Box>
             )}
           </Grid>
           
           <Grid item xs={12} md={4}>
-            <Box sx={{ textAlign: 'right' }}>
+            <Box sx={{ textAlign: isRTL ? 'left' : 'right' }}>
               <Grid container justifyContent="space-between" sx={{ mb: 1 }}>
-                <Typography variant="body2">Subtotal:</Typography>
+                <Typography variant="body2">
+                  {t('invoice.calculations.subtotal')}:
+                </Typography>
                 <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                  {currency} {subtotal.toLocaleString()}
+                  {currency} {formatCurrency(subtotal)}
                 </Typography>
               </Grid>
               
               <Grid container justifyContent="space-between" sx={{ mb: 1 }}>
-                <Typography variant="body2">VAT (14%):</Typography>
+                <Typography variant="body2">
+                  {t('invoice.calculations.vat')} (14%):
+                </Typography>
                 <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                  {currency} {taxAmount.toFixed(2)}
+                  {currency} {formatCurrency(taxAmount)}
                 </Typography>
               </Grid>
               
               <Divider sx={{ my: 1 }} />
               
               <Grid container justifyContent="space-between" sx={{ mb: 2 }}>
-                <Typography variant="body1" sx={{ fontWeight: 700 }}>Total Amount:</Typography>
+                <Typography variant="body1" sx={{ fontWeight: 700 }}>
+                  {t('invoice.calculations.totalAmount')}:
+                </Typography>
                 <Typography variant="body1" sx={{ fontWeight: 700, color: '#1976d2' }}>
-                  {currency} {totalAmount.toFixed(2)}
+                  {currency} {formatCurrency(totalAmount)}
                 </Typography>
               </Grid>
               
               {insurance === 'Yes' && insuranceCoverage > 0 && (
                 <>
                   <Grid container justifyContent="space-between" sx={{ mb: 1 }}>
-                    <Typography variant="body2" color="success.main">Insurance Coverage:</Typography>
+                    <Typography variant="body2" color="success.main">
+                      {t('invoice.calculations.insuranceCoverage')}:
+                    </Typography>
                     <Typography variant="body2" sx={{ fontWeight: 600, color: 'success.main' }}>
-                      -{currency} {insuranceCoverage.toLocaleString()}
+                      -{currency} {formatCurrency(insuranceCoverage)}
                     </Typography>
                   </Grid>
                   
                   <Divider sx={{ my: 1 }} />
                   
                   <Grid container justifyContent="space-between">
-                    <Typography variant="h6" sx={{ fontWeight: 700 }}>Patient Balance:</Typography>
+                    <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                      {t('invoice.calculations.patientBalance')}:
+                    </Typography>
                     <Typography variant="h6" sx={{ fontWeight: 700, color: '#1976d2' }}>
-                      {currency} {patientBalance.toFixed(2)}
+                      {currency} {formatCurrency(patientBalance)}
                     </Typography>
                   </Grid>
                 </>
@@ -347,16 +416,16 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({
         <Grid container spacing={3}>
           <Grid item xs={12} md={8}>
             <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
-              Payment Terms & Notes:
+              {t('invoice.footer.paymentTermsTitle')}:
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-              • Payment is due within 30 days of invoice date
+              • {t('invoice.footer.paymentDue30Days')}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-              • Late payments may incur additional charges
+              • {t('invoice.footer.latePaymentCharges')}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              • For questions, please contact us at {clinicPhone}
+              • {t('invoice.footer.questionsContact')}: {clinicPhone}
             </Typography>
           </Grid>
           
@@ -373,7 +442,7 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({
                   fontWeight: 600,
                 }}
               >
-                Download PDF
+                {t('invoice.actions.downloadPDF')}
               </Button>
               
               <Button
@@ -387,7 +456,7 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({
                   fontWeight: 600,
                 }}
               >
-                Print Invoice
+                {t('invoice.actions.printInvoice')}
               </Button>
               
               <Button
@@ -401,7 +470,7 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({
                   fontWeight: 600,
                 }}
               >
-                Share
+                {t('invoice.actions.share')}
               </Button>
             </Box>
           </Grid>
@@ -417,11 +486,11 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({
         opacity: 0.6,
       }}>
         <Typography variant="caption" color="text.secondary">
-          Generated by {clinicName} Management System • {new Date().toLocaleString()}
+          {t('invoice.footer.generatedBy')} {clinicName} {t('invoice.footer.managementSystem')} • {formatDate(new Date().toISOString())}
         </Typography>
       </Box>
     </Paper>
   );
 };
 
-export default InvoiceGenerator; 
+export default InvoiceGenerator;

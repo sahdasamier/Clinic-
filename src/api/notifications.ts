@@ -456,8 +456,8 @@ const generateInventoryNotifications = (inventory: any[]): Notification[] => {
       notifications.push({
         id: `inventory-low-${item.id}`,
         type: 'inventory',
-        title: 'Low Stock Alert',
-        message: `${item.name} is running low. Only ${item.quantity} units left (minimum: ${item.minQuantity})`,
+        title: 'low_stock_alert_title',
+        message: `low_stock_message|||${item.name}|||${item.quantity}|||${item.minQuantity}`,
         time: timeAgo,
         read: false,
         color: '#F59E0B',
@@ -473,8 +473,8 @@ const generateInventoryNotifications = (inventory: any[]): Notification[] => {
       notifications.push({
         id: `inventory-out-${item.id}`,
         type: 'inventory',
-        title: 'Out of Stock Alert',
-        message: `${item.name} is out of stock. Please reorder from ${item.supplier}`,
+        title: 'out_of_stock_alert_title',
+        message: `out_of_stock_message|||${item.name}|||${item.supplier}`,
         time: timeAgo,
         read: false,
         color: '#EF4444',
@@ -498,8 +498,8 @@ const generateSystemNotifications = (): Notification[] => {
   notifications.push({
     id: 'system-update-latest',
     type: 'system',
-    title: 'System Update',
-    message: 'New features have been added to the patient management system. Check out the updated medication tracking!',
+    title: 'system_update',
+    message: 'system_update_message',
     time: getTimeAgo(lastSystemUpdate),
     read: false,
     color: '#8B5CF6',

@@ -127,22 +127,22 @@ export const doctorSchedules = baseDoctorSchedules;
 
 // Appointment interface (compatible with appointment page)
 interface Appointment {
-  id?: number;
-  patient?: string;
-  patientAvatar?: string;
+  id: number;
+  patient: string;
+  patientAvatar: string;
   date: string;
   time: string;
   timeSlot: string;
   duration: number;
   doctor: string;
-  type?: string;
-  status?: string;
-  location?: string;
-  phone?: string;
-  notes?: string;
-  completed?: boolean;
-  priority?: string;
-  createdAt?: string;
+  type: string;
+  status: 'confirmed' | 'pending' | 'cancelled' | 'rescheduled' | 'no-show' | 'completed';
+  location: string;
+  phone: string;
+  notes: string;
+  completed: boolean;
+  priority: 'normal' | 'high' | 'urgent';
+  createdAt: string;
   isAvailableSlot?: boolean; // New field to distinguish available slots from actual appointments
 }
 
@@ -406,10 +406,11 @@ const DoctorSchedulingPage: React.FC = () => {
       date: selectedDate,
       time: timeDisplay,
       timeSlot: formData.time,
-      patient: '', // No patient - this is just an available slot
+      patient: 'Available Slot', // Use a default name for available slots
+      patientAvatar: 'AS',
       duration: doctor.consultationDuration || 30,
       type: 'Available Slot',
-      status: 'available',
+      status: 'pending',
       location: `Room ${100 + doctor.id}`,
       phone: '',
       notes: 'Available time slot created from doctor scheduling',
@@ -663,10 +664,13 @@ const DoctorSchedulingPage: React.FC = () => {
         date: selectedDate,
         time: timeDisplay,
         timeSlot: selectedTimeSlot.time,
-        patient: timeSlotFormData.type === 'reserved' ? timeSlotFormData.patientName.trim() : '',
+        patient: timeSlotFormData.type === 'reserved' ? timeSlotFormData.patientName.trim() : 'Available Slot',
+        patientAvatar: timeSlotFormData.type === 'reserved' 
+          ? timeSlotFormData.patientName.trim().split(' ').map(n => n[0]).join('').toUpperCase() || 'PA'
+          : 'AS',
         duration: doctor.consultationDuration || 30,
         type: timeSlotFormData.type === 'reserved' ? timeSlotFormData.appointmentType : 'Available Slot',
-        status: timeSlotFormData.type === 'reserved' ? 'confirmed' : 'available',
+        status: timeSlotFormData.type === 'reserved' ? 'confirmed' : 'pending',
         location: `Room ${100 + doctor.id}`,
         phone: timeSlotFormData.patientPhone || '',
         notes: timeSlotFormData.notes || (timeSlotFormData.type === 'available' ? 'Available time slot' : ''),

@@ -304,7 +304,402 @@ const resources = {
       'completed_status': 'Completed',
       'total_patients': 'Total Patients',
       'comprehensive_patient_care': '🏥 Comprehensive Patient Care',
-      'sync_appointments': 'Sync Appointments'
+      'sync_appointments': 'Sync Appointments',
+      
+      // Notifications
+      'failed_to_load_settings': 'Failed to load settings',
+      'failed_to_refresh_notifications': 'Failed to refresh notifications',
+      'notification_marked_as_read': 'Notification marked as read',
+      'failed_to_mark_as_read': 'Failed to mark as read',
+      'notification_deleted': 'Notification deleted',
+      'failed_to_delete_notification': 'Failed to delete notification',
+      'all_notifications_marked_as_read': 'All notifications marked as read',
+      'failed_to_mark_all_as_read': 'Failed to mark all as read',
+      'settings_saved_successfully': 'Settings saved successfully',
+      'failed_to_save_settings': 'Failed to save settings',
+      'mark_as_read': 'Mark as read',
+      'delete_notification': 'Delete notification',
+      'notification_preferences': 'Notification Preferences',
+      'realtime_updates': 'Real-time updates from your clinic management system',
+      'no_notifications_found': 'No notifications found',
+      'all_caught_up': "You're all caught up! New notifications will appear here when there's something important to share.",
+      'notification_settings': 'Notification Settings',
+      'customize_notification_preferences': 'Customize your notification preferences',
+      'appointment_notifications': 'Appointment Notifications',
+      'payment_notifications': 'Payment Notifications',
+      'system_updates': 'System Updates',
+      'save_settings': 'Save Settings',
+      'quick_actions': 'Quick Actions',
+      'manage_all_notifications': 'Manage all notifications at once',
+      'mark_all_as_read': 'Mark All as Read',
+      'clear_all_notifications': 'Clear All Notifications',
+      'refresh_from_all_data': 'Refresh from all data',
+      'load_more_notifications': 'Load more notifications',
+      'loading_more': 'Loading...',
+      'all_notifications_loaded': 'All notifications loaded ({{count}} total)',
+      'loaded_more_notifications': 'Loaded {{count}} more notification{{s}}',
+      'failed_to_load_more': 'Failed to load more notifications',
+      'notifications_refreshed': 'Notifications refreshed! Found {{total}} total notifications ({{unread}} unread) from all application data',
+      'refreshing_from_all_modules': 'Refreshing notifications from all application modules...',
+      'refreshing_notifications': 'Refreshing notifications',
+      'notification_type_all': 'All Notifications',
+      'notification_type_appointment': 'Appointments',
+      'notification_type_payment': 'Payments',
+      'notification_type_inventory': 'Inventory',
+      'notification_type_system': 'System',
+      'notification_appointment_type': 'Appointment',
+      'notification_payment_type': 'Payment',
+      'notification_inventory_type': 'Inventory',
+      'notification_system_type': 'System',
+      'created_at': 'Created at',
+      'message': 'Message',
+      'title': 'Title',
+      'read': 'Read',
+      'unread': 'Unread',
+      'notification_cleared': 'Notification cleared',
+      'all_notifications_cleared': 'All notifications cleared',
+      'failed_to_clear_notifications': 'Failed to clear notifications',
+      'notification_count': '{{count}} notification{{s}}',
+      'unread_count': '{{count}} unread',
+      'refreshing': 'Refreshing...',
+      'refresh_all_data': 'Refresh All Data',
+      'processing': 'Processing...',
+      'clear_all_with_count': 'Clear All ({{count}})',
+      'for': 'for',
+      
+      // Inventory Alert Messages
+      'low_stock_alert_title': 'Low Stock Alert',
+      'out_of_stock_alert_title': 'Out of Stock Alert',
+      'low_stock_message': '{{itemName}} is running low. Only {{quantity}} units left (minimum: {{minQuantity}})',
+      'out_of_stock_message': '{{itemName}} is out of stock. Please reorder from {{supplier}}',
+      'units_left': 'units left',
+      'minimum': 'minimum',
+      'please_reorder_from': 'Please reorder from',
+      
+      // Notification Titles & Messages
+      'new_appointment_scheduled': 'New Appointment Scheduled',
+      'appointment_reminder': 'Appointment Reminder',
+      'patient_no_show': 'Patient No-Show',
+      'appointment_cancelled': 'Appointment Cancelled',
+      'payment_received': 'Payment Received',
+      'payment_overdue': 'Payment Overdue',
+      'payment_due_soon': 'Payment Due Soon',
+      'new_patient_registration': 'New Patient Registration',
+      'follow_up_due': 'Follow-up Due',
+      'medication_refill_due': 'Medication Refill Due',
+      'system_update': 'System Update',
+      'system_update_message': 'New features have been added to the patient management system. Check out the updated medication tracking!',
+      
+      // Payment Management System
+      payment: {
+        title: 'Payment Management',
+        subtitle: 'Streamline invoices, track payments, and manage billing seamlessly',
+        
+        // Fields
+        fields: {
+          amount: 'Amount',
+          patientName: 'Patient Name',
+          invoiceDate: 'Invoice Date',
+          dueDate: 'Due Date',
+          description: 'Description',
+          serviceCategory: 'Service Category',
+          paymentMethod: 'Payment Method',
+          insuranceCoverage: 'Insurance Coverage',
+          insurance: 'Insurance',
+          method: 'Method'
+        },
+        
+        // Status
+        status: {
+          paid: 'Paid',
+          pending: 'Pending',
+          overdue: 'Overdue',
+          partial: 'Partial'
+        },
+        
+        // Categories
+        categories: {
+          consultation: 'Consultation',
+          checkup: 'Check-up',
+          surgery: 'Surgery',
+          emergency: 'Emergency',
+          followup: 'Follow-up',
+          procedure: 'Medical Procedure'
+        },
+        
+        // Payment Methods
+        methods: {
+          cash: 'Cash',
+          credit_card: 'Credit Card',
+          bank_transfer: 'Bank Transfer',
+          insurance: 'Insurance'
+        },
+        
+        // Statistics
+        stats: {
+          totalRevenue: 'Total Revenue',
+          totalProfit: 'Total Profit',
+          pendingPayments: 'Pending Payments',
+          overdueAmount: 'Overdue Amount',
+          thisMonth: 'This Month',
+          totalInvoices: 'Total invoices',
+          revenueMinusInsurance: 'Revenue - Insurance',
+          pendingInvoices: '{{count}} invoices',
+          overdueInvoices: '{{count}} overdue'
+        },
+        
+        // Actions
+        actions: {
+          createNewInvoice: 'Create New Invoice',
+          exportAll: 'Export All',
+          filter: 'Filter',
+          export: 'Export',
+          view: 'View',
+          download: 'Download',
+          send: 'Send',
+          edit: 'Edit',
+          delete: 'Delete',
+          viewInvoice: 'View Invoice',
+          downloadPDF: 'Download PDF',
+          sendReminder: 'Send Reminder',
+          clickToChangeStatus: 'Click to change status',
+          createInvoice: 'Create Invoice',
+          share: 'Share',
+          print: 'Print',
+          printInvoice: 'Print Invoice',
+          generatingPDF: 'Generating PDF for invoice {{invoiceId}}...',
+          preparingPrint: 'Preparing invoice {{invoiceId}} for printing...',
+          openingWhatsApp: 'Opening WhatsApp to send reminder to {{patient}}...'
+        },
+        
+        // Search
+        search: {
+          placeholder: 'Search payments by patient, invoice ID, or description...'
+        },
+        
+        // Table
+        table: {
+          invoice: 'Invoice',
+          patient: 'Patient',
+          amount: 'Amount',
+          method: 'Method',
+          date: 'Date',
+          status: 'Status',
+          actions: 'Actions',
+          insurance: 'Insurance',
+          due: 'Due'
+        },
+        
+        // Tabs
+        tabs: {
+          all: 'All ({{count}})',
+          paid: 'Paid ({{count}})',
+          pending: 'Pending ({{count}})',
+          overdue: 'Overdue ({{count}})'
+        },
+        
+        // View modes
+        view: {
+          table: 'Table',
+          cards: 'Cards'
+        },
+        
+        // Filters
+        filters: {
+          title: 'Filter Payments',
+          subtitle: 'Filter by status or period',
+          allPayments: 'All Payments',
+          thisMonth: 'This Month',
+          lastMonth: 'Last Month',
+          paidOnly: 'Paid Only',
+          pendingOnly: 'Pending Only',
+          overdueOnly: 'Overdue Only',
+          withInsurance: 'With Insurance'
+        },
+        
+        // Status Menu
+        statusMenu: {
+          title: 'Change Payment Status',
+          pendingDesc: 'Payment is awaiting',
+          paidDesc: 'Payment completed',
+          overdueDesc: 'Payment is late',
+          partialDesc: 'Partially paid'
+        },
+        
+        // Dialogs
+        dialogs: {
+          createNewInvoice: 'Create New Invoice',
+          invoicePreview: 'Invoice Preview'
+        },
+        
+        // Placeholders
+        placeholders: {
+          patientName: 'e.g., Ahmed Al-Rashid',
+          description: 'Description of services provided...'
+        },
+        
+        // Helpers
+        helpers: {
+          serviceDate: 'Date when the service was provided',
+          insuranceCoverage: 'Leave blank if no insurance coverage'
+        },
+        
+        // Validation
+        validation: {
+          fillAllFields: 'Please fill in all required fields',
+          validAmount: 'Amount must be a valid number greater than 0',
+          futureDateNotAllowed: 'Invoice date cannot be in the future',
+          dueDateAfterInvoice: 'Due date must be after the invoice date'
+        },
+        
+        // Success Messages
+        success: {
+          invoiceCreated: '✅ Invoice {{invoiceId}} created successfully for {{patient}}!',
+          invoiceDownloaded: '✅ Invoice {{invoiceId}} downloaded successfully!',
+          invoiceSentToPrinter: '✅ Invoice {{invoiceId}} sent to printer!',
+          reminderSent: '✅ WhatsApp reminder sent to {{patient}}!',
+          invoiceDeleted: '🗑️ Invoice {{invoiceId}} deleted successfully!',
+          statusChanged: '✅ Payment {{invoiceId}} status changed from "{{oldStatus}}" to "{{newStatus}}"'
+        },
+        
+        // Info Messages
+        info: {
+          alreadyPaid: 'ℹ️ Invoice {{invoiceId}} is already paid. No reminder needed.'
+        },
+        
+        // Analytics
+        analytics: {
+          paymentMethods: 'Payment Methods',
+          transactions: '{{count}} transactions'
+        },
+        
+        // Insurance
+        insurance: {
+          none: 'None'
+        },
+        
+        // Reminder Messages
+        reminder: {
+          title: 'Clinic Payment Reminder',
+          dear: 'Dear',
+          friendlyReminder: 'This is a friendly reminder about your outstanding payment',
+          amountDue: 'Amount Due',
+          pleaseArrange: 'Please arrange payment at your earliest convenience.',
+          questions: 'For any questions, please contact our clinic.',
+          thankYou: 'Thank you!'
+        },
+        
+        // Confirmation Messages
+        confirmation: {
+          deleteInvoice: 'Are you sure you want to delete invoice {{invoiceId}}?\n\nThis action cannot be undone.'
+        }
+      },
+
+      // Invoice System
+      invoice: {
+        title: 'INVOICE',
+        
+        // Default Clinic Information
+        defaultClinic: {
+          name: 'Modern Clinic',
+          address: '123 Medical Street, Healthcare City',
+          phone: '+20 123 456 7890',
+          email: 'info@modernclinic.com'
+        },
+        
+        // Labels
+        labels: {
+          phone: 'Phone',
+          email: 'Email',
+          invoiceNumber: 'Invoice Number',
+          patientId: 'Patient ID',
+          issueDate: 'Issue Date',
+          dueDate: 'Due Date',
+          status: 'Status',
+          serviceDate: 'Service Date'
+        },
+        
+        // Sections
+        sections: {
+          billTo: 'Bill To',
+          invoiceDetails: 'Invoice Details',
+          servicesAndProcedures: 'Services & Procedures'
+        },
+        
+        // Table Headers
+        table: {
+          description: 'Description',
+          category: 'Category',
+          paymentMethod: 'Payment Method',
+          amount: 'Amount'
+        },
+        
+        // Status
+        status: {
+          paid: 'Paid',
+          pending: 'Pending',
+          overdue: 'Overdue',
+          partial: 'Partial'
+        },
+        
+        // Categories
+        categories: {
+          consultation: 'Consultation',
+          checkup: 'Check-up',
+          surgery: 'Surgery',
+          emergency: 'Emergency',
+          followup: 'Follow-up',
+          procedure: 'Medical Procedure'
+        },
+        
+        // Payment Methods
+        paymentMethods: {
+          cash: 'Cash',
+          credit_card: 'Credit Card',
+          bank_transfer: 'Bank Transfer',
+          insurance: 'Insurance'
+        },
+        
+        // Insurance
+        insurance: {
+          coverageApplied: '✓ Insurance Coverage Applied',
+          activeDescription: 'This patient has active insurance coverage'
+        },
+        
+        // Calculations
+        calculations: {
+          subtotal: 'Subtotal',
+          vat: 'VAT',
+          totalAmount: 'Total Amount',
+          insuranceCoverage: 'Insurance Coverage',
+          patientBalance: 'Patient Balance'
+        },
+        
+        // Footer
+        footer: {
+          paymentTermsTitle: 'Payment Terms & Notes',
+          paymentDue30Days: 'Payment is due within 30 days of invoice date',
+          latePaymentCharges: 'Late payments may incur additional charges',
+          questionsContact: 'For questions, please contact us at',
+          generatedBy: 'Generated by',
+          managementSystem: 'Management System'
+        },
+        
+        // Actions
+        actions: {
+          downloadPDF: 'Download PDF',
+          printInvoice: 'Print Invoice',
+          share: 'Share'
+        }
+      },
+
+      // Common terms
+      common: {
+        cancel: 'Cancel',
+        close: 'Close',
+        for: 'for'
+      }
+      
     }
   },
   ar: {
@@ -652,6 +1047,400 @@ const resources = {
       'total_patients': 'إجمالي المرضى',
       'comprehensive_patient_care': '🏥 صحة المريض الشاملة',
       'sync_appointments': 'مزامنة المواعيد',
+      'for': 'لـ',
+      
+      // Notifications - الإشعارات
+      'failed_to_load_settings': 'فشل في تحميل الإعدادات',
+      'failed_to_refresh_notifications': 'فشل في تحديث الإشعارات',
+      'notification_marked_as_read': 'تم تحديد الإشعار كمقروء',
+      'failed_to_mark_as_read': 'فشل في تحديد الإشعار كمقروء',
+      'notification_deleted': 'تم حذف الإشعار',
+      'failed_to_delete_notification': 'فشل في حذف الإشعار',
+      'all_notifications_marked_as_read': 'تم تحديد جميع الإشعارات كمقروءة',
+      'failed_to_mark_all_as_read': 'فشل في تحديد جميع الإشعارات كمقروءة',
+      'settings_saved_successfully': 'تم حفظ الإعدادات بنجاح',
+      'failed_to_save_settings': 'فشل في حفظ الإعدادات',
+      'mark_as_read': 'تحديد كمقروء',
+      'delete_notification': 'حذف الإشعار',
+      'notification_preferences': 'تفضيلات الإشعارات',
+      'realtime_updates': 'تحديثات في الوقت الفعلي من نظام إدارة العيادة',
+      'no_notifications_found': 'لم يتم العثور على إشعارات',
+      'all_caught_up': 'أنت محدث! ستظهر الإشعارات الجديدة هنا عندما يكون هناك شيء مهم للمشاركة.',
+      'notification_settings': 'إعدادات الإشعارات',
+      'customize_notification_preferences': 'تخصيص تفضيلات الإشعارات الخاصة بك',
+      'appointment_notifications': 'إشعارات المواعيد',
+      'payment_notifications': 'إشعارات المدفوعات',
+      'system_updates': 'تحديثات النظام',
+      'save_settings': 'حفظ الإعدادات',
+      'quick_actions': 'إجراءات سريعة',
+      'manage_all_notifications': 'إدارة جميع الإشعارات في وقت واحد',
+      'mark_all_as_read': 'تحديد الجميع كمقروء',
+      'clear_all_notifications': 'مسح جميع الإشعارات',
+      'refresh_from_all_data': 'تحديث من جميع البيانات',
+      'load_more_notifications': 'تحميل المزيد من الإشعارات',
+      'loading_more': 'جاري التحميل...',
+      'all_notifications_loaded': 'تم تحميل جميع الإشعارات ({{count}} إجمالي)',
+      'loaded_more_notifications': 'تم تحميل {{count}} إشعار إضافي',
+      'failed_to_load_more': 'فشل في تحميل المزيد من الإشعارات',
+      'notifications_refreshed': 'تم تحديث الإشعارات! تم العثور على {{total}} إشعار إجمالي ({{unread}} غير مقروء) من جميع بيانات التطبيق',
+      'refreshing_from_all_modules': 'تحديث الإشعارات من جميع وحدات التطبيق...',
+      'refreshing_notifications': 'تحديث الإشعارات',
+      'notification_type_all': 'جميع الإشعارات',
+      'notification_type_appointment': 'المواعيد',
+      'notification_type_payment': 'المدفوعات',
+      'notification_type_inventory': 'المخزون',
+      'notification_type_system': 'النظام',
+      'notification_appointment_type': 'موعد',
+      'notification_payment_type': 'دفع',
+      'notification_inventory_type': 'مخزون',
+      'notification_system_type': 'نظام',
+      'created_at': 'تم الإنشاء في',
+      'message': 'الرسالة',
+      'title': 'العنوان',
+      'read': 'مقروء',
+      'unread': 'غير مقروء',
+      'notification_cleared': 'تم مسح الإشعار',
+      'all_notifications_cleared': 'تم مسح جميع الإشعارات',
+      'failed_to_clear_notifications': 'فشل في مسح الإشعارات',
+      'notification_count': '{{count}} إشعار',
+      'unread_count': '{{count}} غير مقروء',
+      'refreshing': 'جاري التحديث...',
+      'refresh_all_data': 'تحديث جميع البيانات',
+      'processing': 'جاري المعالجة...',
+      'clear_all_with_count': 'مسح الجميع ({{count}})',
+      
+      // Inventory Alert Messages - رسائل تنبيهات المخزون
+      'low_stock_alert_title': 'تنبيه انخفاض المخزون',
+      'out_of_stock_alert_title': 'تنبيه نفاد المخزون',
+      'low_stock_message': '{{itemName}} منخفض. متبقي {{quantity}} وحدة فقط (الحد الأدنى: {{minQuantity}})',
+      'out_of_stock_message': '{{itemName}} نفد من المخزون. يرجى إعادة الطلب من {{supplier}}',
+      'units_left': 'وحدة متبقية',
+      'minimum': 'الحد الأدنى',
+      'please_reorder_from': 'يرجى إعادة الطلب من',
+      
+      // Notification Titles & Messages - عناوين ورسائل الإشعارات
+      'new_appointment_scheduled': 'تم جدولة موعد جديد',
+      'appointment_reminder': 'تذكير بالموعد',
+      'patient_no_show': 'لم يحضر المريض',
+      'appointment_cancelled': 'تم إلغاء الموعد',
+      'payment_received': 'تم استلام الدفعة',
+      'payment_overdue': 'دفعة متأخرة',
+      'payment_due_soon': 'دفعة مستحقة قريباً',
+      'new_patient_registration': 'تسجيل مريض جديد',
+      'follow_up_due': 'متابعة مستحقة',
+      'medication_refill_due': 'إعادة تعبئة الدواء مستحقة',
+      'system_update': 'تحديث النظام',
+      'system_update_message': 'تم إضافة ميزات جديدة إلى نظام إدارة المرضى. تحقق من تتبع الأدوية المحدث!',
+      
+      // Payment Management System - نظام إدارة المدفوعات
+      payment: {
+        title: 'إدارة المدفوعات',
+        subtitle: 'تبسيط الفواتير وتتبع المدفوعات وإدارة الفوترة بسلاسة',
+        
+        // Fields
+        fields: {
+          amount: 'المبلغ',
+          patientName: 'اسم المريض',
+          invoiceDate: 'تاريخ الفاتورة',
+          dueDate: 'تاريخ الاستحقاق',
+          description: 'الوصف',
+          serviceCategory: 'فئة الخدمة',
+          paymentMethod: 'طريقة الدفع',
+          insuranceCoverage: 'التغطية التأمينية',
+          insurance: 'التأمين',
+          method: 'الطريقة'
+        },
+        
+        // Status
+        status: {
+          paid: 'مدفوع',
+          pending: 'معلق',
+          overdue: 'متأخر',
+          partial: 'جزئي'
+        },
+        
+        // Categories
+        categories: {
+          consultation: 'استشارة',
+          checkup: 'فحص روتيني',
+          surgery: 'جراحة',
+          emergency: 'طوارئ',
+          followup: 'متابعة',
+          procedure: 'إجراء طبي'
+        },
+        
+        // Payment Methods
+        methods: {
+          cash: 'نقداً',
+          credit_card: 'بطاقة ائتمان',
+          bank_transfer: 'تحويل بنكي',
+          insurance: 'تأمين'
+        },
+        
+        // Statistics
+        stats: {
+          totalRevenue: 'إجمالي الإيرادات',
+          totalProfit: 'إجمالي الربح',
+          pendingPayments: 'المدفوعات المعلقة',
+          overdueAmount: 'المبلغ المتأخر',
+          thisMonth: 'هذا الشهر',
+          totalInvoices: 'إجمالي الفواتير',
+          revenueMinusInsurance: 'الإيرادات - التأمين',
+          pendingInvoices: '{{count}} فاتورة',
+          overdueInvoices: '{{count}} متأخرة'
+        },
+        
+        // Actions
+        actions: {
+          createNewInvoice: 'إنشاء فاتورة جديدة',
+          exportAll: 'تصدير الكل',
+          filter: 'تصفية',
+          export: 'تصدير',
+          view: 'عرض',
+          download: 'تحميل',
+          send: 'إرسال',
+          edit: 'تعديل',
+          delete: 'حذف',
+          viewInvoice: 'عرض الفاتورة',
+          downloadPDF: 'تحميل PDF',
+          sendReminder: 'إرسال تذكير',
+          clickToChangeStatus: 'اضغط لتغيير الحالة',
+          createInvoice: 'إنشاء فاتورة',
+          share: 'مشاركة',
+          print: 'طباعة',
+          printInvoice: 'طباعة الفاتورة',
+          generatingPDF: 'جاري إنشاء PDF للفاتورة {{invoiceId}}...',
+          preparingPrint: 'جاري تحضير الفاتورة {{invoiceId}} للطباعة...',
+          openingWhatsApp: 'جاري فتح واتساب لإرسال تذكير لـ {{patient}}...'
+        },
+        
+        // Search
+        search: {
+          placeholder: 'البحث في المدفوعات بواسطة المريض أو رقم الفاتورة أو الوصف...'
+        },
+        
+        // Table
+        table: {
+          invoice: 'الفاتورة',
+          patient: 'المريض',
+          amount: 'المبلغ',
+          method: 'الطريقة',
+          date: 'التاريخ',
+          status: 'الحالة',
+          actions: 'الإجراءات',
+          insurance: 'التأمين',
+          due: 'الاستحقاق'
+        },
+        
+        // Tabs
+        tabs: {
+          all: 'الكل ({{count}})',
+          paid: 'مدفوع ({{count}})',
+          pending: 'معلق ({{count}})',
+          overdue: 'متأخر ({{count}})'
+        },
+        
+        // View modes
+        view: {
+          table: 'جدول',
+          cards: 'بطاقات'
+        },
+        
+        // Filters
+        filters: {
+          title: 'تصفية المدفوعات',
+          subtitle: 'تصفية حسب الحالة أو الفترة',
+          allPayments: 'جميع المدفوعات',
+          thisMonth: 'هذا الشهر',
+          lastMonth: 'الشهر الماضي',
+          paidOnly: 'المدفوع فقط',
+          pendingOnly: 'المعلق فقط',
+          overdueOnly: 'المتأخر فقط',
+          withInsurance: 'مع التأمين'
+        },
+        
+        // Status Menu
+        statusMenu: {
+          title: 'تغيير حالة الدفع',
+          pendingDesc: 'الدفع في الانتظار',
+          paidDesc: 'تم الدفع',
+          overdueDesc: 'الدفع متأخر',
+          partialDesc: 'دفع جزئي'
+        },
+        
+        // Dialogs
+        dialogs: {
+          createNewInvoice: 'إنشاء فاتورة جديدة',
+          invoicePreview: 'معاينة الفاتورة'
+        },
+        
+        // Placeholders
+        placeholders: {
+          patientName: 'مثال: أحمد الراشد',
+          description: 'وصف الخدمات المقدمة...'
+        },
+        
+        // Helpers
+        helpers: {
+          serviceDate: 'تاريخ تقديم الخدمة',
+          insuranceCoverage: 'اتركه فارغاً إذا لم يكن هناك تغطية تأمينية'
+        },
+        
+        // Validation
+        validation: {
+          fillAllFields: 'يرجى ملء جميع الحقول المطلوبة',
+          validAmount: 'يجب أن يكون المبلغ رقماً صالحاً أكبر من 0',
+          futureDateNotAllowed: 'لا يمكن أن يكون تاريخ الفاتورة في المستقبل',
+          dueDateAfterInvoice: 'يجب أن يكون تاريخ الاستحقاق بعد تاريخ الفاتورة'
+        },
+        
+        // Success Messages
+        success: {
+          invoiceCreated: '✅ تم إنشاء الفاتورة {{invoiceId}} بنجاح لـ {{patient}}!',
+          invoiceDownloaded: '✅ تم تحميل الفاتورة {{invoiceId}} بنجاح!',
+          invoiceSentToPrinter: '✅ تم إرسال الفاتورة {{invoiceId}} للطابعة!',
+          reminderSent: '✅ تم إرسال تذكير واتساب لـ {{patient}}!',
+          invoiceDeleted: '🗑️ تم حذف الفاتورة {{invoiceId}} بنجاح!',
+          statusChanged: '✅ تم تغيير حالة الدفع {{invoiceId}} من "{{oldStatus}}" إلى "{{newStatus}}"'
+        },
+        
+        // Info Messages
+        info: {
+          alreadyPaid: 'ℹ️ الفاتورة {{invoiceId}} مدفوعة بالفعل. لا حاجة لتذكير.'
+        },
+        
+        // Analytics
+        analytics: {
+          paymentMethods: 'طرق الدفع',
+          transactions: '{{count}} معاملة'
+        },
+        
+        // Insurance
+        insurance: {
+          none: 'لا يوجد'
+        },
+        
+        // Reminder Messages
+        reminder: {
+          title: 'تذكير دفع العيادة',
+          dear: 'عزيزي/عزيزتي',
+          friendlyReminder: 'هذا تذكير ودود بشأن دفعتك المستحقة',
+          amountDue: 'المبلغ المستحق',
+          pleaseArrange: 'يرجى ترتيب الدفع في أقرب وقت ممكن.',
+          questions: 'لأي استفسارات، يرجى الاتصال بعيادتنا.',
+          thankYou: 'شكراً لك!'
+        },
+        
+        // Confirmation Messages
+        confirmation: {
+          deleteInvoice: 'هل أنت متأكد من حذف الفاتورة {{invoiceId}}؟\n\nلا يمكن التراجع عن هذا الإجراء.'
+        }
+      },
+
+      // Invoice System - نظام الفواتير
+      invoice: {
+        title: 'فاتورة',
+        
+        // Default Clinic Information
+        defaultClinic: {
+          name: 'العيادة الحديثة',
+          address: '123 شارع الطب، مدينة الرعاية الصحية',
+          phone: '+20 123 456 7890',
+          email: 'info@modernclinic.com'
+        },
+        
+        // Labels
+        labels: {
+          phone: 'الهاتف',
+          email: 'البريد الإلكتروني',
+          invoiceNumber: 'رقم الفاتورة',
+          patientId: 'رقم المريض',
+          issueDate: 'تاريخ الإصدار',
+          dueDate: 'تاريخ الاستحقاق',
+          status: 'الحالة',
+          serviceDate: 'تاريخ الخدمة'
+        },
+        
+        // Sections
+        sections: {
+          billTo: 'فاتورة إلى',
+          invoiceDetails: 'تفاصيل الفاتورة',
+          servicesAndProcedures: 'الخدمات والإجراءات'
+        },
+        
+        // Table Headers
+        table: {
+          description: 'الوصف',
+          category: 'الفئة',
+          paymentMethod: 'طريقة الدفع',
+          amount: 'المبلغ'
+        },
+        
+        // Status
+        status: {
+          paid: 'مدفوع',
+          pending: 'معلق',
+          overdue: 'متأخر',
+          partial: 'جزئي'
+        },
+        
+        // Categories
+        categories: {
+          consultation: 'استشارة',
+          checkup: 'فحص روتيني',
+          surgery: 'جراحة',
+          emergency: 'طوارئ',
+          followup: 'متابعة',
+          procedure: 'إجراء طبي'
+        },
+        
+        // Payment Methods
+        paymentMethods: {
+          cash: 'نقداً',
+          credit_card: 'بطاقة ائتمان',
+          bank_transfer: 'تحويل بنكي',
+          insurance: 'تأمين'
+        },
+        
+        // Insurance
+        insurance: {
+          coverageApplied: '✓ تم تطبيق التغطية التأمينية',
+          activeDescription: 'هذا المريض لديه تغطية تأمينية فعالة'
+        },
+        
+        // Calculations
+        calculations: {
+          subtotal: 'المجموع الفرعي',
+          vat: 'ضريبة القيمة المضافة',
+          totalAmount: 'المبلغ الإجمالي',
+          insuranceCoverage: 'التغطية التأمينية',
+          patientBalance: 'رصيد المريض'
+        },
+        
+        // Footer
+        footer: {
+          paymentTermsTitle: 'شروط الدفع والملاحظات',
+          paymentDue30Days: 'الدفع مستحق في غضون 30 يوماً من تاريخ الفاتورة',
+          latePaymentCharges: 'قد تتحمل المدفوعات المتأخرة رسوماً إضافية',
+          questionsContact: 'للاستفسارات، يرجى الاتصال بنا على',
+          generatedBy: 'تم إنشاؤها بواسطة',
+          managementSystem: 'نظام الإدارة'
+        },
+        
+        // Actions
+        actions: {
+          downloadPDF: 'تحميل PDF',
+          printInvoice: 'طباعة الفاتورة',
+          share: 'مشاركة'
+        }
+      },
+
+      // Common terms - المصطلحات الشائعة
+      common: {
+        cancel: 'إلغاء',
+        close: 'إغلاق',
+        for: 'لـ'
+      }
     }
   }
 };
