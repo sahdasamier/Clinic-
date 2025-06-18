@@ -214,7 +214,7 @@ const generateAppointmentNotifications = (appointments: any[]): Notification[] =
       notifications.push({
         id: `appointment-new-${appointment.id}`,
         type: 'appointment',
-        title: 'New Appointment Scheduled',
+        title: 'new_appointment_scheduled',
         message: `${appointment.patient} has booked a ${appointment.type.toLowerCase()} for ${appointment.date} at ${appointment.time}`,
         time: timeAgo,
         read: false,
@@ -231,7 +231,7 @@ const generateAppointmentNotifications = (appointments: any[]): Notification[] =
       notifications.push({
         id: `appointment-upcoming-${appointment.id}`,
         type: 'appointment',
-        title: 'Appointment Reminder',
+        title: 'appointment_reminder',
         message: `${appointment.patient} has an appointment tomorrow at ${appointment.time}`,
         time: 'Tomorrow',
         read: false,
@@ -248,7 +248,7 @@ const generateAppointmentNotifications = (appointments: any[]): Notification[] =
       notifications.push({
         id: `appointment-noshow-${appointment.id}`,
         type: 'appointment',
-        title: 'Patient No-Show',
+        title: 'patient_no_show',
         message: `${appointment.patient} did not show up for their ${appointment.type.toLowerCase()} appointment`,
         time: timeAgo,
         read: false,
@@ -265,7 +265,7 @@ const generateAppointmentNotifications = (appointments: any[]): Notification[] =
       notifications.push({
         id: `appointment-cancelled-${appointment.id}`,
         type: 'appointment',
-        title: 'Appointment Cancelled',
+        title: 'appointment_cancelled',
         message: `${appointment.patient} cancelled their ${appointment.type.toLowerCase()} appointment${appointment.priority === 'high' ? ' (High Priority)' : ''}`,
         time: timeAgo,
         read: false,
@@ -301,7 +301,7 @@ const generatePaymentNotifications = (payments: any[]): Notification[] => {
       notifications.push({
         id: `payment-received-${payment.id}`,
         type: 'payment',
-        title: 'Payment Received',
+        title: 'payment_received',
         message: `Payment of ${payment.amount} EGP received from ${payment.patient} (${payment.invoiceId})`,
         time: timeAgo,
         read: false,
@@ -321,7 +321,7 @@ const generatePaymentNotifications = (payments: any[]): Notification[] => {
       notifications.push({
         id: `payment-overdue-${payment.id}`,
         type: 'payment',
-        title: 'Payment Overdue',
+        title: 'payment_overdue',
         message: `Payment from ${payment.patient} is ${daysPastDue} day${daysPastDue > 1 ? 's' : ''} overdue (${payment.amount} EGP)`,
         time: `${daysPastDue} days overdue`,
         read: false,
@@ -342,7 +342,7 @@ const generatePaymentNotifications = (payments: any[]): Notification[] => {
         notifications.push({
           id: `payment-due-${payment.id}`,
           type: 'payment',
-          title: 'Payment Due Soon',
+          title: 'payment_due_soon',
           message: `Payment from ${payment.patient} is due ${daysToDue === 0 ? 'today' : `in ${daysToDue} day${daysToDue > 1 ? 's' : ''}`} (${payment.amount} EGP)`,
           time: daysToDue === 0 ? 'Due today' : `Due in ${daysToDue} day${daysToDue > 1 ? 's' : ''}`,
           read: false,
@@ -379,7 +379,7 @@ const generatePatientNotifications = (patients: any[]): Notification[] => {
       notifications.push({
         id: `patient-new-${patient.id}`,
         type: 'system',
-        title: 'New Patient Registration',
+        title: 'new_patient_registration',
         message: `${patient.name} has registered as a new patient`,
         time: timeAgo,
         read: false,
@@ -400,7 +400,7 @@ const generatePatientNotifications = (patients: any[]): Notification[] => {
         notifications.push({
           id: `patient-followup-${patient.id}`,
           type: 'appointment',
-          title: 'Follow-up Due',
+          title: 'follow_up_due',
           message: `${patient.name} has a follow-up appointment ${daysToAppointment === 0 ? 'today' : daysToAppointment === 1 ? 'tomorrow' : `in ${daysToAppointment} days`}`,
           time: daysToAppointment === 0 ? 'Today' : daysToAppointment === 1 ? 'Tomorrow' : `In ${daysToAppointment} days`,
           read: false,
@@ -424,7 +424,7 @@ const generatePatientNotifications = (patients: any[]): Notification[] => {
             notifications.push({
               id: `medication-refill-${patient.id}-${medication.name}`,
               type: 'system',
-              title: 'Medication Refill Due',
+              title: 'medication_refill_due',
               message: `${patient.name} may need a refill for ${medication.name} (${daysSinceStart} days since start)`,
               time: `${daysSinceStart} days on medication`,
               read: false,

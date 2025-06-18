@@ -171,5 +171,5 @@ const createAppTheme = (direction: Direction = 'ltr') => createTheme({
 // Default theme with LTR direction
 const theme = createAppTheme('ltr');
 
-export default theme;
+export default theme; 
 export { createAppTheme }; 

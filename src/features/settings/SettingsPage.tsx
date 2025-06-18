@@ -680,16 +680,16 @@ const SettingsPage: React.FC = () => {
                     WebkitBackgroundClip: 'text',
                     WebkitTextFillColor: 'transparent'
                   }}>
-                {t('settings')}
-              </Typography>
+                    {t('settings')}
+                  </Typography>
                   <Typography variant="h5" sx={{ 
                     opacity: 0.95, 
                     fontWeight: 500,
                     maxWidth: '600px',
                     lineHeight: 1.4
                   }}>
-              Manage your profile, clinic settings, and system preferences
-            </Typography>
+                    {t('manage_profile_clinic_settings')}
+                  </Typography>
                 </Box>
               </Box>
               <Box sx={{
@@ -741,7 +741,7 @@ const SettingsPage: React.FC = () => {
                         color: 'white',
                         fontSize: '1.4rem'
                       }}>
-                        Settings Menu
+                        {t('settings_menu')}
                     </Typography>
                   </Box>
                     <Typography variant="body2" sx={{ 
@@ -749,7 +749,7 @@ const SettingsPage: React.FC = () => {
                       fontWeight: 500,
                       fontSize: '0.9rem'
                     }}>
-                      Configure your clinic & preferences
+                      {t('configure_clinic_preferences')}
                     </Typography>
                   </Box>
                   <Box sx={{ py: 2 }}>
@@ -817,27 +817,27 @@ const SettingsPage: React.FC = () => {
                       }}
                   >
                     <Tab 
-                        label="Profile Management" 
+                        label={t('profile_management')} 
                         icon={<Person sx={{ fontSize: 26 }} />}
                       iconPosition="start"
                     />
                     <Tab 
-                      label="Clinic Settings" 
+                      label={t('clinic_settings_tab')} 
                         icon={<LocalHospital sx={{ fontSize: 26 }} />}
                       iconPosition="start"
                     />
                     <Tab 
-                      label="Notifications" 
+                      label={t('notifications')} 
                         icon={<Notifications sx={{ fontSize: 26 }} />}
                       iconPosition="start"
                     />
                     <Tab 
-                        label="Security & Privacy" 
+                        label={t('security_privacy')} 
                         icon={<Security sx={{ fontSize: 26 }} />}
                       iconPosition="start"
                     />
                     <Tab 
-                        label="System Settings" 
+                        label={t('system_settings')} 
                         icon={<Storage sx={{ fontSize: 26 }} />}
                       iconPosition="start"
                     />
@@ -899,13 +899,13 @@ const SettingsPage: React.FC = () => {
                                 fontSize: '2rem',
                                 mb: 0.5
                               }}>
-                          Profile Information
-                        </Typography>
+                                {t('profile_information')}
+                              </Typography>
                               <Typography variant="body1" sx={{ 
                                 color: 'grey.600',
                                 fontWeight: 500
                               }}>
-                                Manage your personal and professional details
+                                {t('manage_personal_professional_details')}
                               </Typography>
                             </Box>
                           </Box>
@@ -979,18 +979,18 @@ const SettingsPage: React.FC = () => {
                                   boxShadow: 2
                                 }}
                               >
-                                {isEditingProfile ? 'Cancel Edit' : 'Edit Profile'}
+                                {isEditingProfile ? t('cancel_edit') : t('edit_profile')}
                               </Button>
                             </Box>
                             <Box sx={{ display: 'flex', gap: 2 }}>
                               <Chip 
-                                label="Available" 
+                                label={t('available')} 
                                 color="success" 
                                 size="small"
                                 icon={<Check fontSize="small" />}
                               />
                               <Typography variant="body2" color="text.secondary">
-                                Last updated: 2 hours ago
+                                {t('last_updated')}: {t('hours_ago', { count: 2 })}
                               </Typography>
                             </Box>
                           </Box>
@@ -1003,72 +1003,72 @@ const SettingsPage: React.FC = () => {
                           // Display Mode - Show profile information
                           <Box>
                             <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
-                              Profile Information
+                              {t('profile_information')}
                             </Typography>
                             
                             {/* Basic Information Display */}
                             <Box sx={{ mb: 4 }}>
                               <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2, color: 'primary.main' }}>
-                                Basic Information
+                                {t('basic_information')}
                               </Typography>
                               <Grid container spacing={3}>
                                 <Grid item xs={12} md={6}>
                                   <Box sx={{ mb: 2 }}>
                                     <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                                      Full Name
+                                      {t('full_name')}
                                     </Typography>
                                     <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                                      {profile.name || 'Not specified'}
+                                      {profile.name || t('not_specified')}
                                     </Typography>
                                   </Box>
                                 </Grid>
                                 <Grid item xs={12} md={6}>
                                   <Box sx={{ mb: 2 }}>
                                     <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                                      Email Address
+                                      {t('email_address')}
                                     </Typography>
                                     <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                                      {profile.email || 'Not specified'}
+                                      {profile.email || t('not_specified')}
                                     </Typography>
                                   </Box>
                                 </Grid>
                                 <Grid item xs={12} md={6}>
                                   <Box sx={{ mb: 2 }}>
                                     <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                                      Phone Number
+                                      {t('phone_number')}
                                     </Typography>
                                     <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                                      {profile.phone || 'Not specified'}
+                                      {profile.phone || t('not_specified')}
                                     </Typography>
                                   </Box>
                                 </Grid>
                                 <Grid item xs={12} md={6}>
                                   <Box sx={{ mb: 2 }}>
                                     <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                                      Emergency Contact
+                                      {t('emergency_contact')}
                                     </Typography>
                                     <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                                      {profile.emergencyContact || 'Not specified'}
+                                      {profile.emergencyContact || t('not_specified')}
                                     </Typography>
                                   </Box>
                                 </Grid>
                                 <Grid item xs={12} md={6}>
                                   <Box sx={{ mb: 2 }}>
                                     <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                                      Date of Birth
+                                      {t('date_of_birth')}
                                     </Typography>
                                     <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                                      {profile.dateOfBirth || 'Not specified'}
+                                      {profile.dateOfBirth || t('not_specified')}
                                     </Typography>
                                   </Box>
                                 </Grid>
                                 <Grid item xs={12} md={6}>
                                   <Box sx={{ mb: 2 }}>
                                     <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                                      Gender
+                                      {t('gender')}
                                     </Typography>
                                     <Typography variant="body1" sx={{ fontWeight: 500, textTransform: 'capitalize' }}>
-                                      {profile.gender || 'Not specified'}
+                                      {profile.gender || t('not_specified')}
                                     </Typography>
                                   </Box>
                                 </Grid>
@@ -1078,66 +1078,66 @@ const SettingsPage: React.FC = () => {
                             {/* Professional Information Display */}
                             <Box sx={{ mb: 4 }}>
                               <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2, color: 'primary.main' }}>
-                                Professional Information
+                                {t('professional_information')}
                               </Typography>
                               <Grid container spacing={3}>
                                 <Grid item xs={12} md={6}>
                                   <Box sx={{ mb: 2 }}>
                                     <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                                      Primary Specialization
+                                      {t('primary_specialization')}
                                     </Typography>
                                     <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                                      {profile.specialization || 'Not specified'}
+                                      {profile.specialization || t('not_specified')}
                                     </Typography>
                                   </Box>
                                 </Grid>
                                 <Grid item xs={12} md={6}>
                                   <Box sx={{ mb: 2 }}>
                                     <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                                      Years of Experience
+                                      {t('years_of_experience')}
                                     </Typography>
                                     <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                                      {profile.experience ? `${profile.experience} years` : 'Not specified'}
+                                      {profile.experience ? t('years_text', { count: Number(profile.experience) }) : t('not_specified')}
                                     </Typography>
                                   </Box>
                                 </Grid>
                                 <Grid item xs={12} md={6}>
                                   <Box sx={{ mb: 2 }}>
                                     <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                                      Medical License Number
+                                      {t('medical_license_number')}
                                     </Typography>
                                     <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                                      {profile.licenseNumber || 'Not specified'}
+                                      {profile.licenseNumber || t('not_specified')}
                                     </Typography>
                                   </Box>
                                 </Grid>
                                 <Grid item xs={12} md={6}>
                                   <Box sx={{ mb: 2 }}>
                                     <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                                      Medical School
+                                      {t('medical_school')}
                                     </Typography>
                                     <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                                      {profile.medicalSchool || 'Not specified'}
+                                      {profile.medicalSchool || t('not_specified')}
                                     </Typography>
                                   </Box>
                                 </Grid>
                                 <Grid item xs={12} md={6}>
                                   <Box sx={{ mb: 2 }}>
                                     <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                                      Residency
+                                      {t('residency')}
                                     </Typography>
                                     <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                                      {profile.residency || 'Not specified'}
+                                      {profile.residency || t('not_specified')}
                                     </Typography>
                                   </Box>
                                 </Grid>
                                 <Grid item xs={12} md={6}>
                                   <Box sx={{ mb: 2 }}>
                                     <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                                      Board Certifications
+                                      {t('board_certifications')}
                                     </Typography>
                                     <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                                      {profile.certifications || 'Not specified'}
+                                      {profile.certifications || t('not_specified')}
                                     </Typography>
                                   </Box>
                                 </Grid>
@@ -1147,36 +1147,36 @@ const SettingsPage: React.FC = () => {
                             {/* Languages & Bio Display */}
                             <Box sx={{ mb: 4 }}>
                               <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2, color: 'primary.main' }}>
-                                Languages & Bio
+                                {t('languages_bio')}
                               </Typography>
                               <Grid container spacing={3}>
                                 <Grid item xs={12} md={6}>
                                   <Box sx={{ mb: 2 }}>
                                     <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                                      Languages Spoken
+                                      {t('languages_spoken')}
                                     </Typography>
                                     <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                                      {profile.languages || 'Not specified'}
+                                      {profile.languages || t('not_specified')}
                                     </Typography>
                                   </Box>
                                 </Grid>
                                 <Grid item xs={12} md={6}>
                                   <Box sx={{ mb: 2 }}>
                                     <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                                      Consultation Fee
+                                      {t('consultation_fee')}
                                     </Typography>
                                     <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                                      {profile.consultationFee ? `EGP ${profile.consultationFee}` : 'Not specified'}
+                                      {profile.consultationFee ? t('egp_amount', { amount: profile.consultationFee }) : t('not_specified')}
                                     </Typography>
                                   </Box>
                                 </Grid>
                                 <Grid item xs={12}>
                                   <Box sx={{ mb: 2 }}>
                                     <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                                      Professional Bio
+                                      {t('professional_bio')}
                                     </Typography>
                                     <Typography variant="body1" sx={{ fontWeight: 500, lineHeight: 1.6 }}>
-                                      {profile.bio || 'No bio available'}
+                                      {profile.bio || t('no_bio_available')}
                                     </Typography>
                                   </Box>
                                 </Grid>
@@ -1186,43 +1186,43 @@ const SettingsPage: React.FC = () => {
                             {/* Availability Settings Display */}
                             <Box>
                               <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2, color: 'primary.main' }}>
-                                Availability Settings
+                                {t('availability_settings')}
                               </Typography>
                               <Grid container spacing={3}>
                                 <Grid item xs={12} md={6}>
                                   <Box sx={{ mb: 2 }}>
                                     <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                                      Working Days
+                                      {t('working_days')}
                                     </Typography>
                                     <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                                      {profile.workingDays || 'Not specified'}
+                                      {profile.workingDays || t('not_specified')}
                                     </Typography>
                                   </Box>
                                 </Grid>
                                 <Grid item xs={12} md={6}>
                                   <Box sx={{ mb: 2 }}>
                                     <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                                      Working Hours
+                                      {t('working_hours')}
                                     </Typography>
                                     <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                                      {profile.workingHours || 'Not specified'}
+                                      {profile.workingHours || t('not_specified')}
                                     </Typography>
                                   </Box>
                                 </Grid>
                                 <Grid item xs={12} md={6}>
                                   <Box sx={{ mb: 2 }}>
                                     <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                                      Lunch Break
+                                      {t('lunch_break')}
                                     </Typography>
                                     <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                                      {profile.lunchBreak || 'Not specified'}
+                                      {profile.lunchBreak || t('not_specified')}
                                     </Typography>
                                   </Box>
                                 </Grid>
                                 <Grid item xs={12} md={6}>
                                   <Box sx={{ mb: 2 }}>
                                     <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                                      Current Status
+                                      {t('current_status')}
                                     </Typography>
                                     <Chip 
                                       label={profile.status?.charAt(0).toUpperCase() + profile.status?.slice(1) || 'Available'} 
@@ -1238,18 +1238,18 @@ const SettingsPage: React.FC = () => {
                           // Edit Mode - Show form fields
                           <div id="profile-form">
                             <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
-                              Edit Profile Information
+                              {t('edit_profile_information')}
                             </Typography>
 
                         {/* Basic Information */}
                             <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2, color: 'primary.main' }}>
-                          Basic Information
+                          {t('basic_information')}
                         </Typography>
                         <Grid container spacing={3} sx={{ mb: 4 }}>
                           <Grid item xs={12} md={6}>
                             <TextField
                               fullWidth
-                              label="Full Name"
+                              label={t('full_name')}
                               value={profile.name}
                               onChange={(e) => setProfile({ ...profile, name: e.target.value })}
                                   error={!!errors.name}
@@ -1260,7 +1260,7 @@ const SettingsPage: React.FC = () => {
                           <Grid item xs={12} md={6}>
                             <TextField
                               fullWidth
-                              label="Email Address"
+                              label={t('email_address')}
                               value={profile.email}
                               onChange={(e) => setProfile({ ...profile, email: e.target.value })}
                                   error={!!errors.email}
@@ -1271,7 +1271,7 @@ const SettingsPage: React.FC = () => {
                           <Grid item xs={12} md={6}>
                             <TextField
                               fullWidth
-                              label="Phone Number"
+                              label={t('phone_number')}
                               value={profile.phone}
                               onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
                                   error={!!errors.phone}
@@ -1282,7 +1282,7 @@ const SettingsPage: React.FC = () => {
                           <Grid item xs={12} md={6}>
                             <TextField
                               fullWidth
-                              label="Emergency Contact"
+                              label={t('emergency_contact')}
                                   value={profile.emergencyContact}
                                   onChange={(e) => setProfile({ ...profile, emergencyContact: e.target.value })}
                                   placeholder="+20 10 XXXX XXXX"
@@ -1291,7 +1291,7 @@ const SettingsPage: React.FC = () => {
                           <Grid item xs={12} md={6}>
                             <TextField
                               fullWidth
-                              label="Date of Birth"
+                              label={t('date_of_birth')}
                               type="date"
                                   value={profile.dateOfBirth}
                                   onChange={(e) => setProfile({ ...profile, dateOfBirth: e.target.value })}
@@ -1300,15 +1300,15 @@ const SettingsPage: React.FC = () => {
                           </Grid>
                           <Grid item xs={12} md={6}>
                             <FormControl fullWidth>
-                              <InputLabel>Gender</InputLabel>
+                              <InputLabel>{t('gender')}</InputLabel>
                                   <Select 
-                                    label="Gender"
+                                    label={t('gender')}
                                     value={profile.gender}
                                     onChange={(e) => setProfile({ ...profile, gender: e.target.value })}
                                   >
-                                <MenuItem value="male">Male</MenuItem>
-                                <MenuItem value="female">Female</MenuItem>
-                                <MenuItem value="other">Other</MenuItem>
+                                <MenuItem value="male">{t('male')}</MenuItem>
+                                <MenuItem value="female">{t('female')}</MenuItem>
+                                <MenuItem value="other">{t('other')}</MenuItem>
                               </Select>
                             </FormControl>
                           </Grid>
@@ -1316,15 +1316,15 @@ const SettingsPage: React.FC = () => {
 
                         {/* Professional Information */}
                             <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2, color: 'primary.main' }}>
-                          Professional Information
+                          {t('professional_information')}
                         </Typography>
                         <Grid container spacing={3} sx={{ mb: 4 }}>
                           <Grid item xs={12} md={6}>
                                 <FormControl fullWidth required>
-                              <InputLabel>Primary Specialization</InputLabel>
+                              <InputLabel>{t('primary_specialization')}</InputLabel>
                               <Select
                                 value={profile.specialization}
-                                label="Primary Specialization"
+                                label={t('primary_specialization')}
                                 onChange={(e) => setProfile({ ...profile, specialization: e.target.value })}
                                     error={!!errors.specialization}
                               >
@@ -1345,7 +1345,7 @@ const SettingsPage: React.FC = () => {
                           <Grid item xs={12} md={6}>
                             <TextField
                               fullWidth
-                              label="Years of Experience"
+                              label={t('years_of_experience')}
                               type="number"
                                   value={profile.experience}
                                   onChange={(e) => setProfile({ ...profile, experience: e.target.value })}
@@ -1355,7 +1355,7 @@ const SettingsPage: React.FC = () => {
                           <Grid item xs={12} md={6}>
                             <TextField
                               fullWidth
-                              label="Medical License Number"
+                              label={t('medical_license_number')}
                                   value={profile.licenseNumber}
                                   onChange={(e) => setProfile({ ...profile, licenseNumber: e.target.value })}
                                   placeholder="EG-12345-MED"
@@ -1364,7 +1364,7 @@ const SettingsPage: React.FC = () => {
                           <Grid item xs={12} md={6}>
                             <TextField
                               fullWidth
-                              label="Medical School"
+                              label={t('medical_school')}
                                   value={profile.medicalSchool}
                                   onChange={(e) => setProfile({ ...profile, medicalSchool: e.target.value })}
                                   placeholder="Cairo University Faculty of Medicine"
@@ -1373,7 +1373,7 @@ const SettingsPage: React.FC = () => {
                           <Grid item xs={12} md={6}>
                             <TextField
                               fullWidth
-                              label="Residency"
+                              label={t('residency')}
                                   value={profile.residency}
                                   onChange={(e) => setProfile({ ...profile, residency: e.target.value })}
                                   placeholder="Kasr Al Ainy Hospital"
@@ -1382,7 +1382,7 @@ const SettingsPage: React.FC = () => {
                           <Grid item xs={12} md={6}>
                             <TextField
                               fullWidth
-                              label="Board Certifications"
+                              label={t('board_certifications')}
                                   value={profile.certifications}
                                   onChange={(e) => setProfile({ ...profile, certifications: e.target.value })}
                                   placeholder="Egyptian Medical Syndicate Board"
@@ -1392,13 +1392,13 @@ const SettingsPage: React.FC = () => {
 
                         {/* Languages & Bio */}
                             <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2, color: 'primary.main' }}>
-                          Languages & Bio
+                          {t('languages_bio')}
                         </Typography>
                         <Grid container spacing={3} sx={{ mb: 4 }}>
                           <Grid item xs={12} md={6}>
                             <TextField
                               fullWidth
-                              label="Languages Spoken"
+                              label={t('languages_spoken')}
                                   value={profile.languages}
                                   onChange={(e) => setProfile({ ...profile, languages: e.target.value })}
                               placeholder="English, Arabic, Hindi"
@@ -1408,7 +1408,7 @@ const SettingsPage: React.FC = () => {
                           <Grid item xs={12} md={6}>
                             <TextField
                               fullWidth
-                              label="Consultation Fee"
+                              label={t('consultation_fee')}
                               type="number"
                                   value={profile.consultationFee}
                                   onChange={(e) => setProfile({ ...profile, consultationFee: e.target.value })}
@@ -1425,12 +1425,12 @@ const SettingsPage: React.FC = () => {
                           <Grid item xs={12}>
                             <TextField
                               fullWidth
-                              label="Professional Bio"
+                              label={t('professional_bio')}
                               multiline
                               rows={4}
                                   value={profile.bio}
                                   onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
-                              placeholder="Dr. Ahmed Ali is a board-certified General Practitioner with over 8 years of experience in providing comprehensive healthcare services. He specializes in preventive medicine, chronic disease management, and patient education."
+                              placeholder={t('bio_placeholder')}
                               helperText="This information will be visible to patients on your profile"
                             />
                           </Grid>
@@ -1438,13 +1438,13 @@ const SettingsPage: React.FC = () => {
 
                         {/* Availability Settings */}
                             <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2, color: 'primary.main' }}>
-                          Availability Settings
+                          {t('availability_settings')}
                         </Typography>
                         <Grid container spacing={3} sx={{ mb: 4 }}>
                           <Grid item xs={12} md={6}>
                             <TextField
                               fullWidth
-                              label="Working Days"
+                              label={t('working_days')}
                                   value={profile.workingDays}
                                   onChange={(e) => setProfile({ ...profile, workingDays: e.target.value })}
                               placeholder="Monday - Friday"
@@ -1453,7 +1453,7 @@ const SettingsPage: React.FC = () => {
                           <Grid item xs={12} md={6}>
                             <TextField
                               fullWidth
-                              label="Working Hours"
+                              label={t('working_hours')}
                                   value={profile.workingHours}
                                   onChange={(e) => setProfile({ ...profile, workingHours: e.target.value })}
                               placeholder="9:00 AM - 6:00 PM"
@@ -1462,7 +1462,7 @@ const SettingsPage: React.FC = () => {
                           <Grid item xs={12} md={6}>
                             <TextField
                               fullWidth
-                              label="Lunch Break"
+                              label={t('lunch_break')}
                                   value={profile.lunchBreak}
                                   onChange={(e) => setProfile({ ...profile, lunchBreak: e.target.value })}
                               placeholder="1:00 PM - 2:00 PM"
@@ -1470,16 +1470,16 @@ const SettingsPage: React.FC = () => {
                           </Grid>
                           <Grid item xs={12} md={6}>
                             <FormControl fullWidth>
-                              <InputLabel>Status</InputLabel>
+                              <InputLabel>{t('status')}</InputLabel>
                                   <Select 
-                                    label="Status" 
+                                    label={t('status')} 
                                     value={profile.status}
                                     onChange={(e) => setProfile({ ...profile, status: e.target.value })}
                                   >
-                                <MenuItem value="available">Available</MenuItem>
-                                <MenuItem value="busy">Busy</MenuItem>
-                                <MenuItem value="vacation">On Vacation</MenuItem>
-                                <MenuItem value="emergency">Emergency Only</MenuItem>
+                                <MenuItem value="available">{t('available')}</MenuItem>
+                                <MenuItem value="busy">{t('busy')}</MenuItem>
+                                <MenuItem value="vacation">{t('vacation')}</MenuItem>
+                                <MenuItem value="emergency">{t('emergency_only')}</MenuItem>
                               </Select>
                             </FormControl>
                           </Grid>
@@ -1513,7 +1513,7 @@ const SettingsPage: React.FC = () => {
                                   }
                                 }}
                               >
-                            Cancel
+                            {t('cancel')}
                           </Button>
                               <Button 
                                 variant="contained" 
@@ -1537,7 +1537,7 @@ const SettingsPage: React.FC = () => {
                                   }
                                 }}
                               >
-                                {loading ? 'Saving Profile...' : 'Save Changes'}
+                                {loading ? t('saving_profile') : t('save_changes')}
                           </Button>
                             </Box>
                           </div>
@@ -1598,13 +1598,13 @@ const SettingsPage: React.FC = () => {
                                 fontSize: '1.3rem',
                                 mb: 0.2
                               }}>
-                                Profile Statistics
+                                {t('profile_statistics')}
                         </Typography>
                               <Typography variant="body2" sx={{ 
                                 color: 'grey.600',
                                 fontWeight: 500
                               }}>
-                                Performance overview
+                                {t('performance_overview')}
                               </Typography>
                             </Box>
                           </Box>
@@ -1618,7 +1618,7 @@ const SettingsPage: React.FC = () => {
                               <People color="primary" />
                             </ListItemIcon>
                             <ListItemText
-                              primary="Total Patients"
+                              primary={t('total_patients')}
                               secondary="156"
                               primaryTypographyProps={{ variant: 'body2' }}
                               secondaryTypographyProps={{ variant: 'h6', fontWeight: 600 }}
@@ -1629,7 +1629,7 @@ const SettingsPage: React.FC = () => {
                               <Schedule color="primary" />
                             </ListItemIcon>
                             <ListItemText
-                              primary="Appointments This Month"
+                              primary={t('appointments_this_month')}
                               secondary="89"
                               primaryTypographyProps={{ variant: 'body2' }}
                               secondaryTypographyProps={{ variant: 'h6', fontWeight: 600 }}
@@ -1640,7 +1640,7 @@ const SettingsPage: React.FC = () => {
                               <Business color="primary" />
                             </ListItemIcon>
                             <ListItemText
-                              primary="Years of Experience"
+                              primary={t('years_of_experience')}
                               secondary={profile.experience || "8"}
                               primaryTypographyProps={{ variant: 'body2' }}
                               secondaryTypographyProps={{ variant: 'h6', fontWeight: 600 }}
@@ -1651,7 +1651,7 @@ const SettingsPage: React.FC = () => {
                                     <Check color="primary" />
                                   </ListItemIcon>
                                   <ListItemText
-                                    primary="Successful Treatments"
+                                    primary={t('successful_treatments')}
                                     secondary="1,247"
                               primaryTypographyProps={{ variant: 'body2' }}
                               secondaryTypographyProps={{ variant: 'h6', fontWeight: 600 }}
@@ -1711,13 +1711,13 @@ const SettingsPage: React.FC = () => {
                                     fontSize: '1.3rem',
                                     mb: 0.2
                                   }}>
-                                    Achievements & Certifications
+                                    {t('achievements_certifications')}
                                   </Typography>
                                   <Typography variant="body2" sx={{ 
                                     color: 'grey.600',
                                     fontWeight: 500
                                   }}>
-                                    Awards and recognitions
+                                    {t('awards_recognitions')}
                                   </Typography>
                                 </Box>
                               </Box>
@@ -1728,32 +1728,32 @@ const SettingsPage: React.FC = () => {
                               <List sx={{ p: 0 }}>
                                 <ListItem sx={{ px: 0, py: 1 }}>
                                   <ListItemText
-                                    primary="Board Certified"
-                                    secondary={profile.certifications || "Egyptian Medical Syndicate Board"}
+                                    primary={t('board_certified')}
+                                    secondary={profile.certifications || t('egyptian_medical_syndicate_member')}
                                     primaryTypographyProps={{ variant: 'body2', fontWeight: 600 }}
                                     secondaryTypographyProps={{ variant: 'caption' }}
                                   />
                                 </ListItem>
                                 <ListItem sx={{ px: 0, py: 1 }}>
                                   <ListItemText
-                                    primary="Excellence Award"
-                                    secondary="Best Doctor 2023 - Egyptian Medical Syndicate"
+                                    primary={t('excellence_award')}
+                                    secondary={t('best_doctor_2023')}
                                     primaryTypographyProps={{ variant: 'body2', fontWeight: 600 }}
                                     secondaryTypographyProps={{ variant: 'caption' }}
                                   />
                                 </ListItem>
                                 <ListItem sx={{ px: 0, py: 1 }}>
                                   <ListItemText
-                                    primary="Medical School"
-                                    secondary={profile.medicalSchool || "Cairo University Faculty of Medicine"}
+                                    primary={t('medical_school')}
+                                    secondary={profile.medicalSchool || t('cairo_university_medicine')}
                                     primaryTypographyProps={{ variant: 'body2', fontWeight: 600 }}
                                     secondaryTypographyProps={{ variant: 'caption' }}
                                   />
                                 </ListItem>
                                 <ListItem sx={{ px: 0, py: 1 }}>
                                   <ListItemText
-                                    primary="Professional Member"
-                                    secondary="Egyptian Medical Syndicate - Member #12345"
+                                    primary={t('professional_member')}
+                                    secondary={t('egyptian_medical_syndicate_member')}
                                     primaryTypographyProps={{ variant: 'body2', fontWeight: 600 }}
                                     secondaryTypographyProps={{ variant: 'caption' }}
                                   />
@@ -1779,7 +1779,7 @@ const SettingsPage: React.FC = () => {
                                     }
                                   }}
                                 >
-                                  Add Achievement
+                                  {t('add_achievement')}
                                 </Button>
                               </Box>
                             </Box>
@@ -1837,13 +1837,13 @@ const SettingsPage: React.FC = () => {
                                 fontSize: '1.3rem',
                                 mb: 0.2
                               }}>
-                                  Professional Information & Actions
+                                  {t('professional_information_actions')}
                         </Typography>
                               <Typography variant="body2" sx={{ 
                                 color: 'grey.600',
                                 fontWeight: 500
                               }}>
-                                  License details and quick actions
+                                  {t('license_details_quick_actions')}
                               </Typography>
                               </Box>
                             </Box>
@@ -1857,7 +1857,7 @@ const SettingsPage: React.FC = () => {
                             <Grid item xs={12} md={6}>
                         <Box sx={{ mb: 2 }}>
                           <Typography variant="body2" color="text.secondary">
-                            License Number
+                            {t('license_number')}
                           </Typography>
                           <Typography variant="body1" fontWeight={600}>
                             {profile.licenseNumber || 'EG-12345-MED'}
@@ -1865,15 +1865,15 @@ const SettingsPage: React.FC = () => {
                         </Box>
                         <Box sx={{ mb: 2 }}>
                           <Typography variant="body2" color="text.secondary">
-                            Registration Date
+                            {t('registration_date')}
                           </Typography>
                           <Typography variant="body1" fontWeight={600}>
-                            January 15, 2016
+                            {t('january_15_2016')}
                           </Typography>
                         </Box>
                         <Box sx={{ mb: 2 }}>
                           <Typography variant="body2" color="text.secondary">
-                            Department
+                            {t('department')}
                           </Typography>
                           <Typography variant="body1" fontWeight={600}>
                             {profile.specialization}
@@ -1881,7 +1881,7 @@ const SettingsPage: React.FC = () => {
                         </Box>
                         <Box sx={{ mb: 2 }}>
                           <Typography variant="body2" color="text.secondary">
-                            License Status
+                            {t('license_status')}
                           </Typography>
                           <Box sx={{ display: 'flex', alignItems: 'center' }}>
                             <Box
@@ -1894,7 +1894,7 @@ const SettingsPage: React.FC = () => {
                               }}
                             />
                             <Typography variant="body1" fontWeight={600} color="success.main">
-                              Active
+                              {t('active')}
                             </Typography>
                           </Box>
                         </Box>
@@ -1925,7 +1925,7 @@ const SettingsPage: React.FC = () => {
                               boxShadow: 2
                             }}
                           >
-                          Update Credentials
+                          {t('update_credentials')}
                         </Button>
                           <Button 
                             variant="outlined" 
@@ -1943,7 +1943,7 @@ const SettingsPage: React.FC = () => {
                               }
                             }}
                           >
-                          View Certificate
+                          {t('view_certificate')}
                         </Button>
                         </Box>
                             </Grid>
@@ -2005,13 +2005,13 @@ const SettingsPage: React.FC = () => {
                                 fontSize: '2rem',
                                 mb: 0.5
                               }}>
-                          Basic Clinic Information
+                          {t('basic_clinic_information')}
                         </Typography>
                               <Typography variant="body1" sx={{ 
                                 color: 'grey.600',
                                 fontWeight: 500
                               }}>
-                                View your clinic's core details and information
+                                {t('view_clinic_core_details')}
                               </Typography>
                             </Box>
                           </Box>
@@ -2059,7 +2059,7 @@ const SettingsPage: React.FC = () => {
                                   icon={<Check fontSize="small" />}
                                 />
                                 <Typography variant="body2" color="text.secondary">
-                                  Licensed Medical Facility
+                                  {t('licensed_medical_facility')}
                                 </Typography>
                               </Box>
                             </Box>
@@ -2070,19 +2070,19 @@ const SettingsPage: React.FC = () => {
                           {/* Clinic Information Display */}
                           <Box>
                             <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
-                              Clinic Information
+                              {t('clinic_information')}
                             </Typography>
                             
                             {/* Basic Information Display */}
                             <Box sx={{ mb: 4 }}>
                               <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2, color: 'primary.main' }}>
-                                Basic Information
+                                {t('basic_information')}
                               </Typography>
                         <Grid container spacing={3}>
                           <Grid item xs={12} md={6}>
                                   <Box sx={{ mb: 2 }}>
                                     <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                                      Clinic Name
+                                      {t('clinic_name')}
                                     </Typography>
                                     <Typography variant="body1" sx={{ fontWeight: 500 }}>
                                       {clinicSettings.name || 'Not specified'}
@@ -2145,7 +2145,7 @@ const SettingsPage: React.FC = () => {
                             {/* Operation Information Display */}
                             <Box sx={{ mb: 4 }}>
                               <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2, color: 'primary.main' }}>
-                                Operation Information
+                                {t('operation_information')}
                               </Typography>
                               <Grid container spacing={3}>
                           <Grid item xs={12} md={6}>
@@ -2203,7 +2203,7 @@ const SettingsPage: React.FC = () => {
                                         }}
                                       />
                                       <Typography variant="body1" fontWeight={500} color="success.main">
-                                        Active & Valid
+                                        {t('active_valid')}
                                       </Typography>
                                     </Box>
                                   </Box>
@@ -3793,7 +3793,7 @@ const SettingsPage: React.FC = () => {
             <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
-                label="Medical School"
+                label={t('medical_school')}
                 value={credentialsForm.medicalSchool}
                 onChange={(e) => setCredentialsForm({ ...credentialsForm, medicalSchool: e.target.value })}
               />
