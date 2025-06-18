@@ -16,6 +16,8 @@ import {
 import { auth, db } from '../../api/firebase';
 import { AuthContext } from '../../app/AuthProvider';
 import { Clinic, User } from '../../types/models';
+import { validateUserLimit, getPlanInfo, canAddUser } from '../../utils/subscriptionUtils';
+import { formatDateForTable, formatDateTime, formatDateForInput, timestampToDate, getRelativeTime } from '../../utils/dateUtils';
 import {
   Box,
   Container,
@@ -61,6 +63,7 @@ import {
   Warning,
   Edit,
 } from '@mui/icons-material';
+import { Tooltip } from '@mui/material';
 
 const AdminPanelPage: React.FC = () => {
   const navigate = useNavigate();
@@ -85,6 +88,7 @@ const AdminPanelPage: React.FC = () => {
     name: '',
     subscriptionPlan: 'basic' as 'basic' | 'premium' | 'enterprise',
     maxUsers: 10,
+    createdAt: '',
   });
   
   const [newUser, setNewUser] = useState({
@@ -94,6 +98,7 @@ const AdminPanelPage: React.FC = () => {
     role: 'receptionist' as 'management' | 'doctor' | 'receptionist',
     clinicId: '',
     password: '',
+    createdAt: '',
   });
 
   useEffect(() => {
@@ -170,9 +175,28 @@ const AdminPanelPage: React.FC = () => {
       setError('Please enter a clinic name');
       return;
     }
+
+    // Check if new max users is valid for the plan
+    const currentUserCount = users.filter(u => u.clinicId === editingClinic.id && u.isActive).length;
+    const validation = validateUserLimit(
+      newClinic.subscriptionPlan,
+      newClinic.maxUsers,
+      0 // Don't check current count when editing clinic
+    );
+    
+    if (!validation.isValid) {
+      setError(validation.message || 'Invalid user limit for selected plan');
+      return;
+    }
+
+    // Check if reducing max users below current active users
+    if (newClinic.maxUsers < currentUserCount) {
+      setError(`Cannot set max users to ${newClinic.maxUsers}. Currently has ${currentUserCount} active users.`);
+      return;
+    }
     
     try {
-      await updateDoc(doc(db, 'clinics', editingClinic.id), {
+      const updateData: any = {
         name: newClinic.name,
         settings: {
           ...editingClinic.settings,
@@ -180,7 +204,14 @@ const AdminPanelPage: React.FC = () => {
           subscriptionPlan: newClinic.subscriptionPlan,
         },
         updatedAt: serverTimestamp(),
-      });
+      };
+
+      // Update creation date if provided and different
+      if (newClinic.createdAt && newClinic.createdAt !== formatDateForInput(editingClinic.createdAt)) {
+        updateData.createdAt = new Date(newClinic.createdAt);
+      }
+
+      await updateDoc(doc(db, 'clinics', editingClinic.id), updateData);
       
       resetClinicForm();
       setClinicDialogOpen(false);
@@ -197,6 +228,7 @@ const AdminPanelPage: React.FC = () => {
       name: '',
       subscriptionPlan: 'basic',
       maxUsers: 10,
+      createdAt: '',
     });
   };
 
@@ -206,6 +238,7 @@ const AdminPanelPage: React.FC = () => {
       name: clinic.name,
       subscriptionPlan: clinic.settings.subscriptionPlan,
       maxUsers: clinic.settings.maxUsers,
+      createdAt: formatDateForInput(clinic.createdAt),
     });
     setClinicDialogOpen(true);
   };
@@ -221,6 +254,22 @@ const AdminPanelPage: React.FC = () => {
     if (!newUser.email || !newUser.firstName || !newUser.lastName || !newUser.clinicId || !newUser.password) {
       setError('Please fill in all required fields');
       return;
+    }
+
+    // Check user limits
+    const selectedClinic = clinics.find(c => c.id === newUser.clinicId);
+    if (selectedClinic) {
+      const currentUserCount = users.filter(u => u.clinicId === newUser.clinicId && u.isActive).length;
+      const validation = validateUserLimit(
+        selectedClinic.settings.subscriptionPlan,
+        selectedClinic.settings.maxUsers,
+        currentUserCount
+      );
+      
+      if (!validation.isValid) {
+        setError(validation.message || 'Cannot add user due to plan limits');
+        return;
+      }
     }
     
     try {
@@ -257,14 +306,21 @@ const AdminPanelPage: React.FC = () => {
     }
     
     try {
-      await updateDoc(doc(db, 'users', editingUser.id), {
+      const updateData: any = {
         email: newUser.email,
         firstName: newUser.firstName,
         lastName: newUser.lastName,
         role: newUser.role,
         clinicId: newUser.clinicId,
         updatedAt: serverTimestamp(),
-      });
+      };
+
+      // Update creation date if provided and different
+      if (newUser.createdAt && newUser.createdAt !== formatDateForInput(editingUser.createdAt)) {
+        updateData.createdAt = new Date(newUser.createdAt);
+      }
+
+      await updateDoc(doc(db, 'users', editingUser.id), updateData);
       
       resetUserForm();
       setUserDialogOpen(false);
@@ -284,6 +340,7 @@ const AdminPanelPage: React.FC = () => {
       role: 'receptionist',
       clinicId: '',
       password: '',
+      createdAt: '',
     });
   };
 
@@ -296,6 +353,7 @@ const AdminPanelPage: React.FC = () => {
       role: user.role,
       clinicId: user.clinicId,
       password: '', // Don't show existing password
+      createdAt: formatDateForInput(user.createdAt),
     });
     setUserDialogOpen(true);
   };
@@ -385,6 +443,10 @@ const AdminPanelPage: React.FC = () => {
   const getClinicName = (clinicId: string) => {
     const clinic = clinics.find(c => c.id === clinicId);
     return clinic?.name || 'Unknown Clinic';
+  };
+
+  const getClinicUserCount = (clinicId: string) => {
+    return users.filter(u => u.clinicId === clinicId && u.isActive).length;
   };
 
   if (loading) {
@@ -488,56 +550,92 @@ const AdminPanelPage: React.FC = () => {
                   <TableRow>
                     <TableCell>Name</TableCell>
                     <TableCell>Plan</TableCell>
-                    <TableCell>Max Users</TableCell>
+                    <TableCell>Users</TableCell>
                     <TableCell>Status</TableCell>
                     <TableCell>Created</TableCell>
                     <TableCell>Actions</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {clinics.map((clinic) => (
-                    <TableRow key={clinic.id}>
-                      <TableCell>{clinic.name}</TableCell>
-                      <TableCell>
-                        <Chip label={clinic.settings.subscriptionPlan} size="small" />
-                      </TableCell>
-                      <TableCell>{clinic.settings.maxUsers}</TableCell>
-                      <TableCell>
-                        <Chip 
-                          label={clinic.isActive ? 'Active' : 'Inactive'} 
-                          color={clinic.isActive ? 'success' : 'error'}
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        {new Date(clinic.createdAt).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Switch
-                            checked={clinic.isActive}
-                            onChange={() => toggleClinicStatus(clinic.id, clinic.isActive)}
+                  {clinics.map((clinic) => {
+                    const currentUsers = getClinicUserCount(clinic.id);
+                    const maxUsers = clinic.settings.maxUsers;
+                    const planInfo = getPlanInfo(clinic.settings.subscriptionPlan);
+                    const isNearLimit = currentUsers / maxUsers > 0.8;
+                    const isAtLimit = currentUsers >= maxUsers;
+
+                    return (
+                      <TableRow key={clinic.id}>
+                        <TableCell>{clinic.name}</TableCell>
+                        <TableCell>
+                          <Chip 
+                            label={planInfo.name} 
+                            size="small"
+                            color={planInfo.color as any}
                           />
-                          <IconButton
-                            color="primary"
+                        </TableCell>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Typography 
+                              color={isAtLimit ? 'error' : isNearLimit ? 'warning.main' : 'text.primary'}
+                              fontWeight={isAtLimit ? 'bold' : 'normal'}
+                            >
+                              {currentUsers}/{maxUsers}
+                            </Typography>
+                            {isAtLimit && (
+                              <Chip label="FULL" size="small" color="error" />
+                            )}
+                            {isNearLimit && !isAtLimit && (
+                              <Chip label="NEAR LIMIT" size="small" color="warning" />
+                            )}
+                          </Box>
+                        </TableCell>
+                        <TableCell>
+                          <Chip 
+                            label={clinic.isActive ? 'Active' : 'Inactive'} 
+                            color={clinic.isActive ? 'success' : 'error'}
                             size="small"
-                            onClick={() => handleEditClinic(clinic)}
-                            title="Edit Clinic"
-                          >
-                            <Edit />
-                          </IconButton>
-                          <IconButton
-                            color="error"
-                            size="small"
-                            onClick={() => confirmDelete('clinic', clinic.id, clinic.name)}
-                            title="Delete Clinic"
-                          >
-                            <Delete />
-                          </IconButton>
-                        </Box>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Tooltip title={formatDateTime(clinic.createdAt)} arrow>
+                            <Box sx={{ cursor: 'pointer' }}>
+                              <Typography variant="body2">
+                                {formatDateForTable(clinic.createdAt)}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                {getRelativeTime(clinic.createdAt)}
+                              </Typography>
+                            </Box>
+                          </Tooltip>
+                        </TableCell>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Switch
+                              checked={clinic.isActive}
+                              onChange={() => toggleClinicStatus(clinic.id, clinic.isActive)}
+                            />
+                            <IconButton
+                              color="primary"
+                              size="small"
+                              onClick={() => handleEditClinic(clinic)}
+                              title="Edit Clinic"
+                            >
+                              <Edit />
+                            </IconButton>
+                            <IconButton
+                              color="error"
+                              size="small"
+                              onClick={() => confirmDelete('clinic', clinic.id, clinic.name)}
+                              title="Delete Clinic"
+                            >
+                              <Delete />
+                            </IconButton>
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </TableContainer>
@@ -589,7 +687,16 @@ const AdminPanelPage: React.FC = () => {
                         />
                       </TableCell>
                       <TableCell>
-                        {new Date(user.createdAt).toLocaleDateString()}
+                        <Tooltip title={formatDateTime(user.createdAt)} arrow>
+                          <Box sx={{ cursor: 'pointer' }}>
+                            <Typography variant="body2">
+                              {formatDateForTable(user.createdAt)}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {getRelativeTime(user.createdAt)}
+                            </Typography>
+                          </Box>
+                        </Tooltip>
                       </TableCell>
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -658,7 +765,21 @@ const AdminPanelPage: React.FC = () => {
             variant="outlined"
             value={newClinic.maxUsers}
             onChange={(e) => setNewClinic({...newClinic, maxUsers: parseInt(e.target.value)})}
+            sx={{ mb: 2 }}
           />
+          {editingClinic && (
+            <TextField
+              margin="dense"
+              label="Created Date"
+              type="date"
+              fullWidth
+              variant="outlined"
+              value={newClinic.createdAt}
+              onChange={(e) => setNewClinic({...newClinic, createdAt: e.target.value})}
+              InputLabelProps={{ shrink: true }}
+              helperText="Change the creation date if needed"
+            />
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={handleClinicDialogClose}>Cancel</Button>
@@ -729,12 +850,38 @@ const AdminPanelPage: React.FC = () => {
                   label="Clinic"
                   onChange={(e) => setNewUser({...newUser, clinicId: e.target.value})}
                 >
-                  {clinics.filter(c => c.isActive).map((clinic) => (
-                    <MenuItem key={clinic.id} value={clinic.id}>
-                      {clinic.name}
-                    </MenuItem>
-                  ))}
+                  {clinics.filter(c => c.isActive).map((clinic) => {
+                    const currentUsers = getClinicUserCount(clinic.id);
+                    const remaining = clinic.settings.maxUsers - currentUsers;
+                    const isAtLimit = remaining <= 0;
+                    
+                    return (
+                      <MenuItem 
+                        key={clinic.id} 
+                        value={clinic.id}
+                        disabled={isAtLimit && !editingUser}
+                      >
+                        {clinic.name} ({currentUsers}/{clinic.settings.maxUsers} users)
+                        {isAtLimit && !editingUser && " - FULL"}
+                      </MenuItem>
+                    );
+                  })}
                 </Select>
+                {newUser.clinicId && !editingUser && (
+                  <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
+                    {(() => {
+                      const selectedClinic = clinics.find(c => c.id === newUser.clinicId);
+                      if (selectedClinic) {
+                        const currentUsers = getClinicUserCount(selectedClinic.id);
+                        const remaining = selectedClinic.settings.maxUsers - currentUsers;
+                        return remaining > 0 
+                          ? `${remaining} user slots remaining`
+                          : 'No slots available';
+                      }
+                      return '';
+                    })()}
+                  </Typography>
+                )}
               </FormControl>
             </Grid>
             {!editingUser && (
@@ -748,6 +895,21 @@ const AdminPanelPage: React.FC = () => {
                   value={newUser.password}
                   onChange={(e) => setNewUser({...newUser, password: e.target.value})}
                   helperText="User will be asked to change this on first login"
+                />
+              </Grid>
+            )}
+            {editingUser && (
+              <Grid item xs={12}>
+                <TextField
+                  margin="dense"
+                  label="Created Date"
+                  type="date"
+                  fullWidth
+                  variant="outlined"
+                  value={newUser.createdAt}
+                  onChange={(e) => setNewUser({...newUser, createdAt: e.target.value})}
+                  InputLabelProps={{ shrink: true }}
+                  helperText="Change the creation date if needed"
                 />
               </Grid>
             )}
