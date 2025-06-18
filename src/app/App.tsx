@@ -2,6 +2,7 @@ import React, { useEffect } from "react";
 import { useTranslation } from 'react-i18next';
 import { ThemeProvider } from "./ThemeProvider";
 import { AuthProvider } from "./AuthProvider";
+import { UserProvider } from "../contexts/UserContext";
 import { NotificationProvider } from "../contexts/NotificationContext";
 import Router from "./Router";
 
@@ -20,9 +21,11 @@ const AppContent: React.FC = () => {
 const App: React.FC = () => (
   <ThemeProvider>
     <AuthProvider>
-      <NotificationProvider>
-        <AppContent />
-      </NotificationProvider>
+      <UserProvider>
+        <NotificationProvider>
+          <AppContent />
+        </NotificationProvider>
+      </UserProvider>
     </AuthProvider>
   </ThemeProvider>
 );

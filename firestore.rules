@@ -2,8 +2,101 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Super Admin emails
+    function isSuperAdmin() {
+      return request.auth != null && 
+             (request.auth.token.email == 'admin@sahdasclinic.com' ||
+              request.auth.token.email == 'sahdasamier013@gmail.com');
+    }
+    
+    // Get user's clinic ID from users collection
+    function getUserClinicId() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.clinicId;
+    }
+    
+    // Check if user belongs to same clinic as the resource
+    function isOwnerOrSameClinic(clinicId) {
+      return request.auth != null && 
+             (getUserClinicId() == clinicId || isSuperAdmin());
+    }
+    
+    // Check if clinic is active
+    function isClinicActive(clinicId) {
+      return get(/databases/$(database)/documents/clinics/$(clinicId)).data.isActive == true;
+    }
+    
+    // Check if user's clinic is active
+    function hasActiveClinicAccess(clinicId) {
+      return isSuperAdmin() || (isOwnerOrSameClinic(clinicId) && isClinicActive(clinicId));
+    }
+    
+    // Super admin access to everything
+    function hasAdminAccess() {
+      return isSuperAdmin();
+    }
+    
+    // Clinics collection - only super admins can manage
+    match /clinics/{clinicId} {
+      allow read, write: if hasAdminAccess();
+    }
+    
+    // Users collection
+    match /users/{userId} {
+      // Super admins can do anything
+      allow read, write: if hasAdminAccess();
+      // Users can always read their own document (needed for clinic status check)
+      allow read: if request.auth != null && request.auth.uid == userId;
+      // Users can read other users only if same clinic AND clinic is active
+      allow read: if hasActiveClinicAccess(resource.data.clinicId);
+      // Users can only modify their own data if clinic is active
+      allow write: if request.auth != null && request.auth.uid == userId && hasActiveClinicAccess(resource.data.clinicId);
+    }
+    
+    // Patients collection - clinic isolation + active check
+    match /patients/{patientId} {
+      allow read, write: if hasAdminAccess();
+      allow read, write: if hasActiveClinicAccess(resource.data.clinicId);
+      allow create: if hasActiveClinicAccess(request.resource.data.clinicId);
+    }
+    
+    // Appointments collection - clinic isolation + active check
+    match /appointments/{appointmentId} {
+      allow read, write: if hasAdminAccess();
+      allow read, write: if hasActiveClinicAccess(resource.data.clinicId);
+      allow create: if hasActiveClinicAccess(request.resource.data.clinicId);
+    }
+    
+    // Payments collection - clinic isolation + active check
+    match /payments/{paymentId} {
+      allow read, write: if hasAdminAccess();
+      allow read, write: if hasActiveClinicAccess(resource.data.clinicId);
+      allow create: if hasActiveClinicAccess(request.resource.data.clinicId);
+    }
+    
+    // Inventory collection - clinic isolation + active check
+    match /inventory/{inventoryId} {
+      allow read, write: if hasAdminAccess();
+      allow read, write: if hasActiveClinicAccess(resource.data.clinicId);
+      allow create: if hasActiveClinicAccess(request.resource.data.clinicId);
+    }
+    
+    // Notifications collection - clinic isolation + active check
+    match /notifications/{notificationId} {
+      allow read, write: if hasAdminAccess();
+      allow read, write: if hasActiveClinicAccess(resource.data.clinicId);
+      allow create: if hasActiveClinicAccess(request.resource.data.clinicId);
+    }
+    
+    // Medical records - clinic isolation + active check
+    match /medical_records/{recordId} {
+      allow read, write: if hasAdminAccess();
+      allow read, write: if hasActiveClinicAccess(resource.data.clinicId);
+      allow create: if hasActiveClinicAccess(request.resource.data.clinicId);
+    }
+    
+    // Default deny all other documents
     match /{document=**} {
-      allow read, write: if false;
+      allow read, write: if hasAdminAccess();
     }
   }
 }

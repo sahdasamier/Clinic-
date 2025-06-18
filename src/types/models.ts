@@ -1,7 +1,15 @@
 export interface Clinic {
   id: string;
   name: string;
-  branches: Branch[];
+  isActive: boolean;
+  settings: {
+    allowedFeatures: string[];
+    maxUsers: number;
+    subscriptionPlan: 'basic' | 'premium' | 'enterprise';
+  };
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string; // super admin email
 }
 
 export interface Branch {
@@ -13,9 +21,21 @@ export interface Branch {
 export interface User {
   id: string;
   email: string;
-  role: "admin" | "doctor" | "receptionist";
+  role: "management" | "doctor" | "receptionist";
   clinicId: string;
   branchId?: string;
+  isActive: boolean;
+  firstName: string;
+  lastName: string;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string; // who created this user
+}
+
+// Super Admin type for admin panel
+export interface SuperAdmin {
+  email: string;
+  role: 'super_admin';
 }
 
 export interface Patient {
