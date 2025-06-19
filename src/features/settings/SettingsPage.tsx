@@ -503,10 +503,10 @@ const SettingsPage: React.FC = () => {
     }
   };
 
-    const handleSubmitContactForm = async () => {
+  const handleSubmitContactForm = async () => {
     const requiredFields = ['name', 'email', 'subject', 'message'];
     if (!validateForm(contactForm, requiredFields)) return;
-
+  
     setLoading(true);
     try {
       // Generate ticket info
@@ -524,75 +524,81 @@ const SettingsPage: React.FC = () => {
         submittedAt,
         browserInfo: navigator.userAgent
       };
-
+  
       // Try to send email using EmailJS service
       const emailSent = await sendSupportEmail(emailData);
-
+  
       if (emailSent) {
-        // Email sent successfully via EmailJS
+        // ✅ EMAIL SENT SUCCESSFULLY
         setConfirmMessage(`
-✅ Your support request has been sent successfully!
-
-📋 Support Ticket: ${ticketId}
-📧 Email sent to: drsuperclinic@gmail.com
-📱 WhatsApp: +201147299675
-🕒 Submitted: ${submittedAt}
-
-We'll respond to your email within 24 hours during business days.
-For urgent matters, you can also contact us via WhatsApp.
+  ✅ Message sent successfully!
+  
+  📧 Your support request has been sent to our team
+  📋 Support Ticket: ${ticketId}
+  🕒 Submitted: ${submittedAt}
+  
+  We'll respond to your email within 24 hours during business days.
+  For urgent matters, you can also contact us via WhatsApp
         `);
-        showSnackbar('Support request sent successfully to drsuperclinic@gmail.com!', 'success');
+        showSnackbar('Message sent successfully to drsuperclinic@gmail.com!', 'success');
       } else {
-        // EmailJS not configured - show setup instructions and fallback
+        // ❌ EMAIL FAILED - Show fallback options
         setConfirmMessage(`
-🔧 EmailJS Setup Required
-
-${getSetupInstructions()}
-
-📧 Meanwhile, please send your support request manually:
-
-TO: drsuperclinic@gmail.com
-SUBJECT: ClinicCare Support: [${contactForm.supportType.toUpperCase()}] ${contactForm.subject}
-
-Support Ticket: ${ticketId}
-Submitted: ${submittedAt}
-
-From: ${contactForm.name}
-Email: ${contactForm.email}
-Support Type: ${contactForm.supportType}
-
-Message:
-${contactForm.message}
-
----
-Browser: ${navigator.userAgent}
-Sent via ClinicCare Contact Form
-
-📱 OR WhatsApp: +201147299675
+  🔧 EmailJS Setup Required
+  
+  ${getSetupInstructions()}
+  
+  📧 Meanwhile, please send your support request manually:
+  
+  TO: drsuperclinic@gmail.com
+  SUBJECT: ClinicCare Support: [${contactForm.supportType.toUpperCase()}] ${contactForm.subject}
+  
+  Support Ticket: ${ticketId}
+  Submitted: ${submittedAt}
+  
+  From: ${contactForm.name}
+  Email: ${contactForm.email}
+  Support Type: ${contactForm.supportType}
+  
+  Message:
+  ${contactForm.message}
+  
+  ---
+  Browser: ${navigator.userAgent}
+  Sent via ClinicCare Contact Form
+  
+  📱 OR WhatsApp: +201147299675
         `);
         showSnackbar('EmailJS not configured. Please see setup instructions above.', 'warning');
       }
       
       setConfirmAction(() => {
         setConfirmDialogOpen(false);
-        // Copy support email to clipboard
-        navigator.clipboard.writeText('drsuperclinic@gmail.com').then(() => {
-          showSnackbar('Support email copied to clipboard', 'info');
-        }).catch(() => {
-          // Silent fail for clipboard
-        });
+        if (emailSent) {
+          // If email was sent successfully, just close the dialog
+          showSnackbar('Thank you for contacting us!', 'success');
+        } else {
+          // If email failed, copy email to clipboard as backup
+          navigator.clipboard.writeText('drsuperclinic@gmail.com').then(() => {
+            showSnackbar('Support email copied to clipboard', 'info');
+          }).catch(() => {
+            // Silent fail for clipboard
+          });
+        }
       });
       
       setConfirmDialogOpen(true);
       
-      // Reset form
-      setContactForm({
-        name: '',
-        email: '',
-        subject: '',
-        message: '',
-        supportType: 'general',
-      });
+      // Reset form only if email was sent successfully
+      if (emailSent) {
+        setContactForm({
+          name: '',
+          email: '',
+          subject: '',
+          message: '',
+          supportType: 'general',
+        });
+      }
       
     } catch (error) {
       console.error('Contact form error:', error);
