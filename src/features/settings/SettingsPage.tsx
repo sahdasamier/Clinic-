@@ -1,5 +1,7 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useContext } from 'react';
 import { useTranslation } from 'react-i18next';
+import { updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
+import { AuthContext } from '../../app/AuthProvider';
 import {
   Box,
   Container,
@@ -91,6 +93,7 @@ function TabPanel(props: TabPanelProps) {
 
 const SettingsPage: React.FC = () => {
   const { t, i18n } = useTranslation();
+  const { user } = useContext(AuthContext);
   const [tabValue, setTabValue] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(false);
   const [errors, setErrors] = useState<any>({});
@@ -384,14 +387,43 @@ const SettingsPage: React.FC = () => {
       return;
     }
 
+    if (!user) {
+      showSnackbar('User not authenticated. Please log in again.', 'error');
+      return;
+    }
+
     setLoading(true);
+    setErrors({});
+
     try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // First, reauthenticate the user with their current password
+      const credential = EmailAuthProvider.credential(
+        user.email!,
+        passwordForm.currentPassword
+      );
+      
+      await reauthenticateWithCredential(user, credential);
+      
+      // Then update the password
+      await updatePassword(user, passwordForm.newPassword);
+      
+      // Success - close dialog and reset form
       setPasswordDialogOpen(false);
       setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
       showSnackbar('Password changed successfully', 'success');
-    } catch (error) {
-      showSnackbar('Failed to change password. Please try again.', 'error');
+    } catch (error: any) {
+      console.error('Password change error:', error);
+      
+      // Handle different error types
+      if (error.code === 'auth/wrong-password') {
+        setErrors({ currentPassword: 'Current password is incorrect' });
+      } else if (error.code === 'auth/weak-password') {
+        setErrors({ newPassword: 'Password is too weak. Please choose a stronger password.' });
+      } else if (error.code === 'auth/requires-recent-login') {
+        showSnackbar('Please log out and log back in before changing your password.', 'error');
+      } else {
+        showSnackbar('Failed to change password. Please try again.', 'error');
+      }
     } finally {
       setLoading(false);
     }

@@ -6,6 +6,7 @@ import ClinicAccessGuard from "../components/ClinicAccessGuard";
 import PermissionGuard from "../components/PermissionGuard";
 import DashboardPage from "../features/dashboard/DashboardPage";
 import LoginPage from "../features/auth/LoginPage";
+import ResetPasswordPage from "../features/auth/ResetPasswordPage";
 import AdminLoginPage from "../features/auth/AdminLoginPage";
 import AdminPanelPage from "../features/admin/AdminPanelPage";
 import ReceptionistDashboard from "../features/dashboard/ReceptionistDashboard";
@@ -27,6 +28,7 @@ const Router: React.FC = () => {
       <Routes>
         {/* Authentication Routes - No AuthGuard needed */}
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         
         {/* Admin Routes */}
         <Route path="/admin/login" element={<AdminLoginPage />} />

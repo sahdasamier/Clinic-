@@ -1,7 +1,7 @@
 import React, { useState, useContext } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '../../api/firebase';
 import { AuthContext } from '../../app/AuthProvider';
 import {
@@ -21,6 +21,11 @@ import {
   InputLabel,
   Alert,
   CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Link,
 } from '@mui/material';
 import {
   Visibility,
@@ -37,12 +42,21 @@ const LoginPage: React.FC = () => {
   const location = useLocation();
   const { user } = useContext(AuthContext);
   
+  // Get success message from navigation state
+  const successMessage = location.state?.message;
+  
   const [showPassword, setShowPassword] = useState(false);
   const [language, setLanguage] = useState(i18n.language);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  
+  // Forgot password states
+  const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetSuccess, setResetSuccess] = useState(false);
 
   // Redirect if already logged in
   React.useEffect(() => {
@@ -72,6 +86,33 @@ const LoginPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!resetEmail) {
+      setError('Please enter your email address');
+      return;
+    }
+
+    setResetLoading(true);
+    setError('');
+
+    try {
+      await sendPasswordResetEmail(auth, resetEmail);
+      setResetSuccess(true);
+    } catch (error: any) {
+      console.error('Password reset error:', error);
+      setError(error.message || 'Failed to send password reset email. Please try again.');
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
+  const handleCloseForgotPassword = () => {
+    setForgotPasswordOpen(false);
+    setResetEmail('');
+    setResetSuccess(false);
+    setError('');
   };
 
   return (
@@ -147,6 +188,12 @@ const LoginPage: React.FC = () => {
             </Box>
 
             <Divider sx={{ mb: 3 }} />
+
+            {successMessage && (
+              <Alert severity="success" sx={{ mb: 3 }}>
+                {successMessage}
+              </Alert>
+            )}
 
             {error && (
               <Alert severity="error" sx={{ mb: 3 }}>
@@ -243,6 +290,22 @@ const LoginPage: React.FC = () => {
             </form>
 
             <Box sx={{ textAlign: 'center', mt: 2 }}>
+              <Link
+                component="button"
+                variant="body2"
+                onClick={() => setForgotPasswordOpen(true)}
+                sx={{
+                  textDecoration: 'none',
+                  color: 'primary.main',
+                  '&:hover': {
+                    textDecoration: 'underline',
+                  },
+                  mb: 2,
+                  display: 'block',
+                }}
+              >
+                {t('forgot_password')}
+              </Link>
               <Typography variant="body2" color="text.secondary">
                 {t('authorized_access_only')}
               </Typography>
@@ -250,6 +313,82 @@ const LoginPage: React.FC = () => {
           </CardContent>
         </Card>
       </Container>
+
+      {/* Forgot Password Dialog */}
+      <Dialog 
+        open={forgotPasswordOpen} 
+        onClose={handleCloseForgotPassword}
+        maxWidth="sm" 
+        fullWidth
+      >
+        <DialogTitle>
+          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+            {t('reset_password')}
+          </Typography>
+        </DialogTitle>
+        <DialogContent>
+          {resetSuccess ? (
+            <Alert severity="success" sx={{ mb: 2 }}>
+              <Typography variant="body2">
+                {t('password_reset_email_sent')} {resetEmail}
+              </Typography>
+            </Alert>
+          ) : (
+            <>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                {t('enter_email_for_reset')}
+              </Typography>
+              
+              {error && (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                  {error}
+                </Alert>
+              )}
+
+              <TextField
+                fullWidth
+                label={t('email_address')}
+                type="email"
+                variant="outlined"
+                value={resetEmail}
+                onChange={(e) => setResetEmail(e.target.value)}
+                required
+                disabled={resetLoading}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Email sx={{ color: 'text.secondary' }} />
+                    </InputAdornment>
+                  ),
+                }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 2,
+                  },
+                }}
+              />
+            </>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button 
+            onClick={handleCloseForgotPassword}
+            disabled={resetLoading}
+          >
+            {resetSuccess ? t('close') : t('cancel')}
+          </Button>
+          {!resetSuccess && (
+            <Button 
+              variant="contained" 
+              onClick={handleForgotPassword}
+              disabled={resetLoading || !resetEmail}
+              startIcon={resetLoading ? <CircularProgress size={16} /> : <Email />}
+            >
+              {resetLoading ? t('sending') : t('send_reset_email')}
+            </Button>
+          )}
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
