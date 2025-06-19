@@ -71,6 +71,7 @@ import {
 } from '@mui/icons-material';
 import Header from '../../components/Header';
 import Sidebar from '../../components/Sidebar';
+import { sendSupportEmail, sendFeedbackEmail, getSetupInstructions, type SupportEmailData } from '../../services/emailService';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -99,6 +100,8 @@ const SettingsPage: React.FC = () => {
   const [tabValue, setTabValue] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(false);
   const [errors, setErrors] = useState<any>({});
+
+
   const [isEditingProfile, setIsEditingProfile] = useState<boolean>(false);
 
   // Snackbar state
@@ -245,6 +248,14 @@ const SettingsPage: React.FC = () => {
     description: '',
     date: '',
     issuer: '',
+  });
+
+  const [contactForm, setContactForm] = useState({
+    name: '',
+    email: '',
+    subject: '',
+    message: '',
+    supportType: 'general',
   });
 
   // Validation functions
@@ -487,6 +498,105 @@ const SettingsPage: React.FC = () => {
       showSnackbar('Credentials updated successfully', 'success');
     } catch (error) {
       showSnackbar('Failed to update credentials. Please try again.', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+    const handleSubmitContactForm = async () => {
+    const requiredFields = ['name', 'email', 'subject', 'message'];
+    if (!validateForm(contactForm, requiredFields)) return;
+
+    setLoading(true);
+    try {
+      // Generate ticket info
+      const ticketId = `TICKET-${Date.now().toString().slice(-6)}`;
+      const submittedAt = new Date().toLocaleString();
+      
+      // Prepare email data
+      const emailData: SupportEmailData = {
+        fullName: contactForm.name,
+        email: contactForm.email,
+        subject: contactForm.subject,
+        message: contactForm.message,
+        supportType: contactForm.supportType,
+        ticketId,
+        submittedAt,
+        browserInfo: navigator.userAgent
+      };
+
+      // Try to send email using EmailJS service
+      const emailSent = await sendSupportEmail(emailData);
+
+      if (emailSent) {
+        // Email sent successfully via EmailJS
+        setConfirmMessage(`
+✅ Your support request has been sent successfully!
+
+📋 Support Ticket: ${ticketId}
+📧 Email sent to: drsuperclinic@gmail.com
+📱 WhatsApp: +201147299675
+🕒 Submitted: ${submittedAt}
+
+We'll respond to your email within 24 hours during business days.
+For urgent matters, you can also contact us via WhatsApp.
+        `);
+        showSnackbar('Support request sent successfully to drsuperclinic@gmail.com!', 'success');
+      } else {
+        // EmailJS not configured - show setup instructions and fallback
+        setConfirmMessage(`
+🔧 EmailJS Setup Required
+
+${getSetupInstructions()}
+
+📧 Meanwhile, please send your support request manually:
+
+TO: drsuperclinic@gmail.com
+SUBJECT: ClinicCare Support: [${contactForm.supportType.toUpperCase()}] ${contactForm.subject}
+
+Support Ticket: ${ticketId}
+Submitted: ${submittedAt}
+
+From: ${contactForm.name}
+Email: ${contactForm.email}
+Support Type: ${contactForm.supportType}
+
+Message:
+${contactForm.message}
+
+---
+Browser: ${navigator.userAgent}
+Sent via ClinicCare Contact Form
+
+📱 OR WhatsApp: +201147299675
+        `);
+        showSnackbar('EmailJS not configured. Please see setup instructions above.', 'warning');
+      }
+      
+      setConfirmAction(() => {
+        setConfirmDialogOpen(false);
+        // Copy support email to clipboard
+        navigator.clipboard.writeText('drsuperclinic@gmail.com').then(() => {
+          showSnackbar('Support email copied to clipboard', 'info');
+        }).catch(() => {
+          // Silent fail for clipboard
+        });
+      });
+      
+      setConfirmDialogOpen(true);
+      
+      // Reset form
+      setContactForm({
+        name: '',
+        email: '',
+        subject: '',
+        message: '',
+        supportType: 'general',
+      });
+      
+    } catch (error) {
+      console.error('Contact form error:', error);
+      showSnackbar('Failed to process your request. Please try contacting us directly.', 'error');
     } finally {
       setLoading(false);
     }
@@ -4037,9 +4147,25 @@ const SettingsPage: React.FC = () => {
               <Grid container spacing={2}>
                 <Grid item xs={12} md={6}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>📞 Phone Support:</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>💬 WhatsApp Support</Typography>
                   </Box>
-                  <Typography variant="body2">+201147299675 (24/7)</Typography>
+                  <Button 
+                    size="small" 
+                    variant="contained"
+                    sx={{ 
+                      mt: 1, 
+                      backgroundColor: 'white', 
+                      color: 'primary.main', 
+                      '&:hover': { backgroundColor: 'grey.100' } 
+                    }}
+                    onClick={() => {
+                      const message = encodeURIComponent('Hello! I need support with ClinicCare system. Please assist me with my inquiry.');
+                      window.open(`https://wa.me/201147299675?text=${message}`);
+                      showSnackbar('Opening WhatsApp support...', 'success');
+                    }}
+                  >
+                    💬 Chat Now
+                  </Button>
                 </Grid>
                 <Grid item xs={12} md={6}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
@@ -4049,6 +4175,109 @@ const SettingsPage: React.FC = () => {
                 </Grid>
               </Grid>
             </Box>
+
+            {/* Contact Support Form */}
+            <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
+              💬 Contact Support
+            </Typography>
+            
+            <Card sx={{ p: 3, mb: 4 }}>
+              <Typography variant="subtitle1" sx={{ mb: 3, fontWeight: 600 }}>
+                Send us a message and we'll get back to you soon
+              </Typography>
+              
+              <Grid container spacing={2}>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Full Name"
+                    value={contactForm.name}
+                    onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
+                    error={!!errors.name}
+                    helperText={errors.name}
+                    required
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Email Address"
+                    type="email"
+                    value={contactForm.email}
+                    onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
+                    error={!!errors.email}
+                    helperText={errors.email}
+                    required
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth>
+                    <InputLabel>Support Type</InputLabel>
+                    <Select
+                      value={contactForm.supportType}
+                      label="Support Type"
+                      onChange={(e) => setContactForm({ ...contactForm, supportType: e.target.value })}
+                    >
+                      <MenuItem value="general">General Support</MenuItem>
+                      <MenuItem value="technical">Technical Support</MenuItem>
+                      <MenuItem value="billing">Billing Support</MenuItem>
+                      <MenuItem value="feature">Feature Request</MenuItem>
+                      <MenuItem value="bug">Bug Report</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Subject"
+                    value={contactForm.subject}
+                    onChange={(e) => setContactForm({ ...contactForm, subject: e.target.value })}
+                    error={!!errors.subject}
+                    helperText={errors.subject}
+                    required
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Message"
+                    multiline
+                    rows={4}
+                    value={contactForm.message}
+                    onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
+                    error={!!errors.message}
+                    helperText={errors.message}
+                    placeholder="Please describe your issue or question in detail..."
+                    required
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <Box sx={{ display: 'flex', gap: 2 }}>
+                    <Button
+                      variant="contained"
+                      onClick={handleSubmitContactForm}
+                      disabled={loading}
+                      startIcon={loading ? <CircularProgress size={16} /> : <Help />}
+                    >
+                      {loading ? 'Sending...' : 'Send Message'}
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      onClick={() => setContactForm({
+                        name: '',
+                        email: '',
+                        subject: '',
+                        message: '',
+                        supportType: 'general',
+                      })}
+                      disabled={loading}
+                    >
+                      Clear Form
+                    </Button>
+                  </Box>
+                </Grid>
+              </Grid>
+            </Card>
 
             {/* FAQ Section */}
             <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
@@ -4096,187 +4325,13 @@ const SettingsPage: React.FC = () => {
               </ListItem>
             </List>
 
-            {/* Emergency Contact */}
-            <Box sx={{ mb: 4, p: 3, backgroundColor: 'error.light', borderRadius: 2, color: 'error.contrastText' }}>
-              <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-                🚨 Emergency Support
-              </Typography>
-              <Typography variant="body2" sx={{ mb: 2 }}>
-                For critical system issues affecting patient care or data security:
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                <Button 
-                  variant="contained" 
-                  size="small"
-                  sx={{ backgroundColor: 'white', color: 'error.main', '&:hover': { backgroundColor: 'grey.100' } }}
-                  onClick={() => {
-                    window.open('tel:+201147299675');
-                    showSnackbar('Calling emergency support...', 'warning');
-                  }}
-                >
-                  📞 Call Emergency Line
-                </Button>
-                <Button 
-                  variant="outlined" 
-                  size="small"
-                  sx={{ borderColor: 'white', color: 'white', '&:hover': { backgroundColor: 'rgba(255,255,255,0.1)' } }}
-                  onClick={() => {
-                    const subject = encodeURIComponent('URGENT - Emergency Support Required');
-                    const body = encodeURIComponent(`
-🚨 EMERGENCY SUPPORT REQUEST 🚨
-
-Urgency Level: HIGH
-Date/Time: ${new Date().toLocaleString()}
-
-Issue Description:
-[Describe the critical issue affecting patient care or system security]
-
-Impact:
-[How is this affecting your clinic operations?]
-
-Immediate Actions Needed:
-[What support do you need right away?]
-
-Contact Information:
-Phone: [Your immediate contact number]
-                    `);
-                    window.open(`mailto:drsuperclinic@gmail.com?subject=${subject}&body=${body}`);
-                    showSnackbar('Opening emergency email...', 'warning');
-                  }}
-                >
-                  📧 Emergency Email
-                </Button>
-              </Box>
-            </Box>
-
-            {/* Contact Options */}
-            <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
-              📞 Contact Support
-            </Typography>
-            
-            <Grid container spacing={2}>
-              <Grid item xs={12} md={6}>
-                <Card sx={{ p: 2, textAlign: 'center' }}>
-                  <Box sx={{ mb: 2 }}>
-                    <Business sx={{ fontSize: 40, color: 'primary.main' }} />
-                  </Box>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
-                    Technical Support
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    Get help with system issues, bugs, or technical difficulties. Please include screenshots of the issue in your email
-                  </Typography>
-                  <Button 
-                    variant="outlined" 
-                    size="small" 
-                    fullWidth
-                    onClick={() => {
-                      const subject = encodeURIComponent('Technical Support - Please attach screenshots');
-                      const body = encodeURIComponent(`
-Dear Support Team,
-
-I need technical assistance with the following issue:
-
-Issue Description:
-[Please describe the problem you're experiencing]
-
-Steps to Reproduce:
-1. [Step 1]
-2. [Step 2]
-3. [Step 3]
-
-Expected Behavior:
-[What should happen]
-
-Actual Behavior:
-[What actually happens]
-
-System Information:
-- Browser: ${navigator.userAgent}
-- Date: ${new Date().toLocaleDateString()}
-- Time: ${new Date().toLocaleTimeString()}
-
-Please find attached screenshots of the issue.
-
-Best regards,
-Dr. Clinic User
-                      `);
-                      window.open(`mailto:drsuperclinic@gmail.com?subject=${subject}&body=${body}`);
-                      showSnackbar('Opening email client with template...', 'success');
-                    }}
-                  >
-                    Email Tech Support
-                  </Button>
-                </Card>
-              </Grid>
-              
-              <Grid item xs={12} md={6}>
-                <Card sx={{ p: 2, textAlign: 'center' }}>
-                  <Box sx={{ mb: 2 }}>
-                    <People sx={{ fontSize: 40, color: 'primary.main' }} />
-                  </Box>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
-                    General Support
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    Questions about features, billing, or general clinic management. Please include screenshots of any issues in your email
-                  </Typography>
-                  <Button 
-                    variant="outlined" 
-                    size="small" 
-                    fullWidth
-                    onClick={() => {
-                      const subject = encodeURIComponent('General Support - Please attach screenshots if applicable');
-                      const body = encodeURIComponent(`
-Dear Support Team,
-
-I have a question/inquiry regarding:
-
-Topic: [e.g., Billing, Features, Account Management, etc.]
-
-Question/Issue:
-[Please describe your question or concern in detail]
-
-What I'm trying to accomplish:
-[Describe what you're trying to do]
-
-Additional Information:
-[Any relevant details that might help us assist you better]
-
-Contact Information:
-- Name: [Your Name]
-- Clinic: [Your Clinic Name]
-- Phone: [Your Phone Number]
-- Preferred Contact Method: [Email/Phone]
-
-System Information:
-- Date: ${new Date().toLocaleDateString()}
-- Time: ${new Date().toLocaleTimeString()}
-
-Please attach screenshots if your inquiry involves any visual elements or specific screens.
-
-Thank you for your assistance.
-
-Best regards,
-Dr. Clinic User
-                      `);
-                      window.open(`mailto:drsuperclinic@gmail.com?subject=${subject}&body=${body}`);
-                      showSnackbar('Opening email client with template...', 'success');
-                    }}
-                  >
-                    Email General Support
-                  </Button>
-                </Card>
-              </Grid>
-            </Grid>
-
-            {/* Live Chat Support */}
+            {/* WhatsApp Support */}
             <Box sx={{ mt: 4, mb: 4, p: 3, backgroundColor: 'success.light', borderRadius: 2 }}>
               <Typography variant="h6" sx={{ mb: 2, fontWeight: 600, color: 'success.contrastText' }}>
-                💬 Instant Support
+                💬 WhatsApp Support
               </Typography>
               <Typography variant="body2" sx={{ mb: 3, color: 'success.contrastText' }}>
-                Connect with our support team for immediate assistance. Available 24/7 for emergency support.
+                Get instant help through WhatsApp! Our support team is available 24/7 to assist you with any questions or issues.
               </Typography>
               <Grid container spacing={3}>
                 <Grid item xs={12} md={6}>
@@ -4291,39 +4346,12 @@ Dr. Clinic User
                       '&:hover': { backgroundColor: 'grey.100' } 
                     }}
                     onClick={() => {
-                      const subject = encodeURIComponent('Live Support Request - ClinicCare');
-                      const body = encodeURIComponent(`
-Dear Support Team,
-
-I need immediate assistance with ClinicCare.
-
-Support Type: [Technical/General/Emergency]
-
-Issue Details:
-[Please describe your issue or question]
-
-Urgency Level: [High/Medium/Low]
-
-Contact Information:
-- Name: [Your Name]
-- Phone: [Your Phone Number]
-- Best time to call: [Time preference]
-
-System Information:
-- Date: ${new Date().toLocaleDateString()}
-- Time: ${new Date().toLocaleTimeString()}
-- Browser: ${navigator.userAgent.split(' ')[0]}
-
-Thank you for your prompt attention.
-
-Best regards,
-Dr. Clinic User
-                      `);
-                      window.open(`mailto:drsuperclinic@gmail.com?subject=${subject}&body=${body}`);
-                      showSnackbar('Opening priority support email...', 'success');
+                      const message = encodeURIComponent('Hello! I need technical support with ClinicCare system. Please help me resolve my issue.');
+                      window.open(`https://wa.me/201147299675?text=${message}`);
+                      showSnackbar('Opening WhatsApp for technical support...', 'success');
                     }}
                   >
-                    📧 Priority Email Support
+                    🔧 Technical Support
                   </Button>
                 </Grid>
                 <Grid item xs={12} md={6}>
@@ -4338,18 +4366,18 @@ Dr. Clinic User
                       '&:hover': { backgroundColor: 'rgba(255,255,255,0.1)' } 
                     }}
                     onClick={() => {
-                      const message = encodeURIComponent('Hello! I need support with ClinicCare system. Please assist me with my inquiry.');
+                      const message = encodeURIComponent('Hello! I have a general question about ClinicCare. Could you please assist me?');
                       window.open(`https://wa.me/201147299675?text=${message}`);
-                      showSnackbar('Opening WhatsApp support...', 'success');
+                      showSnackbar('Opening WhatsApp for general support...', 'success');
                     }}
                   >
-                    📱 WhatsApp Support
+                    💬 General Support
                   </Button>
                 </Grid>
               </Grid>
               <Box sx={{ mt: 3, p: 2, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 1 }}>
                 <Typography variant="body2" sx={{ color: 'success.contrastText', textAlign: 'center' }}>
-                  💡 <strong>Pro Tip:</strong> For faster support, include screenshots and detailed descriptions of your issue.
+                  💡 <strong>Pro Tip:</strong> Send screenshots and detailed descriptions for faster resolution!
                 </Typography>
               </Box>
             </Box>
@@ -4370,41 +4398,65 @@ Dr. Clinic User
                     variant="contained" 
                     fullWidth
                     sx={{ backgroundColor: 'white', color: 'warning.main', '&:hover': { backgroundColor: 'grey.100' } }}
-                    onClick={() => {
-                      const subject = encodeURIComponent('ClinicCare Feedback & Suggestions');
-                      const body = encodeURIComponent(`
-Dear ClinicCare Team,
+                    onClick={async () => {
+                      // Use EmailJS to send feedback email
+                      const feedbackSent = await sendFeedbackEmail({
+                        name: 'ClinicCare User',
+                        email: 'feedback@cliniccare.com',
+                        feedback: 'User requested to send feedback via the feedback button. Please follow up with them for their detailed feedback.',
+                        rating: 'Pending'
+                      });
 
-I would like to share my feedback about the system:
+                      if (feedbackSent) {
+                        setConfirmMessage(`
+✅ Feedback request sent successfully!
 
-Overall Experience: [Excellent/Good/Average/Poor]
+📧 We've notified our team at drsuperclinic@gmail.com
+📱 You can also reach us via WhatsApp: +201147299675
 
-What I like most:
-[Please share what features you find most helpful]
+We'd love to hear about:
+• Your overall experience with ClinicCare
+• Features you find most helpful
+• Areas for improvement
+• Suggestions for new features
+• Technical performance feedback
+• User interface comments
 
-Areas for improvement:
-[What could be better or what features are missing?]
+We'll reach out to you soon for your detailed feedback!
+                        `);
+                        showSnackbar('Feedback request sent to drsuperclinic@gmail.com!', 'success');
+                      } else {
+                        setConfirmMessage(`
+📝 We'd love to hear from you!
 
-Suggestions:
-[Any new features or improvements you'd like to see]
+Please send your feedback directly to:
 
-Technical Performance:
-[How is the system performance, speed, reliability?]
+📧 Email: drsuperclinic@gmail.com
+📱 WhatsApp: +201147299675
 
-User Interface:
-[Is the interface easy to use and navigate?]
+Include these details in your message:
+• Overall experience rating
+• Features you find most helpful
+• Areas for improvement
+• Suggestions for new features
+• Technical performance feedback
+• User interface comments
 
-Additional Comments:
-[Any other feedback you'd like to share]
+Your feedback helps us improve ClinicCare for everyone!
+                        `);
+                        showSnackbar('Please send feedback using the contact details above', 'info');
+                      }
 
-Thank you for your time and for helping us improve!
-
-Best regards,
-[Your Name]
-[Your Clinic Name]
-                      `);
-                      window.open(`mailto:drsuperclinic@gmail.com?subject=${subject}&body=${body}`);
-                      showSnackbar('Opening feedback email...', 'success');
+                      setConfirmAction(() => {
+                        setConfirmDialogOpen(false);
+                        // Copy email to clipboard for convenience
+                        navigator.clipboard.writeText('drsuperclinic@gmail.com').then(() => {
+                          showSnackbar('Support email copied to clipboard', 'info');
+                        }).catch(() => {
+                          // Silent fail for clipboard
+                        });
+                      });
+                      setConfirmDialogOpen(true);
                     }}
                   >
                     📧 Send Feedback
@@ -4431,16 +4483,6 @@ Best regards,
         <DialogActions sx={{ px: 3, pb: 3 }}>
           <Button onClick={() => setHelpDialogOpen(false)}>
             Close
-          </Button>
-          <Button 
-            variant="contained" 
-            startIcon={<Help />}
-            onClick={() => {
-              window.open('tel:+201147299675');
-              showSnackbar('Calling support hotline...', 'info');
-            }}
-          >
-            Call Support Now
           </Button>
         </DialogActions>
       </Dialog>
