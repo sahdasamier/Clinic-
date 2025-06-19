@@ -1,10 +1,10 @@
 import emailjs from '@emailjs/browser';
 
-// EmailJS Configuration - Replace with your actual credentials
+// EmailJS Configuration - Fixed with correct values
 const EMAILJS_CONFIG = {
-  serviceId: 'service_n85wg6i',        // ✅ This is correct from your Gmail service
-  templateId: 'template_zbdymt5',      // ✅ This should be the "Contact Us" template ID
-  publicKey: '4r1MGc7ZnbGx-x2gL'      // ✅ This is your Public Key from Account page
+  serviceId: 'service_n85wg6i',        // ✅ Gmail service ID  
+  templateId: 'template_cjjw42i',      // ✅ Contact Us template ID (was wrong before)
+  publicKey: '4r1MGc7ZnbGx-x2gL'      // ✅ Your actual public key
 };
 
 // Support email data interface
