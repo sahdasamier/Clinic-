@@ -53,6 +53,8 @@ import {
   Tab,
   Alert,
   CircularProgress,
+  InputAdornment,
+  Snackbar,
 } from '@mui/material';
 import {
   AdminPanelSettings,
@@ -65,6 +67,10 @@ import {
   Warning,
   Edit,
   Security,
+  Visibility,
+  VisibilityOff,
+  ContentCopy,
+  AutorenewRounded,
 } from '@mui/icons-material';
 import { Tooltip } from '@mui/material';
 
@@ -88,6 +94,11 @@ const AdminPanelPage: React.FC = () => {
   const [permissionsDialogOpen, setPermissionsDialogOpen] = useState(false);
   const [userForPermissions, setUserForPermissions] = useState<User | null>(null);
   
+  // Password visibility and notifications
+  const [showTempPassword, setShowTempPassword] = useState(false);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+  
   // Form states
   const [newClinic, setNewClinic] = useState({
     name: '',
@@ -109,6 +120,38 @@ const AdminPanelPage: React.FC = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Helper functions for password management
+  const generateRandomPassword = () => {
+    const length = 12;
+    const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+    let result = "";
+    for (let i = 0; i < length; i++) {
+      result += charset.charAt(Math.floor(Math.random() * charset.length));
+    }
+    return result;
+  };
+
+  const handleGeneratePassword = () => {
+    const newPassword = generateRandomPassword();
+    setNewUser({...newUser, password: newPassword});
+    showSnackbar('Password generated successfully');
+  };
+
+  const handleCopyPassword = async () => {
+    try {
+      await navigator.clipboard.writeText(newUser.password);
+      showSnackbar('Password copied to clipboard');
+    } catch (error) {
+      console.error('Failed to copy password:', error);
+      showSnackbar('Failed to copy password');
+    }
+  };
+
+  const showSnackbar = (message: string) => {
+    setSnackbarMessage(message);
+    setSnackbarOpen(true);
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -347,6 +390,7 @@ const AdminPanelPage: React.FC = () => {
       password: '',
       createdAt: '',
     });
+    setShowTempPassword(false);
   };
 
   const handleEditUser = (user: User) => {
@@ -922,16 +966,56 @@ const AdminPanelPage: React.FC = () => {
             </Grid>
             {!editingUser && (
               <Grid item xs={12}>
-                <TextField
-                  margin="dense"
-                  label="Temporary Password"
-                  type="password"
-                  fullWidth
-                  variant="outlined"
-                  value={newUser.password}
-                  onChange={(e) => setNewUser({...newUser, password: e.target.value})}
-                  helperText="User will be asked to change this on first login"
-                />
+                <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+                  <TextField
+                    margin="dense"
+                    label="Temporary Password"
+                    type={showTempPassword ? 'text' : 'password'}
+                    fullWidth
+                    variant="outlined"
+                    value={newUser.password}
+                    onChange={(e) => setNewUser({...newUser, password: e.target.value})}
+                    helperText="User will be asked to change this on first login"
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton
+                            onClick={() => setShowTempPassword(!showTempPassword)}
+                            edge="end"
+                            size="small"
+                            title={showTempPassword ? 'Hide password' : 'Show password'}
+                          >
+                            {showTempPassword ? <VisibilityOff /> : <Visibility />}
+                          </IconButton>
+                          <IconButton
+                            onClick={handleCopyPassword}
+                            edge="end"
+                            size="small"
+                            disabled={!newUser.password}
+                            title="Copy password"
+                            sx={{ ml: 0.5 }}
+                          >
+                            <ContentCopy />
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                  <Button
+                    variant="outlined"
+                    onClick={handleGeneratePassword}
+                    startIcon={<AutorenewRounded />}
+                    sx={{ 
+                      mt: 1, 
+                      minWidth: 'auto',
+                      px: 2,
+                      height: '56px'
+                    }}
+                    title="Generate random password"
+                  >
+                    Generate
+                  </Button>
+                </Box>
               </Grid>
             )}
             {editingUser && (
@@ -1015,6 +1099,15 @@ const AdminPanelPage: React.FC = () => {
         }}
         user={userForPermissions}
         onSave={handleSavePermissions}
+      />
+
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={3000}
+        onClose={() => setSnackbarOpen(false)}
+        message={snackbarMessage}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       />
     </Box>
   );

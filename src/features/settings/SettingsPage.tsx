@@ -37,6 +37,7 @@ import {
   Chip,
   FormHelperText,
   Skeleton,
+  InputAdornment,
 } from '@mui/material';
 import {
   Person,
@@ -49,6 +50,7 @@ import {
   Edit,
   CloudUpload,
   Visibility,
+  VisibilityOff,
   Add,
   Close,
   Info,
@@ -216,6 +218,13 @@ const SettingsPage: React.FC = () => {
     confirmPassword: '',
   });
 
+  // Password visibility states
+  const [passwordVisibility, setPasswordVisibility] = useState({
+    showCurrentPassword: false,
+    showNewPassword: false,
+    showConfirmPassword: false,
+  });
+
   const [newStaffForm, setNewStaffForm] = useState({
     name: '',
     email: '',
@@ -289,6 +298,14 @@ const SettingsPage: React.FC = () => {
 
   const handleCloseSnackbar = () => {
     setSnackbar({ ...snackbar, open: false });
+  };
+
+  // Password visibility handlers
+  const togglePasswordVisibility = (field: 'showCurrentPassword' | 'showNewPassword' | 'showConfirmPassword') => {
+    setPasswordVisibility(prev => ({
+      ...prev,
+      [field]: !prev[field]
+    }));
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>, type: 'profile' | 'logo' | 'document') => {
@@ -378,17 +395,17 @@ const SettingsPage: React.FC = () => {
     if (!validateForm(passwordForm, requiredFields)) return;
 
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      setErrors({ confirmPassword: 'Passwords do not match' });
+      setErrors({ confirmPassword: t('passwords_do_not_match') });
       return;
     }
 
     if (passwordForm.newPassword.length < 6) {
-      setErrors({ newPassword: 'Password must be at least 6 characters long' });
+      setErrors({ newPassword: t('password_min_length') });
       return;
     }
 
     if (!user) {
-      showSnackbar('User not authenticated. Please log in again.', 'error');
+      showSnackbar(t('user_not_authenticated'), 'error');
       return;
     }
 
@@ -410,19 +427,21 @@ const SettingsPage: React.FC = () => {
       // Success - close dialog and reset form
       setPasswordDialogOpen(false);
       setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
-      showSnackbar('Password changed successfully', 'success');
+      setPasswordVisibility({ showCurrentPassword: false, showNewPassword: false, showConfirmPassword: false });
+      setErrors({});
+      showSnackbar(t('password_changed_successfully'), 'success');
     } catch (error: any) {
       console.error('Password change error:', error);
       
       // Handle different error types
       if (error.code === 'auth/wrong-password') {
-        setErrors({ currentPassword: 'Current password is incorrect' });
+        setErrors({ currentPassword: t('current_password_incorrect') });
       } else if (error.code === 'auth/weak-password') {
-        setErrors({ newPassword: 'Password is too weak. Please choose a stronger password.' });
+        setErrors({ newPassword: t('password_too_weak') });
       } else if (error.code === 'auth/requires-recent-login') {
-        showSnackbar('Please log out and log back in before changing your password.', 'error');
+        showSnackbar(t('requires_recent_login'), 'error');
       } else {
-        showSnackbar('Failed to change password. Please try again.', 'error');
+        showSnackbar(t('failed_to_change_password'), 'error');
       }
     } finally {
       setLoading(false);
@@ -3518,55 +3537,107 @@ const SettingsPage: React.FC = () => {
       <Dialog open={passwordDialogOpen} onClose={() => setPasswordDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Typography variant="h6">Change Password</Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Lock color="primary" />
+              <Typography variant="h6">{t('change_password')}</Typography>
+            </Box>
             <IconButton onClick={() => setPasswordDialogOpen(false)} size="small">
               <Close />
             </IconButton>
           </Box>
         </DialogTitle>
         <DialogContent>
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="body2" color="text.secondary">
+              {t('enter_current_password_and_new_password')}
+            </Typography>
+          </Box>
           <Grid container spacing={3} sx={{ mt: 1 }}>
             <Grid item xs={12}>
               <TextField
                 fullWidth
-                label="Current Password"
-                type="password"
+                label={t('current_password')}
+                type={passwordVisibility.showCurrentPassword ? 'text' : 'password'}
                 value={passwordForm.currentPassword}
                 onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
                 error={!!errors.currentPassword}
                 helperText={errors.currentPassword}
                 required
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        onClick={() => togglePasswordVisibility('showCurrentPassword')}
+                        edge="end"
+                        size="small"
+                      >
+                        {passwordVisibility.showCurrentPassword ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
               />
             </Grid>
             <Grid item xs={12}>
               <TextField
                 fullWidth
-                label="New Password"
-                type="password"
+                label={t('new_password')}
+                type={passwordVisibility.showNewPassword ? 'text' : 'password'}
                 value={passwordForm.newPassword}
                 onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
                 error={!!errors.newPassword}
-                helperText={errors.newPassword || 'Password must be at least 6 characters long'}
+                helperText={errors.newPassword || t('password_min_length')}
                 required
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        onClick={() => togglePasswordVisibility('showNewPassword')}
+                        edge="end"
+                        size="small"
+                      >
+                        {passwordVisibility.showNewPassword ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
               />
             </Grid>
             <Grid item xs={12}>
               <TextField
                 fullWidth
-                label="Confirm New Password"
-                type="password"
+                label={t('confirm_new_password')}
+                type={passwordVisibility.showConfirmPassword ? 'text' : 'password'}
                 value={passwordForm.confirmPassword}
                 onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
                 error={!!errors.confirmPassword}
                 helperText={errors.confirmPassword}
                 required
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        onClick={() => togglePasswordVisibility('showConfirmPassword')}
+                        edge="end"
+                        size="small"
+                      >
+                        {passwordVisibility.showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
               />
             </Grid>
           </Grid>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 3 }}>
-          <Button onClick={() => setPasswordDialogOpen(false)} disabled={loading}>
-            Cancel
+          <Button onClick={() => {
+            setPasswordDialogOpen(false);
+            setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+            setPasswordVisibility({ showCurrentPassword: false, showNewPassword: false, showConfirmPassword: false });
+            setErrors({});
+          }} disabled={loading}>
+            {t('cancel')}
           </Button>
           <Button 
             variant="contained" 
@@ -3574,7 +3645,7 @@ const SettingsPage: React.FC = () => {
             disabled={loading}
             startIcon={loading ? <CircularProgress size={16} /> : <Lock />}
           >
-            {loading ? 'Changing...' : 'Change Password'}
+            {loading ? t('updating_password') : t('change_password')}
           </Button>
         </DialogActions>
       </Dialog>
