@@ -18,6 +18,8 @@ import { AuthContext } from '../../app/AuthProvider';
 import { Clinic, User } from '../../types/models';
 import { validateUserLimit, getPlanInfo, canAddUser } from '../../utils/subscriptionUtils';
 import { formatDateForTable, formatDateTime, formatDateForInput, timestampToDate, getRelativeTime } from '../../utils/dateUtils';
+import { UserPermissions } from '../../types/permissions';
+import PermissionsManager from '../../components/PermissionsManager';
 import {
   Box,
   Container,
@@ -62,6 +64,7 @@ import {
   Delete,
   Warning,
   Edit,
+  Security,
 } from '@mui/icons-material';
 import { Tooltip } from '@mui/material';
 
@@ -82,6 +85,8 @@ const AdminPanelPage: React.FC = () => {
   const [itemToDelete, setItemToDelete] = useState<{type: 'clinic' | 'user', id: string, name: string} | null>(null);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [editingClinic, setEditingClinic] = useState<Clinic | null>(null);
+  const [permissionsDialogOpen, setPermissionsDialogOpen] = useState(false);
+  const [userForPermissions, setUserForPermissions] = useState<User | null>(null);
   
   // Form states
   const [newClinic, setNewClinic] = useState({
@@ -362,6 +367,29 @@ const AdminPanelPage: React.FC = () => {
     setUserDialogOpen(false);
     setEditingUser(null);
     resetUserForm();
+  };
+
+  const handleManagePermissions = (user: User) => {
+    setUserForPermissions(user);
+    setPermissionsDialogOpen(true);
+  };
+
+  const handleSavePermissions = async (permissions: UserPermissions) => {
+    if (!userForPermissions) return;
+
+    try {
+      await updateDoc(doc(db, 'users', userForPermissions.id), {
+        permissions,
+        updatedAt: serverTimestamp(),
+      });
+      
+      fetchUsers(); // Refresh user list
+      setPermissionsDialogOpen(false);
+      setUserForPermissions(null);
+    } catch (error) {
+      console.error('Error updating user permissions:', error);
+      setError('Failed to update user permissions');
+    }
   };
 
   const toggleClinicStatus = async (clinicId: string, currentStatus: boolean) => {
@@ -705,6 +733,14 @@ const AdminPanelPage: React.FC = () => {
                             onChange={() => toggleUserStatus(user.id, user.isActive)}
                           />
                           <IconButton
+                            color="secondary"
+                            size="small"
+                            onClick={() => handleManagePermissions(user)}
+                            title="Manage Permissions"
+                          >
+                            <Security />
+                          </IconButton>
+                          <IconButton
                             color="primary"
                             size="small"
                             onClick={() => handleEditUser(user)}
@@ -969,6 +1005,17 @@ const AdminPanelPage: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Permissions Manager Dialog */}
+      <PermissionsManager
+        open={permissionsDialogOpen}
+        onClose={() => {
+          setPermissionsDialogOpen(false);
+          setUserForPermissions(null);
+        }}
+        user={userForPermissions}
+        onSave={handleSavePermissions}
+      />
     </Box>
   );
 };

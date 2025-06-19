@@ -1,3 +1,5 @@
+import { UserPermissions } from './permissions';
+
 export interface Clinic {
   id: string;
   name: string;
@@ -27,6 +29,7 @@ export interface User {
   isActive: boolean;
   firstName: string;
   lastName: string;
+  permissions?: UserPermissions; // Custom permissions override role defaults
   createdAt: string;
   updatedAt: string;
   createdBy: string; // who created this user

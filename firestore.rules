@@ -42,14 +42,17 @@ service cloud.firestore {
     
     // Users collection
     match /users/{userId} {
-      // Super admins can do anything
+      // Super admins can do anything (including permissions)
       allow read, write: if hasAdminAccess();
       // Users can always read their own document (needed for clinic status check)
       allow read: if request.auth != null && request.auth.uid == userId;
       // Users can read other users only if same clinic AND clinic is active
       allow read: if hasActiveClinicAccess(resource.data.clinicId);
-      // Users can only modify their own data if clinic is active
-      allow write: if request.auth != null && request.auth.uid == userId && hasActiveClinicAccess(resource.data.clinicId);
+      // Users can only modify their own data if clinic is active (but NOT permissions field)
+      allow write: if request.auth != null && 
+                      request.auth.uid == userId && 
+                      hasActiveClinicAccess(resource.data.clinicId) &&
+                      !('permissions' in request.resource.data);
     }
     
     // Patients collection - clinic isolation + active check

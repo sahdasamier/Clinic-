@@ -3,6 +3,7 @@ import { Routes, Route, BrowserRouter } from "react-router-dom";
 import AuthGuard from "./AuthGuard";
 import AdminProtectedRoute from "../components/AdminProtectedRoute";
 import ClinicAccessGuard from "../components/ClinicAccessGuard";
+import PermissionGuard from "../components/PermissionGuard";
 import DashboardPage from "../features/dashboard/DashboardPage";
 import LoginPage from "../features/auth/LoginPage";
 import AdminLoginPage from "../features/auth/AdminLoginPage";
@@ -31,27 +32,131 @@ const Router: React.FC = () => {
         <Route path="/admin/login" element={<AdminLoginPage />} />
         <Route path="/admin/dashboard" element={<AdminProtectedRoute><AdminPanelPage /></AdminProtectedRoute>} />
         
-        {/* Protected Routes - Wrapped with AuthGuard and ClinicAccessGuard */}
-        <Route path="/" element={<AuthGuard><ClinicAccessGuard><DashboardPage /></ClinicAccessGuard></AuthGuard>} />
-        <Route path="/dashboard" element={<AuthGuard><ClinicAccessGuard><DashboardPage /></ClinicAccessGuard></AuthGuard>} />
-        <Route path="/dashboard/receptionist" element={<AuthGuard><ClinicAccessGuard><ReceptionistDashboard /></ClinicAccessGuard></AuthGuard>} />
-        <Route path="/dashboard/doctor" element={<AuthGuard><ClinicAccessGuard><DoctorDashboard /></ClinicAccessGuard></AuthGuard>} />
+        {/* Protected Routes - Wrapped with AuthGuard, ClinicAccessGuard, and PermissionGuard */}
+        <Route path="/" element={
+          <AuthGuard>
+            <ClinicAccessGuard>
+              <PermissionGuard feature="dashboard">
+                <DashboardPage />
+              </PermissionGuard>
+            </ClinicAccessGuard>
+          </AuthGuard>
+        } />
+        <Route path="/dashboard" element={
+          <AuthGuard>
+            <ClinicAccessGuard>
+              <PermissionGuard feature="dashboard">
+                <DashboardPage />
+              </PermissionGuard>
+            </ClinicAccessGuard>
+          </AuthGuard>
+        } />
+        <Route path="/dashboard/receptionist" element={
+          <AuthGuard>
+            <ClinicAccessGuard>
+              <PermissionGuard feature="dashboard">
+                <ReceptionistDashboard />
+              </PermissionGuard>
+            </ClinicAccessGuard>
+          </AuthGuard>
+        } />
+        <Route path="/dashboard/doctor" element={
+          <AuthGuard>
+            <ClinicAccessGuard>
+              <PermissionGuard feature="dashboard">
+                <DoctorDashboard />
+              </PermissionGuard>
+            </ClinicAccessGuard>
+          </AuthGuard>
+        } />
         
         {/* Patient Routes */}
-        <Route path="/patients" element={<AuthGuard><ClinicAccessGuard><PatientListPage /></ClinicAccessGuard></AuthGuard>} />
-        <Route path="/patients/:id" element={<AuthGuard><ClinicAccessGuard><PatientDetailPage /></ClinicAccessGuard></AuthGuard>} />
+        <Route path="/patients" element={
+          <AuthGuard>
+            <ClinicAccessGuard>
+              <PermissionGuard feature="patients">
+                <PatientListPage />
+              </PermissionGuard>
+            </ClinicAccessGuard>
+          </AuthGuard>
+        } />
+        <Route path="/patients/:id" element={
+          <AuthGuard>
+            <ClinicAccessGuard>
+              <PermissionGuard feature="patient_details">
+                <PatientDetailPage />
+              </PermissionGuard>
+            </ClinicAccessGuard>
+          </AuthGuard>
+        } />
         
         {/* Appointment Routes */}
-        <Route path="/appointments" element={<AuthGuard><ClinicAccessGuard><AppointmentListPage /></ClinicAccessGuard></AuthGuard>} />
-        <Route path="/appointments/calendar" element={<AuthGuard><ClinicAccessGuard><AppointmentCalendarPage /></ClinicAccessGuard></AuthGuard>} />
+        <Route path="/appointments" element={
+          <AuthGuard>
+            <ClinicAccessGuard>
+              <PermissionGuard feature="appointments">
+                <AppointmentListPage />
+              </PermissionGuard>
+            </ClinicAccessGuard>
+          </AuthGuard>
+        } />
+        <Route path="/appointments/calendar" element={
+          <AuthGuard>
+            <ClinicAccessGuard>
+              <PermissionGuard feature="appointment_calendar">
+                <AppointmentCalendarPage />
+              </PermissionGuard>
+            </ClinicAccessGuard>
+          </AuthGuard>
+        } />
         
         {/* Other Feature Routes */}
-        <Route path="/payments" element={<AuthGuard><ClinicAccessGuard><PaymentListPage /></ClinicAccessGuard></AuthGuard>} />
-        <Route path="/inventory" element={<AuthGuard><ClinicAccessGuard><InventoryPage /></ClinicAccessGuard></AuthGuard>} />
-        <Route path="/notifications" element={<AuthGuard><ClinicAccessGuard><NotificationsPage /></ClinicAccessGuard></AuthGuard>} />
+        <Route path="/payments" element={
+          <AuthGuard>
+            <ClinicAccessGuard>
+              <PermissionGuard feature="payments">
+                <PaymentListPage />
+              </PermissionGuard>
+            </ClinicAccessGuard>
+          </AuthGuard>
+        } />
+        <Route path="/inventory" element={
+          <AuthGuard>
+            <ClinicAccessGuard>
+              <PermissionGuard feature="inventory">
+                <InventoryPage />
+              </PermissionGuard>
+            </ClinicAccessGuard>
+          </AuthGuard>
+        } />
+        <Route path="/notifications" element={
+          <AuthGuard>
+            <ClinicAccessGuard>
+              <PermissionGuard feature="notifications">
+                <NotificationsPage />
+              </PermissionGuard>
+            </ClinicAccessGuard>
+          </AuthGuard>
+        } />
 
-        <Route path="/doctor-scheduling" element={<AuthGuard><ClinicAccessGuard><AppointmentSchedulingPage /></ClinicAccessGuard></AuthGuard>} />
-        <Route path="/settings" element={<AuthGuard><ClinicAccessGuard><SettingsPage /></ClinicAccessGuard></AuthGuard>} />
+        <Route path="/doctor-scheduling" element={
+          <AuthGuard>
+            <ClinicAccessGuard>
+              <PermissionGuard feature="doctor_scheduling">
+                <AppointmentSchedulingPage />
+              </PermissionGuard>
+            </ClinicAccessGuard>
+          </AuthGuard>
+        } />
+        <Route path="/settings" element={
+          <AuthGuard>
+            <ClinicAccessGuard>
+              <PermissionGuard feature="settings">
+                <SettingsPage />
+              </PermissionGuard>
+            </ClinicAccessGuard>
+          </AuthGuard>
+        } />
       </Routes>
     </BrowserRouter>
   );

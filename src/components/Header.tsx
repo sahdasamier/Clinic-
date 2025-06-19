@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { auth } from '../api/firebase';
 import { AuthContext } from '../app/AuthProvider';
+import { useUser } from '../contexts/UserContext';
 import { useNotifications } from '../contexts/NotificationContext';
 import {
   AppBar,
@@ -36,6 +37,7 @@ const Header: React.FC = () => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
+  const { userProfile, userClinic } = useUser();
   const { unreadCount } = useNotifications();
   
   // Language menu state
@@ -87,6 +89,10 @@ const Header: React.FC = () => {
 
   // Get user display information
   const getUserDisplayName = () => {
+    // Prioritize user profile data
+    if (userProfile?.firstName && userProfile?.lastName) {
+      return `${userProfile.firstName} ${userProfile.lastName}`;
+    }
     if (user?.displayName) {
       return user.displayName;
     }
@@ -99,6 +105,10 @@ const Header: React.FC = () => {
   };
 
   const getUserInitials = () => {
+    // Prioritize user profile data for initials
+    if (userProfile?.firstName && userProfile?.lastName) {
+      return userProfile.firstName.charAt(0).toUpperCase() + userProfile.lastName.charAt(0).toUpperCase();
+    }
     const displayName = getUserDisplayName();
     const names = displayName.split(' ');
     if (names.length >= 2) {
@@ -122,7 +132,7 @@ const Header: React.FC = () => {
         {/* Left Side - Title */}
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <Typography variant="h5" sx={{ fontWeight: 600, color: 'text.primary' }}>
-            {t('dashboard')}
+            {userClinic?.name ? `${userClinic.name} - ${t('dashboard')}` : t('dashboard')}
           </Typography>
         </Box>
 
@@ -205,7 +215,7 @@ const Header: React.FC = () => {
                 {getUserDisplayName()}
               </Typography>
               <Typography variant="caption" color="text.secondary">
-                {t('general_practitioner')}
+                {userProfile?.role ? t(userProfile.role) : t('general_practitioner')}
               </Typography>
             </Box>
             <IconButton
@@ -263,7 +273,7 @@ const Header: React.FC = () => {
                   {getUserDisplayName()}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  {t('general_practitioner')}
+                  {userProfile?.role ? t(userProfile.role) : t('general_practitioner')}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
                   {user?.email}

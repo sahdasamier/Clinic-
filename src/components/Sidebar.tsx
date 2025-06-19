@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useUser } from '../contexts/UserContext';
 import {
   Box,
   Drawer,
@@ -42,6 +43,7 @@ const navLinks = [
 const Sidebar: React.FC = () => {
   const { t } = useTranslation();
   const location = useLocation();
+  const { userProfile, userClinic } = useUser();
 
   return (
     <Drawer
@@ -77,7 +79,7 @@ const Sidebar: React.FC = () => {
           </Box>
           <Box>
             <Typography variant="h6" sx={{ fontWeight: 700, color: 'white', lineHeight: 1.2 }}>
-              ClinicCare
+              {userClinic?.name || 'ClinicCare'}
             </Typography>
             <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
               {t('management_system')}
@@ -100,14 +102,20 @@ const Sidebar: React.FC = () => {
                 fontWeight: 600,
               }}
             >
-              DA
+              {userProfile ? 
+                `${userProfile.firstName.charAt(0)}${userProfile.lastName.charAt(0)}` : 
+                'DA'
+              }
             </Avatar>
             <Box>
               <Typography variant="body1" sx={{ fontWeight: 600, color: 'white', lineHeight: 1.2 }}>
-                Dr. Ahmed
+                {userProfile ? 
+                  `${userProfile.firstName} ${userProfile.lastName}` : 
+                  'Dr. Ahmed'
+                }
               </Typography>
               <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
-                {t('general_practitioner')}
+                {userProfile?.role ? t(userProfile.role) : t('general_practitioner')}
               </Typography>
             </Box>
           </Box>
