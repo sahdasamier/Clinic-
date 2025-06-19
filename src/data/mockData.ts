@@ -193,7 +193,7 @@ export const defaultMedicalHistoryData = {
   date: new Date().toISOString().split('T')[0],
   condition: '',
   treatment: '',
-  doctor: 'Dr. Ahmed Ali',
+  doctor: '',
   notes: ''
 };
 

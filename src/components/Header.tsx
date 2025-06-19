@@ -101,7 +101,7 @@ const Header: React.FC = () => {
       const name = user.email.split('@')[0];
       return name.charAt(0).toUpperCase() + name.slice(1);
     }
-    return 'Dr. Ahmed Ali'; // Fallback
+    return ''; // Fallback to empty string if no user information is available
   };
 
   const getUserInitials = () => {
@@ -321,4 +321,4 @@ const Header: React.FC = () => {
   );
 };
 
-export default Header; 
+export default Header;

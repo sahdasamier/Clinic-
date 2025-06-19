@@ -3,16 +3,20 @@ import { useTranslation } from 'react-i18next';
 import Header from '../../components/Header';
 import Sidebar from '../../components/Sidebar';
 
-const ClinicDetailPage: React.FC = () => {
-  const { t } = useTranslation();
+interface ClinicInfo {
+  name: string;
+  address: string;
+  phone: string;
+  email: string;
+  operatingHours: string;
+}
 
-  const clinic = {
-    name: 'Al-Shifa Clinic',
-    address: '15 شارع النيل، وسط البلد، القاهرة، مصر',
-    phone: '+20 2 2345 6789',
-    email: 'contact@alshifa.com.eg',
-    operatingHours: 'Sun-Thu, 9:00 AM - 6:00 PM',
-  };
+interface ClinicDetailPageProps {
+  clinic: ClinicInfo;
+}
+
+const ClinicDetailPage: React.FC<ClinicDetailPageProps> = ({ clinic }) => {
+  const { t } = useTranslation();
 
   return (
     <div className="flex h-screen bg-background">
@@ -24,9 +28,15 @@ const ClinicDetailPage: React.FC = () => {
           <div className="p-8 bg-white rounded-lg shadow-md">
             <h3 className="text-xl font-bold text-primary mb-4">{clinic.name}</h3>
             <p className="text-gray-600 mb-2">{clinic.address}</p>
-            <p className="text-gray-600 mb-2">{t('phone')}: {clinic.phone}</p>
-            <p className="text-gray-600 mb-2">{t('email')}: {clinic.email}</p>
-            <p className="text-gray-600">{t('operating_hours')}: {clinic.operatingHours}</p>
+            <p className="text-gray-600 mb-2">
+              {t('phone')}: {clinic.phone}
+            </p>
+            <p className="text-gray-600 mb-2">
+              {t('email')}: {clinic.email}
+            </p>
+            <p className="text-gray-600">
+              {t('operating_hours')}: {clinic.operatingHours}
+            </p>
           </div>
         </main>
       </div>
@@ -34,4 +44,4 @@ const ClinicDetailPage: React.FC = () => {
   );
 };
 
-export default ClinicDetailPage; 
+export default ClinicDetailPage;

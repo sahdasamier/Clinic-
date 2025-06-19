@@ -393,7 +393,7 @@ const PatientListPage: React.FC = () => {
       const newVisitNote = {
         date: new Date().toISOString().split('T')[0],
         note: newNote,
-        doctor: 'Dr. Ahmed Ali'
+        doctor: ''
       };
       
       // Update patients array
@@ -474,7 +474,7 @@ const PatientListPage: React.FC = () => {
             dosage: editingMedication.dosage,
             frequency: editingMedication.frequency,
             duration: editingMedication.duration,
-            prescribedBy: editingMedication.prescribedBy || editingMedication.prescribed || 'Dr. Ahmed Ali',
+            prescribedBy: editingMedication.prescribedBy || editingMedication.prescribed ,
             status: editingMedication.status || 'Active',
             dateStarted: editingMedication.dateStarted || new Date().toISOString().split('T')[0],
             id: editingMedication.id || Date.now()
@@ -804,7 +804,7 @@ const PatientListPage: React.FC = () => {
         frequency: newTreatmentMedication.frequency.trim() || '⚠️ Pending',
         duration: newTreatmentMedication.duration.trim() || '⚠️ Pending',
         status: 'Active' as const,
-        prescribedBy: 'Dr. Ahmed Ali',
+        prescribedBy: '',
         dateStarted: new Date().toISOString().split('T')[0]
       };
 
@@ -874,7 +874,7 @@ const PatientListPage: React.FC = () => {
       date: new Date().toISOString().split('T')[0],
       condition: '',
       treatment: '',
-      doctor: 'Dr. Ahmed Ali',
+      doctor: '',
       notes: ''
     });
     setTreatmentType('existing');
@@ -5998,7 +5998,7 @@ const PatientListPage: React.FC = () => {
                     label="Attending Doctor" 
                     value={newMedicalHistory.doctor}
                     onChange={(e) => setNewMedicalHistory({ ...newMedicalHistory, doctor: e.target.value })}
-                    placeholder="Dr. Ahmed Ali"
+                    placeholder=""
                   />
                 </Grid>
                 <Grid item xs={12}>
@@ -6181,7 +6181,7 @@ const PatientListPage: React.FC = () => {
                   date: new Date().toISOString().split('T')[0],
                   condition: '',
                   treatment: '',
-                  doctor: 'Dr. Ahmed Ali',
+                  doctor: '',
                   notes: ''
                 });
               }}>

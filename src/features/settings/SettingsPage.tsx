@@ -129,10 +129,10 @@ const SettingsPage: React.FC = () => {
 
   // Form states
   const [profile, setProfile] = useState({
-    name: 'Dr. Ahmed Ali',
-    email: 'ahmed.ali@clinic.com',
-    phone: '+20 10 1234 5678',
-    specialization: 'General Practitioner',
+    name: '',
+    email: '',
+    phone: '',
+    specialization: '',
     emergencyContact: '',
     dateOfBirth: '',
     gender: '',
@@ -716,10 +716,10 @@ const SettingsPage: React.FC = () => {
     setConfirmAction(() => () => {
       if (formType === 'profile') {
         setProfile({
-          name: 'Dr. Ahmed Ali',
-          email: 'ahmed.ali@clinic.com',
-          phone: '+20 10 1234 5678',
-          specialization: 'General Practitioner',
+          name: '',
+          email: '',
+          phone: '',
+          specialization: '',
           emergencyContact: '',
           dateOfBirth: '',
           gender: '',
