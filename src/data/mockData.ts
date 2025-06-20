@@ -289,6 +289,11 @@ export interface PaymentData {
   insurance: 'Yes' | 'No';
   insuranceAmount: number;
   paidAmount?: number;
+  includeVAT?: boolean;
+  vatRate?: number;
+  vatAmount?: number;
+  totalAmountWithVAT?: number;
+  baseAmount?: number; // Amount before VAT
 }
 
 // Sample patient names for payments - Empty for clean deployment
@@ -365,6 +370,29 @@ export const getDefaultNotificationPatients = (): NotificationPatient[] => {
 
 export const getDefaultInventory = (): InventoryItem[] => [];
 
+// VAT Settings
+export interface VATSettings {
+  enabled: boolean;
+  rate: number;
+  defaultIncludeVAT: boolean;
+}
+
+export const defaultVATSettings: VATSettings = {
+  enabled: true,
+  rate: 14, // Default VAT rate (14% for Egypt, can be changed)
+  defaultIncludeVAT: false,
+};
+
+// VAT rate options for different countries
+export const vatRateOptions = [
+  { label: 'Egypt (14%)', value: 14 },
+  { label: 'UAE (5%)', value: 5 },
+  { label: 'Saudi Arabia (15%)', value: 15 },
+  { label: 'Jordan (16%)', value: 16 },
+  { label: 'Kuwait (0%)', value: 0 },
+  { label: 'Custom Rate', value: 0 },
+];
+
 // Default form data for new invoice/payment
 export const defaultNewInvoiceData = {
   patient: '',
@@ -375,6 +403,8 @@ export const defaultNewInvoiceData = {
   description: '',
   method: '',
   insuranceAmount: '',
+  includeVAT: false,
+  vatRate: 14,
 };
 
 // Payment categories

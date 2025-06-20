@@ -36,6 +36,8 @@ import {
   Tooltip,
   Snackbar,
   Alert,
+  FormControlLabel,
+  Switch,
 } from '@mui/material';
 import {
   Search,
@@ -62,6 +64,7 @@ import {
   DeleteOutline,
   Share,
   LocalHospital,
+  Percent,
 } from '@mui/icons-material';
 
 import {
@@ -72,7 +75,16 @@ import {
   paymentStatuses,
   defaultNewInvoiceData,
   type PaymentData,
+  type VATSettings,
+  defaultVATSettings,
 } from '../../data/mockData';
+import { 
+  getVATSettings, 
+  calculateVAT, 
+  calculateProfitWithVAT,
+  formatCurrencyWithVAT,
+  type VATCalculation 
+} from '../../utils/vatUtils';
 import InvoiceGenerator from './InvoiceGenerator';
 
 interface TabPanelProps {
@@ -107,6 +119,8 @@ interface NewInvoiceData {
   description: string;
   method: string;
   insuranceAmount: string;
+  includeVAT: boolean;
+  vatRate: number;
 }
 
 interface SnackbarState {
@@ -310,7 +324,13 @@ const PaymentListPage: React.FC = () => {
   const [exportOptionsOpen, setExportOptionsOpen] = useState(false);
   const [payments, setPayments] = useState<PaymentData[]>([]);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
-  const [newInvoiceData, setNewInvoiceData] = useState<NewInvoiceData>(defaultNewInvoiceData);
+  const [newInvoiceData, setNewInvoiceData] = useState<NewInvoiceData>({
+    ...defaultNewInvoiceData,
+    includeVAT: getVATSettings().defaultIncludeVAT,
+    vatRate: getVATSettings().rate,
+  });
+  const [vatSettings, setVATSettings] = useState<VATSettings>(getVATSettings());
+  const [currentVATCalculation, setCurrentVATCalculation] = useState<VATCalculation | null>(null);
 
 // Load data from localStorage on component mount
 useEffect(() => {
@@ -325,7 +345,11 @@ useEffect(() => {
     setTabValue(0);
     setSearchQuery('');
     setActiveFilter('all');
-    setNewInvoiceData(defaultNewInvoiceData);
+    setNewInvoiceData({
+      ...defaultNewInvoiceData,
+      includeVAT: getVATSettings().defaultIncludeVAT,
+      vatRate: getVATSettings().rate,
+    });
     setSelectedPayment(null);
     setSelectedInvoiceForView(null);
     setSelectedPaymentForStatusChange(null);
@@ -356,6 +380,17 @@ useEffect(() => {
     savePaymentsToStorage(payments);
   }
 }, [payments, isDataLoaded]);
+
+// Calculate VAT whenever amount or VAT settings change
+useEffect(() => {
+  const amount = parseFloat(newInvoiceData.amount);
+  if (!isNaN(amount) && amount > 0) {
+    const calculation = calculateVAT(amount, newInvoiceData.vatRate, newInvoiceData.includeVAT);
+    setCurrentVATCalculation(calculation);
+  } else {
+    setCurrentVATCalculation(null);
+  }
+}, [newInvoiceData.amount, newInvoiceData.vatRate, newInvoiceData.includeVAT]);
 
 // Helper functions
 const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
@@ -456,10 +491,25 @@ const getFilteredPayments = () => {
 
 const filteredPayments = getFilteredPayments();
 
-// Calculate statistics
-const totalRevenue = payments.filter(p => p.status === 'paid').reduce((sum, p) => sum + p.amount, 0);
-const totalInsurance = payments.filter(p => p.status === 'paid' && p.insurance === 'Yes').reduce((sum, p) => sum + (p.insuranceAmount || 0), 0);
-const totalProfit = totalRevenue - totalInsurance;
+// Calculate statistics with VAT consideration
+const paidPayments = payments.filter(p => p.status === 'paid');
+const totalRevenue = paidPayments.reduce((sum, p) => sum + p.amount, 0);
+const totalInsurance = paidPayments.filter(p => p.insurance === 'Yes').reduce((sum, p) => sum + (p.insuranceAmount || 0), 0);
+
+// Calculate VAT deductions for profit calculation
+const totalVATDeducted = paidPayments
+  .filter(p => p.includeVAT)
+  .reduce((sum, p) => sum + (p.vatAmount || 0), 0);
+
+// Calculate profit with VAT considerations
+const profitCalculation = calculateProfitWithVAT(
+  totalRevenue,
+  totalInsurance,
+  totalVATDeducted,
+  true // VAT is included in revenue amounts
+);
+
+const totalProfit = profitCalculation.finalProfit;
 const pendingAmount = payments.filter(p => p.status === 'pending').reduce((sum, p) => sum + p.amount, 0);
 const overdueAmount = payments.filter(p => p.status === 'overdue').reduce((sum, p) => sum + p.amount, 0);
 
@@ -511,6 +561,9 @@ const handleCreatePayment = () => {
   }
 
   const insuranceAmount = parseFloat(newInvoiceData.insuranceAmount) || 0;
+  
+  // Calculate VAT
+  const vatCalculation = calculateVAT(amount, newInvoiceData.vatRate, newInvoiceData.includeVAT);
 
   const newPayment: PaymentData = {
     id: payments.length > 0 ? Math.max(...payments.map(p => p.id)) + 1 : 1,
@@ -520,20 +573,29 @@ const handleCreatePayment = () => {
     status: 'pending',
     currency: 'EGP',
     patient: newInvoiceData.patient,
-    amount: amount,
+    amount: vatCalculation.totalAmountWithVAT, // Total amount including VAT if applicable
     category: newInvoiceData.category,
     dueDate: newInvoiceData.dueDate,
     description: newInvoiceData.description,
     method: newInvoiceData.method,
     insurance: insuranceAmount > 0 ? 'Yes' : 'No',
     insuranceAmount: insuranceAmount,
+    includeVAT: vatCalculation.includeVAT,
+    vatRate: vatCalculation.vatRate,
+    vatAmount: vatCalculation.vatAmount,
+    totalAmountWithVAT: vatCalculation.totalAmountWithVAT,
+    baseAmount: vatCalculation.baseAmount,
   };
 
   setPayments(prev => [newPayment, ...prev]);
   setAddPaymentOpen(false);
   
   // Reset form
-  setNewInvoiceData(defaultNewInvoiceData);
+  setNewInvoiceData({
+    ...defaultNewInvoiceData,
+    includeVAT: vatSettings.defaultIncludeVAT,
+    vatRate: vatSettings.rate,
+  });
 
   setSnackbar({
     open: true,
@@ -634,13 +696,15 @@ const handleSendReminder = (payment: PaymentData) => {
 const handleEditPayment = (payment: PaymentData) => {
   setNewInvoiceData({
     patient: payment.patient,
-    amount: payment.amount.toString(),
+    amount: payment.baseAmount?.toString() || payment.amount.toString(),
     category: payment.category,
     invoiceDate: payment.date,
     dueDate: payment.dueDate,
     description: payment.description,
     method: payment.method,
     insuranceAmount: payment.insuranceAmount?.toString() || '',
+    includeVAT: payment.includeVAT || false,
+    vatRate: payment.vatRate || vatSettings.rate,
   });
   setAddPaymentOpen(true);
 };
@@ -934,11 +998,14 @@ return (
           </Grid>
           <Grid item xs={12} sm={6} md={2.4}>
             <StatCard
-              title={t('payment.stats.totalProfit')}
+              title={vatSettings.enabled ? 'Net Profit (After VAT)' : t('payment.stats.totalProfit')}
               value={`EGP ${formatCurrency(totalProfit)}`}
               icon={<MonetizationOn />}
               color="#8B5CF6"
-              subtitle={t('payment.stats.revenueMinusInsurance')}
+              subtitle={vatSettings.enabled 
+                ? `VAT Deducted: EGP ${formatCurrency(totalVATDeducted)}` 
+                : t('payment.stats.revenueMinusInsurance')
+              }
               trend="+15.3%"
               trendDirection="up"
             />
@@ -963,11 +1030,14 @@ return (
           </Grid>
           <Grid item xs={12} sm={6} md={2.4}>
             <StatCard
-              title={t('payment.stats.thisMonth')}
-              value={payments.length}
-              icon={<Receipt />}
-              color="#3B82F6"
-              subtitle={t('payment.stats.totalInvoices')}
+              title={vatSettings.enabled ? 'VAT Collected' : t('payment.stats.thisMonth')}
+              value={vatSettings.enabled ? `EGP ${formatCurrency(totalVATDeducted)}` : payments.length}
+              icon={vatSettings.enabled ? <Percent /> : <Receipt />}
+              color={vatSettings.enabled ? "#F59E0B" : "#3B82F6"}
+              subtitle={vatSettings.enabled 
+                ? `Rate: ${vatSettings.rate}% | Invoices: ${paidPayments.filter(p => p.includeVAT).length}`
+                : t('payment.stats.totalInvoices')
+              }
               trend="+8.2%"
               trendDirection="up"
             />
@@ -1553,6 +1623,90 @@ return (
                    helperText={t('payment.helpers.insuranceCoverage')}
                  />
                </Grid>
+
+               {/* VAT Section */}
+               {vatSettings.enabled && (
+                 <>
+                   <Grid item xs={12}>
+                     <Divider sx={{ my: 2 }}>
+                       <Chip label="VAT Settings" icon={<Percent />} />
+                     </Divider>
+                   </Grid>
+                   
+                   <Grid item xs={12} md={6}>
+                     <FormControlLabel
+                       control={
+                         <Switch
+                           checked={newInvoiceData.includeVAT}
+                           onChange={(e) => setNewInvoiceData(prev => ({ ...prev, includeVAT: e.target.checked }))}
+                           color="primary"
+                         />
+                       }
+                       label={
+                         <Box>
+                           <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                             Include VAT
+                           </Typography>
+                           <Typography variant="caption" color="text.secondary">
+                             Add VAT to the invoice amount
+                           </Typography>
+                         </Box>
+                       }
+                     />
+                   </Grid>
+
+                   <Grid item xs={12} md={6}>
+                     <TextField
+                       fullWidth
+                       name="vatRate"
+                       label="VAT Rate"
+                       type="number"
+                       value={newInvoiceData.vatRate}
+                       onChange={(e) => setNewInvoiceData(prev => ({ ...prev, vatRate: parseFloat(e.target.value) || 0 }))}
+                       InputProps={{
+                         endAdornment: <InputAdornment position="end">%</InputAdornment>,
+                       }}
+                       inputProps={{ min: 0, max: 100, step: 0.1 }}
+                       disabled={!newInvoiceData.includeVAT}
+                       helperText={newInvoiceData.includeVAT ? "Current VAT rate" : "Enable VAT to set rate"}
+                     />
+                   </Grid>
+
+                   {/* VAT Calculation Preview */}
+                   {currentVATCalculation && newInvoiceData.includeVAT && (
+                     <Grid item xs={12}>
+                       <Box sx={{ 
+                         p: 2, 
+                         bgcolor: 'primary.light', 
+                         borderRadius: 2,
+                         border: '1px solid',
+                         borderColor: 'primary.main'
+                       }}>
+                         <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: 'primary.main' }}>
+                           📊 VAT Calculation Preview
+                         </Typography>
+                         <Grid container spacing={1}>
+                           <Grid item xs={12} sm={4}>
+                             <Typography variant="body2">
+                               💰 Base Amount: <strong>EGP {currentVATCalculation.baseAmount.toFixed(2)}</strong>
+                             </Typography>
+                           </Grid>
+                           <Grid item xs={12} sm={4}>
+                             <Typography variant="body2">
+                               📈 VAT ({currentVATCalculation.vatRate}%): <strong>EGP {currentVATCalculation.vatAmount.toFixed(2)}</strong>
+                             </Typography>
+                           </Grid>
+                           <Grid item xs={12} sm={4}>
+                             <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                               💳 Total with VAT: <strong>EGP {currentVATCalculation.totalAmountWithVAT.toFixed(2)}</strong>
+                             </Typography>
+                           </Grid>
+                         </Grid>
+                       </Box>
+                     </Grid>
+                   )}
+                 </>
+               )}
              </Grid>
            </DialogContent>
            <DialogActions>

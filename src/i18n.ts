@@ -1070,7 +1070,7 @@ const resources = {
       "appointment_statistics": "إحصائيات المواعيد",
       "todays_progress": "تقدم اليوم",
       "doctor_hours": "ساعات الطبيب",
-      "doctor_hours_display": "3 مساءً - 8 مساءً",
+      "doctor hours display": "3 مساءً - 8 مساءً",
       "confirmed_today": "مؤكد اليوم",
       "available_slots": "الفترات المتاحة",
       

@@ -1168,7 +1168,7 @@ const PatientListPage: React.FC = () => {
                       {t('patient_management')}
                     </Typography>
                     <Typography variant="h6" color="text.secondary" sx={{ fontWeight: 400 }}>
-                      🏥 {t('comprehensive_patient_care')}
+                      🩺 {t('patient dashboard ')}
                     </Typography>
                   </Box>
                 </Box>

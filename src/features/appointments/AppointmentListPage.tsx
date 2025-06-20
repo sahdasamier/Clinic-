@@ -725,7 +725,7 @@ const AppointmentListPage: React.FC = () => {
                   </Box>
                   <Box>
                     <Typography variant="h3" sx={{ fontWeight: 800, mb: 1 }}>
-                      {t('appointment_management')} 📅
+                      {t('appointmentmanagement')} 📅
                     </Typography>
                     <Typography variant="h6" sx={{ opacity: 0.9, fontWeight: 400 }}>
                       {t('realtime_scheduling_coordination')}
@@ -874,7 +874,7 @@ const AppointmentListPage: React.FC = () => {
                    border: '1px solid rgba(255,255,255,0.2)'
                  }}>
                    <Typography variant="h4" sx={{ fontWeight: 800, color: 'success.main', mb: 0.5 }}>
-                     {t('doctor_hours_display')}
+                     {t('doctor hours display')}
                    </Typography>
                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
                      {t('doctor_hours')}
