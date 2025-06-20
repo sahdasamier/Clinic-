@@ -1204,8 +1204,8 @@ const resources = {
       "no_account": "ليس لديك حساب؟ اشترك الآن",
       "authorized_access_only": "وصول مخول فقط",
       "management_system": "نظام الإدارة",
-      "clinic_care": "كلينيك كير",
-      "version": "الإصدار 1.0.0",
+      "clinic_care": "كلينيسي",
+              "version": "الإصدار 2.0.1",
       
       // Profile & User - الملف الشخصي والمستخدم
       "general_practitioner": "طبيب عام",

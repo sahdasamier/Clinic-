@@ -189,7 +189,7 @@ const StatCard: React.FC<{
   return (
     <Card sx={{ 
       height: '100%',
-      borderRadius: 3,
+      borderRadius: { xs: 2, md: 3 },
       boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
       border: '1px solid rgba(0,0,0,0.05)',
       '&:hover': {
@@ -199,14 +199,14 @@ const StatCard: React.FC<{
       transition: 'all 0.3s ease'
     }}>
       <CardContent sx={{ 
-        p: 3,
+        p: { xs: 2, md: 3 },
         textAlign: 'center'
       }}>
         <Box
           sx={{
-            width: 56,
-            height: 56,
-            borderRadius: '16px',
+            width: { xs: 40, md: 56 },
+            height: { xs: 40, md: 56 },
+            borderRadius: { xs: '12px', md: '16px' },
             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
             display: 'flex',
             alignItems: 'center',
@@ -225,15 +225,22 @@ const StatCard: React.FC<{
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
-          backgroundClip: 'text'
+          backgroundClip: 'text',
+          fontSize: { xs: '1.5rem', sm: '2rem', md: '3rem' }
         }}>
           {value}
         </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontWeight: 600 }}>
+        <Typography variant="body2" color="text.secondary" sx={{ 
+          mb: 1, 
+          fontWeight: 600,
+          fontSize: { xs: '0.8rem', md: '0.875rem' }
+        }}>
           {t(title)}
         </Typography>
         {subtitle && (
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="text.secondary" sx={{
+            fontSize: { xs: '0.7rem', md: '0.75rem' }
+          }}>
             {t(subtitle)}
           </Typography>
         )}
@@ -710,9 +717,7 @@ const AppointmentListPage: React.FC = () => {
                   </Box>
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <Typography variant="body2" sx={{ opacity: 0.8 }}>
-                    {t('auto_sync_patient_database')}
-                  </Typography>
+                
                 </Box>
               </Box>
             </CardContent>

@@ -107,13 +107,20 @@ const StatCard: React.FC<{
       boxShadow: '0 16px 48px rgba(0,0,0,0.15)',
     }
   }}>
-    <CardContent sx={{ p: 3, position: 'relative', zIndex: 2 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+    <CardContent sx={{ p: { xs: 2, md: 3 }, position: 'relative', zIndex: 2 }}>
+      <Box sx={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'space-between', 
+        mb: { xs: 1.5, md: 2 },
+        flexDirection: { xs: 'column', sm: 'row' },
+        gap: { xs: 1, sm: 0 }
+      }}>
         <Box
           sx={{
-            width: 56,
-            height: 56,
-            borderRadius: '16px',
+            width: { xs: 40, md: 56 },
+            height: { xs: 40, md: 56 },
+            borderRadius: { xs: '12px', md: '16px' },
             backgroundColor: 'rgba(255,255,255,0.2)',
             display: 'flex',
             alignItems: 'center',
@@ -133,18 +140,37 @@ const StatCard: React.FC<{
               color: 'white',
               fontWeight: 700,
               backdropFilter: 'blur(10px)',
+              fontSize: { xs: '0.7rem', md: '0.75rem' },
+              height: { xs: 24, md: 32 },
             }}
           />
         )}
       </Box>
-      <Typography variant="h3" sx={{ fontWeight: 800, mb: 0.5, color: 'white' }}>
+      <Typography variant="h3" sx={{ 
+        fontWeight: 800, 
+        mb: 0.5, 
+        color: 'white',
+        fontSize: { xs: '1.5rem', sm: '2rem', md: '3rem' },
+        textAlign: { xs: 'center', sm: 'left' }
+      }}>
         {value}
       </Typography>
-      <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.9)', fontWeight: 600 }}>
+      <Typography variant="body1" sx={{ 
+        color: 'rgba(255,255,255,0.9)', 
+        fontWeight: 600,
+        fontSize: { xs: '0.8rem', md: '1rem' },
+        textAlign: { xs: 'center', sm: 'left' }
+      }}>
         {title}
       </Typography>
       {subtitle && (
-        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', display: 'block', mt: 0.5 }}>
+        <Typography variant="caption" sx={{ 
+          color: 'rgba(255,255,255,0.7)', 
+          display: 'block', 
+          mt: 0.5,
+          fontSize: { xs: '0.7rem', md: '0.75rem' },
+          textAlign: { xs: 'center', sm: 'left' }
+        }}>
           {subtitle}
         </Typography>
       )}
@@ -403,24 +429,38 @@ const DashboardPage: React.FC = () => {
   }));
 
   return (
-    <Container maxWidth="xl" sx={{ mt: 4, mb: 4, flex: 1, overflow: 'auto' }}>
+    <Container maxWidth="xl" sx={{ mt: { xs: 2, md: 4 }, mb: { xs: 2, md: 4 }, flex: 1, overflow: 'auto' }}>
           {/* Welcome Section */}
           <Box sx={{ 
-            mb: 4, 
-            p: 4,
+            mb: { xs: 3, md: 4 }, 
+            p: { xs: 3, md: 4 },
             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            borderRadius: 4,
+            borderRadius: { xs: 3, md: 4 },
             color: 'white',
             position: 'relative',
             overflow: 'hidden',
           }}>
             <Box sx={{ position: 'relative', zIndex: 2 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: { xs: 'flex-start', md: 'center' }, 
+                justifyContent: 'space-between',
+                flexDirection: { xs: 'column', md: 'row' },
+                gap: { xs: 2, md: 0 }
+              }}>
                 <Box>
-                  <Typography variant="h3" sx={{ fontWeight: 800, mb: 1 }}>
+                  <Typography variant="h3" sx={{ 
+                    fontWeight: 800, 
+                    mb: 1,
+                    fontSize: { xs: '1.75rem', sm: '2.25rem', md: '3rem' }
+                  }}>
                     {t('clinical_dashboard')} 🏥
                   </Typography>
-                  <Typography variant="h6" sx={{ opacity: 0.9, fontWeight: 400 }}>
+                  <Typography variant="h6" sx={{ 
+                    opacity: 0.9, 
+                    fontWeight: 400,
+                    fontSize: { xs: '1rem', md: '1.25rem' }
+                  }}>
                     {t('real_time_data_description')}
                   </Typography>
                 </Box>
@@ -455,40 +495,40 @@ const DashboardPage: React.FC = () => {
           </Box>
 
           {/* Enhanced Stats Cards */}
-          <Grid container spacing={3} sx={{ mb: 4 }}>
-            <Grid item xs={12} sm={6} lg={3}>
+          <Grid container spacing={{ xs: 2, md: 3 }} sx={{ mb: { xs: 3, md: 4 } }}>
+            <Grid item xs={6} sm={6} lg={3}>
               <StatCard
                 title={t('working_doctors_today')}
                 value={`${stats.workingDoctors}/${stats.totalDoctors}`}
-                icon={<LocalHospital sx={{ fontSize: 32 }} />}
+                icon={<LocalHospital sx={{ fontSize: { xs: 24, md: 32 } }} />}
                 gradient={colorPalette.gradient.blue}
                 change={stats.workingDoctors > 0 ? `${stats.workingDoctors} ${t('active')}` : t('none_today')}
               />
             </Grid>
-            <Grid item xs={12} sm={6} lg={3}>
+            <Grid item xs={6} sm={6} lg={3}>
               <StatCard
                 title={t('total_appointments')}
                 value={stats.totalAppointments}
-                icon={<CalendarToday sx={{ fontSize: 32 }} />}
+                icon={<CalendarToday sx={{ fontSize: { xs: 24, md: 32 } }} />}
                 gradient={colorPalette.gradient.green}
                 change={stats.todayAppointments > 0 ? `${stats.todayAppointments} ${t('today')}` : t('none_today')}
               />
             </Grid>
-            <Grid item xs={12} sm={6} lg={3}>
+            <Grid item xs={6} sm={6} lg={3}>
               <StatCard
                 title={t('completion_rate')}
                 value={stats.totalAppointments > 0 ? `${Math.round((stats.completedAppointments / stats.totalAppointments) * 100)}%` : '0%'}
-                icon={<CheckCircle sx={{ fontSize: 32 }} />}
+                icon={<CheckCircle sx={{ fontSize: { xs: 24, md: 32 } }} />}
                 gradient={colorPalette.gradient.orange}
                 change={`${stats.completedAppointments} ${t('completed')}`}
                 subtitle={`${stats.pendingAppointments} ${t('pending_completion')}`}
               />
             </Grid>
-            <Grid item xs={12} sm={6} lg={3}>
+            <Grid item xs={6} sm={6} lg={3}>
               <StatCard
                 title={t('total_patients')}
                 value={stats.totalPatients}
-                icon={<Groups sx={{ fontSize: 32 }} />}
+                icon={<Groups sx={{ fontSize: { xs: 24, md: 32 } }} />}
                 gradient={colorPalette.gradient.purple}
                 change={`${stats.newPatients} ${t('new_patients')}`}
               />

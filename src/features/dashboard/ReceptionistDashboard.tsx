@@ -37,7 +37,7 @@ import {
   Edit,
   Visibility,
 } from '@mui/icons-material';
-import Header from '../../components/navBar';
+import Header from '../../components/NavBar';
 import Sidebar from '../../components/Sidebar';
 import {
   receptionistDashboardTodayAppointments,

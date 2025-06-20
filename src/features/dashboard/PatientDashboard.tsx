@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import Header from '../../components/navBar';
+import Header from '../../components/NavBar';
 import Sidebar from '../../components/Sidebar';
 
 const PatientDashboard: React.FC = () => {

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import Header from '../../components/navBar';
+import Header from '../../components/NavBar';
 import Sidebar from '../../components/Sidebar';
 
 const ProfileTab: React.FC = () => <div>Profile details will be here.</div>;

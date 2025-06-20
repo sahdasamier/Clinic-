@@ -35,12 +35,15 @@ import {
   Person,
   Settings,
   AdminPanelSettings,
+  MenuOpen,
   Menu as MenuIcon,
+  ChevronLeft,
+  ChevronRight,
   KeyboardArrowDown,
   Circle,
 } from '@mui/icons-material';
 
-const Header: React.FC = () => {
+const NavBar: React.FC = () => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const theme = useTheme();
@@ -137,26 +140,33 @@ const Header: React.FC = () => {
         color: 'text.primary',
         boxShadow: '0 2px 24px rgba(0, 0, 0, 0.03), 0 1px 0 rgba(255, 255, 255, 0.8) inset',
         position: 'relative',
+        height: '90px',
         '&::before': {
           content: '""',
           position: 'absolute',
           top: 0,
           left: 0,
           right: 0,
-          height: '1px',
+          height: '0.5px',
           background: 'linear-gradient(90deg, transparent 0%, rgba(59, 130, 246, 0.3) 20%, rgba(99, 102, 241, 0.3) 50%, rgba(59, 130, 246, 0.3) 80%, transparent 100%)',
         },
       }}
     >
-      <Toolbar sx={{ justifyContent: 'space-between', py: 2, px: 4, position: 'relative' }}>
+      <Toolbar sx={{ 
+        justifyContent: 'space-between', 
+        py: { xs: 1, sm: 1.5, md: 2 }, 
+        px: { xs: 2, sm: 3, md: 4 }, 
+        position: 'relative',
+        minHeight: { xs: '56px', md: '64px' }
+      }}>
         {/* Left Side - Sidebar Toggle & Title */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 2 } }}>
           <Tooltip title={isCollapsed ? t('expand_sidebar') : t('collapse_sidebar')}>
             <IconButton
               onClick={toggleSidebar}
               sx={{
-                width: 48,
-                height: 48,
+                width: { xs: 40, md: 48 },
+                height: { xs: 40, md: 48 },
                 borderRadius: '14px',
                 background: isCollapsed 
                   ? 'linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(22, 163, 74, 0.05) 100%)'
@@ -201,15 +211,23 @@ const Header: React.FC = () => {
                   alignItems: 'center',
                   justifyContent: 'center',
                   width: '100%',
-                  height: '100%',
-                  transition: 'transform 0.3s ease',
-                  transform: isCollapsed ? 'rotate(180deg)' : 'rotate(0deg)',
+                  height: '90%',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                 }}
               >
-                <MenuIcon sx={{ 
-                  fontSize: 22,
-                  filter: 'drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1))',
-                }} />
+                {isCollapsed ? (
+                  <ChevronRight sx={{ 
+                    fontSize: 24,
+                    filter: 'drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1))',
+                    transition: 'all 0.3s ease',
+                  }} />
+                ) : (
+                  <ChevronLeft sx={{ 
+                    fontSize: 24,
+                    filter: 'drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1))',
+                    transition: 'all 0.3s ease',
+                  }} />
+                )}
               </Box>
               
               {/* Status indicator */}
@@ -243,13 +261,13 @@ const Header: React.FC = () => {
             </IconButton>
           </Tooltip>
           
-          <Box sx={{ position: 'relative' }}>
+          <Box sx={{ position: 'relative', display: { xs: 'none', sm: 'block' } }}>
             <Typography 
               variant="h5" 
               sx={{ 
                 fontFamily: "'Inter', 'SF Pro Display', sans-serif",
                 fontWeight: 800, 
-                fontSize: '1.6rem',
+                fontSize: { xs: '1.2rem', sm: '1.4rem', md: '1.6rem' },
                 background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 30%, #334155 70%, #475569 100%)',
                 backgroundClip: 'text',
                 WebkitBackgroundClip: 'text',
@@ -272,7 +290,7 @@ const Header: React.FC = () => {
             >
               {userClinic?.name || 'Clinicy Dashboard'}
             </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+            <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center', gap: 1, mt: 0.5 }}>
               <Box
                 sx={{
                   width: 4,
@@ -310,14 +328,14 @@ const Header: React.FC = () => {
         </Box>
 
         {/* Right Side - Actions */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1, md: 2 } }}>
           {/* Language Switcher */}
           <Tooltip title={t('change_language')}>
             <IconButton
               onClick={handleLanguageMenuOpen}
               sx={{
-                width: 42,
-                height: 42,
+                width: { xs: 36, md: 42 },
+                height: { xs: 36, md: 42 },
                 borderRadius: '12px',
                 background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.03) 0%, rgba(0, 0, 0, 0.06) 100%)',
                 color: 'text.secondary',
@@ -364,8 +382,8 @@ const Header: React.FC = () => {
             <IconButton
               onClick={handleNotificationClick}
               sx={{
-                width: 42,
-                height: 42,
+                width: { xs: 36, md: 42 },
+                height: { xs: 36, md: 42 },
                 borderRadius: '12px',
                 background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.03) 0%, rgba(0, 0, 0, 0.06) 100%)',
                 color: 'text.secondary',
@@ -431,14 +449,14 @@ const Header: React.FC = () => {
             }}
           >
             {/* User Info */}
-            <Box sx={{ textAlign: 'right', display: { xs: 'none', sm: 'block' } }}>
+            <Box sx={{ textAlign: 'right', display: { xs: 'none', lg: 'block' } }}>
               <Typography 
                 variant="body2" 
                 sx={{ 
                   fontFamily: "'Inter', sans-serif",
                   fontWeight: 600, 
                   lineHeight: 1.2,
-                  fontSize: '0.9rem',
+                  fontSize: { md: '0.85rem', lg: '0.9rem' },
                   color: 'text.primary',
                 }}
               >
@@ -451,7 +469,7 @@ const Header: React.FC = () => {
                   sx={{
                     fontFamily: "'Inter', sans-serif",
                     color: 'text.secondary',
-                    fontSize: '0.7rem',
+                    fontSize: { md: '0.65rem', lg: '0.7rem' },
                     fontWeight: 500,
                   }}
                 >
@@ -479,8 +497,8 @@ const Header: React.FC = () => {
             >
               <Avatar
                 sx={{
-                  width: 48,
-                  height: 48,
+                  width: { xs: 40, md: 48 },
+                  height: { xs: 40, md: 48 },
                   background: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #667eea 100%)',
                   fontFamily: "'Inter', 'SF Pro Display', sans-serif",
                   fontWeight: 800,
@@ -608,4 +626,4 @@ const Header: React.FC = () => {
   );
 };
 
-export default Header;
+export default NavBar;

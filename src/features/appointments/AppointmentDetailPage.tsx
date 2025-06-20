@@ -29,7 +29,7 @@ import {
   Cancel,
   Schedule
 } from '@mui/icons-material';
-import Header from '../../components/navBar';
+import Header from '../../components/NavBar';
 import Sidebar from '../../components/Sidebar';
 
 const AppointmentDetailPage: React.FC = () => {
