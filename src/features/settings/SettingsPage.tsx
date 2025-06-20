@@ -151,26 +151,26 @@ const SettingsPage: React.FC = () => {
   });
   
   const [clinicSettings, setClinicSettings] = useState({
-    name: 'مركز الرعاية الطبية - ClinicCare Medical Center',
-    address: '15 شارع النيل، وسط البلد، القاهرة، مصر',
-    phone: '+20 2 2345 6789',
-    email: 'info@cliniccare.com.eg',
-    workingHours: '9:00 AM - 6:00 PM',
-    timezone: 'Africa/Cairo',
+    name: '',
+    address: '',
+    phone: '',
+    email: '',
+    workingHours: '',
+    timezone: '',
     licenseNumber: '',
     website: '',
-    specialization: 'general',
+    specialization: '',
     logo: '',
     tagline: '',
-    primaryColor: '#1E3A8A',
-    secondaryColor: '#10B981',
+    primaryColor: '#1976d2',
+    secondaryColor: '#2e7d32',
     description: '',
     appointmentDuration: 30,
     breakBetweenAppointments: 15,
     advanceBookingLimit: 30,
-    allowOnlineBooking: true,
+    allowOnlineBooking: false,
     requirePaymentAtBooking: false,
-    sendReminders: true,
+    sendReminders: false,
   });
 
   const [preferences, setPreferences] = useState({
@@ -186,11 +186,11 @@ const SettingsPage: React.FC = () => {
   });
 
   const [insuranceProviders, setInsuranceProviders] = useState({
-    egyptianInsurance: true,
-    deltaInsurance: true,
-    orientalInsurance: false,
-    mohapInsurance: false,
-    allianzEgypt: false,
+    insurance1: false,
+    insurance2: false,
+    insurance3: false,
+    insurance4: false,
+    insurance5: false,
   });
 
   const [paymentMethods, setPaymentMethods] = useState({
@@ -644,10 +644,10 @@ const SettingsPage: React.FC = () => {
           services: services,
           appointmentSettings: appointmentSettings,
           systemInfo: {
-            totalPatients: 156,
-            appointmentsThisMonth: 89,
+            totalPatients: 0,
+            appointmentsThisMonth: 0,
             lastBackup: new Date().toISOString(),
-            licenseStatus: 'Active'
+            licenseStatus: t('not_specified')
           }
         };
 
@@ -671,8 +671,8 @@ const SettingsPage: React.FC = () => {
           ['Clinic', 'Email', clinicSettings.email],
           ['Clinic', 'Working Hours', clinicSettings.workingHours],
           ['Clinic', 'Timezone', clinicSettings.timezone],
-          ['Statistics', 'Total Patients', '156'],
-          ['Statistics', 'Monthly Appointments', '89'],
+          ['Statistics', 'Total Patients', '0'],
+          ['Statistics', 'Monthly Appointments', '0'],
           ['System', 'Export Date', new Date().toLocaleDateString()],
           ['System', 'Export Time', new Date().toLocaleTimeString()]
         ];
@@ -736,29 +736,29 @@ const SettingsPage: React.FC = () => {
           status: 'available',
           profileImage: '',
         });
-      } else if (formType === 'clinic') {
-        setClinicSettings({
-          name: 'مركز الرعاية الطبية - ClinicCare Medical Center',
-          address: '15 شارع النيل، وسط البلد، القاهرة، مصر',
-          phone: '+20 2 2345 6789',
-          email: 'info@cliniccare.com.eg',
-          workingHours: '9:00 AM - 6:00 PM',
-          timezone: 'Africa/Cairo',
-          licenseNumber: '',
-          website: '',
-          specialization: 'general',
-          logo: '',
-          tagline: '',
-          primaryColor: '#1E3A8A',
-          secondaryColor: '#10B981',
-          description: '',
-          appointmentDuration: 30,
-          breakBetweenAppointments: 15,
-          advanceBookingLimit: 30,
-          allowOnlineBooking: true,
-          requirePaymentAtBooking: false,
-          sendReminders: true,
-        });
+      } else     if (formType === 'clinic') {
+      setClinicSettings({
+        name: '',
+        address: '',
+        phone: '',
+        email: '',
+        workingHours: '',
+        timezone: '',
+        licenseNumber: '',
+        website: '',
+        specialization: '',
+        logo: '',
+        tagline: '',
+        primaryColor: '#1976d2',
+        secondaryColor: '#2e7d32',
+        description: '',
+        appointmentDuration: 30,
+        breakBetweenAppointments: 15,
+        advanceBookingLimit: 30,
+        allowOnlineBooking: false,
+        requirePaymentAtBooking: false,
+        sendReminders: false,
+      });
       }
       setErrors({});
       showSnackbar(`${formType} settings reset successfully`, 'success');
@@ -767,12 +767,7 @@ const SettingsPage: React.FC = () => {
     setConfirmDialogOpen(true);
   };
 
-  const mockLoginHistory = [
-    { date: '2024-01-15 10:30:00', location: 'Cairo, Egypt', device: 'Chrome on Windows', status: 'Success' },
-    { date: '2024-01-14 09:15:00', location: 'Cairo, Egypt', device: 'Safari on iPhone', status: 'Success' },
-    { date: '2024-01-13 14:20:00', location: 'Cairo, Egypt', device: 'Chrome on Windows', status: 'Success' },
-    { date: '2024-01-12 11:45:00', location: 'Alexandria, Egypt', device: 'Firefox on Mac', status: 'Failed' },
-  ];
+  const [loginHistory, setLoginHistory] = useState<any[]>([]);
 
   return (
     <>
@@ -1510,7 +1505,7 @@ const SettingsPage: React.FC = () => {
                               label={t('medical_license_number')}
                                   value={profile.licenseNumber}
                                   onChange={(e) => setProfile({ ...profile, licenseNumber: e.target.value })}
-                                  placeholder="EG-12345-MED"
+                                  placeholder={t('enter_license_number')}
                             />
                           </Grid>
                           <Grid item xs={12} md={6}>
@@ -1537,7 +1532,7 @@ const SettingsPage: React.FC = () => {
                               label={t('board_certifications')}
                                   value={profile.certifications}
                                   onChange={(e) => setProfile({ ...profile, certifications: e.target.value })}
-                                  placeholder="Egyptian Medical Syndicate Board"
+                                  placeholder={t('enter_medical_authority')}
                             />
                           </Grid>
                         </Grid>
@@ -1771,7 +1766,7 @@ const SettingsPage: React.FC = () => {
                             </ListItemIcon>
                             <ListItemText
                               primary={t('total_patients')}
-                              secondary="156"
+                              secondary="0"
                               primaryTypographyProps={{ variant: 'body2' }}
                               secondaryTypographyProps={{ variant: 'h6', fontWeight: 600 }}
                             />
@@ -1782,7 +1777,7 @@ const SettingsPage: React.FC = () => {
                             </ListItemIcon>
                             <ListItemText
                               primary={t('appointments_this_month')}
-                              secondary="89"
+                              secondary="0"
                               primaryTypographyProps={{ variant: 'body2' }}
                               secondaryTypographyProps={{ variant: 'h6', fontWeight: 600 }}
                             />
@@ -1793,7 +1788,7 @@ const SettingsPage: React.FC = () => {
                             </ListItemIcon>
                             <ListItemText
                               primary={t('years_of_experience')}
-                              secondary={profile.experience || "8"}
+                              secondary={profile.experience || "0"}
                               primaryTypographyProps={{ variant: 'body2' }}
                               secondaryTypographyProps={{ variant: 'h6', fontWeight: 600 }}
                             />
@@ -1804,7 +1799,7 @@ const SettingsPage: React.FC = () => {
                                   </ListItemIcon>
                                   <ListItemText
                                     primary={t('successful_treatments')}
-                                    secondary="1,247"
+                                    secondary="0"
                               primaryTypographyProps={{ variant: 'body2' }}
                               secondaryTypographyProps={{ variant: 'h6', fontWeight: 600 }}
                             />
@@ -1881,7 +1876,7 @@ const SettingsPage: React.FC = () => {
                                 <ListItem sx={{ px: 0, py: 1 }}>
                                   <ListItemText
                                     primary={t('board_certified')}
-                                    secondary={profile.certifications || t('egyptian_medical_syndicate_member')}
+                                    secondary={profile.certifications || t('not_specified')}
                                     primaryTypographyProps={{ variant: 'body2', fontWeight: 600 }}
                                     secondaryTypographyProps={{ variant: 'caption' }}
                                   />
@@ -1889,7 +1884,7 @@ const SettingsPage: React.FC = () => {
                                 <ListItem sx={{ px: 0, py: 1 }}>
                                   <ListItemText
                                     primary={t('excellence_award')}
-                                    secondary={t('best_doctor_2023')}
+                                    secondary={t('not_specified')}
                                     primaryTypographyProps={{ variant: 'body2', fontWeight: 600 }}
                                     secondaryTypographyProps={{ variant: 'caption' }}
                                   />
@@ -1897,7 +1892,7 @@ const SettingsPage: React.FC = () => {
                                 <ListItem sx={{ px: 0, py: 1 }}>
                                   <ListItemText
                                     primary={t('medical_school')}
-                                    secondary={profile.medicalSchool || t('cairo_university_medicine')}
+                                    secondary={profile.medicalSchool || t('not_specified')}
                                     primaryTypographyProps={{ variant: 'body2', fontWeight: 600 }}
                                     secondaryTypographyProps={{ variant: 'caption' }}
                                   />
@@ -1905,7 +1900,7 @@ const SettingsPage: React.FC = () => {
                                 <ListItem sx={{ px: 0, py: 1 }}>
                                   <ListItemText
                                     primary={t('professional_member')}
-                                    secondary={t('egyptian_medical_syndicate_member')}
+                                    secondary={t('not_specified')}
                                     primaryTypographyProps={{ variant: 'body2', fontWeight: 600 }}
                                     secondaryTypographyProps={{ variant: 'caption' }}
                                   />
@@ -2012,7 +2007,7 @@ const SettingsPage: React.FC = () => {
                             {t('license_number')}
                           </Typography>
                           <Typography variant="body1" fontWeight={600}>
-                            {profile.licenseNumber || 'EG-12345-MED'}
+                            {profile.licenseNumber || t('not_specified')}
                           </Typography>
                         </Box>
                         <Box sx={{ mb: 2 }}>
@@ -2020,7 +2015,7 @@ const SettingsPage: React.FC = () => {
                             {t('registration_date')}
                           </Typography>
                           <Typography variant="body1" fontWeight={600}>
-                            {t('january_15_2016')}
+                            {t('not_specified')}
                           </Typography>
                         </Box>
                         <Box sx={{ mb: 2 }}>
@@ -2045,8 +2040,8 @@ const SettingsPage: React.FC = () => {
                                 mr: 1,
                               }}
                             />
-                            <Typography variant="body1" fontWeight={600} color="success.main">
-                              {t('active')}
+                            <Typography variant="body1" fontWeight={600} color="text.secondary">
+                              {t('not_specified')}
                             </Typography>
                           </Box>
                         </Box>
@@ -2205,7 +2200,7 @@ const SettingsPage: React.FC = () => {
                               </Typography>
                               <Box sx={{ display: 'flex', gap: 2 }}>
                                 <Chip 
-                                  label="Active" 
+                                  label={t('status_unknown')} 
                                   color="success" 
                                   size="small"
                                   icon={<Check fontSize="small" />}
@@ -2247,7 +2242,7 @@ const SettingsPage: React.FC = () => {
                                       License Number
                                     </Typography>
                                     <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                                      {clinicSettings.licenseNumber || 'EG-CL-2024-001'}
+                                      {clinicSettings.licenseNumber || t('not_specified')}
                                     </Typography>
                                   </Box>
                           </Grid>
@@ -2316,12 +2311,7 @@ const SettingsPage: React.FC = () => {
                                       Timezone
                                     </Typography>
                                     <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                                      {clinicSettings.timezone === 'Africa/Cairo' ? 'Africa/Cairo (GMT+2)' :
-                                       clinicSettings.timezone === 'Asia/Riyadh' ? 'Asia/Riyadh (GMT+3)' :
-                                       clinicSettings.timezone === 'Asia/Dubai' ? 'Asia/Dubai (GMT+4)' :
-                                       clinicSettings.timezone === 'Europe/London' ? 'Europe/London (GMT)' :
-                                       clinicSettings.timezone === 'America/New_York' ? 'America/New_York (GMT-5)' :
-                                       clinicSettings.timezone}
+                                      {clinicSettings.timezone || t('not_specified')}
                                     </Typography>
                                   </Box>
                                 </Grid>
@@ -2331,11 +2321,7 @@ const SettingsPage: React.FC = () => {
                                       Primary Specialization
                                     </Typography>
                                     <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                                      {clinicSettings.specialization === 'general' ? 'General Medicine' : 
-                                       clinicSettings.specialization === 'family' ? 'Family Medicine' :
-                                       clinicSettings.specialization === 'internal' ? 'Internal Medicine' :
-                                       clinicSettings.specialization === 'pediatrics' ? 'Pediatrics' :
-                                       clinicSettings.specialization === 'cardiology' ? 'Cardiology' : 'General Medicine'}
+                                      {clinicSettings.specialization || t('not_specified')}
                                     </Typography>
                                   </Box>
                                 </Grid>
@@ -2372,20 +2358,20 @@ const SettingsPage: React.FC = () => {
                           <Grid item xs={12} md={6}>
                                   <Box sx={{ mb: 2 }}>
                                     <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                                      Establishment Date
+                                      {t('establishment_date')}
                                     </Typography>
                                     <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                                      January 2016
+                                      {t('not_specified')}
                                     </Typography>
                                   </Box>
                           </Grid>
                                 <Grid item xs={12} md={6}>
                                   <Box sx={{ mb: 2 }}>
                                     <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                                      Facility Type
+                                      {t('facility_type')}
                                     </Typography>
                                     <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                                      Private Medical Clinic
+                                      {t('not_specified')}
                                     </Typography>
                                   </Box>
                         </Grid>
@@ -2395,7 +2381,7 @@ const SettingsPage: React.FC = () => {
                                       Clinic Description
                                     </Typography>
                                     <Typography variant="body1" sx={{ fontWeight: 500, lineHeight: 1.6 }}>
-                                      {clinicSettings.description || 'A modern medical facility providing comprehensive healthcare services with state-of-the-art equipment and experienced medical professionals.'}
+                                      {clinicSettings.description || t('not_specified')}
                                     </Typography>
                                   </Box>
                                 </Grid>
@@ -2629,55 +2615,55 @@ const SettingsPage: React.FC = () => {
                             <FormControlLabel
                               control={
                                 <Switch 
-                                  checked={insuranceProviders.egyptianInsurance}
-                                  onChange={(e) => setInsuranceProviders({ ...insuranceProviders, egyptianInsurance: e.target.checked })}
+                                  checked={insuranceProviders.insurance1}
+                                  onChange={(e) => setInsuranceProviders({ ...insuranceProviders, insurance1: e.target.checked })}
                                 />
                               }
-                              label="Egyptian General Insurance Company"
+                              label={t('insurance_provider_1')}
                             />
                           </ListItem>
                           <ListItem sx={{ px: 0, py: 0.5 }}>
                             <FormControlLabel
                               control={
                                 <Switch 
-                                  checked={insuranceProviders.deltaInsurance}
-                                  onChange={(e) => setInsuranceProviders({ ...insuranceProviders, deltaInsurance: e.target.checked })}
+                                  checked={insuranceProviders.insurance2}
+                                  onChange={(e) => setInsuranceProviders({ ...insuranceProviders, insurance2: e.target.checked })}
                                 />
                               }
-                              label="Delta Insurance Company"
+                              label={t('insurance_provider_2')}
                             />
                           </ListItem>
                           <ListItem sx={{ px: 0, py: 0.5 }}>
                             <FormControlLabel
                               control={
                                 <Switch 
-                                  checked={insuranceProviders.orientalInsurance}
-                                  onChange={(e) => setInsuranceProviders({ ...insuranceProviders, orientalInsurance: e.target.checked })}
+                                  checked={insuranceProviders.insurance3}
+                                  onChange={(e) => setInsuranceProviders({ ...insuranceProviders, insurance3: e.target.checked })}
                                 />
                               }
-                              label="Oriental Insurance Company"
+                              label={t('insurance_provider_3')}
                             />
                           </ListItem>
                           <ListItem sx={{ px: 0, py: 0.5 }}>
                             <FormControlLabel
                               control={
                                 <Switch 
-                                  checked={insuranceProviders.mohapInsurance}
-                                  onChange={(e) => setInsuranceProviders({ ...insuranceProviders, mohapInsurance: e.target.checked })}
+                                  checked={insuranceProviders.insurance4}
+                                  onChange={(e) => setInsuranceProviders({ ...insuranceProviders, insurance4: e.target.checked })}
                                 />
                               }
-                              label="Mohap Insurance"
+                              label={t('insurance_provider_4')}
                             />
                           </ListItem>
                           <ListItem sx={{ px: 0, py: 0.5 }}>
                             <FormControlLabel
                               control={
                                 <Switch 
-                                  checked={insuranceProviders.allianzEgypt}
-                                  onChange={(e) => setInsuranceProviders({ ...insuranceProviders, allianzEgypt: e.target.checked })}
+                                  checked={insuranceProviders.insurance5}
+                                  onChange={(e) => setInsuranceProviders({ ...insuranceProviders, insurance5: e.target.checked })}
                                 />
                               }
-                              label="Allianz Egypt"
+                              label={t('insurance_provider_5')}
                             />
                           </ListItem>
                         </List>
@@ -3126,7 +3112,7 @@ const SettingsPage: React.FC = () => {
                               label="Clinic Tagline"
                               value={clinicSettings.tagline}
                               onChange={(e) => setClinicSettings({ ...clinicSettings, tagline: e.target.value })}
-                              placeholder="صحتك أولويتنا - Your Health, Our Priority"
+                              placeholder={t('enter_clinic_tagline')}
                             />
                           </Grid>
                           <Grid item xs={12} md={6}>
@@ -3155,7 +3141,7 @@ const SettingsPage: React.FC = () => {
                               rows={3}
                               value={clinicSettings.description}
                               onChange={(e) => setClinicSettings({ ...clinicSettings, description: e.target.value })}
-                              placeholder="Providing comprehensive healthcare services with a focus on patient care and satisfaction."
+                              placeholder={t('enter_clinic_description')}
                             />
                           </Grid>
                         </Grid>
@@ -3620,9 +3606,9 @@ const SettingsPage: React.FC = () => {
                       </ListItem>
                     </List>
 
-                    <Alert severity="warning" sx={{ mt: 3 }}>
+                    <Alert severity="info" sx={{ mt: 3 }}>
                       <Typography variant="body2">
-                        System Version: ClinicCare v1.0.0 | Last Updated: January 2024
+                        {t('system_version_info')}
                       </Typography>
                     </Alert>
                     </Box>
@@ -3762,38 +3748,50 @@ const SettingsPage: React.FC = () => {
         </DialogTitle>
         <DialogContent>
           <List>
-            {mockLoginHistory.map((login, index) => (
-              <React.Fragment key={index}>
-                <ListItem>
-                  <ListItemIcon>
-                    <History color={login.status === 'Success' ? 'primary' : 'error'} />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography variant="body1">{login.device}</Typography>
-                        <Chip 
-                          label={login.status} 
-                          size="small" 
-                          color={login.status === 'Success' ? 'success' : 'error'}
-                        />
-                      </Box>
-                    }
-                    secondary={
-                      <Box>
-                        <Typography variant="body2" color="text.secondary">
-                          {login.date}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {login.location}
-                        </Typography>
-                      </Box>
-                    }
-                  />
-                </ListItem>
-                {index < mockLoginHistory.length - 1 && <Divider />}
-              </React.Fragment>
-            ))}
+            {loginHistory.length > 0 ? (
+              loginHistory.map((login, index) => (
+                <React.Fragment key={index}>
+                  <ListItem>
+                    <ListItemIcon>
+                      <History color={login.status === 'Success' ? 'primary' : 'error'} />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Typography variant="body1">{login.device}</Typography>
+                          <Chip 
+                            label={login.status} 
+                            size="small" 
+                            color={login.status === 'Success' ? 'success' : 'error'}
+                          />
+                        </Box>
+                      }
+                      secondary={
+                        <Box>
+                          <Typography variant="body2" color="text.secondary">
+                            {login.date}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {login.location}
+                          </Typography>
+                        </Box>
+                      }
+                    />
+                  </ListItem>
+                  {index < loginHistory.length - 1 && <Divider />}
+                </React.Fragment>
+              ))
+            ) : (
+              <ListItem>
+                <ListItemText
+                  primary={
+                    <Typography variant="body1" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+                      No login history available
+                    </Typography>
+                  }
+                />
+              </ListItem>
+            )}
           </List>
         </DialogContent>
       </Dialog>
@@ -3931,18 +3929,18 @@ const SettingsPage: React.FC = () => {
               <Typography variant="h5" sx={{ fontWeight: 600, mb: 1 }}>
                 Medical License Certificate
               </Typography>
-                             <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
-                 License Number: {profile.licenseNumber || 'EG-12345-MED'}
+                                                           <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
+                 License Number: {profile.licenseNumber || t('not_specified')}
                </Typography>
                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                 Issued by: Egyptian Medical Syndicate
+                 Issued by: {t('medical_authority')}
                </Typography>
               <Box sx={{ display: 'flex', gap: 1 }}>
-                <Chip label="Active" color="success" />
+                <Chip label={t('status_unknown')} color="primary" />
                 <Chip label="Verified" color="primary" />
               </Box>
               <Typography variant="caption" color="text.secondary" sx={{ mt: 2 }}>
-                Valid until: December 31, 2025
+                {t('validity_not_specified')}
               </Typography>
             </Box>
           </Box>
@@ -4057,7 +4055,7 @@ const SettingsPage: React.FC = () => {
                 onChange={(e) => setAchievementForm({ ...achievementForm, title: e.target.value })}
                 error={!!errors.title}
                 helperText={errors.title}
-                placeholder="e.g., Best Doctor Award 2024"
+                placeholder={t('enter_achievement_title')}
                 required
               />
             </Grid>
@@ -4080,7 +4078,7 @@ const SettingsPage: React.FC = () => {
                  label="Issuing Organization"
                  value={achievementForm.issuer}
                  onChange={(e) => setAchievementForm({ ...achievementForm, issuer: e.target.value })}
-                 placeholder="e.g., Egyptian Medical Syndicate"
+                 placeholder={t('enter_issuing_organization')}
                />
              </Grid>
             <Grid item xs={12}>
@@ -4391,8 +4389,8 @@ const SettingsPage: React.FC = () => {
                     onClick={async () => {
                       // Use EmailJS to send feedback email
                       const feedbackSent = await sendFeedbackEmail({
-                        name: 'ClinicCare User',
-                        email: 'feedback@cliniccare.com',
+                        name: profile.name || 'User',
+                        email: profile.email || '',
                         feedback: 'User requested to send feedback via the feedback button. Please follow up with them for their detailed feedback.',
                         rating: 'Pending'
                       });

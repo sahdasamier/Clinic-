@@ -12,19 +12,8 @@ export const timeSlots = [
   '20:00', '20:30', '21:00', '21:30', '22:00'
 ];
 
-// Base doctor schedules data - Minimal for clean deployment
-export const baseDoctorSchedules = [
-  {
-    id: 1,
-    name: 'Dr. Default',
-    avatar: 'DD',
-    specialty: 'general_medicine',
-    workingHours: { start: '09:00', end: '17:00' },
-    offDays: ['friday', 'saturday'],
-    maxPatientsPerHour: 3,
-    consultationDuration: 30,
-  }
-];
+// Base doctor schedules data - Empty for clean deployment
+export const baseDoctorSchedules = [];
 
 // Medical specialties
 export const medicalSpecialties = [
