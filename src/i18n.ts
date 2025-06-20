@@ -46,8 +46,8 @@ const resources = {
       'no_account': "Don't have an account? Sign up",
       'authorized_access_only': 'Authorized Access Only',
       'management_system': 'Management System',
-      'clinic_care': 'Clinic Care',
-      'version': 'Version 1.0.0',
+      'clinic_care': 'Clinicy',
+      'version': 'version',
       
       // Profile & User
       'general_practitioner': 'General Practitioner',
@@ -66,6 +66,9 @@ const resources = {
       'doctor_scheduling': 'Doctor Scheduling',
       'settings': 'Settings',
       'language': 'Language',
+      'expand_sidebar': 'Expand Sidebar',
+      'collapse_sidebar': 'Collapse Sidebar',
+      'change_language': 'Change Language',
       
       // Clinic Setup
       'clinic_onboarding': 'Clinic Onboarding',
@@ -1223,6 +1226,9 @@ const resources = {
       "doctor_scheduling": "جدولة الأطباء",
       "settings": "الإعدادات",
       "language": "اللغة",
+      "expand_sidebar": "توسيع الشريط الجانبي",
+      "collapse_sidebar": "طي الشريط الجانبي",
+      "change_language": "تغيير اللغة",
       
       // Form Fields
       "patient_name": "اسم المريض",

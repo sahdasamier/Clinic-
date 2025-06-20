@@ -42,7 +42,7 @@ import {
   Add,
 } from '@mui/icons-material';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, LineChart, Line } from 'recharts';
-import Header from '../../components/Header';
+import Header from '../../components/navBar';
 import Sidebar from '../../components/Sidebar';
 import {
   doctorDashboardPatientsData,

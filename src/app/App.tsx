@@ -4,6 +4,7 @@ import { ThemeProvider } from "./ThemeProvider";
 import { AuthProvider } from "./AuthProvider";
 import { UserProvider } from "../contexts/UserContext";
 import { NotificationProvider } from "../contexts/NotificationContext";
+import { SidebarProvider } from "../contexts/SidebarContext";
 import { ensureDemoClinicExists } from "../scripts/initFirestore";
 import Router from "./Router";
 
@@ -33,7 +34,9 @@ const App: React.FC = () => (
     <AuthProvider>
       <UserProvider>
         <NotificationProvider>
-          <AppContent />
+          <SidebarProvider>
+            <AppContent />
+          </SidebarProvider>
         </NotificationProvider>
       </UserProvider>
     </AuthProvider>

@@ -34,7 +34,7 @@ import {
   Phone,
   LocationOn
 } from '@mui/icons-material';
-import Header from '../../components/Header';
+import Header from '../../components/navBar';
 import Sidebar from '../../components/Sidebar';
 import { createAppointment, type AppointmentFormData as ApiAppointmentFormData } from '../../api/appointments';
 import { getDoctorSchedules, type DoctorSchedule } from '../../api/scheduling';

@@ -1,5 +1,5 @@
 import React from 'react';
-import Header from '../../components/Header';
+import Header from '../../components/navBar';
 import Sidebar from '../../components/Sidebar';
 import PatientProfilePage from './PatientProfilePage';
 
