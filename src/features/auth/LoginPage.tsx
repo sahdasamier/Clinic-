@@ -1,9 +1,11 @@
 import React, { useState, useContext } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
+import { sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '../../api/firebase';
+import { loginWithInvitationCheck } from '../../api/auth';
 import { AuthContext } from '../../app/AuthProvider';
+import { isSuperAdmin } from '../../utils/adminConfig';
 import {
   Box,
   Card,
@@ -78,11 +80,23 @@ const LoginPage: React.FC = () => {
     setLoading(true);
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      // Navigation will happen automatically via the useEffect above
+      const result = await loginWithInvitationCheck(email, password);
+      
+      if (result.success) {
+        // Check if user is super admin or regular user
+        if (isSuperAdmin(email)) {
+          navigate('/admin/dashboard');
+        } else if (result.userData) {
+          navigate(`/dashboard`);
+        } else {
+          navigate('/dashboard');
+        }
+      } else {
+        setError(result.error || 'Failed to sign in. Please check your credentials.');
+      }
     } catch (error: any) {
       console.error('Login error:', error);
-      setError(error.message || 'Failed to sign in. Please check your credentials.');
+      setError('An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -308,6 +322,9 @@ const LoginPage: React.FC = () => {
               </Link>
               <Typography variant="body2" color="text.secondary">
                 {t('authorized_access_only')}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1, fontStyle: 'italic' }}>
+                Contact your administrator for account access
               </Typography>
             </Box>
           </CardContent>

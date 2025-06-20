@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { signOut } from 'firebase/auth';
+import { signOut, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { 
   collection, 
   addDoc, 
@@ -11,9 +11,13 @@ import {
   query, 
   orderBy,
   where,
-  serverTimestamp 
+  serverTimestamp,
+  setDoc 
 } from 'firebase/firestore';
 import { auth, db } from '../../api/firebase';
+import { createUserAccount, createUserInvitation, isValidEmail, checkEmailExists, doubleCheckEmailBeforeCreation, createUserAccountWithCleanup, suggestAlternativeEmails } from '../../api/auth';
+import { fixClinicAccess } from '../../utils/clinicUtils';
+import { initializeDemoClinicAfterAuth } from '../../scripts/initFirestore';
 import { AuthContext } from '../../app/AuthProvider';
 import { Clinic, User } from '../../types/models';
 import { validateUserLimit, getPlanInfo, canAddUser } from '../../utils/subscriptionUtils';
@@ -94,10 +98,33 @@ const AdminPanelPage: React.FC = () => {
   const [permissionsDialogOpen, setPermissionsDialogOpen] = useState(false);
   const [userForPermissions, setUserForPermissions] = useState<User | null>(null);
   
+  // Add this near your other dialog state declarations
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [confirmMessage, setConfirmMessage] = useState('');
+  const [confirmAction, setConfirmAction] = useState<() => void>(() => {});
+  
+  // Password success dialog
+  const [passwordSuccessOpen, setPasswordSuccessOpen] = useState(false);
+  const [createdUserCredentials, setCreatedUserCredentials] = useState<{email: string, password: string, name: string} | null>(null);
+  
+  // Email validation
+  const [emailValidation, setEmailValidation] = useState<{
+    isChecking: boolean;
+    isValid: boolean;
+    error: string;
+    exists: boolean;
+  }>({
+    isChecking: false,
+    isValid: true,
+    error: '',
+    exists: false
+  });
+  
   // Password visibility and notifications
-  const [showTempPassword, setShowTempPassword] = useState(false);
+  const [showTempPassword, setShowTempPassword] = useState(true); // Show password by default
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [generatedPasswords, setGeneratedPasswords] = useState<{[userId: string]: string}>({});
   
   // Form states
   const [newClinic, setNewClinic] = useState({
@@ -117,9 +144,25 @@ const AdminPanelPage: React.FC = () => {
     createdAt: '',
   });
 
+  // Debug Auth State - Temporary debugging code
+  useEffect(() => {
+    console.log('🔍 Debug Auth State:');
+    console.log('User from AuthContext:', user);
+    console.log('Firebase Auth Current User:', auth.currentUser);
+    console.log('User Email:', user?.email || auth.currentUser?.email);
+    console.log('User UID:', user?.uid || auth.currentUser?.uid);
+  }, [user]);
+
   useEffect(() => {
     fetchData();
-  }, []);
+    
+    // Initialize demo clinic after admin authentication
+    if (user?.email) {
+      initializeDemoClinicAfterAuth().catch(error => {
+        console.warn('⚠️ Post-auth demo clinic initialization failed:', error);
+      });
+    }
+  }, [user]);
 
   // Helper functions for password management
   const generateRandomPassword = () => {
@@ -135,7 +178,8 @@ const AdminPanelPage: React.FC = () => {
   const handleGeneratePassword = () => {
     const newPassword = generateRandomPassword();
     setNewUser({...newUser, password: newPassword});
-    showSnackbar('Password generated successfully');
+    setShowTempPassword(true); // Always show password when generated
+    showSnackbar('Password generated and visible!');
   };
 
   const handleCopyPassword = async () => {
@@ -151,6 +195,31 @@ const AdminPanelPage: React.FC = () => {
   const showSnackbar = (message: string) => {
     setSnackbarMessage(message);
     setSnackbarOpen(true);
+  };
+
+  // Simple email validation - orphaned accounts handled during creation
+  const handleEmailChange = (email: string) => {
+    setNewUser({...newUser, email});
+    
+    // Clear previous errors
+    setError('');
+    
+    // Simple format validation only
+    if (email.trim() && !isValidEmail(email)) {
+      setEmailValidation({
+        isChecking: false,
+        isValid: false,
+        error: 'Please enter a valid email format',
+        exists: false
+      });
+    } else {
+      setEmailValidation({
+        isChecking: false,
+        isValid: true,
+        error: '',
+        exists: false
+      });
+    }
   };
 
   const fetchData = async () => {
@@ -176,13 +245,17 @@ const AdminPanelPage: React.FC = () => {
   };
 
   const fetchUsers = async () => {
-    const usersQuery = query(collection(db, 'users'), orderBy('createdAt', 'desc'));
-    const snapshot = await getDocs(usersQuery);
-    const usersData = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    })) as User[];
-    setUsers(usersData);
+    try {
+      const usersQuery = query(collection(db, 'users'), orderBy('createdAt', 'desc'));
+      const snapshot = await getDocs(usersQuery);
+      const usersData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as User[];
+      setUsers(usersData);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    }
   };
 
   const handleCreateClinic = async () => {
@@ -298,49 +371,83 @@ const AdminPanelPage: React.FC = () => {
   };
 
   const handleCreateUser = async () => {
-    // Validation
-    if (!newUser.email || !newUser.firstName || !newUser.lastName || !newUser.clinicId || !newUser.password) {
+    // Clear previous errors
+    setError('');
+    
+    // Basic validation
+    if (!newUser.email?.trim() || !newUser.firstName?.trim() || !newUser.lastName?.trim() || !newUser.clinicId || !newUser.password?.trim()) {
       setError('Please fill in all required fields');
       return;
     }
 
-    // Check user limits
-    const selectedClinic = clinics.find(c => c.id === newUser.clinicId);
-    if (selectedClinic) {
-      const currentUserCount = users.filter(u => u.clinicId === newUser.clinicId && u.isActive).length;
-      const validation = validateUserLimit(
-        selectedClinic.settings.subscriptionPlan,
-        selectedClinic.settings.maxUsers,
-        currentUserCount
-      );
-      
-      if (!validation.isValid) {
-        setError(validation.message || 'Cannot add user due to plan limits');
-        return;
-      }
+    if (!isValidEmail(newUser.email.trim())) {
+      setError('Please enter a valid email address');
+      return;
     }
     
     try {
-      // In a real app, you'd create the user account using Firebase Admin SDK
-      // For now, we'll just create the user document
-      await addDoc(collection(db, 'users'), {
-        email: newUser.email,
-        firstName: newUser.firstName,
-        lastName: newUser.lastName,
+      setLoading(true);
+      showSnackbar('Creating user account...');
+      
+      // Create Firebase Auth account
+      const userCredential = await createUserWithEmailAndPassword(auth, newUser.email.trim(), newUser.password);
+      const user = userCredential.user;
+      
+      // Update display name
+      await updateProfile(user, {
+        displayName: `${newUser.firstName.trim()} ${newUser.lastName.trim()}`
+      });
+      
+      // Create Firestore document with the authenticated user's UID
+      const userDoc = {
+        id: user.uid,
+        email: newUser.email.trim(),
+        firstName: newUser.firstName.trim(),
+        lastName: newUser.lastName.trim(),
         role: newUser.role,
         clinicId: newUser.clinicId,
         isActive: true,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-        createdBy: user?.email || '',
+        createdBy: auth.currentUser?.email || '',
+      };
+      
+      // Use the user's UID as the document ID
+      await setDoc(doc(db, 'users', user.uid), userDoc);
+      
+      // Store password for display
+      setGeneratedPasswords(prev => ({
+        ...prev,
+        [newUser.email.trim()]: newUser.password
+      }));
+      
+      setCreatedUserCredentials({
+        email: newUser.email.trim(),
+        password: newUser.password,
+        name: `${newUser.firstName.trim()} ${newUser.lastName.trim()}`
       });
       
       resetUserForm();
       setUserDialogOpen(false);
+      setPasswordSuccessOpen(true);
       fetchUsers();
-    } catch (error) {
+      showSnackbar('✅ User account created successfully!');
+      
+    } catch (error: any) {
       console.error('Error creating user:', error);
-      setError('Failed to create user');
+      
+      // Handle specific errors
+      if (error.code === 'auth/email-already-in-use') {
+        setError('Email address is already in use. Please use a different email.');
+      } else if (error.code === 'permission-denied') {
+        setError('Permission denied. Check Firestore security rules.');
+      } else {
+        setError(`Failed to create user: ${error.message}`);
+      }
+      
+      showSnackbar('❌ Failed to create user');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -390,7 +497,18 @@ const AdminPanelPage: React.FC = () => {
       password: '',
       createdAt: '',
     });
-    setShowTempPassword(false);
+    setShowTempPassword(true); // Show password by default for new users
+    
+    // Reset email validation
+    setEmailValidation({
+      isChecking: false,
+      isValid: true,
+      error: '',
+      exists: false
+    });
+    
+    // Clear any pending validation timeouts
+    clearTimeout((window as any).emailValidationTimeout);
   };
 
   const handleEditUser = (user: User) => {
@@ -480,10 +598,66 @@ const AdminPanelPage: React.FC = () => {
     if (!itemToDelete || itemToDelete.type !== 'user') return;
     
     try {
+      // Find the user to get their email
+      const userToDelete = users.find(u => u.id === itemToDelete.id);
+      const userEmail = userToDelete?.email;
+      
+      // Delete the Firestore document
       await deleteDoc(doc(db, 'users', itemToDelete.id));
+      
       setDeleteConfirmOpen(false);
       setItemToDelete(null);
       fetchUsers();
+      
+      // Show enhanced cleanup instructions
+      if (userEmail) {
+        showSnackbar(`⚠️ User deleted from database. Manual Firebase Auth cleanup required.`);
+        
+        // Show detailed manual cleanup instructions in the confirm dialog
+        setConfirmMessage(`
+🗑️ User Deleted from Database Successfully
+
+✅ Database record removed: ${userEmail}
+⚠️ Manual Firebase Auth cleanup required:
+
+📋 REQUIRED CLEANUP STEPS:
+1. Open Firebase Console: https://console.firebase.google.com
+2. Select your project
+3. Go to: Authentication → Users
+4. Search for: ${userEmail}
+5. Click the user → Delete account
+6. Confirm deletion
+
+💡 WHY THIS IS NEEDED:
+- Database deletion only removes user data
+- Firebase Auth account still exists
+- Email "${userEmail}" cannot be reused until Auth account is deleted
+- This prevents email conflicts for future user creation
+
+🚨 IMPORTANT:
+Until manual cleanup is completed, the email "${userEmail}" 
+will show as "already registered" when creating new users.
+
+Would you like to open Firebase Console now?
+        `);
+        
+        setConfirmAction(() => {
+          setConfirmDialogOpen(false);
+          // Open Firebase Console in new tab
+          window.open('https://console.firebase.google.com', '_blank');
+        });
+        
+        setConfirmDialogOpen(true);
+        
+        // Log detailed information for developers
+        console.warn(`🚨 ORPHANED ACCOUNT CREATED: ${userEmail}`);
+        console.warn(`🔧 MANUAL CLEANUP REQUIRED:`);
+        console.warn(`   1. Go to Firebase Console → Authentication → Users`);
+        console.warn(`   2. Find and delete: ${userEmail}`);
+        console.warn(`   3. This will allow email reuse for new accounts`);
+        console.warn(`   4. Alternative: Use deactivation instead of deletion`);
+      }
+      
     } catch (error) {
       console.error('Error deleting user:', error);
       setError('Failed to delete user');
@@ -509,6 +683,68 @@ const AdminPanelPage: React.FC = () => {
       navigate('/admin/login');
     } catch (error) {
       console.error('Error signing out:', error);
+    }
+  };
+
+  const handleFixClinicAccess = async () => {
+    try {
+      setLoading(true);
+      showSnackbar('🔧 Fixing clinic access...');
+      
+      const success = await fixClinicAccess('demo-clinic');
+      
+      if (success) {
+        showSnackbar('✅ Demo clinic access fixed! Users should now be able to login.');
+      } else {
+        showSnackbar('❌ Failed to fix clinic access. Check console for details.');
+      }
+    } catch (error) {
+      console.error('Error fixing clinic access:', error);
+      showSnackbar('❌ Error fixing clinic access');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Debug function to check for common orphaned accounts
+  const handleCheckOrphanedAccounts = async () => {
+    try {
+      setLoading(true);
+      showSnackbar('🔍 Checking for orphaned accounts...');
+      
+      const commonEmails = [
+        'test@example.com',
+        'admin@test.com',
+        'user@clinic.com',
+        'doctor@clinic.com',
+        'receptionist@clinic.com'
+      ];
+      
+      let orphanedCount = 0;
+      
+      for (const email of commonEmails) {
+        try {
+          const exists = await checkEmailExists(email);
+          if (exists) {
+            console.warn(`🚨 Orphaned account found: ${email}`);
+            orphanedCount++;
+          }
+        } catch (error) {
+          console.error(`Error checking ${email}:`, error);
+        }
+      }
+      
+      if (orphanedCount > 0) {
+        showSnackbar(`⚠️ Found ${orphanedCount} potential orphaned accounts. Check console for details.`);
+      } else {
+        showSnackbar('✅ No orphaned accounts found in common email list.');
+      }
+      
+    } catch (error) {
+      console.error('Error checking orphaned accounts:', error);
+      showSnackbar('❌ Error checking orphaned accounts');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -542,9 +778,27 @@ const AdminPanelPage: React.FC = () => {
             color="inherit" 
             onClick={fetchData}
             startIcon={<Refresh />}
-            sx={{ mr: 2 }}
+            sx={{ mr: 1 }}
           >
             Refresh
+          </Button>
+          <Button 
+            color="inherit" 
+            onClick={handleFixClinicAccess}
+            startIcon={<Warning />}
+            sx={{ mr: 1, backgroundColor: 'rgba(255,255,255,0.1)' }}
+            title="Fix clinic access issues (if users can't login)"
+          >
+            Fix Access
+          </Button>
+          <Button 
+            color="inherit" 
+            onClick={handleCheckOrphanedAccounts}
+            startIcon={<Security />}
+            sx={{ mr: 2, backgroundColor: 'rgba(255,255,255,0.1)' }}
+            title="Check for orphaned Firebase Auth accounts"
+          >
+            Check Orphans
           </Button>
           <IconButton color="inherit" onClick={handleSignOut}>
             <ExitToApp />
@@ -555,9 +809,36 @@ const AdminPanelPage: React.FC = () => {
       <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
         {error && (
           <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError('')}>
-            {error}
+            <Box component="pre" sx={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit', margin: 0 }}>
+              {error}
+            </Box>
           </Alert>
         )}
+
+        {/* Admin Info Panel */}
+        <Alert severity="info" sx={{ mb: 3 }}>
+          <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+            🔐 Admin-Only User Management:
+          </Typography>
+          <Typography variant="body2">
+            • Only administrators can create user accounts (no self-registration)
+            • Generated passwords are visible in the Password column and success dialog
+            • If users can't login after creation, click "Fix Access" button above
+            • Share credentials securely with users via secure channels
+          </Typography>
+        </Alert>
+
+        <Alert severity="warning" sx={{ mb: 3 }}>
+          <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+            ⚠️ Important - Email Reuse Limitation:
+          </Typography>
+          <Typography variant="body2">
+            • <strong>Deleting users only removes database records</strong> - Firebase Auth accounts remain
+            • <strong>Deleted user emails cannot be reused</strong> for new accounts
+            • <strong>Use deactivation instead</strong> (toggle switch) to preserve email reuse capability
+            • <strong>Click "Check Orphans"</strong> to find emails that can't be reused
+          </Typography>
+        </Alert>
 
         {/* Stats Cards */}
         <Grid container spacing={3} sx={{ mb: 4 }}>
@@ -737,6 +1018,7 @@ const AdminPanelPage: React.FC = () => {
                     <TableCell>Email</TableCell>
                     <TableCell>Role</TableCell>
                     <TableCell>Clinic</TableCell>
+                    <TableCell>Password</TableCell>
                     <TableCell>Status</TableCell>
                     <TableCell>Created</TableCell>
                     <TableCell>Actions</TableCell>
@@ -751,6 +1033,31 @@ const AdminPanelPage: React.FC = () => {
                         <Chip label={user.role} size="small" />
                       </TableCell>
                       <TableCell>{getClinicName(user.clinicId)}</TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          {generatedPasswords[user.email] ? (
+                            <>
+                              <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.9rem' }}>
+                                {generatedPasswords[user.email]}
+                              </Typography>
+                              <IconButton
+                                size="small"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(generatedPasswords[user.email]);
+                                  showSnackbar('Password copied to clipboard');
+                                }}
+                                title="Copy password"
+                              >
+                                <ContentCopy fontSize="small" />
+                              </IconButton>
+                            </>
+                          ) : (
+                            <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                              Set by user
+                            </Typography>
+                          )}
+                        </Box>
+                      </TableCell>
                       <TableCell>
                         <Chip 
                           label={user.isActive ? 'Active' : 'Inactive'} 
@@ -874,7 +1181,14 @@ const AdminPanelPage: React.FC = () => {
 
       {/* Create/Edit User Dialog */}
       <Dialog open={userDialogOpen} onClose={handleUserDialogClose} maxWidth="sm" fullWidth>
-        <DialogTitle>{editingUser ? 'Edit User' : 'Create New User'}</DialogTitle>
+        <DialogTitle>
+          {editingUser ? 'Edit User' : 'Create New User'}
+          {!editingUser && (
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1, fontWeight: 'normal' }}>
+              🔐 Admin-only user creation - Only administrators can create user accounts
+            </Typography>
+          )}
+        </DialogTitle>
         <DialogContent>
           <Grid container spacing={2}>
             <Grid item xs={6}>
@@ -900,12 +1214,41 @@ const AdminPanelPage: React.FC = () => {
             <Grid item xs={12}>
               <TextField
                 margin="dense"
-                label="Email"
+                label="Email Address"
                 type="email"
                 fullWidth
                 variant="outlined"
                 value={newUser.email}
-                onChange={(e) => setNewUser({...newUser, email: e.target.value})}
+                onChange={(e) => handleEmailChange(e.target.value)}
+                error={!emailValidation.isValid}
+                helperText={
+                  emailValidation.isChecking 
+                    ? "Checking email availability..." 
+                    : emailValidation.error || 
+                      (emailValidation.isValid && newUser.email && !emailValidation.exists 
+                        ? "✅ Email is available" 
+                        : "")
+                }
+                InputProps={{
+                  endAdornment: emailValidation.isChecking ? (
+                    <InputAdornment position="end">
+                      <CircularProgress size={20} />
+                    </InputAdornment>
+                  ) : emailValidation.isValid && newUser.email && !emailValidation.exists ? (
+                    <InputAdornment position="end">
+                      <Typography sx={{ color: 'success.main', fontSize: '1.2rem' }}>✅</Typography>
+                    </InputAdornment>
+                  ) : emailValidation.error ? (
+                    <InputAdornment position="end">
+                      <Typography sx={{ color: 'error.main', fontSize: '1.2rem' }}>❌</Typography>
+                    </InputAdornment>
+                  ) : null
+                }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderColor: emailValidation.isValid ? 'inherit' : 'error.main',
+                  }
+                }}
               />
             </Grid>
             <Grid item xs={6}>
@@ -966,55 +1309,114 @@ const AdminPanelPage: React.FC = () => {
             </Grid>
             {!editingUser && (
               <Grid item xs={12}>
-                <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
-                  <TextField
-                    margin="dense"
-                    label="Temporary Password"
-                    type={showTempPassword ? 'text' : 'password'}
-                    fullWidth
-                    variant="outlined"
-                    value={newUser.password}
-                    onChange={(e) => setNewUser({...newUser, password: e.target.value})}
-                    helperText="User will be asked to change this on first login"
-                    InputProps={{
-                      endAdornment: (
-                        <InputAdornment position="end">
-                          <IconButton
-                            onClick={() => setShowTempPassword(!showTempPassword)}
-                            edge="end"
-                            size="small"
-                            title={showTempPassword ? 'Hide password' : 'Show password'}
-                          >
-                            {showTempPassword ? <VisibilityOff /> : <Visibility />}
-                          </IconButton>
-                          <IconButton
-                            onClick={handleCopyPassword}
-                            edge="end"
-                            size="small"
-                            disabled={!newUser.password}
-                            title="Copy password"
-                            sx={{ ml: 0.5 }}
-                          >
-                            <ContentCopy />
-                          </IconButton>
-                        </InputAdornment>
-                      ),
-                    }}
-                  />
-                  <Button
-                    variant="outlined"
-                    onClick={handleGeneratePassword}
-                    startIcon={<AutorenewRounded />}
-                    sx={{ 
-                      mt: 1, 
-                      minWidth: 'auto',
-                      px: 2,
-                      height: '56px'
-                    }}
-                    title="Generate random password"
-                  >
-                    Generate
-                  </Button>
+                <Typography variant="h6" sx={{ mb: 2, color: 'primary.main', fontWeight: 600 }}>
+                  🔐 User Password
+                </Typography>
+                <Box sx={{ 
+                  border: '2px solid', 
+                  borderColor: newUser.password ? 'success.main' : 'grey.300',
+                  borderRadius: 2, 
+                  p: 2, 
+                  backgroundColor: newUser.password ? 'success.50' : 'grey.50' 
+                }}>
+                  <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', mb: 2 }}>
+                    <TextField
+                      margin="dense"
+                      label="Temporary Password"
+                      type={showTempPassword ? 'text' : 'password'}
+                      fullWidth
+                      variant="outlined"
+                      value={newUser.password}
+                      onChange={(e) => setNewUser({...newUser, password: e.target.value})}
+                      helperText={newUser.password ? "✅ Password is ready! Copy this for the user." : "Generate or enter a password"}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          backgroundColor: 'white',
+                          fontFamily: showTempPassword ? 'monospace' : 'inherit',
+                          fontSize: showTempPassword ? '1.1rem' : 'inherit',
+                          fontWeight: showTempPassword ? 'bold' : 'normal',
+                        }
+                      }}
+                      InputProps={{
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            <IconButton
+                              onClick={() => setShowTempPassword(!showTempPassword)}
+                              edge="end"
+                              size="small"
+                              title={showTempPassword ? 'Hide password' : 'Show password'}
+                              color={showTempPassword ? 'primary' : 'default'}
+                            >
+                              {showTempPassword ? <VisibilityOff /> : <Visibility />}
+                            </IconButton>
+                            <IconButton
+                              onClick={handleCopyPassword}
+                              edge="end"
+                              size="small"
+                              disabled={!newUser.password}
+                              title="Copy password"
+                              sx={{ ml: 0.5 }}
+                              color={newUser.password ? 'primary' : 'default'}
+                            >
+                              <ContentCopy />
+                            </IconButton>
+                          </InputAdornment>
+                        ),
+                      }}
+                    />
+                    <Button
+                      variant="contained"
+                      onClick={handleGeneratePassword}
+                      startIcon={<AutorenewRounded />}
+                      sx={{ 
+                        mt: 1, 
+                        minWidth: 'auto',
+                        px: 3,
+                        height: '56px',
+                        backgroundColor: 'secondary.main',
+                        '&:hover': {
+                          backgroundColor: 'secondary.dark',
+                        }
+                      }}
+                      title="Generate random password"
+                    >
+                      Generate
+                    </Button>
+                  </Box>
+                  
+                  {newUser.password && (
+                    <Box sx={{ 
+                      backgroundColor: 'success.100', 
+                      border: '1px solid', 
+                      borderColor: 'success.main',
+                      borderRadius: 1, 
+                      p: 2,
+                      mt: 1
+                    }}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'success.dark', mb: 1 }}>
+                        📋 Password for {newUser.firstName} {newUser.lastName}:
+                      </Typography>
+                      <Typography 
+                        variant="h6" 
+                        sx={{ 
+                          fontFamily: 'monospace', 
+                          backgroundColor: 'white',
+                          p: 1,
+                          borderRadius: 1,
+                          border: '1px solid',
+                          borderColor: 'success.main',
+                          color: 'success.dark',
+                          fontWeight: 'bold',
+                          letterSpacing: '0.1em'
+                        }}
+                      >
+                        {newUser.password}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                        💡 Make sure to save this password before creating the user!
+                      </Typography>
+                    </Box>
+                  )}
                 </Box>
               </Grid>
             )}
@@ -1047,8 +1449,28 @@ const AdminPanelPage: React.FC = () => {
           <Button 
             onClick={editingUser ? handleUpdateUser : handleCreateUser} 
             variant="contained"
+            disabled={
+              loading || 
+              (!editingUser && (
+                emailValidation.isChecking || 
+                !emailValidation.isValid || 
+                emailValidation.exists ||
+                !newUser.email?.trim() ||
+                !newUser.firstName?.trim() ||
+                !newUser.lastName?.trim() ||
+                !newUser.password?.trim() ||
+                !newUser.clinicId
+              ))
+            }
           >
-            {editingUser ? 'Update' : 'Create'}
+            {loading ? (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <CircularProgress size={16} color="inherit" />
+                {editingUser ? 'Updating...' : 'Creating...'}
+              </Box>
+            ) : (
+              editingUser ? 'Update' : 'Create User'
+            )}
           </Button>
         </DialogActions>
       </Dialog>
@@ -1072,8 +1494,22 @@ const AdminPanelPage: React.FC = () => {
           <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
             This action cannot be undone. {itemToDelete?.type === 'clinic' 
               ? 'All users and data associated with this clinic will become inaccessible.' 
-              : 'This user will be completely removed from the system.'}
+              : 'This user will be removed from the database.'}
           </Typography>
+          
+          {itemToDelete?.type === 'user' && (
+            <Alert severity="warning" sx={{ mt: 2 }}>
+              <Typography variant="body2">
+                <strong>⚠️ Important:</strong> This only removes the user from our database. 
+                The Firebase Authentication account will remain and that email address 
+                <strong> cannot be reused</strong> for new accounts.
+              </Typography>
+              <Typography variant="body2" sx={{ mt: 1 }}>
+                <strong>💡 Alternative:</strong> Consider deactivating the user instead 
+                (toggle the switch) to preserve the ability to reuse the email later.
+              </Typography>
+            </Alert>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteConfirmOpen(false)}>
@@ -1100,6 +1536,198 @@ const AdminPanelPage: React.FC = () => {
         user={userForPermissions}
         onSave={handleSavePermissions}
       />
+
+      {/* Password Success Dialog */}
+      <Dialog 
+        open={passwordSuccessOpen} 
+        onClose={() => setPasswordSuccessOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle sx={{ 
+          backgroundColor: 'success.main', 
+          color: 'white',
+          textAlign: 'center',
+          py: 3
+        }}>
+          <Typography variant="h5" sx={{ fontWeight: 600 }}>
+            🎉 User Account Created Successfully!
+          </Typography>
+        </DialogTitle>
+        <DialogContent sx={{ p: 4 }}>
+          {createdUserCredentials && (
+            <Box>
+              <Alert severity="success" sx={{ mb: 3 }}>
+                <Typography variant="h6" sx={{ mb: 2 }}>
+                  ✅ {createdUserCredentials.name} can now login with these credentials:
+                </Typography>
+              </Alert>
+              
+              <Box sx={{ 
+                border: '2px solid', 
+                borderColor: 'success.main',
+                borderRadius: 2, 
+                p: 3, 
+                backgroundColor: 'success.50',
+                mb: 3
+              }}>
+                <Grid container spacing={3}>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: 'success.dark' }}>
+                      📧 Email Address:
+                    </Typography>
+                    <Box sx={{ 
+                      backgroundColor: 'white',
+                      p: 2,
+                      borderRadius: 1,
+                      border: '1px solid',
+                      borderColor: 'success.main',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1
+                    }}>
+                      <Typography variant="h6" sx={{ fontFamily: 'monospace', flexGrow: 1 }}>
+                        {createdUserCredentials.email}
+                      </Typography>
+                      <IconButton
+                        size="small"
+                        onClick={() => {
+                          navigator.clipboard.writeText(createdUserCredentials.email);
+                          showSnackbar('Email copied to clipboard');
+                        }}
+                        title="Copy email"
+                      >
+                        <ContentCopy />
+                      </IconButton>
+                    </Box>
+                  </Grid>
+                  
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: 'success.dark' }}>
+                      🔐 Password:
+                    </Typography>
+                    <Box sx={{ 
+                      backgroundColor: 'white',
+                      p: 2,
+                      borderRadius: 1,
+                      border: '1px solid',
+                      borderColor: 'success.main',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1
+                    }}>
+                      <Typography 
+                        variant="h6" 
+                        sx={{ 
+                          fontFamily: 'monospace', 
+                          flexGrow: 1,
+                          fontWeight: 'bold',
+                          letterSpacing: '0.1em'
+                        }}
+                      >
+                        {createdUserCredentials.password}
+                      </Typography>
+                      <IconButton
+                        size="small"
+                        onClick={() => {
+                          navigator.clipboard.writeText(createdUserCredentials.password);
+                          showSnackbar('Password copied to clipboard');
+                        }}
+                        title="Copy password"
+                      >
+                        <ContentCopy />
+                      </IconButton>
+                    </Box>
+                  </Grid>
+                </Grid>
+              </Box>
+              
+              <Alert severity="info" sx={{ mb: 2 }}>
+                <Typography variant="body2">
+                  <strong>📋 Important Notes:</strong>
+                  <br />• Share these credentials securely with the user
+                  <br />• The user can login immediately at /login
+                  <br />• Password is also visible in the Users table for future reference
+                  <br />• Consider asking the user to change their password on first login
+                </Typography>
+              </Alert>
+              
+              <Box sx={{ 
+                backgroundColor: 'primary.50',
+                border: '1px solid',
+                borderColor: 'primary.main',
+                borderRadius: 1,
+                p: 2
+              }}>
+                <Typography variant="body2" sx={{ fontWeight: 600, color: 'primary.dark' }}>
+                  🚀 Quick Actions:
+                </Typography>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={() => {
+                    const credentials = `Email: ${createdUserCredentials.email}\nPassword: ${createdUserCredentials.password}`;
+                    navigator.clipboard.writeText(credentials);
+                    showSnackbar('Full credentials copied to clipboard');
+                  }}
+                  startIcon={<ContentCopy />}
+                  sx={{ mt: 1, mr: 1 }}
+                >
+                  Copy Both
+                </Button>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={() => setPasswordSuccessOpen(false)}
+                  sx={{ mt: 1 }}
+                >
+                  Create Another User
+                </Button>
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: 3 }}>
+          <Button 
+            onClick={() => setPasswordSuccessOpen(false)} 
+            variant="contained"
+            size="large"
+            sx={{ minWidth: 120 }}
+          >
+            Got It!
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Manual Cleanup Instructions Dialog */}
+      <Dialog 
+        open={confirmDialogOpen} 
+        onClose={() => setConfirmDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Warning color="warning" />
+          Manual Cleanup Required
+        </DialogTitle>
+        <DialogContent>
+          <Box component="pre" sx={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit', margin: 0 }}>
+            {confirmMessage}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmDialogOpen(false)}>
+            I'll Do This Later
+          </Button>
+          <Button 
+            variant="contained" 
+            onClick={confirmAction}
+            startIcon={<ExitToApp />}
+          >
+            Open Firebase Console
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Snackbar for notifications */}
       <Snackbar

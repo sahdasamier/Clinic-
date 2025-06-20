@@ -33,13 +33,20 @@ const ClinicAccessGuard: React.FC<ClinicAccessGuardProps> = ({ children }) => {
       setChecking(true);
       
       try {
-        // Super admins always have access
+        console.log('🔍 ClinicAccessGuard Debug:');
+        console.log('  isAdmin:', isAdmin);
+        console.log('  userProfile:', userProfile);
+        console.log('  loading:', loading);
+        
+        // Super admins ALWAYS have access - no further checks needed
         if (isAdmin) {
+          console.log('  ✅ Admin access granted - bypassing all clinic checks');
           setHasAccess(true);
+          setChecking(false);
           return;
         }
 
-        // Check if user has an active clinic
+        // For non-admin users, check clinic access
         if (userProfile && userProfile.email) {
           const access = await hasActiveClinicAccess(userProfile.email, userProfile.clinicId);
           setHasAccess(access);
@@ -48,7 +55,13 @@ const ClinicAccessGuard: React.FC<ClinicAccessGuardProps> = ({ children }) => {
         }
       } catch (error) {
         console.error('Error checking clinic access:', error);
-        setHasAccess(false);
+        // If checking fails but user is admin, still allow access
+        if (isAdmin) {
+          console.log('  ✅ Admin access granted despite error');
+          setHasAccess(true);
+        } else {
+          setHasAccess(false);
+        }
       } finally {
         setChecking(false);
       }
