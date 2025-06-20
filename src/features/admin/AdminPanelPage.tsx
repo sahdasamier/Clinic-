@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { signOut, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { signOut, createUserWithEmailAndPassword, updateProfile, getAuth, signInWithEmailAndPassword, deleteUser } from 'firebase/auth';
+import { initializeApp, deleteApp } from 'firebase/app';
 import { 
   collection, 
   addDoc, 
@@ -14,7 +15,7 @@ import {
   serverTimestamp,
   setDoc 
 } from 'firebase/firestore';
-import { auth, db } from '../../api/firebase';
+import { auth, db, firebaseConfig } from '../../api/firebase';
 import { createUserAccount, createUserInvitation, isValidEmail, checkEmailExists, doubleCheckEmailBeforeCreation, createUserAccountWithCleanup, suggestAlternativeEmails } from '../../api/auth';
 import { fixClinicAccess } from '../../utils/clinicUtils';
 import { initializeDemoClinicAfterAuth } from '../../scripts/initFirestore';
@@ -371,6 +372,15 @@ const AdminPanelPage: React.FC = () => {
   };
 
   const handleCreateUser = async () => {
+    // Store current admin user
+    const currentUser = auth.currentUser;
+    const currentUserEmail = currentUser?.email;
+    
+    if (!currentUserEmail) {
+      setError('Admin session lost. Please refresh and try again.');
+      return;
+    }
+
     // Clear previous errors
     setError('');
     
@@ -389,18 +399,24 @@ const AdminPanelPage: React.FC = () => {
       setLoading(true);
       showSnackbar('Creating user account...');
       
-      // Create Firebase Auth account
-      const userCredential = await createUserWithEmailAndPassword(auth, newUser.email.trim(), newUser.password);
-      const user = userCredential.user;
+      // Create a secondary Firebase app instance to avoid signing out admin
+      const secondaryApp = initializeApp(firebaseConfig, 'secondary');
+      const secondaryAuth = getAuth(secondaryApp);
       
-      // Update display name
-      await updateProfile(user, {
-        displayName: `${newUser.firstName.trim()} ${newUser.lastName.trim()}`
-      });
+      // Create user with secondary auth (won't affect main session)
+      const userCredential = await createUserWithEmailAndPassword(
+        secondaryAuth, 
+        newUser.email.trim(), 
+        newUser.password
+      );
+      const newUserId = userCredential.user.uid;
       
-      // Create Firestore document with the authenticated user's UID
+      // Delete the secondary app
+      await deleteApp(secondaryApp);
+      
+      // Create Firestore document using admin privileges
       const userDoc = {
-        id: user.uid,
+        id: newUserId,
         email: newUser.email.trim(),
         firstName: newUser.firstName.trim(),
         lastName: newUser.lastName.trim(),
@@ -409,11 +425,10 @@ const AdminPanelPage: React.FC = () => {
         isActive: true,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-        createdBy: auth.currentUser?.email || '',
+        createdBy: currentUserEmail,
       };
       
-      // Use the user's UID as the document ID
-      await setDoc(doc(db, 'users', user.uid), userDoc);
+      await setDoc(doc(db, 'users', newUserId), userDoc);
       
       // Store password for display
       setGeneratedPasswords(prev => ({
@@ -435,16 +450,7 @@ const AdminPanelPage: React.FC = () => {
       
     } catch (error: any) {
       console.error('Error creating user:', error);
-      
-      // Handle specific errors
-      if (error.code === 'auth/email-already-in-use') {
-        setError('Email address is already in use. Please use a different email.');
-      } else if (error.code === 'permission-denied') {
-        setError('Permission denied. Check Firestore security rules.');
-      } else {
-        setError(`Failed to create user: ${error.message}`);
-      }
-      
+      setError(`Failed to create user: ${error.message}`);
       showSnackbar('❌ Failed to create user');
     } finally {
       setLoading(false);
@@ -602,65 +608,68 @@ const AdminPanelPage: React.FC = () => {
       const userToDelete = users.find(u => u.id === itemToDelete.id);
       const userEmail = userToDelete?.email;
       
-      // Delete the Firestore document
+      if (!userEmail) {
+        setError('User email not found');
+        return;
+      }
+
+      // Delete the Firestore document first
       await deleteDoc(doc(db, 'users', itemToDelete.id));
+      
+      // Try to delete Firebase Auth account if we have the password
+      let authDeleted = false;
+      const userPassword = generatedPasswords[userEmail];
+      
+      if (userPassword) {
+        try {
+          // Create secondary Firebase app to avoid affecting admin session
+          const secondaryApp = initializeApp(firebaseConfig, `delete-${Date.now()}`);
+          const secondaryAuth = getAuth(secondaryApp);
+          
+          // Sign in as the user to be deleted
+          const userCredential = await signInWithEmailAndPassword(secondaryAuth, userEmail, userPassword);
+          
+          // Delete the user account
+          await deleteUser(userCredential.user);
+          
+          // Clean up secondary app
+          await deleteApp(secondaryApp);
+          
+          authDeleted = true;
+          console.log(`✅ Firebase Auth account deleted: ${userEmail}`);
+          
+        } catch (authError: any) {
+          console.warn(`⚠️ Could not delete Firebase Auth account for ${userEmail}:`, authError);
+          // Continue anyway - database deletion was successful
+        }
+      }
+      
+      // Remove from generated passwords if it exists
+      if (generatedPasswords[userEmail]) {
+        setGeneratedPasswords(prev => {
+          const newPasswords = { ...prev };
+          delete newPasswords[userEmail];
+          return newPasswords;
+        });
+      }
       
       setDeleteConfirmOpen(false);
       setItemToDelete(null);
       fetchUsers();
       
-      // Show enhanced cleanup instructions
-      if (userEmail) {
-        showSnackbar(`⚠️ User deleted from database. Manual Firebase Auth cleanup required.`);
-        
-        // Show detailed manual cleanup instructions in the confirm dialog
-        setConfirmMessage(`
-🗑️ User Deleted from Database Successfully
-
-✅ Database record removed: ${userEmail}
-⚠️ Manual Firebase Auth cleanup required:
-
-📋 REQUIRED CLEANUP STEPS:
-1. Open Firebase Console: https://console.firebase.google.com
-2. Select your project
-3. Go to: Authentication → Users
-4. Search for: ${userEmail}
-5. Click the user → Delete account
-6. Confirm deletion
-
-💡 WHY THIS IS NEEDED:
-- Database deletion only removes user data
-- Firebase Auth account still exists
-- Email "${userEmail}" cannot be reused until Auth account is deleted
-- This prevents email conflicts for future user creation
-
-🚨 IMPORTANT:
-Until manual cleanup is completed, the email "${userEmail}" 
-will show as "already registered" when creating new users.
-
-Would you like to open Firebase Console now?
-        `);
-        
-        setConfirmAction(() => {
-          setConfirmDialogOpen(false);
-          // Open Firebase Console in new tab
-          window.open('https://console.firebase.google.com', '_blank');
-        });
-        
-        setConfirmDialogOpen(true);
-        
-        // Log detailed information for developers
-        console.warn(`🚨 ORPHANED ACCOUNT CREATED: ${userEmail}`);
-        console.warn(`🔧 MANUAL CLEANUP REQUIRED:`);
-        console.warn(`   1. Go to Firebase Console → Authentication → Users`);
-        console.warn(`   2. Find and delete: ${userEmail}`);
-        console.warn(`   3. This will allow email reuse for new accounts`);
-        console.warn(`   4. Alternative: Use deactivation instead of deletion`);
+      // Show appropriate success message
+      if (authDeleted) {
+        showSnackbar(`✅ User ${userEmail} completely deleted (database + auth)`);
+      } else if (userPassword) {
+        showSnackbar(`⚠️ User ${userEmail} database deleted, auth deletion failed`);
+      } else {
+        showSnackbar(`✅ User ${userEmail} database deleted (auth account remains - no password available)`);
       }
       
     } catch (error) {
       console.error('Error deleting user:', error);
       setError('Failed to delete user');
+      showSnackbar('❌ Failed to delete user');
     }
   };
 
@@ -828,17 +837,7 @@ Would you like to open Firebase Console now?
           </Typography>
         </Alert>
 
-        <Alert severity="warning" sx={{ mb: 3 }}>
-          <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
-            ⚠️ Important - Email Reuse Limitation:
-          </Typography>
-          <Typography variant="body2">
-            • <strong>Deleting users only removes database records</strong> - Firebase Auth accounts remain
-            • <strong>Deleted user emails cannot be reused</strong> for new accounts
-            • <strong>Use deactivation instead</strong> (toggle switch) to preserve email reuse capability
-            • <strong>Click "Check Orphans"</strong> to find emails that can't be reused
-          </Typography>
-        </Alert>
+
 
         {/* Stats Cards */}
         <Grid container spacing={3} sx={{ mb: 4 }}>
@@ -1496,20 +1495,6 @@ Would you like to open Firebase Console now?
               ? 'All users and data associated with this clinic will become inaccessible.' 
               : 'This user will be removed from the database.'}
           </Typography>
-          
-          {itemToDelete?.type === 'user' && (
-            <Alert severity="warning" sx={{ mt: 2 }}>
-              <Typography variant="body2">
-                <strong>⚠️ Important:</strong> This only removes the user from our database. 
-                The Firebase Authentication account will remain and that email address 
-                <strong> cannot be reused</strong> for new accounts.
-              </Typography>
-              <Typography variant="body2" sx={{ mt: 1 }}>
-                <strong>💡 Alternative:</strong> Consider deactivating the user instead 
-                (toggle the switch) to preserve the ability to reuse the email later.
-              </Typography>
-            </Alert>
-          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteConfirmOpen(false)}>
