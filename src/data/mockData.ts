@@ -13,7 +13,7 @@ export const timeSlots = [
 ];
 
 // Base doctor schedules data - Empty for clean deployment
-export const baseDoctorSchedules = [];
+export const baseDoctorSchedules: Doctor[] = [];
 
 // Medical specialties
 export const medicalSpecialties = [
@@ -507,20 +507,7 @@ export interface DoctorScheduleData {
 }
 
 export const getDefaultDoctorSchedulesData = (): DoctorScheduleData[] => {
-  return [
-    {
-      id: 'dr_default',
-      name: 'Dr. Default',
-      specialty: 'General Practice',
-      workingHours: {
-        start: '09:00',
-        end: '17:00'
-      },
-      offDays: ['Friday', 'Saturday'],
-      maxPatientsPerHour: 3,
-      consultationDuration: 30
-    }
-  ];
+  return [];
 };
 
 // Storage keys for different modules
