@@ -118,6 +118,7 @@ interface NewAppointment {
   location: string;
   notes: string;
   phone: string;
+  paymentStatus?: 'pending' | 'completed' | 'partial' | 'failed';
 }
 
 interface FilterState {
@@ -286,7 +287,8 @@ const AppointmentListPage: React.FC = () => {
     priority: 'normal',
     location: '',
     notes: '',
-    phone: ''
+    phone: '',
+    paymentStatus: 'pending'
   });
   const [availableDoctors] = useState(doctorSchedules);
   const [availablePatients, setAvailablePatients] = useState<any[]>([]);
@@ -326,7 +328,8 @@ const AppointmentListPage: React.FC = () => {
         priority: 'normal',
         location: '',
         notes: '',
-        phone: ''
+        phone: '',
+        paymentStatus: 'pending'
       });
       setSelectedAppointment(null);
       setStatusEditAppointment(null);
@@ -468,7 +471,8 @@ const AppointmentListPage: React.FC = () => {
       priority: appointment.priority,
       location: appointment.location,
       notes: appointment.notes,
-      phone: appointment.phone
+      phone: appointment.phone,
+      paymentStatus: (appointment as any).paymentStatus || 'pending'
     });
     setEditDialogOpen(true);
   };
@@ -543,7 +547,8 @@ const AppointmentListPage: React.FC = () => {
         completed: false,
         priority: newAppointment.priority,
         createdAt: new Date().toISOString(),
-      };
+        ...(newAppointment.paymentStatus && { paymentStatus: newAppointment.paymentStatus }),
+      } as any;
       
       updatedList = [...appointmentList, newApt];
       setAddAppointmentOpen(false);
@@ -564,7 +569,8 @@ const AppointmentListPage: React.FC = () => {
       priority: 'normal',
       location: '',
       notes: '',
-      phone: ''
+      phone: '',
+      paymentStatus: 'pending'
     });
     setSelectedAppointment(null);
   };
@@ -606,6 +612,16 @@ const AppointmentListPage: React.FC = () => {
       case 'rescheduled': return <Schedule fontSize="small" />;
       case 'no-show': return <Cancel fontSize="small" />;
       default: return <Schedule fontSize="small" />;
+    }
+  };
+
+  const getPaymentStatusColor = (paymentStatus: string) => {
+    switch (paymentStatus) {
+      case 'completed': return 'success';
+      case 'partial': return 'warning';
+      case 'failed': return 'error';
+      case 'pending':
+      default: return 'default';
     }
   };
 
@@ -1310,6 +1326,7 @@ const AppointmentListPage: React.FC = () => {
                          <TableCell sx={{ fontWeight: 600 }}>{t('time_duration')}</TableCell>
                          <TableCell sx={{ fontWeight: 600 }}>{t('type')}</TableCell>
                          <TableCell sx={{ fontWeight: 600 }}>{t('priority')}</TableCell>
+                         <TableCell sx={{ fontWeight: 600 }}>{t('payment_status')}</TableCell>
                          <TableCell sx={{ fontWeight: 600 }}>{t('status')}</TableCell>
                          <TableCell sx={{ fontWeight: 600 }}>{t('actions')}</TableCell>
                        </TableRow>
@@ -1317,7 +1334,7 @@ const AppointmentListPage: React.FC = () => {
                      <TableBody>
                        {filteredAppointments.length === 0 && getActiveFilterCount() > 0 ? (
                          <TableRow>
-                           <TableCell colSpan={7} sx={{ textAlign: 'center', py: 6 }}>
+                           <TableCell colSpan={8} sx={{ textAlign: 'center', py: 6 }}>
                              <Box>
                                <FilterList sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
                                <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
@@ -1338,7 +1355,7 @@ const AppointmentListPage: React.FC = () => {
                          </TableRow>
                        ) : filteredAppointments.length === 0 ? (
                          <TableRow>
-                           <TableCell colSpan={7} sx={{ textAlign: 'center', py: 6 }}>
+                           <TableCell colSpan={8} sx={{ textAlign: 'center', py: 6 }}>
                              <Box>
                                <CalendarToday sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
                                <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
@@ -1445,6 +1462,19 @@ const AppointmentListPage: React.FC = () => {
                                  sx={{ 
                                    borderColor: getPriorityColor(appointment.priority),
                                    color: getPriorityColor(appointment.priority)
+                                 }}
+                               />
+                             </TableCell>
+                             <TableCell>
+                               <Chip
+                                 label={t((appointment as any).paymentStatus || 'pending')}
+                                 size="small"
+                                 variant="filled"
+                                 color={getPaymentStatusColor((appointment as any).paymentStatus || 'pending') as any}
+                                 sx={{ 
+                                   minWidth: 80,
+                                   fontWeight: 600,
+                                   textTransform: 'capitalize'
                                  }}
                                />
                              </TableCell>
@@ -2324,16 +2354,30 @@ const AppointmentListPage: React.FC = () => {
                    <InputLabel>{t('patient_name')}</InputLabel>
                    <Select
                      label={t('patient_name')}
-                     value={newAppointment.patient}
+                     value={availablePatients.find(p => p.name === newAppointment.patient) ? newAppointment.patient : 'custom'}
                      onChange={(e) => {
-                       const selectedPatient = availablePatients.find(p => p.name === e.target.value);
-                       setNewAppointment(prev => ({ 
-                         ...prev, 
-                         patient: e.target.value,
-                         phone: selectedPatient?.phone || prev.phone
-                       }));
+                       if (e.target.value === 'custom') {
+                         setNewAppointment(prev => ({ 
+                           ...prev, 
+                           patient: '',
+                           phone: ''
+                         }));
+                       } else {
+                         const selectedPatient = availablePatients.find(p => p.name === e.target.value);
+                         setNewAppointment(prev => ({ 
+                           ...prev, 
+                           patient: e.target.value,
+                           phone: selectedPatient?.phone || prev.phone
+                         }));
+                       }
                      }}
                    >
+                     <MenuItem value="custom">
+                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'primary.main' }}>
+                         <Add fontSize="small" />
+                         <Typography variant="body2">{t('enter_custom_patient_name')}</Typography>
+                       </Box>
+                     </MenuItem>
                      {availablePatients.map((patient) => (
                        <MenuItem key={patient.id} value={patient.name}>
                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -2349,25 +2393,24 @@ const AppointmentListPage: React.FC = () => {
                          </Box>
                        </MenuItem>
                      ))}
-                     <MenuItem value="">
-                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'primary.main' }}>
-                         <Add fontSize="small" />
-                         <Typography variant="body2">{t('add_new_patient')}</Typography>
-                       </Box>
-                     </MenuItem>
                    </Select>
                  </FormControl>
                </Grid>
 
-               {/* Manual Patient Name */}
-               {!availablePatients.find(p => p.name === newAppointment.patient) && newAppointment.patient !== '' && (
+               {/* Custom Patient Name Input */}
+               {!availablePatients.find(p => p.name === newAppointment.patient) && (
                  <Grid item xs={12} md={6}>
                    <TextField
                      fullWidth
-                     label={t('custom_patient_name')}
+                     label={t('enter_patient_name')}
                      value={newAppointment.patient}
                      onChange={(e) => setNewAppointment(prev => ({ ...prev, patient: e.target.value }))}
-                     placeholder={t('enter_patient_name_manually')}
+                     placeholder={t('type_patient_name_here')}
+                     required
+                     InputProps={{
+                       startAdornment: <InputAdornment position="start">👤</InputAdornment>
+                     }}
+                     helperText={t('enter_new_patient_name_helper')}
                    />
                  </Grid>
                )}
@@ -2593,6 +2636,39 @@ const AppointmentListPage: React.FC = () => {
                      <MenuItem value="urgent">
                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                          🔴 {t('urgent')}
+                       </Box>
+                     </MenuItem>
+                   </Select>
+                 </FormControl>
+               </Grid>
+
+               {/* Payment Status */}
+               <Grid item xs={12} md={3}>
+                 <FormControl fullWidth>
+                   <InputLabel>{t('payment_status')}</InputLabel>
+                   <Select 
+                     label={t('payment_status')}
+                     value={newAppointment.paymentStatus || 'pending'}
+                     onChange={(e) => setNewAppointment(prev => ({ ...prev, paymentStatus: e.target.value as any }))}
+                   >
+                     <MenuItem value="pending">
+                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                         🟡 {t('pending')}
+                       </Box>
+                     </MenuItem>
+                     <MenuItem value="completed">
+                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                         🟢 {t('completed')}
+                       </Box>
+                     </MenuItem>
+                     <MenuItem value="partial">
+                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                         🟠 {t('partial')}
+                       </Box>
+                     </MenuItem>
+                     <MenuItem value="failed">
+                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                         🔴 {t('failed')}
                        </Box>
                      </MenuItem>
                    </Select>
