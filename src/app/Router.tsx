@@ -4,6 +4,8 @@ import AuthGuard from "./AuthGuard";
 import AdminProtectedRoute from "../components/AdminProtectedRoute";
 import ClinicAccessGuard from "../components/ClinicAccessGuard";
 import PermissionGuard from "../components/PermissionGuard";
+import BlurredPermissionGuard from "../components/BlurredPermissionGuard";
+import Layout from "../components/Layout";
 import DashboardPage from "../features/dashboard/DashboardPage";
 import LoginPage from "../features/auth/LoginPage";
 import ResetPasswordPage from "../features/auth/ResetPasswordPage";
@@ -34,40 +36,48 @@ const Router: React.FC = () => {
         <Route path="/admin/login" element={<AdminLoginPage />} />
         <Route path="/admin/dashboard" element={<AdminProtectedRoute><AdminPanelPage /></AdminProtectedRoute>} />
         
-        {/* Protected Routes - Wrapped with AuthGuard, ClinicAccessGuard, and PermissionGuard */}
+        {/* Protected Routes - Wrapped with AuthGuard, ClinicAccessGuard, Layout, and BlurredPermissionGuard */}
         <Route path="/" element={
           <AuthGuard>
             <ClinicAccessGuard>
-              <PermissionGuard feature="dashboard">
-                <DashboardPage />
-              </PermissionGuard>
+              <Layout>
+                <BlurredPermissionGuard feature="dashboard">
+                  <DashboardPage />
+                </BlurredPermissionGuard>
+              </Layout>
             </ClinicAccessGuard>
           </AuthGuard>
         } />
         <Route path="/dashboard" element={
           <AuthGuard>
             <ClinicAccessGuard>
-              <PermissionGuard feature="dashboard">
-                <DashboardPage />
-              </PermissionGuard>
+              <Layout>
+                <BlurredPermissionGuard feature="dashboard">
+                  <DashboardPage />
+                </BlurredPermissionGuard>
+              </Layout>
             </ClinicAccessGuard>
           </AuthGuard>
         } />
         <Route path="/dashboard/receptionist" element={
           <AuthGuard>
             <ClinicAccessGuard>
-              <PermissionGuard feature="dashboard">
-                <ReceptionistDashboard />
-              </PermissionGuard>
+              <Layout>
+                <BlurredPermissionGuard feature="dashboard">
+                  <ReceptionistDashboard />
+                </BlurredPermissionGuard>
+              </Layout>
             </ClinicAccessGuard>
           </AuthGuard>
         } />
         <Route path="/dashboard/doctor" element={
           <AuthGuard>
             <ClinicAccessGuard>
-              <PermissionGuard feature="dashboard">
-                <DoctorDashboard />
-              </PermissionGuard>
+              <Layout>
+                <BlurredPermissionGuard feature="dashboard">
+                  <DoctorDashboard />
+                </BlurredPermissionGuard>
+              </Layout>
             </ClinicAccessGuard>
           </AuthGuard>
         } />
@@ -76,18 +86,22 @@ const Router: React.FC = () => {
         <Route path="/patients" element={
           <AuthGuard>
             <ClinicAccessGuard>
-              <PermissionGuard feature="patients">
-                <PatientListPage />
-              </PermissionGuard>
+              <Layout>
+                <BlurredPermissionGuard feature="patients">
+                  <PatientListPage />
+                </BlurredPermissionGuard>
+              </Layout>
             </ClinicAccessGuard>
           </AuthGuard>
         } />
         <Route path="/patients/:id" element={
           <AuthGuard>
             <ClinicAccessGuard>
-              <PermissionGuard feature="patient_details">
-                <PatientDetailPage />
-              </PermissionGuard>
+              <Layout>
+                <BlurredPermissionGuard feature="patient_details">
+                  <PatientDetailPage />
+                </BlurredPermissionGuard>
+              </Layout>
             </ClinicAccessGuard>
           </AuthGuard>
         } />
@@ -96,18 +110,22 @@ const Router: React.FC = () => {
         <Route path="/appointments" element={
           <AuthGuard>
             <ClinicAccessGuard>
-              <PermissionGuard feature="appointments">
-                <AppointmentListPage />
-              </PermissionGuard>
+              <Layout>
+                <BlurredPermissionGuard feature="appointments">
+                  <AppointmentListPage />
+                </BlurredPermissionGuard>
+              </Layout>
             </ClinicAccessGuard>
           </AuthGuard>
         } />
         <Route path="/appointments/calendar" element={
           <AuthGuard>
             <ClinicAccessGuard>
-              <PermissionGuard feature="appointment_calendar">
-                <AppointmentCalendarPage />
-              </PermissionGuard>
+              <Layout>
+                <BlurredPermissionGuard feature="appointment_calendar">
+                  <AppointmentCalendarPage />
+                </BlurredPermissionGuard>
+              </Layout>
             </ClinicAccessGuard>
           </AuthGuard>
         } />
@@ -116,27 +134,33 @@ const Router: React.FC = () => {
         <Route path="/payments" element={
           <AuthGuard>
             <ClinicAccessGuard>
-              <PermissionGuard feature="payments">
-                <PaymentListPage />
-              </PermissionGuard>
+              <Layout>
+                <BlurredPermissionGuard feature="payments">
+                  <PaymentListPage />
+                </BlurredPermissionGuard>
+              </Layout>
             </ClinicAccessGuard>
           </AuthGuard>
         } />
         <Route path="/inventory" element={
           <AuthGuard>
             <ClinicAccessGuard>
-              <PermissionGuard feature="inventory">
-                <InventoryPage />
-              </PermissionGuard>
+              <Layout>
+                <BlurredPermissionGuard feature="inventory">
+                  <InventoryPage />
+                </BlurredPermissionGuard>
+              </Layout>
             </ClinicAccessGuard>
           </AuthGuard>
         } />
         <Route path="/notifications" element={
           <AuthGuard>
             <ClinicAccessGuard>
-              <PermissionGuard feature="notifications">
-                <NotificationsPage />
-              </PermissionGuard>
+              <Layout>
+                <BlurredPermissionGuard feature="notifications">
+                  <NotificationsPage />
+                </BlurredPermissionGuard>
+              </Layout>
             </ClinicAccessGuard>
           </AuthGuard>
         } />
@@ -144,18 +168,22 @@ const Router: React.FC = () => {
         <Route path="/doctor-scheduling" element={
           <AuthGuard>
             <ClinicAccessGuard>
-              <PermissionGuard feature="doctor_scheduling">
-                <AppointmentSchedulingPage />
-              </PermissionGuard>
+              <Layout>
+                <BlurredPermissionGuard feature="doctor_scheduling">
+                  <AppointmentSchedulingPage />
+                </BlurredPermissionGuard>
+              </Layout>
             </ClinicAccessGuard>
           </AuthGuard>
         } />
         <Route path="/settings" element={
           <AuthGuard>
             <ClinicAccessGuard>
-              <PermissionGuard feature="settings">
-                <SettingsPage />
-              </PermissionGuard>
+              <Layout>
+                <BlurredPermissionGuard feature="settings">
+                  <SettingsPage />
+                </BlurredPermissionGuard>
+              </Layout>
             </ClinicAccessGuard>
           </AuthGuard>
         } />

@@ -53,8 +53,7 @@ import {
   NotificationsNone,
   AutoAwesome,
 } from '@mui/icons-material';
-import Header from '../../components/Header';
-import Sidebar from '../../components/Sidebar';
+
 import { Notification, NotificationSettings } from '../../types/models';
 import { notificationsApi, notificationSettingsApi } from '../../api/notifications';
 import { useNotifications } from '../../contexts/NotificationContext';
@@ -589,11 +588,7 @@ const NotificationsPage: React.FC = () => {
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', height: '100vh', backgroundColor: 'background.default' }}>
-        <Sidebar />
-        <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          <Header />
-          <Container maxWidth="xl" sx={{ mt: 4, mb: 4, flex: 1 }}>
+      <Container maxWidth="xl" sx={{ mt: 4, mb: 4, flex: 1 }}>
             {/* Header Skeleton */}
             <Box sx={{ mb: 4 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
@@ -618,32 +613,11 @@ const NotificationsPage: React.FC = () => {
               {renderLoadingSkeleton()}
             </Card>
           </Container>
-        </Box>
-      </Box>
     );
   }
 
   return (
-    <Box sx={{ 
-      display: 'flex', 
-      height: '100vh', 
-      backgroundColor: '#f8fafc',
-      position: 'relative',
-      '&::before': {
-        content: '""',
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        height: '300px',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        zIndex: 0,
-      }
-    }}>
-      <Sidebar />
-      <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative', zIndex: 1 }}>
-        <Header />
-        <Container maxWidth="xl" sx={{ mt: 4, mb: 4, flex: 1, overflow: 'auto' }}>
+    <Container maxWidth="xl" sx={{ mt: 4, mb: 4, flex: 1, overflow: 'auto' }}>
           {/* Enhanced Header Section */}
           <Fade in timeout={600}>
             <Box sx={{ mb: 6 }}>
@@ -1179,53 +1153,51 @@ const NotificationsPage: React.FC = () => {
               </Stack>
             </Grid>
           </Grid>
+
+          {/* Enhanced Snackbar */}
+          <Snackbar
+            open={snackbar.open}
+            autoHideDuration={6000}
+            onClose={handleCloseSnackbar}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            sx={{ zIndex: 9999 }}
+          >
+            <Alert 
+              onClose={handleCloseSnackbar} 
+              severity={snackbar.severity} 
+              variant="filled"
+              sx={{
+                borderRadius: 3,
+                fontWeight: 600,
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
+                '& .MuiAlert-icon': {
+                  fontSize: 24
+                }
+              }}
+            >
+              {snackbar.message}
+            </Alert>
+          </Snackbar>
+
+          {/* Add custom CSS for animations */}
+          <style>
+            {`
+              @keyframes pulse {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0.5; }
+              }
+              
+              .animate-spin {
+                animation: spin 1s linear infinite;
+              }
+              
+              @keyframes spin {
+                from { transform: rotate(0deg); }
+                to { transform: rotate(360deg); }
+              }
+            `}
+          </style>
         </Container>
-      </Box>
-
-      {/* Enhanced Snackbar */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-        sx={{ zIndex: 9999 }}
-      >
-        <Alert 
-          onClose={handleCloseSnackbar} 
-          severity={snackbar.severity} 
-          variant="filled"
-          sx={{
-            borderRadius: 3,
-            fontWeight: 600,
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
-            '& .MuiAlert-icon': {
-              fontSize: 24
-            }
-          }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
-
-      {/* Add custom CSS for animations */}
-      <style>
-        {`
-          @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-          }
-          
-          .animate-spin {
-            animation: spin 1s linear infinite;
-          }
-          
-          @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-          }
-        `}
-      </style>
-    </Box>
   );
 };
 

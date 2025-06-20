@@ -85,8 +85,7 @@ import {
   LocalHospital,
   Assignment,
 } from '@mui/icons-material';
-import Header from '../../components/Header';
-import Sidebar from '../../components/Sidebar';
+
 import { syncAppointmentChangesToPatients, setupAppointmentPatientSync } from '../../utils/appointmentPatientSync';
 import { doctorSchedules } from '../DoctorScheduling';
 import { loadPatientsFromStorage } from '../patients/PatientListPage';
@@ -672,11 +671,7 @@ const AppointmentListPage: React.FC = () => {
   const pendingToday = todayAppointments.filter(apt => !apt.completed).length;
 
   return (
-    <Box sx={{ display: 'flex', height: '100vh', backgroundColor: 'background.default' }}>
-      <Sidebar />
-      <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <Header />
-        <Container maxWidth="xl" sx={{ mt: 4, mb: 4, flex: 1, overflow: 'auto' }}>
+    <Container maxWidth="xl" sx={{ mt: 4, mb: 4, flex: 1, overflow: 'auto' }}>
           {/* Auto-sync Info Card */}
           <Card 
             sx={{ 
@@ -2932,11 +2927,9 @@ const AppointmentListPage: React.FC = () => {
                <Typography variant="body2">{t('no_show')}</Typography>
              </Box>
            </MenuItem>
-         </Menu>
-       </Container>
-     </Box>
-   </Box>
- );
+                 </Menu>
+      </Container>
+);
 };
 
 export default AppointmentListPage;

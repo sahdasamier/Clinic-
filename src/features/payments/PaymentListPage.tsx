@@ -63,8 +63,7 @@ import {
   Share,
   LocalHospital,
 } from '@mui/icons-material';
-import Header from '../../components/Header';
-import Sidebar from '../../components/Sidebar';
+
 import {
   generateDefaultPayments,
   samplePaymentPatients,
@@ -820,16 +819,7 @@ const generateReminderMessage = (payment: PaymentData): string => {
 };
 
 return (
-  <Box sx={{ 
-    display: 'flex', 
-    height: '100vh', 
-    backgroundColor: 'background.default',
-    direction: isRTL ? 'rtl' : 'ltr'
-  }}>
-    <Sidebar />
-    <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      <Header />
-      <Container maxWidth="xl" sx={{ mt: 4, mb: 4, flex: 1, overflow: 'auto' }}>
+  <Container maxWidth="xl" sx={{ mt: 4, mb: 4, flex: 1, overflow: 'auto', direction: isRTL ? 'rtl' : 'ltr' }}>
         {/* Header Section */}
         <Box sx={{ 
           mb: 4, 
@@ -1908,8 +1898,6 @@ return (
            </Alert>
          </Snackbar>
        </Container>
-     </Box>
-   </Box>
  );
 };
 

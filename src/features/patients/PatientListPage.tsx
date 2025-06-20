@@ -74,8 +74,7 @@ import {
   CheckCircle,
   Schedule,
 } from '@mui/icons-material';
-import Header from '../../components/Header';
-import Sidebar from '../../components/Sidebar';
+
 import { 
   organizeAppointmentsByCompletion, 
   getPatientsOrganizedByAppointmentStatus,
@@ -1053,11 +1052,7 @@ const PatientListPage: React.FC = () => {
   };
 
   return (
-    <Box sx={{ display: 'flex', height: '100vh', backgroundColor: 'background.default' }}>
-      <Sidebar />
-      <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <Header />
-        <Container maxWidth="xl" sx={{ mt: 4, mb: 4, flex: 1, overflow: 'auto' }}>
+    <Container maxWidth="xl" sx={{ mt: 4, mb: 4, flex: 1, overflow: 'auto' }}>
           {/* Enhanced Auto-sync Info Card */}
           <Card 
             sx={{ 
@@ -6589,8 +6584,6 @@ const PatientListPage: React.FC = () => {
             </MenuItem>
           </Menu>
         </Container>
-      </Box>
-    </Box>
   );
 };
 

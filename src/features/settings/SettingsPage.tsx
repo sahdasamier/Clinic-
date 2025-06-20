@@ -69,8 +69,7 @@ import {
   Payment,
   Palette,
 } from '@mui/icons-material';
-import Header from '../../components/Header';
-import Sidebar from '../../components/Sidebar';
+
 import { sendSupportEmail, sendFeedbackEmail, getSetupInstructions, type SupportEmailData } from '../../services/emailService';
 
 interface TabPanelProps {
@@ -776,30 +775,16 @@ const SettingsPage: React.FC = () => {
   ];
 
   return (
-    <Box sx={{ 
-      display: 'flex', 
-      height: '100vh', 
-      backgroundColor: '#f8fafc',
-      backgroundImage: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)'
-    }}>
-      <Sidebar />
-      <Box sx={{ 
-        flexGrow: 1, 
-        display: 'flex', 
-        flexDirection: 'column', 
-        overflow: 'hidden',
-        position: 'relative'
+    <>
+      <Container maxWidth="xl" sx={{ 
+        mt: 3, 
+        mb: 4, 
+        flex: 1, 
+        overflow: 'auto',
+        position: 'relative',
+        zIndex: 1
       }}>
-        <Header />
-        <Container maxWidth="xl" sx={{ 
-          mt: 3, 
-          mb: 4, 
-          flex: 1, 
-          overflow: 'auto',
-          position: 'relative',
-          zIndex: 1
-        }}>
-          {/* Header Section */}
+            {/* Header Section */}
           <Box sx={{ 
             mb: 6, 
             p: 6, 
@@ -3647,7 +3632,6 @@ const SettingsPage: React.FC = () => {
             </Grid>
           </Grid>
         </Container>
-      </Box>
 
       {/* Password Change Dialog */}
       <Dialog open={passwordDialogOpen} onClose={() => setPasswordDialogOpen(false)} maxWidth="sm" fullWidth>
@@ -4509,7 +4493,7 @@ Your feedback helps us improve ClinicCare for everyone!
           {snackbar.message}
         </Alert>
       </Snackbar>
-    </Box>
+    </>
   );
 };
 

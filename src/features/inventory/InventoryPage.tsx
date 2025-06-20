@@ -10,18 +10,13 @@ import {
 import {
   Inventory,
 } from '@mui/icons-material';
-import Header from '../../components/Header';
-import Sidebar from '../../components/Sidebar';
+
 
 const InventoryPage: React.FC = () => {
   const { t } = useTranslation();
 
   return (
-    <Box sx={{ display: 'flex', height: '100vh', backgroundColor: 'background.default' }}>
-      <Sidebar />
-      <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <Header />
-        <Container maxWidth="xl" sx={{ mt: 4, mb: 4, flex: 1, overflow: 'auto' }}>
+    <Container maxWidth="xl" sx={{ mt: 4, mb: 4, flex: 1, overflow: 'auto' }}>
           <Box sx={{ mb: 4 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
               <Inventory sx={{ fontSize: 32, color: 'primary.main', mr: 2 }} />
@@ -46,8 +41,6 @@ const InventoryPage: React.FC = () => {
             </CardContent>
           </Card>
         </Container>
-      </Box>
-    </Box>
   );
 };
 

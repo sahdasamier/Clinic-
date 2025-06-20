@@ -132,7 +132,7 @@ const Header: React.FC = () => {
         {/* Left Side - Title */}
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <Typography variant="h5" sx={{ fontWeight: 600, color: 'text.primary' }}>
-            {userClinic?.name ? `${userClinic.name} - ${t('dashboard')}` : t('dashboard')}
+            {userClinic?.name ? `${userClinic.name} ` : t('dashboard')}
           </Typography>
         </Box>
 

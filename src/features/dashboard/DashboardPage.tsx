@@ -47,8 +47,7 @@ import {
   AreaChart,
   Tooltip as RechartsTooltip,
 } from 'recharts';
-import Header from '../../components/Header';
-import Sidebar from '../../components/Sidebar';
+
 import { useTranslation } from 'react-i18next';
 
 // DIRECT IMPORTS from actual pages
@@ -404,11 +403,7 @@ const DashboardPage: React.FC = () => {
   }));
 
   return (
-    <Box sx={{ display: 'flex', height: '100vh', backgroundColor: '#f8fafc' }}>
-      <Sidebar />
-      <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <Header />
-        <Container maxWidth="xl" sx={{ mt: 4, mb: 4, flex: 1, overflow: 'auto' }}>
+    <Container maxWidth="xl" sx={{ mt: 4, mb: 4, flex: 1, overflow: 'auto' }}>
           {/* Welcome Section */}
           <Box sx={{ 
             mb: 4, 
@@ -848,8 +843,6 @@ const DashboardPage: React.FC = () => {
             </Grid>
           </Grid>
         </Container>
-      </Box>
-    </Box>
   );
 };
 
