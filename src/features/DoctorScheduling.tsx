@@ -1269,9 +1269,18 @@ const DoctorSchedulingPage: React.FC = () => {
            boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
            border: '1px solid rgba(0,0,0,0.05)',
          }}>
-           <CardContent sx={{ p: 3 }}>
-             <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-               <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.primary' }}>
+           <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+             <Box sx={{ 
+               display: 'flex', 
+               flexDirection: { xs: 'column', sm: 'row' },
+               alignItems: { xs: 'flex-start', sm: 'center' }, 
+               gap: { xs: 2, sm: 3 } 
+             }}>
+               <Typography variant="h6" sx={{ 
+                 fontWeight: 700, 
+                 color: 'text.primary',
+                 fontSize: { xs: '1rem', sm: '1.25rem' }
+               }}>
                  📅 {t('schedule_date')}:
                </Typography>
                <TextField
@@ -1281,6 +1290,7 @@ const DoctorSchedulingPage: React.FC = () => {
                  onChange={(e) => setSelectedDate(e.target.value)}
                  InputLabelProps={{ shrink: true }}
                  sx={{ 
+                   minWidth: { xs: '100%', sm: 'auto' },
                    '& .MuiOutlinedInput-root': { 
                      borderRadius: 3,
                      backgroundColor: 'white',
@@ -1298,6 +1308,7 @@ const DoctorSchedulingPage: React.FC = () => {
                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                    color: 'white',
                    fontWeight: 600,
+                   alignSelf: { xs: 'flex-start', sm: 'center' }
                  }}
                />
              </Box>
@@ -1512,19 +1523,26 @@ const DoctorSchedulingPage: React.FC = () => {
            border: '1px solid rgba(0,0,0,0.05)',
            overflow: 'hidden'
          }}>
-           <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 4 }}>
+           <Box sx={{ borderBottom: 1, borderColor: 'divider', px: { xs: 1, md: 4 } }}>
              <Tabs 
                value={tabValue} 
                onChange={handleTabChange}
+               variant="scrollable"
+               scrollButtons="auto"
                sx={{
+                 '& .MuiTabs-scrollButtons': {
+                   '&.Mui-disabled': {
+                     opacity: 0.3,
+                   },
+                 },
                  '& .MuiTab-root': {
                    textTransform: 'none',
                    fontWeight: 600,
-                   fontSize: '0.95rem',
-                   minWidth: 'auto',
-                   padding: '12px 16px',
+                   fontSize: { xs: '0.8rem', md: '0.95rem' },
+                   minWidth: { xs: 120, md: 'auto' },
+                   padding: { xs: '8px 12px', md: '12px 16px' },
                    borderRadius: '8px 8px 0 0',
-                   margin: '0 2px',
+                   margin: { xs: '0 1px', md: '0 2px' },
                    '&.Mui-selected': {
                      color: 'white',
                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
@@ -1596,7 +1614,7 @@ const DoctorSchedulingPage: React.FC = () => {
                    const availableSlots = totalSlots - bookedSlots;
 
                    return (
-                     <Grid item xs={12} md={6} key={doctor.id}>
+                     <Grid item xs={12} sm={6} lg={4} key={doctor.id}>
                        <Card sx={{ 
                          height: '100%',
                          borderRadius: 4,
@@ -1617,17 +1635,31 @@ const DoctorSchedulingPage: React.FC = () => {
                            background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.02) 0%, rgba(118, 75, 162, 0.02) 100%)',
                          })
                        }}>
-                         <CardContent sx={{ p: 3 }}>
+                         <CardContent sx={{ p: { xs: 2, md: 3 } }}>
                            {/* Doctor Header */}
-                           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
-                             <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
+                           <Box sx={{ 
+                             display: 'flex', 
+                             flexDirection: { xs: 'column', sm: 'row' },
+                             alignItems: { xs: 'center', sm: 'flex-start' }, 
+                             justifyContent: 'space-between', 
+                             mb: 3,
+                             gap: { xs: 2, sm: 0 }
+                           }}>
+                             <Box sx={{ 
+                               display: 'flex', 
+                               flexDirection: { xs: 'column', sm: 'row' },
+                               alignItems: 'center', 
+                               flex: 1,
+                               textAlign: { xs: 'center', sm: 'left' }
+                             }}>
                                <Avatar 
                                  sx={{ 
-                                   width: 64, 
-                                   height: 64, 
-                                   mr: 3, 
+                                   width: { xs: 56, md: 64 }, 
+                                   height: { xs: 56, md: 64 }, 
+                                   mr: { xs: 0, sm: 3 },
+                                   mb: { xs: 1, sm: 0 },
                                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                                   fontSize: '1.3rem',
+                                   fontSize: { xs: '1.1rem', md: '1.3rem' },
                                    fontWeight: 'bold',
                                    boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)',
                                    color: 'white'
@@ -1636,18 +1668,31 @@ const DoctorSchedulingPage: React.FC = () => {
                                  {doctor.avatar}
                                </Avatar>
                                <Box sx={{ flex: 1 }}>
-                                 <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                                 <Typography variant="h6" sx={{ 
+                                   fontWeight: 700,
+                                   fontSize: { xs: '1rem', md: '1.25rem' }
+                                 }}>
                                    {doctor.name}
                                  </Typography>
-                                 <Typography variant="body2" color="text.secondary">
+                                 <Typography variant="body2" color="text.secondary" sx={{
+                                   fontSize: { xs: '0.8rem', md: '0.875rem' }
+                                 }}>
                                    {doctor.specialty}
                                  </Typography>
-                                 <Typography variant="caption" color="primary.main" sx={{ fontWeight: 600 }}>
+                                 <Typography variant="caption" color="primary.main" sx={{ 
+                                   fontWeight: 600,
+                                   fontSize: { xs: '0.7rem', md: '0.75rem' }
+                                 }}>
                                    {doctor.workingHours.start} - {doctor.workingHours.end}
                                  </Typography>
                                </Box>
                              </Box>
-                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                             <Box sx={{ 
+                               display: 'flex', 
+                               alignItems: 'center', 
+                               gap: 1,
+                               flexDirection: { xs: 'row', sm: 'column', md: 'row' }
+                             }}>
                                <Tooltip title={t('weekly_schedule')}>
                                  <IconButton 
                                    onClick={() => handleOpenWeeklySchedule(doctor)}
@@ -1701,7 +1746,7 @@ const DoctorSchedulingPage: React.FC = () => {
                                >
                                  <Person sx={{ 
                                    color: 'text.secondary',
-                                   fontSize: 28
+                                   fontSize: { xs: 24, md: 28 }
                                  }} />
                                </Badge>
                              </Box>
@@ -1742,10 +1787,19 @@ const DoctorSchedulingPage: React.FC = () => {
                            </Box>
 
                            {/* Time Slots */}
-                           <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 2 }}>
+                           <Typography variant="subtitle2" sx={{ 
+                             fontWeight: 600, 
+                             mb: 2,
+                             fontSize: { xs: '0.9rem', md: '1rem' }
+                           }}>
                              {t('time_slots_total', { count: timeSlots.length })}:
                            </Typography>
-                           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                           <Box sx={{ 
+                             display: 'flex', 
+                             flexWrap: 'wrap', 
+                             gap: { xs: 0.5, md: 1 },
+                             justifyContent: { xs: 'center', sm: 'flex-start' }
+                           }}>
                              {timeSlots.map((slot, index) => {
                                const slotType = slot.isReserved ? 'reserved' : 
                                               slot.isAvailableSlot ? 'available' : 'regular';
@@ -1761,10 +1815,12 @@ const DoctorSchedulingPage: React.FC = () => {
                                    clickable
                                    onClick={() => handleTimeSlotClick(doctor.id, slot.time, slotType, slot.appointment || undefined)}
                                    sx={{ 
-                                     fontSize: '0.75rem',
+                                     fontSize: { xs: '0.65rem', md: '0.75rem' },
                                      fontWeight: slot.isReserved ? 700 : 600,
                                      textDecoration: slot.isReserved ? 'line-through' : 'none',
                                      cursor: 'pointer',
+                                     minWidth: { xs: 'auto', md: 'auto' },
+                                     height: { xs: 28, md: 32 },
                                      
                                      // ✅ Regular Working Hours (Green)
                                      ...(slotType === 'regular' && {
@@ -1920,7 +1976,7 @@ const DoctorSchedulingPage: React.FC = () => {
                    </Typography>
                    <Grid container spacing={3}>
                      {doctors.filter(doctor => !isDoctorWorking(doctor)).map((doctor) => (
-                       <Grid item xs={12} sm={6} md={4} key={doctor.id}>
+                       <Grid item xs={12} sm={6} md={4} lg={3} key={doctor.id}>
                          <Card sx={{ 
                            borderRadius: 4,
                            boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
@@ -1935,24 +1991,43 @@ const DoctorSchedulingPage: React.FC = () => {
                            transition: 'all 0.3s ease',
                            background: 'linear-gradient(135deg, rgba(0,0,0,0.02) 0%, rgba(0,0,0,0.05) 100%)',
                          }}>
-                           <CardContent sx={{ p: 3 }}>
-                             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                               <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
+                           <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+                             <Box sx={{ 
+                               display: 'flex', 
+                               flexDirection: { xs: 'column', sm: 'row' },
+                               alignItems: 'center', 
+                               justifyContent: 'space-between',
+                               textAlign: { xs: 'center', sm: 'left' },
+                               gap: { xs: 2, sm: 0 }
+                             }}>
+                               <Box sx={{ 
+                                 display: 'flex', 
+                                 flexDirection: { xs: 'column', sm: 'row' },
+                                 alignItems: 'center', 
+                                 flex: 1 
+                               }}>
                                  <Avatar sx={{ 
-                                   width: 48, 
-                                   height: 48, 
-                                   mr: 2, 
+                                   width: { xs: 40, md: 48 }, 
+                                   height: { xs: 40, md: 48 }, 
+                                   mr: { xs: 0, sm: 2 },
+                                   mb: { xs: 1, sm: 0 },
                                    backgroundColor: '#bdbdbd',
-                                   fontSize: '1.1rem',
+                                   fontSize: { xs: '1rem', md: '1.1rem' },
                                    fontWeight: 'bold'
                                  }}>
                                    {doctor.avatar}
                                  </Avatar>
                                  <Box sx={{ flex: 1 }}>
-                                   <Typography variant="body1" sx={{ fontWeight: 700 }}>
+                                   <Typography variant="body1" sx={{ 
+                                     fontWeight: 700,
+                                     fontSize: { xs: '0.9rem', md: '1rem' }
+                                   }}>
                                      {doctor.name}
                                    </Typography>
-                                   <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+                                   <Typography variant="body2" color="text.secondary" sx={{ 
+                                     fontWeight: 500,
+                                     fontSize: { xs: '0.8rem', md: '0.875rem' }
+                                   }}>
                                      {doctor.specialty}
                                    </Typography>
                                    <Typography variant="caption" sx={{ 
@@ -1962,7 +2037,8 @@ const DoctorSchedulingPage: React.FC = () => {
                                      padding: '2px 8px',
                                      borderRadius: '12px',
                                      display: 'inline-block',
-                                     mt: 0.5
+                                     mt: 0.5,
+                                     fontSize: { xs: '0.7rem', md: '0.75rem' }
                                    }}>
                                      📅 {t('day_off')}
                                    </Typography>
@@ -1999,171 +2075,340 @@ const DoctorSchedulingPage: React.FC = () => {
            </TabPanel>
 
            <TabPanel value={tabValue} index={1}>
-             <Box sx={{ p: 4 }}>
-               <Typography variant="h5" sx={{ fontWeight: 700, mb: 3, color: 'text.primary' }}>
+             <Box sx={{ p: { xs: 2, md: 4 } }}>
+               <Typography variant="h5" sx={{ 
+                 fontWeight: 700, 
+                 mb: 3, 
+                 color: 'text.primary',
+                 fontSize: { xs: '1.25rem', md: '1.5rem' }
+               }}>
                  📊 {t('weekly_schedule_overview')}
                </Typography>
                
                <Box sx={{ 
                  mb: 4, 
-                 p: 3, 
+                 p: { xs: 2, md: 3 }, 
                  background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%)', 
                  borderRadius: 3, 
                  border: '1px solid rgba(102, 126, 234, 0.2)'
                }}>
-                 <Typography variant="body1" sx={{ fontWeight: 600, color: 'primary.main', mb: 1 }}>
+                 <Typography variant="body1" sx={{ 
+                   fontWeight: 600, 
+                   color: 'primary.main', 
+                   mb: 1,
+                   fontSize: { xs: '0.9rem', md: '1rem' }
+                 }}>
                    📅 {t('weekly_working_patterns')}
                  </Typography>
-                 <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+                 <Typography variant="body2" color="text.secondary" sx={{ 
+                   fontWeight: 500,
+                   fontSize: { xs: '0.8rem', md: '0.875rem' }
+                 }}>
                    {t('weekly_overview_description')}
                  </Typography>
                </Box>
                
-               <TableContainer component={Paper} sx={{ 
-                 borderRadius: 4,
-                 boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
-                 border: '1px solid rgba(0,0,0,0.05)',
-                 overflow: 'hidden'
-               }}>
-                 <Table>
-                   <TableHead sx={{ 
-                     background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)'
-                   }}>
-                     <TableRow>
-                       <TableCell sx={{ fontWeight: 700, fontSize: '0.95rem' }}>{t('doctor')}</TableCell>
-                       {daysOfWeek.map((day) => (
-                         <TableCell key={day} sx={{ fontWeight: 700, textTransform: 'capitalize', fontSize: '0.95rem' }}>
-                           {t(day).substring(0, 3)}
-                         </TableCell>
-                       ))}
-                       <TableCell sx={{ fontWeight: 700, fontSize: '0.95rem', textAlign: 'center' }}>
-                         {t('actions')}
-                       </TableCell>
-                     </TableRow>
-                   </TableHead>
-                   <TableBody>
-                     {doctors.map((doctor) => (
-                       <TableRow key={doctor.id} hover sx={{
-                         '&:hover': {
-                           backgroundColor: 'rgba(102, 126, 234, 0.02)',
-                         }
-                       }}>
-                         <TableCell>
-                           <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                             <Avatar sx={{ 
-                               width: 40, 
-                               height: 40, 
-                               mr: 2, 
-                               background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                               color: 'white',
-                               fontWeight: 'bold',
-                               fontSize: '1rem'
-                             }}>
-                               {doctor.avatar}
-                             </Avatar>
-                             <Box>
-                               <Typography variant="body2" fontWeight={700}>
-                                 {doctor.name}
-                               </Typography>
-                               <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
-                                 {doctor.specialty}
-                               </Typography>
-                             </Box>
-                           </Box>
-                         </TableCell>
+               {/* Desktop Table View */}
+               <Box sx={{ display: { xs: 'none', lg: 'block' } }}>
+                 <TableContainer component={Paper} sx={{ 
+                   borderRadius: 4,
+                   boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
+                   border: '1px solid rgba(0,0,0,0.05)',
+                   overflow: 'hidden'
+                 }}>
+                   <Table>
+                     <TableHead sx={{ 
+                       background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)'
+                     }}>
+                       <TableRow>
+                         <TableCell sx={{ fontWeight: 700, fontSize: '0.95rem' }}>{t('doctor')}</TableCell>
                          {daysOfWeek.map((day) => (
-                           <TableCell key={day}>
-                             {doctor.offDays.includes(day) ? (
-                               <Chip 
-                                 label={t('off')} 
-                                 size="small" 
-                                 sx={{
-                                   backgroundColor: 'rgba(244, 67, 54, 0.1)',
-                                   color: '#d32f2f',
-                                   border: '1px solid rgba(244, 67, 54, 0.3)',
-                                   fontWeight: 600
-                                 }}
-                               />
-                             ) : (
-                               <Box sx={{
-                                 p: 1,
-                                 backgroundColor: 'rgba(76, 175, 80, 0.1)',
-                                 borderRadius: 2,
-                                 border: '1px solid rgba(76, 175, 80, 0.3)'
-                               }}>
-                                 <Typography variant="caption" sx={{ 
-                                   fontWeight: 700,
-                                   color: '#2e7d32',
-                                   display: 'block',
-                                   textAlign: 'center'
-                                 }}>
-                                   {doctor.workingHours.start}
-                                 </Typography>
-                                 <Typography variant="caption" sx={{ 
-                                   fontWeight: 500,
-                                   color: '#2e7d32',
-                                   display: 'block',
-                                   textAlign: 'center'
-                                 }}>
-                                   {doctor.workingHours.end}
-                                 </Typography>
-                               </Box>
-                             )}
+                           <TableCell key={day} sx={{ fontWeight: 700, textTransform: 'capitalize', fontSize: '0.95rem' }}>
+                             {t(day).substring(0, 3)}
                            </TableCell>
                          ))}
-                         <TableCell sx={{ textAlign: 'center' }}>
-                           <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
-                             <Tooltip title={t('weekly_schedule')}>
-                               <Button
-                                 variant="contained"
-                                 size="small"
-                                 startIcon={<Schedule />}
-                                 onClick={() => handleOpenWeeklySchedule(doctor)}
-                                 sx={{
-                                   background: 'linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%)',
-                                   color: 'white',
-                                   boxShadow: '0 4px 16px rgba(76, 175, 80, 0.3)',
-                                   borderRadius: 2,
-                                   fontSize: '0.75rem',
-                                   fontWeight: 600,
-                                   px: 2,
-                                   '&:hover': {
-                                     background: 'linear-gradient(135deg, #388E3C 0%, #1B5E20 100%)',
-                                     transform: 'scale(1.05)',
-                                     boxShadow: '0 6px 20px rgba(76, 175, 80, 0.4)',
-                                   },
-                                   transition: 'all 0.3s ease'
-                                 }}
-                               >
-                                 Weekly Schedule
-                               </Button>
-                             </Tooltip>
-                             <Tooltip title={t('edit_doctor_profile')}>
-                               <IconButton 
-                                 onClick={() => handleEditDoctor(doctor)}
-                                 sx={{
-                                   background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                                   color: 'white',
-                                   boxShadow: '0 4px 16px rgba(102, 126, 234, 0.3)',
-                                   '&:hover': {
-                                     background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
-                                     transform: 'scale(1.05)',
-                                     boxShadow: '0 6px 20px rgba(102, 126, 234, 0.4)',
-                                   },
-                                   transition: 'all 0.3s ease'
-                                 }}
-                                 size="small"
-                               >
-                                 <Edit fontSize="small" />
-                               </IconButton>
-                             </Tooltip>
-                           </Box>
+                         <TableCell sx={{ fontWeight: 700, fontSize: '0.95rem', textAlign: 'center' }}>
+                           {t('actions')}
                          </TableCell>
                        </TableRow>
-                     ))}
-                   </TableBody>
-                 </Table>
-               </TableContainer>
+                     </TableHead>
+                     <TableBody>
+                       {doctors.map((doctor) => (
+                         <TableRow key={doctor.id} hover sx={{
+                           '&:hover': {
+                             backgroundColor: 'rgba(102, 126, 234, 0.02)',
+                           }
+                         }}>
+                           <TableCell>
+                             <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                               <Avatar sx={{ 
+                                 width: 40, 
+                                 height: 40, 
+                                 mr: 2, 
+                                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                 color: 'white',
+                                 fontWeight: 'bold',
+                                 fontSize: '1rem'
+                               }}>
+                                 {doctor.avatar}
+                               </Avatar>
+                               <Box>
+                                 <Typography variant="body2" fontWeight={700}>
+                                   {doctor.name}
+                                 </Typography>
+                                 <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
+                                   {doctor.specialty}
+                                 </Typography>
+                               </Box>
+                             </Box>
+                           </TableCell>
+                           {daysOfWeek.map((day) => (
+                             <TableCell key={day}>
+                               {doctor.offDays.includes(day) ? (
+                                 <Chip 
+                                   label={t('off')} 
+                                   size="small" 
+                                   sx={{
+                                     backgroundColor: 'rgba(244, 67, 54, 0.1)',
+                                     color: '#d32f2f',
+                                     border: '1px solid rgba(244, 67, 54, 0.3)',
+                                     fontWeight: 600
+                                   }}
+                                 />
+                               ) : (
+                                 <Box sx={{
+                                   p: 1,
+                                   backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                                   borderRadius: 2,
+                                   border: '1px solid rgba(76, 175, 80, 0.3)'
+                                 }}>
+                                   <Typography variant="caption" sx={{ 
+                                     fontWeight: 700,
+                                     color: '#2e7d32',
+                                     display: 'block',
+                                     textAlign: 'center'
+                                   }}>
+                                     {doctor.workingHours.start}
+                                   </Typography>
+                                   <Typography variant="caption" sx={{ 
+                                     fontWeight: 500,
+                                     color: '#2e7d32',
+                                     display: 'block',
+                                     textAlign: 'center'
+                                   }}>
+                                     {doctor.workingHours.end}
+                                   </Typography>
+                                 </Box>
+                               )}
+                             </TableCell>
+                           ))}
+                           <TableCell sx={{ textAlign: 'center' }}>
+                             <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
+                               <Tooltip title={t('weekly_schedule')}>
+                                 <Button
+                                   variant="contained"
+                                   size="small"
+                                   startIcon={<Schedule />}
+                                   onClick={() => handleOpenWeeklySchedule(doctor)}
+                                   sx={{
+                                     background: 'linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%)',
+                                     color: 'white',
+                                     boxShadow: '0 4px 16px rgba(76, 175, 80, 0.3)',
+                                     borderRadius: 2,
+                                     fontSize: '0.75rem',
+                                     fontWeight: 600,
+                                     px: 2,
+                                     '&:hover': {
+                                       background: 'linear-gradient(135deg, #388E3C 0%, #1B5E20 100%)',
+                                       transform: 'scale(1.05)',
+                                       boxShadow: '0 6px 20px rgba(76, 175, 80, 0.4)',
+                                     },
+                                     transition: 'all 0.3s ease'
+                                   }}
+                                 >
+                                   Weekly Schedule
+                                 </Button>
+                               </Tooltip>
+                               <Tooltip title={t('edit_doctor_profile')}>
+                                 <IconButton 
+                                   onClick={() => handleEditDoctor(doctor)}
+                                   sx={{
+                                     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                     color: 'white',
+                                     boxShadow: '0 4px 16px rgba(102, 126, 234, 0.3)',
+                                     '&:hover': {
+                                       background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
+                                       transform: 'scale(1.05)',
+                                       boxShadow: '0 6px 20px rgba(102, 126, 234, 0.4)',
+                                     },
+                                     transition: 'all 0.3s ease'
+                                   }}
+                                   size="small"
+                                 >
+                                   <Edit fontSize="small" />
+                                 </IconButton>
+                               </Tooltip>
+                             </Box>
+                           </TableCell>
+                         </TableRow>
+                       ))}
+                     </TableBody>
+                   </Table>
+                 </TableContainer>
+               </Box>
+
+               {/* Mobile Card View */}
+               <Box sx={{ display: { xs: 'block', lg: 'none' } }}>
+                 <Grid container spacing={2}>
+                   {doctors.map((doctor) => (
+                     <Grid item xs={12} key={doctor.id}>
+                       <Card sx={{ 
+                         borderRadius: 3,
+                         boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                         border: '1px solid rgba(0,0,0,0.1)',
+                         overflow: 'hidden',
+                         '&:hover': { 
+                           boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
+                           transform: 'translateY(-2px)',
+                         },
+                         transition: 'all 0.3s ease',
+                       }}>
+                         <CardContent sx={{ p: 3 }}>
+                           {/* Doctor Header */}
+                           <Box sx={{ 
+                             display: 'flex', 
+                             alignItems: 'center', 
+                             justifyContent: 'space-between',
+                             mb: 3 
+                           }}>
+                             <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                               <Avatar sx={{ 
+                                 width: 50, 
+                                 height: 50, 
+                                 mr: 2, 
+                                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                 color: 'white',
+                                 fontWeight: 'bold',
+                                 fontSize: '1.1rem'
+                               }}>
+                                 {doctor.avatar}
+                               </Avatar>
+                               <Box>
+                                 <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '1.1rem' }}>
+                                   {doctor.name}
+                                 </Typography>
+                                 <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.9rem' }}>
+                                   {doctor.specialty}
+                                 </Typography>
+                               </Box>
+                             </Box>
+                             <Box sx={{ display: 'flex', gap: 1 }}>
+                               <Tooltip title={t('weekly_schedule')}>
+                                 <IconButton 
+                                   onClick={() => handleOpenWeeklySchedule(doctor)}
+                                   sx={{
+                                     background: 'linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%)',
+                                     color: 'white',
+                                     boxShadow: '0 4px 16px rgba(76, 175, 80, 0.3)',
+                                     '&:hover': {
+                                       background: 'linear-gradient(135deg, #388E3C 0%, #1B5E20 100%)',
+                                       transform: 'scale(1.05)',
+                                     },
+                                     transition: 'all 0.3s ease'
+                                   }}
+                                   size="small"
+                                 >
+                                   <Schedule />
+                                 </IconButton>
+                               </Tooltip>
+                               <Tooltip title={t('edit_doctor_profile')}>
+                                 <IconButton 
+                                   onClick={() => handleEditDoctor(doctor)}
+                                   sx={{
+                                     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                     color: 'white',
+                                     boxShadow: '0 4px 16px rgba(102, 126, 234, 0.3)',
+                                     '&:hover': {
+                                       background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
+                                       transform: 'scale(1.05)',
+                                     },
+                                     transition: 'all 0.3s ease'
+                                   }}
+                                   size="small"
+                                 >
+                                   <Edit />
+                                 </IconButton>
+                               </Tooltip>
+                             </Box>
+                           </Box>
+
+                           {/* Weekly Schedule */}
+                           <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 2, color: 'primary.main' }}>
+                             📅 {t('weekly_schedule')}
+                           </Typography>
+                           <Grid container spacing={1}>
+                             {daysOfWeek.map((day) => (
+                               <Grid item xs={6} sm={4} md={3} key={day}>
+                                 <Box sx={{ 
+                                   p: 1.5, 
+                                   borderRadius: 2, 
+                                   border: '1px solid rgba(0,0,0,0.1)',
+                                   textAlign: 'center',
+                                   backgroundColor: doctor.offDays.includes(day) 
+                                     ? 'rgba(244, 67, 54, 0.05)' 
+                                     : 'rgba(76, 175, 80, 0.05)'
+                                 }}>
+                                   <Typography variant="caption" sx={{ 
+                                     fontWeight: 700, 
+                                     display: 'block',
+                                     color: 'text.primary',
+                                     mb: 0.5,
+                                     fontSize: '0.75rem'
+                                   }}>
+                                     {t(day).substring(0, 3)}
+                                   </Typography>
+                                   {doctor.offDays.includes(day) ? (
+                                     <Chip 
+                                       label={t('off')} 
+                                       size="small" 
+                                       sx={{
+                                         backgroundColor: 'rgba(244, 67, 54, 0.2)',
+                                         color: '#d32f2f',
+                                         fontWeight: 600,
+                                         fontSize: '0.7rem',
+                                         height: 24
+                                       }}
+                                     />
+                                   ) : (
+                                     <Box>
+                                       <Typography variant="caption" sx={{ 
+                                         fontWeight: 600,
+                                         color: '#2e7d32',
+                                         display: 'block',
+                                         fontSize: '0.7rem'
+                                       }}>
+                                         {doctor.workingHours.start}
+                                       </Typography>
+                                       <Typography variant="caption" sx={{ 
+                                         fontWeight: 500,
+                                         color: '#2e7d32',
+                                         display: 'block',
+                                         fontSize: '0.7rem'
+                                       }}>
+                                         {doctor.workingHours.end}
+                                       </Typography>
+                                     </Box>
+                                   )}
+                                 </Box>
+                               </Grid>
+                             ))}
+                           </Grid>
+                         </CardContent>
+                       </Card>
+                     </Grid>
+                   ))}
+                 </Grid>
+               </Box>
              </Box>
            </TabPanel>
 

@@ -852,151 +852,208 @@ const SettingsPage: React.FC = () => {
             }} />
           </Box>
 
-          <Grid container spacing={3}>
-            {/* Settings Navigation */}
-            <Grid item xs={12} md={3}>
-              <Card sx={{ 
-                borderRadius: 4, 
-                boxShadow: '0 10px 40px rgba(0,0,0,0.12), 0 4px 25px rgba(0,0,0,0.07)',
-                border: 'none',
-                overflow: 'hidden',
-                background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)'
-              }}>
-                <CardContent sx={{ p: 0 }}>
-                  <Box sx={{ 
-                    p: 5,
-                    background: 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)',
-                    position: 'relative',
-                    '&::after': {
-                      content: '""',
-                      position: 'absolute',
-                      bottom: 0,
-                      left: 0,
-                      right: 0,
-                      height: '4px',
-                      background: 'linear-gradient(90deg, #06b6d4 0%, #3b82f6 100%)'
-                    }
-                  }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                      <Box sx={{
-                        p: 1.5,
-                        borderRadius: 2,
-                        backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                        backdropFilter: 'blur(10px)',
-                        mr: 2
-                      }}>
-                        <Settings sx={{ fontSize: 24, color: 'white' }} />
-                      </Box>
-                      <Typography variant="h5" sx={{ 
-                        fontWeight: 800, 
-                        color: 'white',
-                        fontSize: '1.4rem'
-                      }}>
-                        {t('settings_menu')}
-                    </Typography>
-                  </Box>
-                    <Typography variant="body2" sx={{ 
-                      color: 'rgba(255, 255, 255, 0.85)', 
-                      fontWeight: 500,
-                      fontSize: '0.9rem'
-                    }}>
-                      {t('configure_clinic_preferences')}
-                    </Typography>
-                  </Box>
-                  <Box sx={{ py: 2 }}>
-                  <Tabs
-                    orientation="vertical"
-                    value={tabValue}
-                    onChange={handleTabChange}
-                      sx={{ 
-                        minHeight: 400,
-                        '& .MuiTab-root': {
-                          textTransform: 'none',
-                          fontWeight: 600,
-                          fontSize: '1rem',
-                          minHeight: 68,
-                          justifyContent: 'flex-start',
-                          alignItems: 'center',
-                          px: 4,
-                          py: 2.5,
-                          margin: '0 12px',
-                          borderRadius: 3,
-                          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                          position: 'relative',
-                          overflow: 'hidden',
-                          color: 'grey.700',
-                          '&::before': {
-                            content: '""',
-                            position: 'absolute',
-                            left: 0,
-                            top: 0,
-                            bottom: 0,
-                            width: '4px',
-                            backgroundColor: 'transparent',
-                            transition: 'all 0.3s ease'
-                          },
-                          '&:hover': {
-                            backgroundColor: 'rgba(59, 130, 246, 0.08)',
-                            color: 'primary.main',
-                            transform: 'translateX(4px)',
-                            '&::before': {
-                              backgroundColor: 'primary.light'
-                            }
-                          },
-                          '&.Mui-selected': {
-                            backgroundColor: 'rgba(59, 130, 246, 0.12)',
-                            color: 'primary.main',
-                            fontWeight: 700,
-                            transform: 'translateX(8px)',
-                            boxShadow: '0 4px 20px rgba(59, 130, 246, 0.25)',
-                            '&::before': {
-                              backgroundColor: 'primary.main',
-                              width: '6px'
-                            },
-                            '& .MuiSvgIcon-root': {
-                              color: 'primary.main'
-                            }
-                          },
-                          '& .MuiTab-iconWrapper': {
-                            marginRight: 2,
-                            marginBottom: 0
-                          }
-                        },
-                        '& .MuiTabs-indicator': {
-                          display: 'none'
+          {/* Mobile Settings Navigation - Above Content */}
+          <Box sx={{ display: { xs: 'block', md: 'none' }, mb: 3 }}>
+            <Card sx={{ 
+              borderRadius: 4, 
+              boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+              border: 'none',
+              overflow: 'hidden',
+              background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)'
+            }}>
+              <CardContent sx={{ p: 2, overflowX: 'auto' }}>
+                <Tabs
+                  orientation="horizontal"
+                  value={tabValue}
+                  onChange={handleTabChange}
+                  variant="scrollable"
+                  scrollButtons="auto"
+                  sx={{ 
+                    minHeight: 'auto',
+                    '& .MuiTabs-scrollButtons': {
+                      '&.Mui-disabled': {
+                        opacity: 0.3,
+                      },
+                    },
+                    '& .MuiTab-root': {
+                      textTransform: 'none',
+                      fontWeight: 600,
+                      fontSize: '0.75rem',
+                      minHeight: 70,
+                      minWidth: 85,
+                      maxWidth: 110,
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      px: 1,
+                      py: 1.5,
+                      margin: '0 2px',
+                      borderRadius: 3,
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      color: 'grey.700',
+                      border: '2px solid transparent',
+                      '&:hover': {
+                        backgroundColor: 'rgba(59, 130, 246, 0.08)',
+                        color: 'primary.main',
+                        transform: 'translateY(-2px)',
+                        borderColor: 'rgba(59, 130, 246, 0.2)'
+                      },
+                      '&.Mui-selected': {
+                        backgroundColor: 'rgba(59, 130, 246, 0.12)',
+                        color: 'primary.main',
+                        fontWeight: 700,
+                        transform: 'translateY(-4px)',
+                        boxShadow: '0 4px 20px rgba(59, 130, 246, 0.25)',
+                        borderColor: 'primary.main',
+                        '& .MuiSvgIcon-root': {
+                          color: 'primary.main'
                         }
-                      }}
-                  >
-                    <Tab 
-                        label={t('profile_management')} 
-                        icon={<Person sx={{ fontSize: 26 }} />}
-                      iconPosition="start"
-                    />
-                    <Tab 
-                      label={t('clinic_settings_tab')} 
-                        icon={<LocalHospital sx={{ fontSize: 26 }} />}
-                      iconPosition="start"
-                    />
-                    <Tab 
-                      label={t('notifications')} 
-                        icon={<Notifications sx={{ fontSize: 26 }} />}
-                      iconPosition="start"
-                    />
-                    <Tab 
-                        label={t('security_privacy')} 
-                        icon={<Security sx={{ fontSize: 26 }} />}
-                      iconPosition="start"
-                    />
-                    <Tab 
-                        label={t('system_settings')} 
-                        icon={<Storage sx={{ fontSize: 26 }} />}
-                      iconPosition="start"
-                    />
-                  </Tabs>
-                  </Box>
-                </CardContent>
-              </Card>
-            </Grid>
+                      },
+                      '& .MuiTab-iconWrapper': {
+                        marginRight: 0,
+                        marginBottom: 0.5
+                      }
+                    },
+                    '& .MuiTabs-indicator': {
+                      display: 'none'
+                    },
+                  }}
+                >
+                  <Tab 
+                    label={t('profile')} 
+                    icon={<Person sx={{ fontSize: 18 }} />}
+                    iconPosition="top"
+                  />
+                  <Tab 
+                    label={t('clinic')} 
+                    icon={<LocalHospital sx={{ fontSize: 18 }} />}
+                    iconPosition="top"
+                  />
+                  <Tab 
+                    label={t('notifications')} 
+                    icon={<Notifications sx={{ fontSize: 18 }} />}
+                    iconPosition="top"
+                  />
+                  <Tab 
+                    label={t('security')} 
+                    icon={<Security sx={{ fontSize: 18 }} />}
+                    iconPosition="top"
+                  />
+                  <Tab 
+                    label={t('system')} 
+                    icon={<Storage sx={{ fontSize: 18 }} />}
+                    iconPosition="top"
+                  />
+                </Tabs>
+              </CardContent>
+            </Card>
+          </Box>
+
+          <Grid container spacing={3}>
+                         {/* Desktop Settings Navigation - Sidebar */}
+             <Grid item xs={12} md={3} sx={{ display: { xs: 'none', md: 'block' } }}>
+               <Card sx={{ 
+                 borderRadius: 4, 
+                 boxShadow: '0 10px 40px rgba(0,0,0,0.12), 0 4px 25px rgba(0,0,0,0.07)',
+                 border: 'none',
+                 overflow: 'hidden',
+                 background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)'
+               }}>
+                 <CardContent sx={{ p: 2 }}>
+                   <Tabs
+                     orientation="vertical"
+                     value={tabValue}
+                     onChange={handleTabChange}
+                     variant="standard"
+                     sx={{ 
+                       minHeight: 400,
+                       '& .MuiTab-root': {
+                         textTransform: 'none',
+                         fontWeight: 600,
+                         fontSize: '1rem',
+                         minHeight: 68,
+                         justifyContent: 'flex-start',
+                         alignItems: 'center',
+                         px: 4,
+                         py: 2.5,
+                         margin: '0 12px',
+                         borderRadius: 3,
+                         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                         position: 'relative',
+                         overflow: 'hidden',
+                         color: 'grey.700',
+                         '&::before': {
+                           content: '""',
+                           position: 'absolute',
+                           left: 0,
+                           top: 0,
+                           bottom: 0,
+                           width: '4px',
+                           backgroundColor: 'transparent',
+                           transition: 'all 0.3s ease'
+                         },
+                         '&:hover': {
+                           backgroundColor: 'rgba(59, 130, 246, 0.08)',
+                           color: 'primary.main',
+                           transform: 'translateX(4px)',
+                           '&::before': {
+                             backgroundColor: 'primary.light'
+                           }
+                         },
+                         '&.Mui-selected': {
+                           backgroundColor: 'rgba(59, 130, 246, 0.12)',
+                           color: 'primary.main',
+                           fontWeight: 700,
+                           transform: 'translateX(8px)',
+                           boxShadow: '0 4px 20px rgba(59, 130, 246, 0.25)',
+                           '&::before': {
+                             backgroundColor: 'primary.main',
+                             width: '6px'
+                           },
+                           '& .MuiSvgIcon-root': {
+                             color: 'primary.main'
+                           }
+                         },
+                         '& .MuiTab-iconWrapper': {
+                           marginRight: 2,
+                           marginBottom: 0
+                         }
+                       },
+                       '& .MuiTabs-indicator': {
+                         display: 'none'
+                       },
+                     }}
+                   >
+                     <Tab 
+                       label={t('profile_management')} 
+                       icon={<Person sx={{ fontSize: 26 }} />}
+                       iconPosition="start"
+                     />
+                     <Tab 
+                       label={t('clinic_settings_tab')} 
+                       icon={<LocalHospital sx={{ fontSize: 26 }} />}
+                       iconPosition="start"
+                     />
+                     <Tab 
+                       label={t('notifications')} 
+                       icon={<Notifications sx={{ fontSize: 26 }} />}
+                       iconPosition="start"
+                     />
+                     <Tab 
+                       label={t('security_privacy')} 
+                       icon={<Security sx={{ fontSize: 26 }} />}
+                       iconPosition="start"
+                     />
+                     <Tab 
+                       label={t('system_settings')} 
+                       icon={<Storage sx={{ fontSize: 26 }} />}
+                       iconPosition="start"
+                     />
+                   </Tabs>
+                 </CardContent>
+               </Card>
+             </Grid>
 
             {/* Settings Content */}
             <Grid item xs={12} md={9}>
@@ -1015,7 +1072,7 @@ const SettingsPage: React.FC = () => {
                       <CardContent sx={{ p: 0 }}>
                         {/* Card Header */}
                         <Box sx={{ 
-                          p: 5,
+                          p: { xs: 3, md: 5 },
                           background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
                           position: 'relative',
                           borderBottom: '1px solid rgba(226, 232, 240, 0.5)',
@@ -1031,30 +1088,33 @@ const SettingsPage: React.FC = () => {
                         }}>
                           <Box sx={{ 
                             display: 'flex',
+                            flexDirection: { xs: 'column', sm: 'row' },
                             alignItems: 'center',
-                            gap: 3
+                            gap: { xs: 2, md: 3 },
+                            textAlign: { xs: 'center', sm: 'left' }
                           }}>
                             <Box sx={{
-                              p: 2.5,
+                              p: { xs: 2, md: 2.5 },
                               borderRadius: 3,
                               background: 'linear-gradient(135deg, #3b82f6 0%, #1e3a8a 100%)',
                               color: 'white',
                               boxShadow: '0 8px 25px rgba(59, 130, 246, 0.3)'
                             }}>
-                              <Person sx={{ fontSize: 32 }} />
+                              <Person sx={{ fontSize: { xs: 28, md: 32 } }} />
                             </Box>
                             <Box>
                               <Typography variant="h3" sx={{ 
                                 fontWeight: 900, 
                                 color: 'grey.800',
-                                fontSize: '2rem',
+                                fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2rem' },
                                 mb: 0.5
                               }}>
                                 {t('profile_information')}
                               </Typography>
                               <Typography variant="body1" sx={{ 
                                 color: 'grey.600',
-                                fontWeight: 500
+                                fontWeight: 500,
+                                fontSize: { xs: '0.9rem', md: '1rem' }
                               }}>
                                 {t('manage_personal_professional_details')}
                               </Typography>
@@ -1063,18 +1123,26 @@ const SettingsPage: React.FC = () => {
                         </Box>
 
                         {/* Card Content */}
-                        <Box sx={{ p: 6 }}>
+                        <Box sx={{ p: { xs: 3, md: 6 } }}>
                         
-                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 4 }}>
+                        <Box sx={{ 
+                          display: 'flex', 
+                          flexDirection: { xs: 'column', sm: 'row' },
+                          alignItems: { xs: 'center', sm: 'flex-start' }, 
+                          mb: 4,
+                          gap: { xs: 2, sm: 0 },
+                          textAlign: { xs: 'center', sm: 'left' }
+                        }}>
                           <Box sx={{ position: 'relative' }}>
                             <Avatar
                               src={profile.profileImage}
                               sx={{
-                                width: 120,
-                                height: 120,
-                                mr: 3,
+                                width: { xs: 100, md: 120 },
+                                height: { xs: 100, md: 120 },
+                                mr: { xs: 0, sm: 3 },
+                                mb: { xs: 2, sm: 0 },
                                 backgroundColor: 'primary.main',
-                                fontSize: '2.8rem',
+                                fontSize: { xs: '2.2rem', md: '2.8rem' },
                                 border: '4px solid white',
                                 boxShadow: 3,
                               }}
@@ -1085,12 +1153,12 @@ const SettingsPage: React.FC = () => {
                               onClick={() => profileImageRef.current?.click()}
                               sx={{
                                 position: 'absolute',
-                                bottom: 0,
-                                right: 20,
+                                bottom: { xs: 8, sm: 0 },
+                                right: { xs: 8, sm: 20 },
                                 backgroundColor: 'primary.main',
                                 color: 'white',
-                                width: 40,
-                                height: 40,
+                                width: { xs: 35, md: 40 },
+                                height: { xs: 35, md: 40 },
                                 '&:hover': { backgroundColor: 'primary.dark' },
                                 boxShadow: 2,
                               }}
@@ -1106,16 +1174,32 @@ const SettingsPage: React.FC = () => {
                             />
                           </Box>
                           <Box>
-                            <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
+                            <Typography variant="h4" sx={{ 
+                              fontWeight: 700, 
+                              mb: 1,
+                              fontSize: { xs: '1.5rem', md: '2rem' }
+                            }}>
                               {profile.name}
                             </Typography>
-                            <Typography variant="h6" color="primary.main" sx={{ mb: 1 }}>
+                            <Typography variant="h6" color="primary.main" sx={{ 
+                              mb: 1,
+                              fontSize: { xs: '1rem', md: '1.25rem' }
+                            }}>
                               {profile.specialization}
                             </Typography>
-                            <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
+                            <Typography variant="body1" color="text.secondary" sx={{ 
+                              mb: { xs: 3, sm: 2 },
+                              fontSize: { xs: '0.9rem', md: '1rem' }
+                            }}>
                               {profile.email}
                             </Typography>
-                            <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+                            <Box sx={{ 
+                              display: 'flex', 
+                              flexDirection: { xs: 'column', sm: 'row' },
+                              gap: 2, 
+                              mb: 3,
+                              alignItems: { xs: 'center', sm: 'flex-start' }
+                            }}>
                               <Button 
                                 variant="contained" 
                                 size="medium" 
@@ -1127,20 +1211,28 @@ const SettingsPage: React.FC = () => {
                                   fontWeight: 600,
                                   px: 3,
                                   py: 1,
-                                  boxShadow: 2
+                                  boxShadow: 2,
+                                  fontSize: { xs: '0.9rem', md: '1rem' }
                                 }}
                               >
                                 {isEditingProfile ? t('cancel_edit') : t('edit_profile')}
                               </Button>
                             </Box>
-                            <Box sx={{ display: 'flex', gap: 2 }}>
+                            <Box sx={{ 
+                              display: 'flex', 
+                              flexDirection: { xs: 'column', sm: 'row' },
+                              gap: 2,
+                              alignItems: { xs: 'center', sm: 'flex-start' }
+                            }}>
                               <Chip 
                                 label={t('available')} 
                                 color="success" 
                                 size="small"
                                 icon={<Check fontSize="small" />}
                               />
-                              <Typography variant="body2" color="text.secondary">
+                              <Typography variant="body2" color="text.secondary" sx={{
+                                fontSize: { xs: '0.8rem', md: '0.875rem' }
+                              }}>
                                 {t('last_updated')}: {t('hours_ago', { count: 2 })}
                               </Typography>
                             </Box>
@@ -1153,72 +1245,118 @@ const SettingsPage: React.FC = () => {
                         {!isEditingProfile ? (
                           // Display Mode - Show profile information
                           <Box>
-                            <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
+                            <Typography variant="h6" sx={{ 
+                              fontWeight: 600, 
+                              mb: 3,
+                              fontSize: { xs: '1.1rem', md: '1.25rem' }
+                            }}>
                               {t('profile_information')}
                             </Typography>
                             
                             {/* Basic Information Display */}
                             <Box sx={{ mb: 4 }}>
-                              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2, color: 'primary.main' }}>
+                              <Typography variant="subtitle1" sx={{ 
+                                fontWeight: 600, 
+                                mb: 2, 
+                                color: 'primary.main',
+                                fontSize: { xs: '1rem', md: '1.1rem' }
+                              }}>
                                 {t('basic_information')}
                               </Typography>
                               <Grid container spacing={3}>
-                                <Grid item xs={12} md={6}>
+                                <Grid item xs={12} sm={6}>
                                   <Box sx={{ mb: 2 }}>
-                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                                    <Typography variant="body2" color="text.secondary" sx={{ 
+                                      mb: 0.5,
+                                      fontSize: { xs: '0.8rem', md: '0.875rem' }
+                                    }}>
                                       {t('full_name')}
                                     </Typography>
-                                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                                    <Typography variant="body1" sx={{ 
+                                      fontWeight: 500,
+                                      fontSize: { xs: '0.9rem', md: '1rem' }
+                                    }}>
                                       {profile.name || t('not_specified')}
                                     </Typography>
                                   </Box>
                                 </Grid>
-                                <Grid item xs={12} md={6}>
+                                <Grid item xs={12} sm={6}>
                                   <Box sx={{ mb: 2 }}>
-                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                                    <Typography variant="body2" color="text.secondary" sx={{ 
+                                      mb: 0.5,
+                                      fontSize: { xs: '0.8rem', md: '0.875rem' }
+                                    }}>
                                       {t('email_address')}
                                     </Typography>
-                                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                                    <Typography variant="body1" sx={{ 
+                                      fontWeight: 500,
+                                      fontSize: { xs: '0.9rem', md: '1rem' }
+                                    }}>
                                       {profile.email || t('not_specified')}
                                     </Typography>
                                   </Box>
                                 </Grid>
-                                <Grid item xs={12} md={6}>
+                                <Grid item xs={12} sm={6}>
                                   <Box sx={{ mb: 2 }}>
-                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                                    <Typography variant="body2" color="text.secondary" sx={{ 
+                                      mb: 0.5,
+                                      fontSize: { xs: '0.8rem', md: '0.875rem' }
+                                    }}>
                                       {t('phone_number')}
                                     </Typography>
-                                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                                    <Typography variant="body1" sx={{ 
+                                      fontWeight: 500,
+                                      fontSize: { xs: '0.9rem', md: '1rem' }
+                                    }}>
                                       {profile.phone || t('not_specified')}
                                     </Typography>
                                   </Box>
                                 </Grid>
-                                <Grid item xs={12} md={6}>
+                                <Grid item xs={12} sm={6}>
                                   <Box sx={{ mb: 2 }}>
-                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                                    <Typography variant="body2" color="text.secondary" sx={{ 
+                                      mb: 0.5,
+                                      fontSize: { xs: '0.8rem', md: '0.875rem' }
+                                    }}>
                                       {t('emergency_contact')}
                                     </Typography>
-                                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                                    <Typography variant="body1" sx={{ 
+                                      fontWeight: 500,
+                                      fontSize: { xs: '0.9rem', md: '1rem' }
+                                    }}>
                                       {profile.emergencyContact || t('not_specified')}
                                     </Typography>
                                   </Box>
                                 </Grid>
-                                <Grid item xs={12} md={6}>
+                                <Grid item xs={12} sm={6}>
                                   <Box sx={{ mb: 2 }}>
-                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                                    <Typography variant="body2" color="text.secondary" sx={{ 
+                                      mb: 0.5,
+                                      fontSize: { xs: '0.8rem', md: '0.875rem' }
+                                    }}>
                                       {t('date_of_birth')}
                                     </Typography>
-                                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                                    <Typography variant="body1" sx={{ 
+                                      fontWeight: 500,
+                                      fontSize: { xs: '0.9rem', md: '1rem' }
+                                    }}>
                                       {profile.dateOfBirth || t('not_specified')}
                                     </Typography>
                                   </Box>
                                 </Grid>
-                                <Grid item xs={12} md={6}>
+                                <Grid item xs={12} sm={6}>
                                   <Box sx={{ mb: 2 }}>
-                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                                    <Typography variant="body2" color="text.secondary" sx={{ 
+                                      mb: 0.5,
+                                      fontSize: { xs: '0.8rem', md: '0.875rem' }
+                                    }}>
                                       {t('gender')}
                                     </Typography>
-                                    <Typography variant="body1" sx={{ fontWeight: 500, textTransform: 'capitalize' }}>
+                                    <Typography variant="body1" sx={{ 
+                                      fontWeight: 500, 
+                                      textTransform: 'capitalize',
+                                      fontSize: { xs: '0.9rem', md: '1rem' }
+                                    }}>
                                       {profile.gender || t('not_specified')}
                                     </Typography>
                                   </Box>
@@ -1228,66 +1366,107 @@ const SettingsPage: React.FC = () => {
 
                             {/* Professional Information Display */}
                             <Box sx={{ mb: 4 }}>
-                              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2, color: 'primary.main' }}>
+                              <Typography variant="subtitle1" sx={{ 
+                                fontWeight: 600, 
+                                mb: 2, 
+                                color: 'primary.main',
+                                fontSize: { xs: '1rem', md: '1.1rem' }
+                              }}>
                                 {t('professional_information')}
                               </Typography>
                               <Grid container spacing={3}>
-                                <Grid item xs={12} md={6}>
+                                <Grid item xs={12} sm={6}>
                                   <Box sx={{ mb: 2 }}>
-                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                                    <Typography variant="body2" color="text.secondary" sx={{ 
+                                      mb: 0.5,
+                                      fontSize: { xs: '0.8rem', md: '0.875rem' }
+                                    }}>
                                       {t('primary_specialization')}
                                     </Typography>
-                                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                                    <Typography variant="body1" sx={{ 
+                                      fontWeight: 500,
+                                      fontSize: { xs: '0.9rem', md: '1rem' }
+                                    }}>
                                       {profile.specialization || t('not_specified')}
                                     </Typography>
                                   </Box>
                                 </Grid>
-                                <Grid item xs={12} md={6}>
+                                <Grid item xs={12} sm={6}>
                                   <Box sx={{ mb: 2 }}>
-                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                                    <Typography variant="body2" color="text.secondary" sx={{ 
+                                      mb: 0.5,
+                                      fontSize: { xs: '0.8rem', md: '0.875rem' }
+                                    }}>
                                       {t('years_of_experience')}
                                     </Typography>
-                                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                                    <Typography variant="body1" sx={{ 
+                                      fontWeight: 500,
+                                      fontSize: { xs: '0.9rem', md: '1rem' }
+                                    }}>
                                       {profile.experience ? t('years_text', { count: Number(profile.experience) }) : t('not_specified')}
                                     </Typography>
                                   </Box>
                                 </Grid>
-                                <Grid item xs={12} md={6}>
+                                <Grid item xs={12} sm={6}>
                                   <Box sx={{ mb: 2 }}>
-                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                                    <Typography variant="body2" color="text.secondary" sx={{ 
+                                      mb: 0.5,
+                                      fontSize: { xs: '0.8rem', md: '0.875rem' }
+                                    }}>
                                       {t('medical_license_number')}
                                     </Typography>
-                                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                                    <Typography variant="body1" sx={{ 
+                                      fontWeight: 500,
+                                      fontSize: { xs: '0.9rem', md: '1rem' }
+                                    }}>
                                       {profile.licenseNumber || t('not_specified')}
                                     </Typography>
                                   </Box>
                                 </Grid>
-                                <Grid item xs={12} md={6}>
+                                <Grid item xs={12} sm={6}>
                                   <Box sx={{ mb: 2 }}>
-                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                                    <Typography variant="body2" color="text.secondary" sx={{ 
+                                      mb: 0.5,
+                                      fontSize: { xs: '0.8rem', md: '0.875rem' }
+                                    }}>
                                       {t('medical_school')}
                                     </Typography>
-                                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                                    <Typography variant="body1" sx={{ 
+                                      fontWeight: 500,
+                                      fontSize: { xs: '0.9rem', md: '1rem' }
+                                    }}>
                                       {profile.medicalSchool || t('not_specified')}
                                     </Typography>
                                   </Box>
                                 </Grid>
-                                <Grid item xs={12} md={6}>
+                                <Grid item xs={12} sm={6}>
                                   <Box sx={{ mb: 2 }}>
-                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                                    <Typography variant="body2" color="text.secondary" sx={{ 
+                                      mb: 0.5,
+                                      fontSize: { xs: '0.8rem', md: '0.875rem' }
+                                    }}>
                                       {t('residency')}
                                     </Typography>
-                                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                                    <Typography variant="body1" sx={{ 
+                                      fontWeight: 500,
+                                      fontSize: { xs: '0.9rem', md: '1rem' }
+                                    }}>
                                       {profile.residency || t('not_specified')}
                                     </Typography>
                                   </Box>
                                 </Grid>
-                                <Grid item xs={12} md={6}>
+                                <Grid item xs={12} sm={6}>
                                   <Box sx={{ mb: 2 }}>
-                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                                    <Typography variant="body2" color="text.secondary" sx={{ 
+                                      mb: 0.5,
+                                      fontSize: { xs: '0.8rem', md: '0.875rem' }
+                                    }}>
                                       {t('board_certifications')}
                                     </Typography>
-                                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                                    <Typography variant="body1" sx={{ 
+                                      fontWeight: 500,
+                                      fontSize: { xs: '0.9rem', md: '1rem' }
+                                    }}>
                                       {profile.certifications || t('not_specified')}
                                     </Typography>
                                   </Box>
@@ -1297,36 +1476,60 @@ const SettingsPage: React.FC = () => {
 
                             {/* Languages & Bio Display */}
                             <Box sx={{ mb: 4 }}>
-                              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2, color: 'primary.main' }}>
+                              <Typography variant="subtitle1" sx={{ 
+                                fontWeight: 600, 
+                                mb: 2, 
+                                color: 'primary.main',
+                                fontSize: { xs: '1rem', md: '1.1rem' }
+                              }}>
                                 {t('languages_bio')}
                               </Typography>
                               <Grid container spacing={3}>
-                                <Grid item xs={12} md={6}>
+                                <Grid item xs={12} sm={6}>
                                   <Box sx={{ mb: 2 }}>
-                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                                    <Typography variant="body2" color="text.secondary" sx={{ 
+                                      mb: 0.5,
+                                      fontSize: { xs: '0.8rem', md: '0.875rem' }
+                                    }}>
                                       {t('languages_spoken')}
                                     </Typography>
-                                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                                    <Typography variant="body1" sx={{ 
+                                      fontWeight: 500,
+                                      fontSize: { xs: '0.9rem', md: '1rem' }
+                                    }}>
                                       {profile.languages || t('not_specified')}
                                     </Typography>
                                   </Box>
                                 </Grid>
-                                <Grid item xs={12} md={6}>
+                                <Grid item xs={12} sm={6}>
                                   <Box sx={{ mb: 2 }}>
-                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                                    <Typography variant="body2" color="text.secondary" sx={{ 
+                                      mb: 0.5,
+                                      fontSize: { xs: '0.8rem', md: '0.875rem' }
+                                    }}>
                                       {t('consultation_fee')}
                                     </Typography>
-                                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                                    <Typography variant="body1" sx={{ 
+                                      fontWeight: 500,
+                                      fontSize: { xs: '0.9rem', md: '1rem' }
+                                    }}>
                                       {profile.consultationFee ? t('egp_amount', { amount: profile.consultationFee }) : t('not_specified')}
                                     </Typography>
                                   </Box>
                                 </Grid>
                                 <Grid item xs={12}>
                                   <Box sx={{ mb: 2 }}>
-                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                                    <Typography variant="body2" color="text.secondary" sx={{ 
+                                      mb: 0.5,
+                                      fontSize: { xs: '0.8rem', md: '0.875rem' }
+                                    }}>
                                       {t('professional_bio')}
                                     </Typography>
-                                    <Typography variant="body1" sx={{ fontWeight: 500, lineHeight: 1.6 }}>
+                                    <Typography variant="body1" sx={{ 
+                                      fontWeight: 500, 
+                                      lineHeight: 1.6,
+                                      fontSize: { xs: '0.9rem', md: '1rem' }
+                                    }}>
                                       {profile.bio || t('no_bio_available')}
                                     </Typography>
                                   </Box>
@@ -1336,43 +1539,69 @@ const SettingsPage: React.FC = () => {
 
                             {/* Availability Settings Display */}
                             <Box>
-                              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2, color: 'primary.main' }}>
+                              <Typography variant="subtitle1" sx={{ 
+                                fontWeight: 600, 
+                                mb: 2, 
+                                color: 'primary.main',
+                                fontSize: { xs: '1rem', md: '1.1rem' }
+                              }}>
                                 {t('availability_settings')}
                               </Typography>
                               <Grid container spacing={3}>
-                                <Grid item xs={12} md={6}>
+                                <Grid item xs={12} sm={6}>
                                   <Box sx={{ mb: 2 }}>
-                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                                    <Typography variant="body2" color="text.secondary" sx={{ 
+                                      mb: 0.5,
+                                      fontSize: { xs: '0.8rem', md: '0.875rem' }
+                                    }}>
                                       {t('working_days')}
                                     </Typography>
-                                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                                    <Typography variant="body1" sx={{ 
+                                      fontWeight: 500,
+                                      fontSize: { xs: '0.9rem', md: '1rem' }
+                                    }}>
                                       {profile.workingDays || t('not_specified')}
                                     </Typography>
                                   </Box>
                                 </Grid>
-                                <Grid item xs={12} md={6}>
+                                <Grid item xs={12} sm={6}>
                                   <Box sx={{ mb: 2 }}>
-                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                                    <Typography variant="body2" color="text.secondary" sx={{ 
+                                      mb: 0.5,
+                                      fontSize: { xs: '0.8rem', md: '0.875rem' }
+                                    }}>
                                       {t('working_hours')}
                                     </Typography>
-                                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                                    <Typography variant="body1" sx={{ 
+                                      fontWeight: 500,
+                                      fontSize: { xs: '0.9rem', md: '1rem' }
+                                    }}>
                                       {profile.workingHours || t('not_specified')}
                                     </Typography>
                                   </Box>
                                 </Grid>
-                                <Grid item xs={12} md={6}>
+                                <Grid item xs={12} sm={6}>
                                   <Box sx={{ mb: 2 }}>
-                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                                    <Typography variant="body2" color="text.secondary" sx={{ 
+                                      mb: 0.5,
+                                      fontSize: { xs: '0.8rem', md: '0.875rem' }
+                                    }}>
                                       {t('lunch_break')}
                                     </Typography>
-                                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                                    <Typography variant="body1" sx={{ 
+                                      fontWeight: 500,
+                                      fontSize: { xs: '0.9rem', md: '1rem' }
+                                    }}>
                                       {profile.lunchBreak || t('not_specified')}
                                     </Typography>
                                   </Box>
                                 </Grid>
-                                <Grid item xs={12} md={6}>
+                                <Grid item xs={12} sm={6}>
                                   <Box sx={{ mb: 2 }}>
-                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                                    <Typography variant="body2" color="text.secondary" sx={{ 
+                                      mb: 0.5,
+                                      fontSize: { xs: '0.8rem', md: '0.875rem' }
+                                    }}>
                                       {t('current_status')}
                                     </Typography>
                                     <Chip 
