@@ -75,6 +75,8 @@ import {
   Schedule,
 } from '@mui/icons-material';
 
+
+
 import { 
   organizeAppointmentsByCompletion, 
   getPatientsOrganizedByAppointmentStatus,
@@ -1059,7 +1061,7 @@ const PatientListPage: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="xl" sx={{ mt: 4, mb: 4, flex: 1, overflow: 'auto' }}>
+        <Container maxWidth="xl" sx={{ mt: 4, mb: 4, flex: 1, overflow: 'auto' }}>
           {/* Enhanced Unified Header Section */}
           <Box sx={{ 
             mb: 4, 

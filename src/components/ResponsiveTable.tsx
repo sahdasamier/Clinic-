@@ -18,6 +18,7 @@ import {
   Tooltip,
   Chip,
   Grid,
+  Paper,
 } from '@mui/material';
 import { ViewList, ViewModule, Sort } from '@mui/icons-material';
 
@@ -200,9 +201,11 @@ const ResponsiveTable: React.FC<ResponsiveTableProps> = ({
                   fontSize: { xs: '0.8rem', sm: '0.875rem' },
                   padding: { xs: '8px 4px', sm: '16px' },
                   cursor: column.sortable ? 'pointer' : 'default',
-                  '&:hover': column.sortable && {
-                    backgroundColor: 'action.hover',
-                  },
+                  ...(column.sortable && {
+                    '&:hover': {
+                      backgroundColor: 'action.hover',
+                    },
+                  }),
                 }}
                 onClick={() => column.sortable && handleSort(column.id)}
               >
@@ -247,9 +250,11 @@ const ResponsiveTable: React.FC<ResponsiveTableProps> = ({
                 onClick={() => onRowClick?.(row)}
                 sx={{
                   cursor: onRowClick ? 'pointer' : 'default',
-                  '&:hover': onRowClick && {
-                    backgroundColor: 'action.hover',
-                  },
+                  ...(onRowClick && {
+                    '&:hover': {
+                      backgroundColor: 'action.hover',
+                    },
+                  }),
                 }}
               >
                 {filteredColumns.map((column) => {

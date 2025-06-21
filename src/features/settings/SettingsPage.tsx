@@ -73,6 +73,8 @@ import {
 
 import { sendSupportEmail, sendFeedbackEmail, getSetupInstructions, type SupportEmailData } from '../../services/emailService';
 
+
+
 interface TabPanelProps {
   children?: React.ReactNode;
   index: number;
@@ -771,82 +773,83 @@ const SettingsPage: React.FC = () => {
   const [loginHistory, setLoginHistory] = useState<any[]>([]);
 
   return (
-    <>
-      <Container maxWidth="xl" sx={{ 
-        mt: 3, 
-        mb: 4, 
-        flex: 1, 
-        overflow: 'auto',
-        position: 'relative',
-        zIndex: 1
-      }}>
-            {/* Header Section */}
+        <Container maxWidth="xl" sx={{ mt: 4, mb: 4, flex: 1, overflow: 'auto' }}>
+          {/* Header Section */}
           <Box sx={{ 
-            mb: 6, 
-            p: 6, 
-            background: 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #06b6d4 100%)',
+            mb: 4, 
+            p: 4,
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
             borderRadius: 4,
             color: 'white',
-            boxShadow: '0 20px 60px rgba(30, 58, 138, 0.3), 0 8px 25px rgba(59, 130, 246, 0.2)',
             position: 'relative',
             overflow: 'hidden',
-            '&::before': {
-              content: '""',
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              background: 'url("data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23ffffff" fill-opacity="0.05"%3E%3Cpath d="M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E") repeat',
-            },
           }}>
             <Box sx={{ 
               display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'space-between',
-              position: 'relative',
-              zIndex: 2
+              alignItems: { xs: 'flex-start', md: 'center' }, 
+              justifyContent: 'space-between', 
+              position: 'relative', 
+              zIndex: 1,
+              flexDirection: { xs: 'column', md: 'row' },
+              gap: { xs: 3, md: 0 }
             }}>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <Box sx={{
-                  p: 3,
-                  borderRadius: 3,
-                  backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                  backdropFilter: 'blur(10px)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  mr: 4
-                }}>
-                  <Settings sx={{ fontSize: 48, opacity: 0.95 }} />
+              <Box sx={{ display: 'flex', alignItems: 'center', width: { xs: '100%', md: 'auto' } }}>
+                <Box
+                  sx={{
+                    width: { xs: 48, sm: 56, md: 64 },
+                    height: { xs: 48, sm: 56, md: 64 },
+                    borderRadius: { xs: '16px', md: '20px' },
+                    backgroundColor: 'rgba(255,255,255,0.2)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    mr: { xs: 2, sm: 2.5, md: 3 },
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255,255,255,0.3)',
+                    flexShrink: 0
+                  }}
+                >
+                  <Settings sx={{ fontSize: { xs: 24, sm: 28, md: 32 }, color: 'white' }} />
                 </Box>
                 <Box>
-                  <Typography variant="h2" sx={{ 
-                    fontWeight: 900, 
-                    mb: 1,
-                    fontSize: { xs: '2.5rem', md: '3.5rem' },
-                    background: 'linear-gradient(45deg, #ffffff 30%, #e0f2fe 90%)',
-                    backgroundClip: 'text',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent'
-                  }}>
+                  <Typography 
+                    variant="h3"
+                    sx={{ 
+                      fontWeight: 800, 
+                      color: 'white',
+                      mb: { xs: 0.5, md: 1 },
+                      textShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                      fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' },
+                      lineHeight: 1.2
+                    }}
+                  >
                     {t('settings')}
                   </Typography>
-                  <Typography variant="h5" sx={{ 
-                    opacity: 0.95, 
-                    fontWeight: 500,
-                    maxWidth: '600px',
-                    lineHeight: 1.4
-                  }}>
-                    {t('manage_profile_clinic_settings')}
+                  <Typography 
+                    variant="h6"
+                    sx={{ 
+                      color: 'rgba(255,255,255,0.9)',
+                      fontWeight: 400,
+                      fontSize: { xs: '0.9rem', sm: '1.1rem', md: '1.25rem' }
+                    }}
+                  >
+                    ⚙️ {t('manage_profile_clinic_settings')}
                   </Typography>
                 </Box>
               </Box>
-              <Box sx={{
-                display: { xs: 'none', md: 'block' },
-                opacity: 0.1
-              }}>
-                <LocalHospital sx={{ fontSize: 120 }} />
-              </Box>
             </Box>
+            
+            {/* Decorative Elements */}
+            <Box sx={{
+              position: 'absolute',
+              top: -40,
+              right: -40,
+              width: 120,
+              height: 120,
+              borderRadius: '50%',
+              backgroundColor: 'rgba(255,255,255,0.1)',
+              zIndex: 1,
+            }} />
           </Box>
 
           <Grid container spacing={3}>
@@ -3661,9 +3664,8 @@ const SettingsPage: React.FC = () => {
               </TabPanel>
             </Grid>
           </Grid>
-        </Container>
 
-      {/* Password Change Dialog */}
+          {/* Password Change Dialog */}
       <Dialog open={passwordDialogOpen} onClose={() => setPasswordDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -4535,7 +4537,7 @@ Your feedback helps us improve ClinicCare for everyone!
           {snackbar.message}
         </Alert>
       </Snackbar>
-    </>
+        </Container>
   );
 };
 

@@ -37,8 +37,8 @@ import {
   Edit,
   Visibility,
 } from '@mui/icons-material';
-import Header from '../../components/NavBar';
-import Sidebar from '../../components/Sidebar';
+
+
 import {
   receptionistDashboardTodayAppointments,
   receptionistDashboardPaymentsDue,
@@ -128,10 +128,6 @@ const ReceptionistDashboard: React.FC = () => {
   };
 
   return (
-    <Box sx={{ display: 'flex', height: '100vh', backgroundColor: 'background.default' }}>
-      <Sidebar />
-      <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <Header />
         <Container maxWidth="xl" sx={{ mt: 4, mb: 4, flex: 1, overflow: 'auto' }}>
           {/* Welcome Section */}
           <Box sx={{ mb: 4 }}>
@@ -347,8 +343,6 @@ const ReceptionistDashboard: React.FC = () => {
             </Grid>
           </Grid>
         </Container>
-      </Box>
-    </Box>
   );
 };
 

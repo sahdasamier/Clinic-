@@ -71,6 +71,7 @@ import {
   type Appointment,
 } from '../data/mockData';
 
+
 interface TabPanelProps {
   children?: React.ReactNode;
   index: number;
@@ -890,7 +891,7 @@ const DoctorSchedulingPage: React.FC = () => {
   const applyDefaultHoursToDay = (day: string) => {
     if (!selectedDoctorForWeekly) return;
     
-    const slots = [];
+    const slots: string[] = [];
     const startHour = parseInt(selectedDoctorForWeekly.workingHours.start.split(':')[0]);
     const startMinute = parseInt(selectedDoctorForWeekly.workingHours.start.split(':')[1]);
     const endHour = parseInt(selectedDoctorForWeekly.workingHours.end.split(':')[0]);
@@ -940,7 +941,7 @@ const DoctorSchedulingPage: React.FC = () => {
 
   // Quick availability presets
   const applyQuickAvailability = (day: string, preset: 'morning' | 'afternoon' | 'evening' | 'full') => {
-    let slots = [];
+    let slots: string[] = [];
     
     switch (preset) {
       case 'morning':
@@ -1088,182 +1089,177 @@ const DoctorSchedulingPage: React.FC = () => {
   ).length;
 
   return (
-    <Container maxWidth="xl" sx={{ mt: 4, mb: 4, flex: 1, overflow: 'auto' }}>
+        <Container maxWidth="xl" sx={{ mt: 4, mb: 4, flex: 1, overflow: 'auto' }}>
           {/* Enhanced Header Section */}
-          <Card sx={{ 
+          <Box sx={{ 
             mb: 4, 
-            background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+            p: 4,
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
             borderRadius: 4,
-            boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+            color: 'white',
             position: 'relative',
-            overflow: 'hidden'
+            overflow: 'hidden',
+            boxShadow: '0 8px 32px rgba(102, 126, 234, 0.25)',
           }}>
-            <CardContent sx={{ p: 4, position: 'relative', zIndex: 2 }}>
-              <Box sx={{ 
-                display: 'flex', 
-                alignItems: { xs: 'flex-start', md: 'center' }, 
-                justifyContent: 'space-between', 
-                mb: 3,
-                flexDirection: { xs: 'column', md: 'row' },
-                gap: { xs: 3, md: 0 }
-              }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', width: { xs: '100%', md: 'auto' } }}>
-                  <Box
-                    sx={{
-                      width: { xs: 48, md: 64 },
-                      height: { xs: 48, md: 64 },
-                      borderRadius: { xs: '16px', md: '20px' },
-                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      mr: { xs: 2, md: 3 },
-                      boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)',
-                      flexShrink: 0,
-                    }}
-                  >
-                    <Schedule sx={{ fontSize: { xs: 24, md: 32 }, color: 'white' }} />
-                  </Box>
-                  <Box sx={{ minWidth: 0 }}>
-                    <Typography variant="h3" sx={{ 
+            <Box sx={{ 
+              display: 'flex', 
+              flexDirection: { xs: 'column', md: 'row' },
+              alignItems: { xs: 'flex-start', md: 'center' }, 
+              justifyContent: 'space-between', 
+              gap: { xs: 3, md: 0 },
+              position: 'relative', 
+              zIndex: 2 
+            }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', width: { xs: '100%', md: 'auto' } }}>
+                <Box
+                  sx={{
+                    width: { xs: 48, sm: 56, md: 64 },
+                    height: { xs: 48, sm: 56, md: 64 },
+                    borderRadius: { xs: '16px', md: '20px' },
+                    backgroundColor: 'rgba(255,255,255,0.2)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    mr: { xs: 2, sm: 2.5, md: 3 },
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255,255,255,0.3)',
+                    flexShrink: 0
+                  }}
+                >
+                  <Schedule sx={{ fontSize: { xs: 24, sm: 28, md: 32 }, color: 'white' }} />
+                </Box>
+                <Box>
+                  <Typography 
+                    variant="h3"
+                    sx={{ 
                       fontWeight: 800, 
-                      color: 'text.primary', 
-                      mb: 0.5,
+                      color: 'white',
+                      mb: { xs: 0.5, md: 1 },
+                      textShadow: '0 2px 4px rgba(0,0,0,0.3)',
                       fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' },
                       lineHeight: 1.2
-                    }}>
-                      {t('doctor_scheduling')}
-                    </Typography>
-                    <Typography variant="h6" color="text.secondary" sx={{ 
-                      fontWeight: 400,
-                      fontSize: { xs: '0.9rem', md: '1.25rem' },
-                      lineHeight: 1.3
-                    }}>
-                      🩺 {t('professional_doctor_schedule_management')}
-                    </Typography>
-                  </Box>
-                </Box>
-                
-                {/* Responsive Button Container */}
-                <Box sx={{ 
-                  display: 'flex', 
-                  gap: { xs: 1.5, md: 2 },
-                  width: { xs: '100%', md: 'auto' },
-                  flexDirection: { xs: 'column', sm: 'row' },
-                  alignItems: 'stretch'
-                }}>
-                  <Button
-                    variant="outlined"
-                    startIcon={<Schedule />}
-                    onClick={() => setSelectedDate(new Date().toISOString().split('T')[0])}
-                    sx={{ 
-                      borderRadius: { xs: 2, md: 3 }, 
-                      color: '#2196f3', 
-                      borderColor: '#2196f3',
-                      fontWeight: 600,
-                      px: { xs: 2, md: 3 },
-                      py: { xs: 1.5, md: 1.5 },
-                      minHeight: { xs: 48, md: 'auto' },
-                      fontSize: { xs: '0.875rem', md: '1rem' },
-                      flex: { xs: 1, sm: 'none' },
-                      '&:hover': {
-                        backgroundColor: 'rgba(33, 150, 243, 0.1)',
-                        borderColor: '#2196f3',
-                        transform: 'translateY(-2px)',
-                      },
-                      transition: 'all 0.3s ease'
                     }}
                   >
-                    <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
-                      {t('todays_schedule')}
-                    </Box>
-                    <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
-                      Today
-                    </Box>
-                    </Button>
-                 <Button
-                   variant="outlined"
-                   startIcon={<EventAvailable />}
-                   onClick={handleSetupRecurringAppointments}
-                   sx={{ 
-                     borderRadius: { xs: 2, md: 3 }, 
-                     color: '#ff9800', 
-                     borderColor: '#ff9800',
-                     fontWeight: 600,
-                     px: { xs: 2, md: 3 },
-                     py: { xs: 1.5, md: 1.5 },
-                     minHeight: { xs: 48, md: 'auto' },
-                     fontSize: { xs: '0.875rem', md: '1rem' },
-                     flex: { xs: 1, sm: 'none' },
-                     '&:hover': {
-                       backgroundColor: 'rgba(255, 152, 0, 0.1)',
-                       borderColor: '#ff9800',
-                       transform: 'translateY(-2px)',
-                     },
-                     transition: 'all 0.3s ease'
-                   }}
-                 >
-                   <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
-                     Recurring Schedule
-                   </Box>
-                   <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
-                     Recurring
-                   </Box>
-                 </Button>
-                 <Button
-                   variant="contained"
-                   startIcon={<Add />}
-                   onClick={handleAddDoctor}
-                   sx={{ 
-                     borderRadius: { xs: 2, md: 3 },
-                     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                     fontWeight: 700,
-                     px: { xs: 3, md: 4 },
-                     py: { xs: 1.5, md: 1.5 },
-                     minHeight: { xs: 48, md: 'auto' },
-                     fontSize: { xs: '0.875rem', md: '1rem' },
-                     flex: { xs: 1, sm: 'none' },
-                     boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)',
-                     '&:hover': {
-                       background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
-                       transform: 'translateY(-2px)',
-                       boxShadow: '0 12px 40px rgba(102, 126, 234, 0.4)',
-                     },
-                     transition: 'all 0.3s ease'
-                   }}
-                 >
-                   <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
-                     {t('add_new_doctor')}
-                   </Box>
-                   <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
-                     Add Doctor
-                   </Box>
-                 </Button>
-               </Box>
-             </Box>
-           </CardContent>
-           {/* Decorative elements */}
-           <Box sx={{
-             position: 'absolute',
-             top: -40,
-             right: -40,
-             width: 120,
-             height: 120,
-             borderRadius: '50%',
-             backgroundColor: 'rgba(102, 126, 234, 0.1)',
-             zIndex: 1,
-           }} />
-           <Box sx={{
-             position: 'absolute',
-             bottom: -30,
-             left: -30,
-             width: 80,
-             height: 80,
-             borderRadius: '50%',
-             backgroundColor: 'rgba(118, 75, 162, 0.1)',
-             zIndex: 1,
-           }} />
-         </Card>
+                    {t('doctor_scheduling')}
+                  </Typography>
+                  <Typography 
+                    variant="h6"
+                    sx={{ 
+                      color: 'rgba(255,255,255,0.9)',
+                      fontWeight: 400,
+                      fontSize: { xs: '0.9rem', sm: '1.1rem', md: '1.25rem' }
+                    }}
+                  >
+                    🩺 {t('comprehensive_schedule_management')}
+                  </Typography>
+                </Box>
+              </Box>
+              
+              {/* Enhanced Action Buttons */}
+              <Box sx={{ 
+                display: 'flex', 
+                flexDirection: { xs: 'column', sm: 'row' },
+                gap: { xs: 1.5, sm: 2 },
+                width: { xs: '100%', md: 'auto' }
+              }}>
+                <Button
+                  variant="contained"
+                  startIcon={<Schedule />}
+                  onClick={() => setSelectedDate(new Date().toISOString().split('T')[0])}
+                  sx={{ 
+                    borderRadius: 3,
+                    backgroundColor: 'rgba(255,255,255,0.2)',
+                    color: 'white',
+                    border: '1px solid rgba(255,255,255,0.3)',
+                    fontWeight: 700,
+                    px: { xs: 2, sm: 3 },
+                    py: { xs: 1, sm: 1.5 },
+                    backdropFilter: 'blur(10px)',
+                    fontSize: { xs: '0.8rem', sm: '0.875rem' },
+                    '&:hover': {
+                      backgroundColor: 'rgba(255,255,255,0.3)',
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 8px 25px rgba(255,255,255,0.25)',
+                    },
+                    transition: 'all 0.3s ease'
+                  }}
+                >
+                  {t('todays_schedule')}
+                </Button>
+                <Button
+                  variant="outlined"
+                  startIcon={<EventAvailable />}
+                  onClick={handleSetupRecurringAppointments}
+                  sx={{ 
+                    borderRadius: 3,
+                    backgroundColor: 'rgba(255,255,255,0.1)',
+                    color: 'white',
+                    border: '1px solid rgba(255,255,255,0.3)',
+                    fontWeight: 600,
+                    px: { xs: 2, sm: 3 },
+                    py: { xs: 1, sm: 1.5 },
+                    backdropFilter: 'blur(10px)',
+                    fontSize: { xs: '0.8rem', sm: '0.875rem' },
+                    '&:hover': {
+                      backgroundColor: 'rgba(255,255,255,0.2)',
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 8px 25px rgba(255,255,255,0.25)',
+                    },
+                    transition: 'all 0.3s ease'
+                  }}
+                >
+                  {t('recurring_schedule')}
+                </Button>
+                <Button
+                  variant="contained"
+                  startIcon={<Add />}
+                  onClick={handleAddDoctor}
+                  sx={{ 
+                    borderRadius: { xs: 2, md: 3 },
+                    backgroundColor: 'rgba(255,255,255,0.2)',
+                    color: 'white',
+                    border: '1px solid rgba(255,255,255,0.3)',
+                    fontWeight: 700,
+                    px: { xs: 3, sm: 4 },
+                    py: { xs: 1.5, sm: 1.5 },
+                    minHeight: { xs: 48, md: 'auto' },
+                    backdropFilter: 'blur(10px)',
+                    fontSize: { xs: '0.875rem', sm: '0.875rem' },
+                    '&:hover': {
+                      backgroundColor: 'rgba(255,255,255,0.3)',
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 8px 25px rgba(255,255,255,0.2)',
+                    },
+                    transition: 'all 0.3s ease'
+                  }}
+                >
+                  {t('add_new_doctor')}
+                </Button>
+              </Box>
+            </Box>
+            
+            {/* Decorative background elements */}
+            <Box sx={{
+              position: 'absolute',
+              top: -40,
+              right: -40,
+              width: 120,
+              height: 120,
+              borderRadius: '50%',
+              backgroundColor: 'rgba(255,255,255,0.1)',
+              zIndex: 1,
+            }} />
+            <Box sx={{
+              position: 'absolute',
+              bottom: -30,
+              left: -30,
+              width: 80,
+              height: 80,
+              borderRadius: '50%',
+              backgroundColor: 'rgba(255,255,255,0.05)',
+              zIndex: 1,
+            }} />
+          </Box>
 
          {/* Enhanced Date Selection */}
          <Card sx={{ 
@@ -3784,8 +3780,8 @@ const DoctorSchedulingPage: React.FC = () => {
              {snackbar.message}
            </Alert>
          </Snackbar>
-       </Container>
- );
+        </Container>
+  );
 };
 
 export default DoctorSchedulingPage;

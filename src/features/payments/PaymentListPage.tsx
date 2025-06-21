@@ -951,7 +951,7 @@ return (
             {/* Responsive Button Container */}
             <Box sx={{ 
               display: 'flex', 
-              gap: { xs: 1.5, md: 2 },
+              gap: { xs: 2, md: 2 },
               width: { xs: '100%', md: 'auto' },
               flexDirection: { xs: 'column', sm: 'row' },
               alignItems: 'stretch'
@@ -962,10 +962,10 @@ return (
                 startIcon={<Add />}
                 onClick={() => setAddPaymentOpen(true)}
                 sx={{ 
-                  borderRadius: { xs: 2, md: 4 },
+                  borderRadius: 3,
                   px: { xs: 3, md: 4 },
                   py: { xs: 1.5, md: 1.5 },
-                  minHeight: { xs: 48, md: 'auto' },
+                  minHeight: 48,
                   backgroundColor: 'rgba(255,255,255,0.2)',
                   backdropFilter: 'blur(10px)',
                   border: '1px solid rgba(255,255,255,0.3)',
@@ -974,6 +974,10 @@ return (
                   textTransform: 'none',
                   fontSize: { xs: '0.9rem', md: '1.1rem' },
                   flex: { xs: 1, sm: 'none' },
+                  minWidth: { xs: 'auto', sm: 160 },
+                  whiteSpace: 'nowrap',
+                  textOverflow: 'ellipsis',
+                  overflow: 'hidden',
                   '&:hover': {
                     backgroundColor: 'rgba(255,255,255,0.3)',
                     transform: 'translateY(-2px)',
@@ -989,16 +993,17 @@ return (
                   New Invoice
                 </Box>
               </Button>
+              
               <Button
                 variant="outlined"
                 size="large"
                 startIcon={<Download />}
                 onClick={() => setExportOptionsOpen(true)}
                 sx={{ 
-                  borderRadius: { xs: 2, md: 4 },
-                  px: { xs: 2, md: 3 },
+                  borderRadius: 3,
+                  px: { xs: 3, md: 4 },
                   py: { xs: 1.5, md: 1.5 },
-                  minHeight: { xs: 48, md: 'auto' },
+                  minHeight: 48,
                   backgroundColor: 'rgba(255,255,255,0.1)',
                   backdropFilter: 'blur(10px)',
                   border: '1px solid rgba(255,255,255,0.3)',
@@ -1007,6 +1012,10 @@ return (
                   textTransform: 'none',
                   fontSize: { xs: '0.9rem', md: '1rem' },
                   flex: { xs: 1, sm: 'none' },
+                  minWidth: { xs: 'auto', sm: 120 },
+                  whiteSpace: 'nowrap',
+                  textOverflow: 'ellipsis',
+                  overflow: 'hidden',
                   '&:hover': {
                     backgroundColor: 'rgba(255,255,255,0.2)',
                     transform: 'translateY(-2px)',
@@ -1019,7 +1028,7 @@ return (
                   {t('payment.actions.exportAll')}
                 </Box>
                 <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
-                  Export
+                  Export All
                 </Box>
               </Button>
             </Box>
@@ -1114,7 +1123,7 @@ return (
                     <Grid item xs={12} md={6}>
                       <Box sx={{ 
                         display: 'flex', 
-                        gap: { xs: 1, md: 1 }, 
+                        gap: { xs: 1.5, md: 2 }, 
                         justifyContent: { xs: 'flex-start', md: 'flex-end' },
                         flexWrap: 'wrap',
                         alignItems: 'center'
@@ -1124,11 +1133,16 @@ return (
                           startIcon={<FilterList />}
                           onClick={(e) => setFilterAnchor(e.currentTarget)}
                           sx={{
-                            minHeight: { xs: 44, md: 'auto' },
-                            px: { xs: 2, md: 3 },
-                            py: { xs: 1, md: 1.5 },
-                            fontSize: { xs: '0.8rem', md: '0.875rem' },
-                            borderRadius: { xs: 2, md: 1 }
+                            minHeight: 48,
+                            px: { xs: 3, md: 3 },
+                            py: { xs: 1.5, md: 1.5 },
+                            fontSize: { xs: '0.875rem', md: '0.875rem' },
+                            borderRadius: 2,
+                            fontWeight: 600,
+                            minWidth: { xs: 'auto', sm: 100 },
+                            whiteSpace: 'nowrap',
+                            textOverflow: 'ellipsis',
+                            overflow: 'hidden'
                           }}
                         >
                           <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
@@ -1143,11 +1157,16 @@ return (
                           startIcon={<Download />}
                           onClick={() => setExportOptionsOpen(true)}
                           sx={{
-                            minHeight: { xs: 44, md: 'auto' },
-                            px: { xs: 2, md: 3 },
-                            py: { xs: 1, md: 1.5 },
-                            fontSize: { xs: '0.8rem', md: '0.875rem' },
-                            borderRadius: { xs: 2, md: 1 }
+                            minHeight: 48,
+                            px: { xs: 3, md: 3 },
+                            py: { xs: 1.5, md: 1.5 },
+                            fontSize: { xs: '0.875rem', md: '0.875rem' },
+                            borderRadius: 2,
+                            fontWeight: 600,
+                            minWidth: { xs: 'auto', sm: 100 },
+                            whiteSpace: 'nowrap',
+                            textOverflow: 'ellipsis',
+                            overflow: 'hidden'
                           }}
                         >
                           <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
@@ -1161,12 +1180,16 @@ return (
                           variant={viewMode === 'table' ? 'contained' : 'outlined'}
                           onClick={() => setViewMode('table')}
                           sx={{
-                            minHeight: { xs: 44, md: 'auto' },
-                            px: { xs: 2, md: 3 },
-                            py: { xs: 1, md: 1.5 },
-                            fontSize: { xs: '0.8rem', md: '0.875rem' },
-                            borderRadius: { xs: 2, md: 1 },
-                            minWidth: { xs: 'auto', md: 'fit-content' }
+                            minHeight: 48,
+                            px: { xs: 3, md: 3 },
+                            py: { xs: 1.5, md: 1.5 },
+                            fontSize: { xs: '0.875rem', md: '0.875rem' },
+                            borderRadius: 2,
+                            fontWeight: 600,
+                            minWidth: { xs: 'auto', sm: 90 },
+                            whiteSpace: 'nowrap',
+                            textOverflow: 'ellipsis',
+                            overflow: 'hidden'
                           }}
                         >
                           <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
@@ -1180,12 +1203,16 @@ return (
                           variant={viewMode === 'cards' ? 'contained' : 'outlined'}
                           onClick={() => setViewMode('cards')}
                           sx={{
-                            minHeight: { xs: 44, md: 'auto' },
-                            px: { xs: 2, md: 3 },
-                            py: { xs: 1, md: 1.5 },
-                            fontSize: { xs: '0.8rem', md: '0.875rem' },
-                            borderRadius: { xs: 2, md: 1 },
-                            minWidth: { xs: 'auto', md: 'fit-content' }
+                            minHeight: 48,
+                            px: { xs: 3, md: 3 },
+                            py: { xs: 1.5, md: 1.5 },
+                            fontSize: { xs: '0.875rem', md: '0.875rem' },
+                            borderRadius: 2,
+                            fontWeight: 600,
+                            minWidth: { xs: 'auto', sm: 90 },
+                            whiteSpace: 'nowrap',
+                            textOverflow: 'ellipsis',
+                            overflow: 'hidden'
                           }}
                         >
                           <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>

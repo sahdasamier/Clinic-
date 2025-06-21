@@ -42,8 +42,8 @@ import {
   Add,
 } from '@mui/icons-material';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, LineChart, Line } from 'recharts';
-import Header from '../../components/NavBar';
-import Sidebar from '../../components/Sidebar';
+
+
 import {
   doctorDashboardPatientsData,
   doctorDashboardMyPatients,
@@ -141,10 +141,6 @@ const DoctorDashboard: React.FC = () => {
   };
 
   return (
-    <Box sx={{ display: 'flex', height: '100vh', backgroundColor: 'background.default' }}>
-      <Sidebar />
-      <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <Header />
         <Container maxWidth="xl" sx={{ mt: 4, mb: 4, flex: 1, overflow: 'auto' }}>
           {/* Welcome Section */}
           <Box sx={{ mb: 4 }}>
@@ -444,8 +440,6 @@ const DoctorDashboard: React.FC = () => {
             </Grid>
           </Grid>
         </Container>
-      </Box>
-    </Box>
   );
 };
 

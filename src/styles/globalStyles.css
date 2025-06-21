@@ -1,0 +1,261 @@
+/* Global Styles for Enhanced UI - Clinic Application */
+
+/* Ensure all buttons have minimum touch target size */
+.MuiButton-root {
+  min-height: 48px !important;
+  min-width: 48px !important;
+  font-weight: 600 !important;
+  text-transform: none !important;
+  border-radius: 8px !important;
+}
+
+/* Enhanced button text visibility */
+.MuiButton-root .MuiButton-startIcon,
+.MuiButton-root .MuiButton-endIcon {
+  margin-right: 8px !important;
+  margin-left: 0px !important;
+}
+
+/* Better button spacing */
+.MuiButton-root + .MuiButton-root {
+  margin-left: 16px !important;
+}
+
+/* Enhanced button hover effects */
+.MuiButton-contained:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+  transition: all 0.3s ease !important;
+}
+
+.MuiButton-outlined:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
+  transition: all 0.3s ease !important;
+}
+
+/* Improve text visibility in small screens */
+@media (max-width: 600px) {
+  .MuiButton-root {
+    font-size: 0.875rem !important;
+    padding: 12px 24px !important;
+    white-space: nowrap !important;
+    text-overflow: ellipsis !important;
+    overflow: hidden !important;
+  }
+  
+  /* Ensure button text is always visible on mobile */
+  .MuiButton-root .responsive-button-text {
+    display: block !important;
+  }
+}
+
+/* Enhanced Card Styles */
+.MuiCard-root {
+  border-radius: 16px !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important;
+  transition: all 0.3s ease !important;
+}
+
+.MuiCard-root:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12) !important;
+}
+
+/* Enhanced Icon Button */
+.MuiIconButton-root {
+  min-height: 48px !important;
+  min-width: 48px !important;
+  border-radius: 8px !important;
+}
+
+.MuiIconButton-root:hover {
+  transform: scale(1.05) !important;
+  transition: all 0.3s ease !important;
+}
+
+/* Better Chip styling */
+.MuiChip-root {
+  font-weight: 600 !important;
+  border-radius: 8px !important;
+}
+
+.MuiChip-root:hover {
+  transform: scale(1.02) !important;
+  transition: all 0.3s ease !important;
+}
+
+/* Enhanced Table styling */
+.MuiTableCell-head {
+  font-weight: 700 !important;
+  background-color: rgba(102, 126, 234, 0.05) !important;
+}
+
+.MuiTableRow-root:hover {
+  background-color: rgba(102, 126, 234, 0.02) !important;
+}
+
+/* Better Dialog styling */
+.MuiDialog-paper {
+  border-radius: 16px !important;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.15) !important;
+}
+
+/* Enhanced Tabs */
+.MuiTab-root {
+  font-weight: 600 !important;
+  text-transform: none !important;
+  min-height: 48px !important;
+}
+
+/* Better Typography */
+.MuiTypography-h3 {
+  font-weight: 800 !important;
+  line-height: 1.2 !important;
+}
+
+.MuiTypography-h4 {
+  font-weight: 700 !important;
+  line-height: 1.3 !important;
+}
+
+.MuiTypography-h5 {
+  font-weight: 600 !important;
+  line-height: 1.4 !important;
+}
+
+/* Enhanced Input Fields */
+.MuiTextField-root .MuiOutlinedInput-root {
+  border-radius: 12px !important;
+}
+
+.MuiTextField-root .MuiOutlinedInput-root:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+}
+
+.MuiTextField-root .MuiOutlinedInput-root.Mui-focused {
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.2) !important;
+}
+
+/* Loading States */
+.loading-button {
+  opacity: 0.7 !important;
+  pointer-events: none !important;
+}
+
+/* Responsive utilities */
+.hide-on-mobile {
+  display: block !important;
+}
+
+@media (max-width: 600px) {
+  .hide-on-mobile {
+    display: none !important;
+  }
+  
+  .mobile-only {
+    display: block !important;
+  }
+}
+
+@media (min-width: 601px) {
+  .mobile-only {
+    display: none !important;
+  }
+}
+
+/* Enhanced Button Container */
+.responsive-button-container {
+  display: flex !important;
+  gap: 16px !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+}
+
+@media (max-width: 600px) {
+  .responsive-button-container {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+  }
+  
+  .responsive-button-container .MuiButton-root {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+}
+
+/* Improved Accessibility */
+.MuiButton-root:focus-visible {
+  outline: 2px solid #667eea !important;
+  outline-offset: 2px !important;
+}
+
+.MuiIconButton-root:focus-visible {
+  outline: 2px solid #667eea !important;
+  outline-offset: 2px !important;
+}
+
+/* Better spacing for button groups */
+.button-group {
+  display: flex !important;
+  gap: 16px !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+}
+
+@media (max-width: 600px) {
+  .button-group {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+  }
+}
+
+/* Enhanced Statistics Cards */
+.stats-card {
+  text-align: center !important;
+  padding: 24px !important;
+  border-radius: 16px !important;
+  background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(248,249,250,0.9) 100%) !important;
+  backdrop-filter: blur(10px) !important;
+  border: 1px solid rgba(255,255,255,0.2) !important;
+  transition: all 0.3s ease !important;
+}
+
+.stats-card:hover {
+  transform: translateY(-4px) !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12) !important;
+}
+
+/* Better loading states */
+.skeleton-loading {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%) !important;
+  background-size: 200% 100% !important;
+  animation: skeleton-loading 1.5s infinite !important;
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: 200% 0 !important;
+  }
+  100% {
+    background-position: -200% 0 !important;
+  }
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  .MuiButton-root {
+    display: none !important;
+  }
+  
+  .MuiCard-root {
+    box-shadow: none !important;
+    border: 1px solid #ddd !important;
+  }
+} 

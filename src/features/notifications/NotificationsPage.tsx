@@ -58,6 +58,7 @@ import { Notification, NotificationSettings } from '../../types/models';
 import { notificationsApi, notificationSettingsApi } from '../../api/notifications';
 import { useNotifications } from '../../contexts/NotificationContext';
 
+
 interface TabPanelProps {
   children?: React.ReactNode;
   index: number;
@@ -617,106 +618,161 @@ const NotificationsPage: React.FC = () => {
   }
 
   return (
-    <Container maxWidth="xl" sx={{ mt: 4, mb: 4, flex: 1, overflow: 'auto' }}>
-          {/* Enhanced Header Section */}
-          <Fade in timeout={600}>
-            <Box sx={{ mb: 6 }}>
-              <Paper 
-                elevation={0}
-                sx={{ 
-                  p: 4,
-                  borderRadius: 4,
-                  background: 'rgba(255, 255, 255, 0.95)',
-                  backdropFilter: 'blur(20px)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
-                }}
-              >
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Box
-                      sx={{
-                        width: 56,
-                        height: 56,
-                        borderRadius: '16px',
-                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        mr: 3,
-                        boxShadow: '0 8px 25px rgba(102, 126, 234, 0.3)',
-                      }}
-                    >
-                      <NotificationsActive sx={{ fontSize: 32, color: 'white' }} />
-                    </Box>
-                    <Box>
-                      <Typography 
-                        variant="h3" 
-                        sx={{ 
-                          fontWeight: 800, 
-                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                          backgroundClip: 'text',
-                          WebkitBackgroundClip: 'text',
-                          WebkitTextFillColor: 'transparent',
-                          mb: 0.5
-                        }}
-                      >
-                        {t('notifications')}
-                        
-                      </Typography>
-                      <Typography variant="h6" color="text.secondary" sx={{ fontWeight: 500 }}>
-                        {t('realtime_updates')}
-                      </Typography>
-                    </Box>
-                  </Box>
-                  
-                  <Stack direction="row" spacing={1}>
-                    <Tooltip title={t('refresh_from_all_data')}>
-                      <IconButton
-                        onClick={handleRefresh}
-                        disabled={refreshing}
-                        size="large"
-                        sx={{
-                          background: refreshing 
-                            ? 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
-                            : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                          color: 'white',
-                          width: 56,
-                          height: 56,
-                          boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)',
-                          '&:hover': {
-                            background: 'linear-gradient(135deg, #5a67d8 0%, #6c5ce7 100%)',
-                            transform: 'translateY(-2px)',
-                            boxShadow: '0 8px 25px rgba(102, 126, 234, 0.4)',
-                          },
-                          transition: 'all 0.3s ease',
-                        }}
-                      >
-                        {refreshing ? (
-                          <AutoAwesome className="animate-spin" sx={{ fontSize: 28 }} />
-                        ) : (
-                          <Refresh sx={{ fontSize: 28 }} />
-                        )}
-                      </IconButton>
-                    </Tooltip>
-                  </Stack>
+        <Container maxWidth="xl" sx={{ mt: 4, mb: 4, flex: 1, overflow: 'auto' }}>
+          {/* Header Section */}
+          <Box sx={{ 
+            mb: 4, 
+            p: 4,
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            borderRadius: 4,
+            color: 'white',
+            position: 'relative',
+            overflow: 'hidden',
+          }}>
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: { xs: 'flex-start', md: 'center' }, 
+              justifyContent: 'space-between', 
+              position: 'relative', 
+              zIndex: 1,
+              flexDirection: { xs: 'column', md: 'row' },
+              gap: { xs: 3, md: 0 }
+            }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', width: { xs: '100%', md: 'auto' } }}>
+                <Box
+                  sx={{
+                    width: { xs: 48, sm: 56, md: 64 },
+                    height: { xs: 48, sm: 56, md: 64 },
+                    borderRadius: { xs: '16px', md: '20px' },
+                    backgroundColor: 'rgba(255,255,255,0.2)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    mr: { xs: 2, sm: 2.5, md: 3 },
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255,255,255,0.3)',
+                    flexShrink: 0
+                  }}
+                >
+                  <NotificationsActive sx={{ fontSize: { xs: 24, sm: 28, md: 32 }, color: 'white' }} />
                 </Box>
-                
-                {refreshing && (
-                  <Slide direction="down" in={refreshing} mountOnEnter unmountOnExit>
-                    <Box sx={{ mt: 3, p: 2, borderRadius: 2, backgroundColor: '#667eea15' }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <CircularProgress size={20} sx={{ color: '#667eea' }} />
-                        <Typography variant="body1" sx={{ color: '#667eea', fontWeight: 600 }}>
-                          {t('refreshing_from_all_modules')}
-                        </Typography>
-                      </Box>
-                    </Box>
-                  </Slide>
-                )}
-              </Paper>
+                <Box>
+                  <Typography 
+                    variant="h3"
+                    sx={{ 
+                      fontWeight: 800, 
+                      color: 'white',
+                      mb: { xs: 0.5, md: 1 },
+                      textShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                      fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' },
+                      lineHeight: 1.2
+                    }}
+                  >
+                    {t('notifications')}
+                  </Typography>
+                  <Typography 
+                    variant="h6"
+                    sx={{ 
+                      color: 'rgba(255,255,255,0.9)',
+                      fontWeight: 400,
+                      fontSize: { xs: '0.9rem', sm: '1.1rem', md: '1.25rem' }
+                    }}
+                  >
+                    🔔 {t('real_time_clinic_notifications')}
+                  </Typography>
+                </Box>
+              </Box>
+              
+              {/* Action Buttons */}
+              <Box sx={{ 
+                display: 'flex', 
+                gap: { xs: 2, md: 2 },
+                width: { xs: '100%', md: 'auto' },
+                flexDirection: { xs: 'column', sm: 'row' },
+                alignItems: 'stretch'
+              }}>
+                <Button
+                  variant="contained"
+                  startIcon={refreshing ? <CircularProgress size={20} sx={{ color: 'white' }} /> : <Refresh />}
+                  onClick={handleRefresh}
+                  disabled={refreshing}
+                  sx={{ 
+                    borderRadius: 3,
+                    backgroundColor: 'rgba(255,255,255,0.2)',
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255,255,255,0.3)',
+                    color: 'white',
+                    fontWeight: 700,
+                    px: { xs: 3, md: 4 },
+                    py: { xs: 1.5, md: 1.5 },
+                    minHeight: 48,
+                    fontSize: { xs: '0.9rem', md: '1rem' },
+                    flex: { xs: 1, sm: 'none' },
+                    minWidth: { xs: 'auto', sm: 140 },
+                    whiteSpace: 'nowrap',
+                    textOverflow: 'ellipsis',
+                    overflow: 'hidden',
+                    '&:hover': {
+                      backgroundColor: 'rgba(255,255,255,0.3)',
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 8px 25px rgba(0,0,0,0.2)',
+                    },
+                    transition: 'all 0.3s ease'
+                  }}
+                >
+                  {refreshing ? t('refreshing') : t('refresh_all')}
+                </Button>
+                <Button
+                  variant="outlined"
+                  startIcon={<MarkEmailRead />}
+                  onClick={handleMarkAllAsRead}
+                  disabled={updating || unreadCount === 0}
+                  sx={{ 
+                    borderRadius: 3,
+                    backgroundColor: 'rgba(255,255,255,0.1)',
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255,255,255,0.3)',
+                    color: 'white',
+                    fontWeight: 600,
+                    px: { xs: 3, md: 4 },
+                    py: { xs: 1.5, md: 1.5 },
+                    minHeight: 48,
+                    fontSize: { xs: '0.9rem', md: '1rem' },
+                    flex: { xs: 1, sm: 'none' },
+                    minWidth: { xs: 'auto', sm: 120 },
+                    whiteSpace: 'nowrap',
+                    textOverflow: 'ellipsis',
+                    overflow: 'hidden',
+                    '&:hover': {
+                      backgroundColor: 'rgba(255,255,255,0.2)',
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 8px 25px rgba(0,0,0,0.2)',
+                    },
+                    '&:disabled': {
+                      backgroundColor: 'rgba(255,255,255,0.05)',
+                      borderColor: 'rgba(255,255,255,0.1)',
+                      color: 'rgba(255,255,255,0.4)',
+                    },
+                    transition: 'all 0.3s ease'
+                  }}
+                >
+                  {t('mark_all_read')}
+                </Button>
+              </Box>
             </Box>
-          </Fade>
+            
+            {/* Decorative Elements */}
+            <Box sx={{
+              position: 'absolute',
+              top: -40,
+              right: -40,
+              width: 120,
+              height: 120,
+              borderRadius: '50%',
+              backgroundColor: 'rgba(255,255,255,0.1)',
+              zIndex: 1,
+            }} />
+          </Box>
 
           <Grid container spacing={4}>
             {/* Main Notifications */}
