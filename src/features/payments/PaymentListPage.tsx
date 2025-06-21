@@ -89,6 +89,14 @@ import {
 } from '../../utils/vatUtils';
 import InvoiceGenerator from './InvoiceGenerator';
 import { doctorSchedules } from '../../data/mockData';
+import { loadAppointmentsFromStorage } from '../appointments/AppointmentListPage';
+import { 
+  paymentSync, 
+  appointmentSync, 
+  doctorSync,
+  initializeBidirectionalSync,
+  debugStorageState 
+} from '../../utils/dataSyncManager';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -116,6 +124,7 @@ function TabPanel(props: TabPanelProps) {
 interface NewInvoiceData {
   patient: string;
   doctor: string; // Added doctor field for clinic management
+  appointmentId?: string; // Link to appointment
   amount: string;
   category: string;
   invoiceDate: string;
@@ -172,11 +181,8 @@ export const loadPaymentsFromStorage = (): PaymentData[] => {
 };
 
 const savePaymentsToStorage = (payments: PaymentData[]) => {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(payments));
-  } catch (error) {
-    console.warn('Error saving payments to localStorage:', error);
-  }
+  // ✅ Use centralized sync manager for consistent event dispatching
+  paymentSync.save(payments, 'PaymentListPage');
 };
 
 // StatCard component
@@ -327,22 +333,31 @@ const PaymentListPage: React.FC = () => {
   const [statusMenuAnchor, setStatusMenuAnchor] = useState<null | HTMLElement>(null);
   const [selectedPaymentForStatusChange, setSelectedPaymentForStatusChange] = useState<PaymentData | null>(null);
   const [exportOptionsOpen, setExportOptionsOpen] = useState(false);
-  // ✅ Initialize payments from localStorage FIRST
-  const [payments, setPayments] = useState<PaymentData[]>(() => {
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [showAppointmentSelection, setShowAppointmentSelection] = useState(false);
+  
+  // ✅ Initialize appointments from localStorage FIRST
+  const [appointments, setAppointments] = useState(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
+      const saved = localStorage.getItem('clinic_appointments_data');
       if (saved) {
         const parsedData = JSON.parse(saved);
         if (Array.isArray(parsedData) && parsedData.length > 0) {
-          console.log('✅ PaymentListPage: Loaded payments from localStorage on init:', parsedData.length);
+          console.log('✅ PaymentListPage: Loaded appointments from localStorage on init:', parsedData.length);
           return parsedData;
         }
       }
     } catch (error) {
-      console.error('❌ PaymentListPage: Error loading from localStorage:', error);
+      console.error('❌ PaymentListPage: Error loading appointments from localStorage:', error);
     }
-    console.log('ℹ️ PaymentListPage: Using default payments');
-    return generateDefaultPayments();
+    return [];
+  });
+  
+  // ✅ Initialize payments from localStorage using sync manager
+  const [payments, setPayments] = useState<PaymentData[]>(() => {
+    const loadedPayments = paymentSync.load(generateDefaultPayments());
+    console.log('✅ PaymentListPage: Initialized with sync manager');
+    return loadedPayments;
   });
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
@@ -459,27 +474,29 @@ useEffect(() => {
   };
 }, [initialized, authLoading, user]);
 
-// ✅ Listen for doctor updates from localStorage (shared with DoctorScheduling)
+// ✅ Initialize bidirectional sync with centralized manager
 useEffect(() => {
-  const updateDoctorsFromStorage = () => {
-    try {
-      const saved = localStorage.getItem('clinic_doctor_schedules');
-      if (saved) {
-        const parsedData = JSON.parse(saved);
-        if (Array.isArray(parsedData) && parsedData.length > 0) {
-          console.log('🔄 PaymentListPage: Updated doctors from localStorage:', parsedData.length);
-          setAvailableDoctors(parsedData);
-        }
-      }
-    } catch (error) {
-      console.error('❌ PaymentListPage: Error updating doctors from localStorage:', error);
-    }
-  };
+  // Set up appointment listener to update local state
+  const cleanupAppointmentSync = appointmentSync.listen((event) => {
+    const updatedAppointments = appointmentSync.load([]);
+    setAppointments(updatedAppointments);
+    console.log('🔄 PaymentListPage: Synced appointments from event');
+  }, 'PaymentListPage');
 
-  // Check for changes periodically (since localStorage doesn't emit events in same tab)
-  const interval = setInterval(updateDoctorsFromStorage, 2000);
+  // Set up doctor listener to update local state  
+  const cleanupDoctorSync = doctorSync.listen((event) => {
+    const updatedDoctors = doctorSync.load(doctorSchedules);
+    setAvailableDoctors(updatedDoctors);
+    console.log('🔄 PaymentListPage: Synced doctors from event');
+  }, 'PaymentListPage');
+
+  // Debug current state
+  debugStorageState();
   
-  return () => clearInterval(interval);
+  return () => {
+    cleanupAppointmentSync();
+    cleanupDoctorSync();
+  };
 }, []);
 
 // Save data to localStorage whenever payments change
@@ -508,7 +525,45 @@ useEffect(() => {
   } else {
     setCurrentVATCalculation(null);
   }
-}, [newInvoiceData.amount, newInvoiceData.vatRate, newInvoiceData.includeVAT]);
+  }, [newInvoiceData.amount, newInvoiceData.vatRate, newInvoiceData.includeVAT]);
+
+// Appointment helper functions
+const getAppointmentsByDate = (date: string) => {
+  return appointments.filter(apt => apt.date === date);
+};
+
+const getCompletedAppointmentsByDate = (date: string) => {
+  return appointments.filter(apt => 
+    apt.date === date && (apt.status === 'completed' || apt.completed === true)
+  );
+};
+
+const getPendingAppointmentsByDate = (date: string) => {
+  return appointments.filter(apt => 
+    apt.date === date && apt.status !== 'completed' && apt.completed !== true
+  );
+};
+
+const handleAppointmentSelection = (appointment: any) => {
+  setNewInvoiceData(prev => ({
+    ...prev,
+    patient: appointment.patient,
+    doctor: appointment.doctor,
+    appointmentId: appointment.id?.toString(),
+    invoiceDate: appointment.date,
+    description: `${appointment.type} appointment with Dr. ${appointment.doctor}`,
+    category: appointment.type.toLowerCase().includes('consultation') ? 'consultation' : 
+              appointment.type.toLowerCase().includes('checkup') ? 'checkup' :
+              appointment.type.toLowerCase().includes('emergency') ? 'emergency' : 'consultation'
+  }));
+  setShowAppointmentSelection(false);
+};
+
+// Calculate appointment-related statistics
+const todayAppointments = getAppointmentsByDate(new Date().toISOString().split('T')[0]);
+const completedTodayAppointments = getCompletedAppointmentsByDate(new Date().toISOString().split('T')[0]);
+const pendingTodayAppointments = getPendingAppointmentsByDate(new Date().toISOString().split('T')[0]);
+const appointmentLinkedPayments = payments.filter(payment => payment.appointmentId);
 
 // Helper functions
 const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
@@ -704,6 +759,7 @@ const handleCreatePayment = () => {
     vatAmount: vatCalculation.vatAmount,
     totalAmountWithVAT: vatCalculation.totalAmountWithVAT,
     baseAmount: vatCalculation.baseAmount,
+    ...(newInvoiceData.appointmentId && { appointmentId: newInvoiceData.appointmentId }), // Link to appointment if selected
   };
 
   setPayments(prev => [newPayment, ...prev]);
@@ -1176,7 +1232,7 @@ return (
 
         {/* Stats Cards */}
         <Grid container spacing={3} sx={{ mb: 4 }}>
-          <Grid item xs={12} sm={6} md={2.4}>
+          <Grid item xs={12} sm={6} md={2}>
             <StatCard
               title={t('payment.stats.totalRevenue')}
               value={`EGP ${formatCurrency(totalRevenue)}`}
@@ -1187,7 +1243,7 @@ return (
               trendDirection="up"
             />
           </Grid>
-          <Grid item xs={12} sm={6} md={2.4}>
+          <Grid item xs={12} sm={6} md={2}>
             <StatCard
               title={vatSettings.enabled ? 'Net Profit (After VAT)' : t('payment.stats.totalProfit')}
               value={`EGP ${formatCurrency(totalProfit)}`}
@@ -1201,7 +1257,7 @@ return (
               trendDirection="up"
             />
           </Grid>
-          <Grid item xs={12} sm={6} md={2.4}>
+          <Grid item xs={12} sm={6} md={2}>
             <StatCard
               title={t('payment.stats.pendingPayments')}
               value={`EGP ${formatCurrency(pendingAmount)}`}
@@ -1210,7 +1266,7 @@ return (
               subtitle={t('payment.stats.pendingInvoices', { count: payments.filter(p => p.status === 'pending').length })}
             />
           </Grid>
-          <Grid item xs={12} sm={6} md={2.4}>
+          <Grid item xs={12} sm={6} md={2}>
             <StatCard
               title={t('payment.stats.overdueAmount')}
               value={`EGP ${formatCurrency(overdueAmount)}`}
@@ -1219,15 +1275,26 @@ return (
               subtitle={t('payment.stats.overdueInvoices', { count: payments.filter(p => p.status === 'overdue').length })}
             />
           </Grid>
-          <Grid item xs={12} sm={6} md={2.4}>
+          <Grid item xs={12} sm={6} md={2}>
             <StatCard
-              title={vatSettings.enabled ? 'VAT Collected' : t('payment.stats.thisMonth')}
-              value={vatSettings.enabled ? `EGP ${formatCurrency(totalVATDeducted)}` : payments.length}
+              title="Today's Appointments"
+              value={todayAppointments.length}
+              icon={<CalendarToday />}
+              color="#2196F3"
+              subtitle={`${completedTodayAppointments.length} completed • ${pendingTodayAppointments.length} pending`}
+              trend={completedTodayAppointments.length > pendingTodayAppointments.length ? "+Good" : "Pending"}
+              trendDirection={completedTodayAppointments.length > pendingTodayAppointments.length ? "up" : "down"}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6} md={2}>
+            <StatCard
+              title={vatSettings.enabled ? 'VAT Collected' : 'Appointment Payments'}
+              value={vatSettings.enabled ? `EGP ${formatCurrency(totalVATDeducted)}` : appointmentLinkedPayments.length}
               icon={vatSettings.enabled ? <Percent /> : <Receipt />}
-              color={vatSettings.enabled ? "#F59E0B" : "#3B82F6"}
+              color={vatSettings.enabled ? "#F59E0B" : "#673AB7"}
               subtitle={vatSettings.enabled 
                 ? `Rate: ${vatSettings.rate}% | Invoices: ${paidPayments.filter(p => p.includeVAT).length}`
-                : t('payment.stats.totalInvoices')
+                : `${appointmentLinkedPayments.length} linked to appointments`
               }
               trend="+8.2%"
               trendDirection="up"
@@ -1769,6 +1836,94 @@ return (
          >
            <DialogTitle>{t('payment.dialogs.createNewInvoice')}</DialogTitle>
            <DialogContent>
+             {/* Appointment Selection Section */}
+             <Box sx={{ mb: 3, p: 2, bgcolor: 'primary.light', borderRadius: 2, border: '1px solid', borderColor: 'primary.main' }}>
+               <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 2, color: 'primary.main', display: 'flex', alignItems: 'center', gap: 1 }}>
+                 <CalendarToday fontSize="small" />
+                 Select Date to View Appointments
+               </Typography>
+               <Grid container spacing={2} alignItems="center">
+                 <Grid item xs={12} md={6}>
+                   <TextField
+                     fullWidth
+                     label="Appointment Date"
+                     type="date"
+                     value={selectedDate}
+                     onChange={(e) => setSelectedDate(e.target.value)}
+                     InputLabelProps={{ shrink: true }}
+                     size="small"
+                   />
+                 </Grid>
+                 <Grid item xs={12} md={6}>
+                   <Button
+                     variant="outlined"
+                     startIcon={<People />}
+                     onClick={() => setShowAppointmentSelection(!showAppointmentSelection)}
+                     disabled={getCompletedAppointmentsByDate(selectedDate).length === 0}
+                     size="small"
+                     sx={{ 
+                       height: 40,
+                       fontSize: '0.875rem',
+                       whiteSpace: 'nowrap'
+                     }}
+                   >
+                     View Appointments ({getCompletedAppointmentsByDate(selectedDate).length})
+                   </Button>
+                 </Grid>
+               </Grid>
+               
+               {/* Appointment List */}
+               {showAppointmentSelection && (
+                 <Box sx={{ mt: 2 }}>
+                   <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                     🏥 Completed appointments for {formatDate(selectedDate)}:
+                   </Typography>
+                   {getCompletedAppointmentsByDate(selectedDate).length > 0 ? (
+                     <Box sx={{ maxHeight: 200, overflowY: 'auto' }}>
+                       {getCompletedAppointmentsByDate(selectedDate).map((apt, index) => (
+                         <Paper
+                           key={apt.id || index}
+                           sx={{
+                             p: 2,
+                             mb: 1,
+                             cursor: 'pointer',
+                             border: '1px solid',
+                             borderColor: 'divider',
+                             '&:hover': {
+                               borderColor: 'primary.main',
+                               backgroundColor: 'primary.light'
+                             }
+                           }}
+                           onClick={() => handleAppointmentSelection(apt)}
+                         >
+                           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                             <Box>
+                               <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                 👤 {apt.patient} • 🩺 Dr. {apt.doctor}
+                               </Typography>
+                               <Typography variant="caption" color="text.secondary">
+                                 ⏰ {apt.time} • 📋 {apt.type} • 📍 {apt.location}
+                               </Typography>
+                             </Box>
+                             <Chip
+                               label="Select"
+                               size="small"
+                               color="primary"
+                               variant="outlined"
+                             />
+                           </Box>
+                         </Paper>
+                       ))}
+                     </Box>
+                   ) : (
+                     <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic', textAlign: 'center', py: 2 }}>
+                       No completed appointments found for this date
+                     </Typography>
+                   )}
+                 </Box>
+               )}
+             </Box>
+
              <Grid container spacing={2} sx={{ mt: 1 }}>
                <Grid item xs={12} md={6}>
                  <TextField

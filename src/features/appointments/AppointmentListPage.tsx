@@ -99,6 +99,12 @@ import {
   priorityLevels,
   type AppointmentData,
 } from '../../data/mockData';
+import { 
+  appointmentSync, 
+  paymentSync, 
+  doctorSync,
+  debugStorageState 
+} from '../../utils/dataSyncManager';
 
 // Types
 interface TabPanelProps {
@@ -171,8 +177,8 @@ export const loadAppointmentsFromStorage = (): Appointment[] => {
 
 export const saveAppointmentsToStorage = (appointments: Appointment[]) => {
   try {
-    localStorage.setItem(APPOINTMENTS_STORAGE_KEY, JSON.stringify(appointments));
-    window.dispatchEvent(new Event('appointmentsUpdated'));
+    // ✅ Use centralized sync manager for consistent event dispatching
+    appointmentSync.save(appointments, 'AppointmentListPage');
     syncAppointmentChangesToPatients();
   } catch (error) {
     console.warn('Error saving appointments to localStorage:', error);
@@ -435,27 +441,32 @@ const AppointmentListPage: React.FC = () => {
     };
   }, [initialized, authLoading, user]);
 
-  // ✅ Listen for doctor updates from localStorage (shared with DoctorScheduling)
+  // ✅ Initialize bidirectional sync with centralized manager
   useEffect(() => {
-    const updateDoctorsFromStorage = () => {
-      try {
-        const saved = localStorage.getItem('clinic_doctor_schedules');
-        if (saved) {
-          const parsedData = JSON.parse(saved);
-          if (Array.isArray(parsedData) && parsedData.length > 0) {
-            console.log('🔄 AppointmentListPage: Updated doctors from localStorage:', parsedData.length);
-            setAvailableDoctors(parsedData);
-          }
-        }
-      } catch (error) {
-        console.error('❌ AppointmentListPage: Error updating doctors from localStorage:', error);
-      }
-    };
+    // Set up payment listener to update local state when payments change
+    const cleanupPaymentSync = paymentSync.listen((event) => {
+      const updatedPayments = paymentSync.load([]);
+      console.log('🔄 AppointmentListPage: Synced payments from event', updatedPayments.length);
+      // Dispatch custom event for appointment-payment sync
+      window.dispatchEvent(new CustomEvent('appointmentPaymentSync', { 
+        detail: { payments: updatedPayments } 
+      }));
+    }, 'AppointmentListPage');
 
-    // Check for changes periodically (since localStorage doesn't emit events in same tab)
-    const interval = setInterval(updateDoctorsFromStorage, 2000);
+    // Set up doctor listener to update local state  
+    const cleanupDoctorSync = doctorSync.listen((event) => {
+      const updatedDoctors = doctorSync.load(doctorSchedules);
+      setAvailableDoctors(updatedDoctors);
+      console.log('🔄 AppointmentListPage: Synced doctors from event');
+    }, 'AppointmentListPage');
+
+    // Debug current state
+    debugStorageState();
     
-    return () => clearInterval(interval);
+    return () => {
+      cleanupPaymentSync();
+      cleanupDoctorSync();
+    };
   }, []);
 
   // Event Handlers

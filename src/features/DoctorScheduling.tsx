@@ -71,6 +71,7 @@ import {
   type Doctor,
   type Appointment,
 } from '../data/mockData';
+import { doctorSync, debugStorageState } from '../utils/dataSyncManager';
 
 
 interface TabPanelProps {
@@ -213,11 +214,11 @@ const DoctorSchedulingPage: React.FC = () => {
     }));
      });
 
-   // Save doctors to localStorage whenever they change
+   // Save doctors to localStorage whenever they change using sync manager
    useEffect(() => {
      try {
-       localStorage.setItem('clinic_doctor_schedules', JSON.stringify(doctors));
-       console.log('✅ DoctorScheduling: Saved doctors to localStorage');
+       // ✅ Use centralized sync manager for consistent event dispatching
+       doctorSync.save(doctors, 'DoctorScheduling');
      } catch (error) {
        console.error('❌ DoctorScheduling: Error saving doctors:', error);
      }

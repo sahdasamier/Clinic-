@@ -279,6 +279,7 @@ export interface PaymentData {
   patient: string;
   patientAvatar: string;
   doctor: string; // Added doctor field for clinic management
+  appointmentId?: string; // Link to appointment if payment is for specific appointment
   amount: number;
   currency: string;
   date: string;
@@ -398,6 +399,7 @@ export const vatRateOptions = [
 export const defaultNewInvoiceData = {
   patient: '',
   doctor: '', // Added doctor field for clinic management
+  appointmentId: '', // Link to appointment if payment is for specific appointment
   amount: '',
   category: '',
   invoiceDate: new Date().toISOString().split('T')[0],
