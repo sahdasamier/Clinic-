@@ -49,7 +49,9 @@ import {
   ToggleButton,
   ToggleButtonGroup,
   InputAdornment,
+  CircularProgress,
 } from '@mui/material';
+import { useAuth } from '../../contexts/AuthContext';
 import {
   CalendarToday,
   Schedule,
@@ -255,6 +257,7 @@ const StatCard: React.FC<{
 // Main Component
 const AppointmentListPage: React.FC = () => {
   const { t } = useTranslation();
+  const { user, loading: authLoading, initialized } = useAuth();
   
   // State Management
   const [tabValue, setTabValue] = useState(0);
@@ -264,6 +267,7 @@ const AppointmentListPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<'table' | 'cards' | 'calendar'>('table');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [appointmentList, setAppointmentList] = useState<Appointment[]>([]);
+  const [dataLoading, setDataLoading] = useState(true);
   const [doctorStartTime] = useState('15:00');
   const [activeFilters, setActiveFilters] = useState<FilterState>({
     status: '',
@@ -295,14 +299,35 @@ const AppointmentListPage: React.FC = () => {
   const [availableDoctors] = useState(doctorSchedules);
   const [availablePatients, setAvailablePatients] = useState<any[]>([]);
 
-  // Effects
+  // Effects - wait for auth initialization
   useEffect(() => {
-    const savedAppointments = loadAppointmentsFromStorage();
-    setAppointmentList(savedAppointments);
-    setupAppointmentPatientSync();
-    
-    const patients = loadPatientsFromStorage();
-    setAvailablePatients(patients);
+    // Wait for auth to be initialized and user to be available
+    if (!initialized || authLoading || !user) {
+      console.log('🔄 AppointmentListPage: Waiting for auth initialization...', {
+        initialized,
+        authLoading,
+        hasUser: !!user
+      });
+      return;
+    }
+
+    console.log('✅ AppointmentListPage: Auth initialized, loading appointment data...');
+    setDataLoading(true);
+
+    try {
+      const savedAppointments = loadAppointmentsFromStorage();
+      setAppointmentList(savedAppointments);
+      setupAppointmentPatientSync();
+      
+      const patients = loadPatientsFromStorage();
+      setAvailablePatients(patients);
+
+      console.log('✅ AppointmentListPage: Appointment data loaded successfully');
+    } catch (error) {
+      console.error('❌ AppointmentListPage: Error loading appointment data:', error);
+    } finally {
+      setDataLoading(false);
+    }
 
     // Listen for mobile FAB action
     const handleOpenAddAppointment = () => {
@@ -361,7 +386,7 @@ const AppointmentListPage: React.FC = () => {
       window.removeEventListener('userDataCleared', handleUserDataCleared);
       window.removeEventListener('openAddAppointment', handleOpenAddAppointment);
     };
-  }, []);
+  }, [initialized, authLoading, user]);
 
   // Event Handlers
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
@@ -701,6 +726,32 @@ const AppointmentListPage: React.FC = () => {
   const upcomingAppointments = appointmentList.filter(apt => new Date(apt.date) > new Date(selectedDate));
   const completedToday = todayAppointments.filter(apt => apt.completed).length;
   const pendingToday = todayAppointments.filter(apt => !apt.completed).length;
+
+  // Show loading spinner while data is loading
+  if (dataLoading) {
+    return (
+      <Container maxWidth="xl" sx={{ mt: 4, mb: 4, flex: 1, overflow: 'auto' }}>
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            height: '60vh',
+            gap: 2
+          }}
+        >
+          <CircularProgress size={60} />
+          <Typography variant="h6" color="textSecondary">
+            Loading appointment data...
+          </Typography>
+          <Typography variant="body2" color="textSecondary">
+            Please wait while we load your appointment information
+          </Typography>
+        </Box>
+      </Container>
+    );
+  }
 
   return (
         <Container maxWidth="xl" sx={{ mt: 4, mb: 4, flex: 1, overflow: 'auto' }}>

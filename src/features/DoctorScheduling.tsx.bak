@@ -2577,7 +2577,7 @@ const DoctorSchedulingPage: React.FC = () => {
                label={t('time_slot')}
                type="time"
                value={formData.time || ''}
-               onChange={(e) => updateFormField("time", e.target.value)}
+               onChange={(e) => setFormData({ ...formData, time: e.target.value })}
                helperText={t('enter_time_format')}
                sx={{ 
                  '& .MuiOutlinedInput-root': { 
@@ -2615,7 +2615,7 @@ const DoctorSchedulingPage: React.FC = () => {
                 label={t('time_hhmm_format')}
                 type="time"
                 value={formData.time || ''}
-                onChange={(e) => updateFormField("time", e.target.value)}
+                onChange={(e) => setFormData({ ...formData, time: e.target.value })}
                 helperText={t('change_time_or_enter_new')}
               />
            </DialogContent>
@@ -2808,7 +2808,7 @@ const DoctorSchedulingPage: React.FC = () => {
                    label={t('working_hours_start')}
                    type="time"
                    value={doctorFormData.workingHoursStart}
-                   onChange={(e) => updateDoctorField("workingHoursStart", e.target.value)}
+                   onChange={(e) => setDoctorFormData({ ...doctorFormData, workingHoursStart: e.target.value })}
                    InputLabelProps={{ shrink: true }}
                    sx={{
                      '& .MuiOutlinedInput-root': {
@@ -2828,7 +2828,7 @@ const DoctorSchedulingPage: React.FC = () => {
                    label={t('working_hours_end')}
                    type="time"
                    value={doctorFormData.workingHoursEnd}
-                   onChange={(e) => updateDoctorField("workingHoursEnd", e.target.value)}
+                   onChange={(e) => setDoctorFormData({ ...doctorFormData, workingHoursEnd: e.target.value })}
                    InputLabelProps={{ shrink: true }}
                    sx={{
                      '& .MuiOutlinedInput-root': {
@@ -2848,7 +2848,7 @@ const DoctorSchedulingPage: React.FC = () => {
                    label={t('consultation_duration_minutes')}
                    type="number"
                    value={doctorFormData.consultationDuration}
-                   onChange={(e) => updateDoctorField("consultationDuration", parseInt(e.target.value) || 30)}
+                   onChange={(e) => setDoctorFormData({ ...doctorFormData, consultationDuration: parseInt(e.target.value) || 30 })}
                    inputProps={{ min: 15, max: 120, step: 15 }}
                    helperText={t('typical_duration_range')}
                    sx={{
@@ -2869,7 +2869,7 @@ const DoctorSchedulingPage: React.FC = () => {
                    label={t('max_patients_per_hour')}
                    type="number"
                    value={doctorFormData.maxPatientsPerHour}
-                   onChange={(e) => updateDoctorField("maxPatientsPerHour", parseInt(e.target.value) || 2)}
+                   onChange={(e) => setDoctorFormData({ ...doctorFormData, maxPatientsPerHour: parseInt(e.target.value) || 2 })}
                    inputProps={{ min: 1, max: 10 }}
                    helperText={t('recommended_patients_range')}
                    sx={{
@@ -2898,7 +2898,7 @@ const DoctorSchedulingPage: React.FC = () => {
                    <Select
                      multiple
                      value={doctorFormData.offDays}
-                     onChange={(e) => updateDoctorField("offDays", e.target.value as string[])}
+                     onChange={(e) => setDoctorFormData({ ...doctorFormData, offDays: e.target.value as string[] })}
                      label={t('off_days')}
                      renderValue={(selected) => selected.map(day => t(day)).join(', ')}
                    >
@@ -3035,7 +3035,7 @@ const DoctorSchedulingPage: React.FC = () => {
                    fullWidth
                    label={t('doctor_name')}
                    value={doctorFormData.name}
-                   onChange={(e) => updateDoctorField("name", e.target.value)}
+                   onChange={(e) => setDoctorFormData({ ...doctorFormData, name: e.target.value })}
                    required
                    sx={{
                      '& .MuiOutlinedInput-root': {
@@ -3063,7 +3063,7 @@ const DoctorSchedulingPage: React.FC = () => {
                    <Select
                      value={doctorFormData.specialty}
                      label={t('medical_specialty')}
-                     onChange={(e) => updateDoctorField("specialty", e.target.value)}
+                     onChange={(e) => setDoctorFormData({ ...doctorFormData, specialty: e.target.value })}
                      required
                    >
                      {medicalSpecialties.map((specialty) => (
@@ -3088,7 +3088,7 @@ const DoctorSchedulingPage: React.FC = () => {
                    label={t('working_hours_start')}
                    type="time"
                    value={doctorFormData.workingHoursStart}
-                   onChange={(e) => updateDoctorField("workingHoursStart", e.target.value)}
+                   onChange={(e) => setDoctorFormData({ ...doctorFormData, workingHoursStart: e.target.value })}
                    InputLabelProps={{ shrink: true }}
                    sx={{
                      '& .MuiOutlinedInput-root': {
@@ -3108,7 +3108,7 @@ const DoctorSchedulingPage: React.FC = () => {
                    label={t('working_hours_end')}
                    type="time"
                    value={doctorFormData.workingHoursEnd}
-                   onChange={(e) => updateDoctorField("workingHoursEnd", e.target.value)}
+                   onChange={(e) => setDoctorFormData({ ...doctorFormData, workingHoursEnd: e.target.value })}
                    InputLabelProps={{ shrink: true }}
                    sx={{
                      '& .MuiOutlinedInput-root': {
@@ -3136,7 +3136,7 @@ const DoctorSchedulingPage: React.FC = () => {
                    <Select
                      multiple
                      value={doctorFormData.offDays}
-                     onChange={(e) => updateDoctorField("offDays", e.target.value as string[])}
+                     onChange={(e) => setDoctorFormData({ ...doctorFormData, offDays: e.target.value as string[] })}
                      label={t('off_days')}
                      renderValue={(selected) => selected.map(day => t(day)).join(', ')}
                    >
@@ -3163,7 +3163,7 @@ const DoctorSchedulingPage: React.FC = () => {
                    label={t('consultation_duration_minutes')}
                    type="number"
                    value={doctorFormData.consultationDuration}
-                   onChange={(e) => updateDoctorField("consultationDuration", parseInt(e.target.value) || 30)}
+                   onChange={(e) => setDoctorFormData({ ...doctorFormData, consultationDuration: parseInt(e.target.value) || 30 })}
                    inputProps={{ min: 15, max: 120, step: 15 }}
                    helperText={t('typical_duration_range')}
                    sx={{
@@ -3184,7 +3184,7 @@ const DoctorSchedulingPage: React.FC = () => {
                    label={t('max_patients_per_hour')}
                    type="number"
                    value={doctorFormData.maxPatientsPerHour}
-                   onChange={(e) => updateDoctorField("maxPatientsPerHour", parseInt(e.target.value) || 2)}
+                   onChange={(e) => setDoctorFormData({ ...doctorFormData, maxPatientsPerHour: parseInt(e.target.value) || 2 })}
                    inputProps={{ min: 1, max: 10 }}
                    helperText={t('recommended_patients_range')}
                    sx={{

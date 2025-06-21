@@ -42,7 +42,9 @@ import {
   RadioGroup,
   FormControlLabel,
   Alert,
+  CircularProgress,
 } from '@mui/material';
+import { useAuth } from '../../contexts/AuthContext';
 import {
   Search,
   Add,
@@ -159,6 +161,7 @@ function TabPanel(props: TabPanelProps) {
 
 const PatientListPage: React.FC = () => {
   const { t } = useTranslation();
+  const { user, loading: authLoading, initialized } = useAuth();
 
   // Helper function to translate patient status and conditions
   const translatePatientData = (text: string) => {
@@ -188,16 +191,37 @@ const PatientListPage: React.FC = () => {
   const [editingNote, setEditingNote] = useState<any>(null);
   const [patients, setPatients] = useState<any[]>([]);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const [dataLoading, setDataLoading] = useState(true);
   const [organizedAppointmentData, setOrganizedAppointmentData] = useState<any>(null);
   const [patientsWithAppointments, setPatientsWithAppointments] = useState<PatientWithAppointments[]>([]);
   const [patientOrganizationMode, setPatientOrganizationMode] = useState<'reservation' | 'completion' | 'all'>('all');
 
-  // Load data from localStorage on component mount
+  // Load data from localStorage on component mount - wait for auth
   React.useEffect(() => {
-    const loadedPatients = loadPatientsFromStorage();
-    setPatients(loadedPatients);
-    setIsDataLoaded(true);
-  }, []);
+    // Wait for auth to be initialized and user to be available
+    if (!initialized || authLoading || !user) {
+      console.log('🔄 PatientListPage: Waiting for auth initialization...', {
+        initialized,
+        authLoading,
+        hasUser: !!user
+      });
+      return;
+    }
+
+    console.log('✅ PatientListPage: Auth initialized, loading patient data...');
+    setDataLoading(true);
+
+    try {
+      const loadedPatients = loadPatientsFromStorage();
+      setPatients(loadedPatients);
+      setIsDataLoaded(true);
+      console.log('✅ PatientListPage: Patient data loaded successfully');
+    } catch (error) {
+      console.error('❌ PatientListPage: Error loading patient data:', error);
+    } finally {
+      setDataLoading(false);
+    }
+  }, [initialized, authLoading, user]);
 
   // Save data to localStorage whenever patients change
   React.useEffect(() => {
@@ -206,22 +230,38 @@ const PatientListPage: React.FC = () => {
     }
   }, [patients, isDataLoaded]);
 
-  // Load organized appointment data
+  // Load organized appointment data - wait for auth and patient data
   React.useEffect(() => {
-    const loadOrganizedData = () => {
-      const organizedData = organizeAppointmentsByCompletion();
-      const organizedPatients = getPatientsOrganizedByAppointmentStatus();
-      
-      setOrganizedAppointmentData(organizedData);
-      setPatientsWithAppointments(organizedPatients.allPatients);
-      
-      console.log('🔄 Loaded Organized Appointment Data:', {
-        completedAppointments: organizedData.completed.length,
-        notCompletedAppointments: organizedData.notCompleted.length,
-        totalPatients: organizedPatients.allPatients.length,
-        patientsWithCompleted: organizedPatients.patientsWithCompleted.length,
-        patientsWithPending: organizedPatients.patientsWithPending.length
+    // Wait for auth to be initialized and patient data to be loaded
+    if (!initialized || authLoading || !user || !isDataLoaded) {
+      console.log('🔄 PatientListPage: Waiting for auth and patient data before loading organized data...', {
+        initialized,
+        authLoading,
+        hasUser: !!user,
+        isDataLoaded
       });
+      return;
+    }
+
+    const loadOrganizedData = () => {
+      console.log('🔄 PatientListPage: Loading organized appointment data...');
+      try {
+        const organizedData = organizeAppointmentsByCompletion();
+        const organizedPatients = getPatientsOrganizedByAppointmentStatus();
+        
+        setOrganizedAppointmentData(organizedData);
+        setPatientsWithAppointments(organizedPatients.allPatients);
+        
+        console.log('✅ PatientListPage: Organized appointment data loaded:', {
+          completedAppointments: organizedData.completed.length,
+          notCompletedAppointments: organizedData.notCompleted.length,
+          totalPatients: organizedPatients.allPatients.length,
+          patientsWithCompleted: organizedPatients.patientsWithCompleted.length,
+          patientsWithPending: organizedPatients.patientsWithPending.length
+        });
+      } catch (error) {
+        console.error('❌ PatientListPage: Error loading organized appointment data:', error);
+      }
     };
 
     loadOrganizedData();
@@ -305,7 +345,7 @@ const PatientListPage: React.FC = () => {
       window.removeEventListener('userDataCleared', handleUserDataCleared);
       window.removeEventListener('openAddPatient', handleOpenAddPatient);
     };
-  }, []);
+  }, [initialized, authLoading, user, isDataLoaded]);
   const [uploadDocumentOpen, setUploadDocumentOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [documentTitle, setDocumentTitle] = useState('');
@@ -1059,6 +1099,32 @@ const PatientListPage: React.FC = () => {
   const getActiveFilterCount = () => {
     return Object.values(activeFilters).filter(value => value !== '').length + (searchQuery ? 1 : 0);
   };
+
+  // Show loading spinner while data is loading
+  if (dataLoading) {
+    return (
+      <Container maxWidth="xl" sx={{ mt: 4, mb: 4, flex: 1, overflow: 'auto' }}>
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            height: '60vh',
+            gap: 2
+          }}
+        >
+          <CircularProgress size={60} />
+          <Typography variant="h6" color="textSecondary">
+            Loading patient data...
+          </Typography>
+          <Typography variant="body2" color="textSecondary">
+            Please wait while we load your patient information
+          </Typography>
+        </Box>
+      </Container>
+    );
+  }
 
   return (
         <Container maxWidth="xl" sx={{ mt: 4, mb: 4, flex: 1, overflow: 'auto' }}>

@@ -1,6 +1,6 @@
 import React from "react";
 import { Routes, Route, BrowserRouter } from "react-router-dom";
-import AuthGuard from "./AuthGuard";
+import ProtectedRoute from "../components/ProtectedRoute";
 import AdminProtectedRoute from "../components/AdminProtectedRoute";
 import ClinicAccessGuard from "../components/ClinicAccessGuard";
 import PermissionGuard from "../components/PermissionGuard";
@@ -28,7 +28,7 @@ const Router: React.FC = () => {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Authentication Routes - No AuthGuard needed */}
+        {/* Authentication Routes - No ProtectedRoute needed */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         
@@ -36,9 +36,9 @@ const Router: React.FC = () => {
         <Route path="/admin/login" element={<AdminLoginPage />} />
         <Route path="/admin/dashboard" element={<AdminProtectedRoute><AdminPanelPage /></AdminProtectedRoute>} />
         
-        {/* Protected Routes - Wrapped with AuthGuard, ClinicAccessGuard, Layout, and BlurredPermissionGuard */}
+        {/* Protected Routes - Wrapped with ProtectedRoute, ClinicAccessGuard, Layout, and BlurredPermissionGuard */}
         <Route path="/" element={
-          <AuthGuard>
+          <ProtectedRoute>
             <ClinicAccessGuard>
               <Layout>
                 <BlurredPermissionGuard feature="dashboard">
@@ -46,10 +46,10 @@ const Router: React.FC = () => {
                 </BlurredPermissionGuard>
               </Layout>
             </ClinicAccessGuard>
-          </AuthGuard>
+          </ProtectedRoute>
         } />
         <Route path="/dashboard" element={
-          <AuthGuard>
+          <ProtectedRoute>
             <ClinicAccessGuard>
               <Layout>
                 <BlurredPermissionGuard feature="dashboard">
@@ -57,10 +57,10 @@ const Router: React.FC = () => {
                 </BlurredPermissionGuard>
               </Layout>
             </ClinicAccessGuard>
-          </AuthGuard>
+          </ProtectedRoute>
         } />
         <Route path="/dashboard/receptionist" element={
-          <AuthGuard>
+          <ProtectedRoute>
             <ClinicAccessGuard>
               <Layout>
                 <BlurredPermissionGuard feature="dashboard">
@@ -68,10 +68,10 @@ const Router: React.FC = () => {
                 </BlurredPermissionGuard>
               </Layout>
             </ClinicAccessGuard>
-          </AuthGuard>
+          </ProtectedRoute>
         } />
         <Route path="/dashboard/doctor" element={
-          <AuthGuard>
+          <ProtectedRoute>
             <ClinicAccessGuard>
               <Layout>
                 <BlurredPermissionGuard feature="dashboard">
@@ -79,12 +79,12 @@ const Router: React.FC = () => {
                 </BlurredPermissionGuard>
               </Layout>
             </ClinicAccessGuard>
-          </AuthGuard>
+          </ProtectedRoute>
         } />
         
         {/* Patient Routes */}
         <Route path="/patients" element={
-          <AuthGuard>
+          <ProtectedRoute>
             <ClinicAccessGuard>
               <Layout>
                 <BlurredPermissionGuard feature="patients">
@@ -92,10 +92,10 @@ const Router: React.FC = () => {
                 </BlurredPermissionGuard>
               </Layout>
             </ClinicAccessGuard>
-          </AuthGuard>
+          </ProtectedRoute>
         } />
         <Route path="/patients/:id" element={
-          <AuthGuard>
+          <ProtectedRoute>
             <ClinicAccessGuard>
               <Layout>
                 <BlurredPermissionGuard feature="patient_details">
@@ -103,12 +103,12 @@ const Router: React.FC = () => {
                 </BlurredPermissionGuard>
               </Layout>
             </ClinicAccessGuard>
-          </AuthGuard>
+          </ProtectedRoute>
         } />
         
         {/* Appointment Routes */}
         <Route path="/appointments" element={
-          <AuthGuard>
+          <ProtectedRoute>
             <ClinicAccessGuard>
               <Layout>
                 <BlurredPermissionGuard feature="appointments">
@@ -116,10 +116,10 @@ const Router: React.FC = () => {
                 </BlurredPermissionGuard>
               </Layout>
             </ClinicAccessGuard>
-          </AuthGuard>
+          </ProtectedRoute>
         } />
         <Route path="/appointments/calendar" element={
-          <AuthGuard>
+          <ProtectedRoute>
             <ClinicAccessGuard>
               <Layout>
                 <BlurredPermissionGuard feature="appointment_calendar">
@@ -127,12 +127,12 @@ const Router: React.FC = () => {
                 </BlurredPermissionGuard>
               </Layout>
             </ClinicAccessGuard>
-          </AuthGuard>
+          </ProtectedRoute>
         } />
         
         {/* Other Feature Routes */}
         <Route path="/payments" element={
-          <AuthGuard>
+          <ProtectedRoute>
             <ClinicAccessGuard>
               <Layout>
                 <BlurredPermissionGuard feature="payments">
@@ -140,10 +140,10 @@ const Router: React.FC = () => {
                 </BlurredPermissionGuard>
               </Layout>
             </ClinicAccessGuard>
-          </AuthGuard>
+          </ProtectedRoute>
         } />
         <Route path="/inventory" element={
-          <AuthGuard>
+          <ProtectedRoute>
             <ClinicAccessGuard>
               <Layout>
                 <BlurredPermissionGuard feature="inventory">
@@ -151,10 +151,10 @@ const Router: React.FC = () => {
                 </BlurredPermissionGuard>
               </Layout>
             </ClinicAccessGuard>
-          </AuthGuard>
+          </ProtectedRoute>
         } />
         <Route path="/notifications" element={
-          <AuthGuard>
+          <ProtectedRoute>
             <ClinicAccessGuard>
               <Layout>
                 <BlurredPermissionGuard feature="notifications">
@@ -162,11 +162,11 @@ const Router: React.FC = () => {
                 </BlurredPermissionGuard>
               </Layout>
             </ClinicAccessGuard>
-          </AuthGuard>
+          </ProtectedRoute>
         } />
 
         <Route path="/doctor-scheduling" element={
-          <AuthGuard>
+          <ProtectedRoute>
             <ClinicAccessGuard>
               <Layout>
                 <BlurredPermissionGuard feature="doctor_scheduling">
@@ -174,10 +174,10 @@ const Router: React.FC = () => {
                 </BlurredPermissionGuard>
               </Layout>
             </ClinicAccessGuard>
-          </AuthGuard>
+          </ProtectedRoute>
         } />
         <Route path="/settings" element={
-          <AuthGuard>
+          <ProtectedRoute>
             <ClinicAccessGuard>
               <Layout>
                 <BlurredPermissionGuard feature="settings">
@@ -185,7 +185,7 @@ const Router: React.FC = () => {
                 </BlurredPermissionGuard>
               </Layout>
             </ClinicAccessGuard>
-          </AuthGuard>
+          </ProtectedRoute>
         } />
       </Routes>
     </BrowserRouter>

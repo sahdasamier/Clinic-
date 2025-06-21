@@ -19,6 +19,7 @@ import {
   Alert,
   IconButton,
   Tooltip,
+  CircularProgress,
 } from '@mui/material';
 import {
   TrendingUp,
@@ -49,6 +50,7 @@ import {
 } from 'recharts';
 
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '../../contexts/AuthContext';
 
 // DIRECT IMPORTS from actual pages
 import { 
@@ -201,7 +203,9 @@ const StatCard: React.FC<{
 
 const DashboardPage: React.FC = () => {
   const { t } = useTranslation();
+  const { user, loading: authLoading, initialized } = useAuth();
   const [refreshKey, setRefreshKey] = useState(0);
+  const [dataLoading, setDataLoading] = useState(true);
   
   // Load real data directly from the pages
   const [appointments, setAppointments] = useState<any[]>([]);
@@ -211,17 +215,38 @@ const DashboardPage: React.FC = () => {
 
   // Load all data directly from the pages and setup sync
   useEffect(() => {
-    const loadedAppointments = loadAppointmentsFromStorage();
-    setAppointments(loadedAppointments.length > 0 ? loadedAppointments : getDefaultAppointments());
-    
-    const loadedPatients = loadPatientsFromStorage();
-    setPatients(loadedPatients);
-    
-    const loadedPayments = loadPaymentsFromStorage();
-    setPayments(loadedPayments);
-    
-    // Setup appointment-patient sync on dashboard load
-    setupAppointmentPatientSync();
+    // Wait for auth to be initialized and user to be available
+    if (!initialized || authLoading || !user) {
+      console.log('🔄 DashboardPage: Waiting for auth initialization...', {
+        initialized,
+        authLoading,
+        hasUser: !!user
+      });
+      return;
+    }
+
+    console.log('✅ DashboardPage: Auth initialized, loading dashboard data...');
+    setDataLoading(true);
+
+    try {
+      const loadedAppointments = loadAppointmentsFromStorage();
+      setAppointments(loadedAppointments.length > 0 ? loadedAppointments : getDefaultAppointments());
+      
+      const loadedPatients = loadPatientsFromStorage();
+      setPatients(loadedPatients);
+      
+      const loadedPayments = loadPaymentsFromStorage();
+      setPayments(loadedPayments);
+      
+      // Setup appointment-patient sync on dashboard load
+      setupAppointmentPatientSync();
+
+      console.log('✅ DashboardPage: Dashboard data loaded successfully');
+    } catch (error) {
+      console.error('❌ DashboardPage: Error loading dashboard data:', error);
+    } finally {
+      setDataLoading(false);
+    }
 
     // Listen for user data clearing
     const handleUserDataCleared = () => {
@@ -238,19 +263,35 @@ const DashboardPage: React.FC = () => {
     return () => {
       window.removeEventListener('userDataCleared', handleUserDataCleared);
     };
-  }, [refreshKey]);
+  }, [refreshKey, initialized, authLoading, user]);
 
   // Refresh function
   const refreshData = () => {
-    setRefreshKey(prev => prev + 1);
-    const loadedAppointments = loadAppointmentsFromStorage();
-    setAppointments(loadedAppointments.length > 0 ? loadedAppointments : getDefaultAppointments());
+    if (!initialized || authLoading || !user) {
+      console.log('⚠️ DashboardPage: Cannot refresh data - auth not ready');
+      return;
+    }
+
+    console.log('🔄 DashboardPage: Refreshing dashboard data...');
+    setDataLoading(true);
     
-    const loadedPatients = loadPatientsFromStorage();
-    setPatients(loadedPatients);
-    
-    const loadedPayments = loadPaymentsFromStorage();
-    setPayments(loadedPayments);
+    try {
+      setRefreshKey(prev => prev + 1);
+      const loadedAppointments = loadAppointmentsFromStorage();
+      setAppointments(loadedAppointments.length > 0 ? loadedAppointments : getDefaultAppointments());
+      
+      const loadedPatients = loadPatientsFromStorage();
+      setPatients(loadedPatients);
+      
+      const loadedPayments = loadPaymentsFromStorage();
+      setPayments(loadedPayments);
+      
+      console.log('✅ DashboardPage: Dashboard data refreshed successfully');
+    } catch (error) {
+      console.error('❌ DashboardPage: Error refreshing dashboard data:', error);
+    } finally {
+      setDataLoading(false);
+    }
   };
 
   // Calculate statistics from real data
@@ -427,6 +468,32 @@ const DashboardPage: React.FC = () => {
     value: count,
     color: [colorPalette.primary, colorPalette.success, colorPalette.warning, colorPalette.purple][index % 4],
   }));
+
+  // Show loading spinner while data is loading
+  if (dataLoading) {
+    return (
+      <Container maxWidth="xl" sx={{ mt: { xs: 2, md: 4 }, mb: { xs: 2, md: 4 }, flex: 1, overflow: 'auto' }}>
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            height: '60vh',
+            gap: 2
+          }}
+        >
+          <CircularProgress size={60} />
+          <Typography variant="h6" color="textSecondary">
+            Loading dashboard data...
+          </Typography>
+          <Typography variant="body2" color="textSecondary">
+            Please wait while we load your clinic data
+          </Typography>
+        </Box>
+      </Container>
+    );
+  }
 
   return (
     <Container maxWidth="xl" sx={{ mt: { xs: 2, md: 4 }, mb: { xs: 2, md: 4 }, flex: 1, overflow: 'auto' }}>

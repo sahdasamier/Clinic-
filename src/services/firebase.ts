@@ -1,6 +1,4 @@
-import { initializeApp, getApps } from 'firebase/app';
 import { 
-  getFirestore, 
   doc, 
   getDoc, 
   setDoc, 
@@ -16,11 +14,9 @@ import {
   serverTimestamp,
   enableNetwork,
   disableNetwork,
-  connectFirestoreEmulator,
   Timestamp
 } from 'firebase/firestore';
 import { 
-  getAuth, 
   onAuthStateChanged, 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
@@ -28,29 +24,8 @@ import {
   User 
 } from 'firebase/auth';
 
-// Firebase configuration with fallback values for development
-const firebaseConfig = {
-    apiKey: (import.meta as any).env?.VITE_FIREBASE_API_KEY || "AIzaSyDotAr3OZOao6-2EGsg6xusem8ENdgRa-E",
-    authDomain: (import.meta as any).env?.VITE_FIREBASE_AUTH_DOMAIN || "clinic-d9c0a.firebaseapp.com",
-    projectId: (import.meta as any).env?.VITE_FIREBASE_PROJECT_ID || "clinic-d9c0a",
-    storageBucket: (import.meta as any).env?.VITE_FIREBASE_STORAGE_BUCKET || "clinic-d9c0a.firebasestorage.app",
-    messagingSenderId: (import.meta as any).env?.VITE_FIREBASE_MESSAGING_SENDER_ID || "430481926571",
-    appId: (import.meta as any).env?.VITE_FIREBASE_APP_ID || "1:430481926571:web:4ac32749d6b0f674868aee",
-    measurementId: (import.meta as any).env?.VITE_FIREBASE_MEASUREMENT_ID || "G-PKFMPKHVTZ"
-  };
-
-// Initialize Firebase
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-export const db = getFirestore(app);
-export const auth = getAuth(app);
-
-// Enable offline persistence
-try {
-  // This is automatically enabled in newer versions of Firebase
-  console.log('Firebase offline persistence enabled');
-} catch (error) {
-  console.warn('Firebase offline persistence failed:', error);
-}
+// Import already-initialized Firebase instances from api/firebase.ts
+import { auth, firestore as db } from '../api/firebase';
 
 // Firestore collection references
 export const COLLECTIONS = {
@@ -62,6 +37,9 @@ export const COLLECTIONS = {
   SETTINGS: 'settings',
   STAFF: 'staff'
 } as const;
+
+// Export the instances for backward compatibility
+export { db, auth };
 
 // Firebase utility types
 export interface FirebaseDocument {

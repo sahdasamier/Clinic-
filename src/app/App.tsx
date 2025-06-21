@@ -1,7 +1,7 @@
 import React, { useEffect } from "react";
 import { useTranslation } from 'react-i18next';
 import { ThemeProvider } from "./ThemeProvider";
-import { AuthProvider } from "./AuthProvider";
+import { AuthProvider } from "../contexts/AuthContext";
 import { UserProvider } from "../contexts/UserContext";
 import { NotificationProvider as LegacyNotificationProvider } from "../contexts/NotificationContext";
 import { SidebarProvider } from "../contexts/SidebarContext";

@@ -38,7 +38,9 @@ import {
   Alert,
   FormControlLabel,
   Switch,
+  CircularProgress,
 } from '@mui/material';
+import { useAuth } from '../../contexts/AuthContext';
 import {
   Search,
   Add,
@@ -302,6 +304,7 @@ const StatCard: React.FC<StatCardProps> = ({
 // Main PaymentListPage component
 const PaymentListPage: React.FC = () => {
   const { t, i18n } = useTranslation();
+  const { user, loading: authLoading, initialized } = useAuth();
   const isRTL = i18n.language === 'ar';
   
   // State management
@@ -324,6 +327,7 @@ const PaymentListPage: React.FC = () => {
   const [exportOptionsOpen, setExportOptionsOpen] = useState(false);
   const [payments, setPayments] = useState<PaymentData[]>([]);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const [dataLoading, setDataLoading] = useState(true);
   const [newInvoiceData, setNewInvoiceData] = useState<NewInvoiceData>({
     ...defaultNewInvoiceData,
     includeVAT: getVATSettings().defaultIncludeVAT,
@@ -332,11 +336,31 @@ const PaymentListPage: React.FC = () => {
   const [vatSettings, setVATSettings] = useState<VATSettings>(getVATSettings());
   const [currentVATCalculation, setCurrentVATCalculation] = useState<VATCalculation | null>(null);
 
-// Load data from localStorage on component mount
+// Load data from localStorage on component mount - wait for auth
 useEffect(() => {
-  const loadedPayments = loadPaymentsFromStorage();
-  setPayments(loadedPayments);
-  setIsDataLoaded(true);
+  // Wait for auth to be initialized and user to be available
+  if (!initialized || authLoading || !user) {
+    console.log('🔄 PaymentListPage: Waiting for auth initialization...', {
+      initialized,
+      authLoading,
+      hasUser: !!user
+    });
+    return;
+  }
+
+  console.log('✅ PaymentListPage: Auth initialized, loading payment data...');
+  setDataLoading(true);
+
+  try {
+    const loadedPayments = loadPaymentsFromStorage();
+    setPayments(loadedPayments);
+    setIsDataLoaded(true);
+    console.log('✅ PaymentListPage: Payment data loaded successfully');
+  } catch (error) {
+    console.error('❌ PaymentListPage: Error loading payment data:', error);
+  } finally {
+    setDataLoading(false);
+  }
 
   // Listen for mobile FAB action
   const handleOpenAddPayment = () => {
@@ -379,7 +403,7 @@ useEffect(() => {
     window.removeEventListener('userDataCleared', handleUserDataCleared);
     window.removeEventListener('openAddPayment', handleOpenAddPayment);
   };
-}, []);
+}, [initialized, authLoading, user]);
 
 // Save data to localStorage whenever payments change
 useEffect(() => {
@@ -888,6 +912,32 @@ const generateReminderMessage = (payment: PaymentData): string => {
 
   return `🏥 *${t('payment.reminder.title')}*\n\n${t('payment.reminder.dear')} ${payment.patient},\n\n${t('payment.reminder.friendlyReminder')}:\n\n📋 *${t('invoice.labels.invoiceId')}:* ${payment.invoiceId}\n🗓️ *${t('invoice.labels.serviceDate')}:* ${formatDate(payment.date)}\n📝 *${t('invoice.table.description')}:* ${payment.description}\n💰 *${t('payment.reminder.amountDue')}:* ${payment.currency} ${formatCurrency(amountDue)}\n📅 *${t('invoice.labels.dueDate')}:* ${formatDate(payment.dueDate)}\n\n${t('payment.reminder.pleaseArrange')}\n\n${t('payment.reminder.questions')}\n\n${t('payment.reminder.thankYou')} 🙏`;
 };
+
+// Show loading spinner while data is loading
+if (dataLoading) {
+  return (
+    <Container maxWidth="xl" sx={{ mt: 4, mb: 4, flex: 1, overflow: 'auto' }}>
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '60vh',
+          gap: 2
+        }}
+      >
+        <CircularProgress size={60} />
+        <Typography variant="h6" color="textSecondary">
+          Loading payment data...
+        </Typography>
+        <Typography variant="body2" color="textSecondary">
+          Please wait while we load your payment information
+        </Typography>
+      </Box>
+    </Container>
+  );
+}
 
 return (
   <Container maxWidth="xl" sx={{ mt: 4, mb: 4, flex: 1, overflow: 'auto', direction: isRTL ? 'rtl' : 'ltr' }}>

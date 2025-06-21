@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { usePersistentForm } from '../../hooks/usePersistentForm';
 import { useTranslation } from 'react-i18next';
 import {
   Box,
@@ -59,7 +60,8 @@ const AppointmentForm: React.FC = () => {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [doctors, setDoctors] = useState<DoctorSchedule[]>([]);
-  const [formData, setFormData] = useState<AppointmentFormData>({
+  // ✅ Use persistent form hook for data persistence
+  const defaultFormData: AppointmentFormData = {
     patientName: '',
     patientPhone: '',
     appointmentDate: '',
@@ -70,6 +72,18 @@ const AppointmentForm: React.FC = () => {
     location: '',
     priority: 'normal',
     notes: ''
+  };
+
+  const { 
+    formData, 
+    updateField, 
+    handleSave, 
+    resetForm: clearForm, 
+    isDirty,
+    lastSaved 
+  } = usePersistentForm('appointmentForm', defaultFormData, { 
+    autoSave: true, 
+    autoSaveDelay: 2000 
   });
 
   const [errors, setErrors] = useState<Partial<AppointmentFormData>>({});
@@ -161,19 +175,8 @@ const AppointmentForm: React.FC = () => {
       await createAppointment(appointmentData);
       setSuccess(true);
       
-      // Reset form
-      setFormData({
-        patientName: '',
-        patientPhone: '',
-        appointmentDate: '',
-        appointmentTime: '',
-        appointmentType: '',
-        duration: 30,
-        doctor: '',
-        location: '',
-        priority: 'normal',
-        notes: ''
-      });
+      // ✅ Reset form using persistent form hook
+      clearForm();
       setActiveStep(0);
       
     } catch (error) {
@@ -185,10 +188,7 @@ const AppointmentForm: React.FC = () => {
   };
  
   const updateFormData = (field: keyof AppointmentFormData, value: string | number) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    updateField(field, value);
     // Clear error when user starts typing
     if (errors[field]) {
       setErrors(prev => ({
@@ -675,6 +675,25 @@ const AppointmentForm: React.FC = () => {
                   <Typography variant="h6" sx={{ opacity: 0.9, fontWeight: 400 }}>
                     📝 {t('appointment_form_description')}
                   </Typography>
+                  
+                  {/* ✅ Data persistence status indicator */}
+                  <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    {isDirty ? (
+                      <Chip
+                        label="⏳ Auto-saving..."
+                        size="small"
+                        variant="outlined"
+                        sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.5)' }}
+                      />
+                    ) : lastSaved ? (
+                      <Chip
+                        label="✅ Saved"
+                        size="small"
+                        variant="outlined"
+                        sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.5)' }}
+                      />
+                    ) : null}
+                  </Box>
                 </Box>
               </Box>
             </CardContent>
