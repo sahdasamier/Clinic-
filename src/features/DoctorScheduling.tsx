@@ -120,6 +120,11 @@ const DoctorSchedulingPage: React.FC = () => {
     };
 
     // Listen for user data clearing
+    // Listen for mobile FAB action
+    const handleOpenAddDoctor = () => {
+      setAddDoctorDialogOpen(true);
+    };
+
     const handleUserDataCleared = () => {
       // Reset to default state
       setAppointments([]);
@@ -150,11 +155,13 @@ const DoctorSchedulingPage: React.FC = () => {
 
     window.addEventListener('appointmentsUpdated', handleAppointmentUpdate);
     window.addEventListener('userDataCleared', handleUserDataCleared);
+    window.addEventListener('openAddDoctor', handleOpenAddDoctor);
     
     // Cleanup
     return () => {
       window.removeEventListener('appointmentsUpdated', handleAppointmentUpdate);
       window.removeEventListener('userDataCleared', handleUserDataCleared);
+      window.removeEventListener('openAddDoctor', handleOpenAddDoctor);
     };
   }, [t]);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -665,44 +672,73 @@ const DoctorSchedulingPage: React.FC = () => {
             overflow: 'hidden'
           }}>
             <CardContent sx={{ p: 4, position: 'relative', zIndex: 2 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: { xs: 'flex-start', md: 'center' }, 
+                justifyContent: 'space-between', 
+                mb: 3,
+                flexDirection: { xs: 'column', md: 'row' },
+                gap: { xs: 3, md: 0 }
+              }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', width: { xs: '100%', md: 'auto' } }}>
                   <Box
                     sx={{
-                      width: 64,
-                      height: 64,
-                      borderRadius: '20px',
+                      width: { xs: 48, md: 64 },
+                      height: { xs: 48, md: 64 },
+                      borderRadius: { xs: '16px', md: '20px' },
                       background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      mr: 3,
+                      mr: { xs: 2, md: 3 },
                       boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)',
+                      flexShrink: 0,
                     }}
                   >
-                    <Schedule sx={{ fontSize: 32, color: 'white' }} />
+                    <Schedule sx={{ fontSize: { xs: 24, md: 32 }, color: 'white' }} />
                   </Box>
-                  <Box>
-                    <Typography variant="h3" sx={{ fontWeight: 800, color: 'text.primary', mb: 0.5 }}>
+                  <Box sx={{ minWidth: 0 }}>
+                    <Typography variant="h3" sx={{ 
+                      fontWeight: 800, 
+                      color: 'text.primary', 
+                      mb: 0.5,
+                      fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' },
+                      lineHeight: 1.2
+                    }}>
                       {t('doctor_scheduling')}
                     </Typography>
-                    <Typography variant="h6" color="text.secondary" sx={{ fontWeight: 400 }}>
+                    <Typography variant="h6" color="text.secondary" sx={{ 
+                      fontWeight: 400,
+                      fontSize: { xs: '0.9rem', md: '1.25rem' },
+                      lineHeight: 1.3
+                    }}>
                       🩺 {t('professional_doctor_schedule_management')}
                     </Typography>
                   </Box>
                 </Box>
-                <Box sx={{ display: 'flex', gap: 2 }}>
+                
+                {/* Responsive Button Container */}
+                <Box sx={{ 
+                  display: 'flex', 
+                  gap: { xs: 1.5, md: 2 },
+                  width: { xs: '100%', md: 'auto' },
+                  flexDirection: { xs: 'column', sm: 'row' },
+                  alignItems: 'stretch'
+                }}>
                   <Button
                     variant="outlined"
                     startIcon={<Schedule />}
                     onClick={() => setSelectedDate(new Date().toISOString().split('T')[0])}
                     sx={{ 
-                      borderRadius: 3, 
+                      borderRadius: { xs: 2, md: 3 }, 
                       color: '#2196f3', 
                       borderColor: '#2196f3',
                       fontWeight: 600,
-                      px: 3,
-                      py: 1.5,
+                      px: { xs: 2, md: 3 },
+                      py: { xs: 1.5, md: 1.5 },
+                      minHeight: { xs: 48, md: 'auto' },
+                      fontSize: { xs: '0.875rem', md: '1rem' },
+                      flex: { xs: 1, sm: 'none' },
                       '&:hover': {
                         backgroundColor: 'rgba(33, 150, 243, 0.1)',
                         borderColor: '#2196f3',
@@ -711,18 +747,26 @@ const DoctorSchedulingPage: React.FC = () => {
                       transition: 'all 0.3s ease'
                     }}
                   >
-                    {t('todays_schedule')}
+                    <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                      {t('todays_schedule')}
+                    </Box>
+                    <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
+                      Today
+                    </Box>
                     </Button>
                  <Button
                    variant="contained"
                    startIcon={<Add />}
                    onClick={handleAddDoctor}
                    sx={{ 
-                     borderRadius: 3,
+                     borderRadius: { xs: 2, md: 3 },
                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                      fontWeight: 700,
-                     px: 4,
-                     py: 1.5,
+                     px: { xs: 3, md: 4 },
+                     py: { xs: 1.5, md: 1.5 },
+                     minHeight: { xs: 48, md: 'auto' },
+                     fontSize: { xs: '0.875rem', md: '1rem' },
+                     flex: { xs: 1, sm: 'none' },
                      boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)',
                      '&:hover': {
                        background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
@@ -732,7 +776,12 @@ const DoctorSchedulingPage: React.FC = () => {
                      transition: 'all 0.3s ease'
                    }}
                  >
-                   {t('add_new_doctor')}
+                   <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                     {t('add_new_doctor')}
+                   </Box>
+                   <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
+                     Add Doctor
+                   </Box>
                  </Button>
                </Box>
              </Box>

@@ -289,12 +289,19 @@ const PatientListPage: React.FC = () => {
       console.log('✅ Patient data reset to default state');
     };
 
+    // Listen for mobile FAB action
+    const handleOpenAddPatient = () => {
+      setAddPatientOpen(true);
+    };
+
     window.addEventListener('appointmentPatientSync', handleSync);
     window.addEventListener('userDataCleared', handleUserDataCleared);
+    window.addEventListener('openAddPatient', handleOpenAddPatient);
     
     return () => {
       window.removeEventListener('appointmentPatientSync', handleSync);
       window.removeEventListener('userDataCleared', handleUserDataCleared);
+      window.removeEventListener('openAddPatient', handleOpenAddPatient);
     };
   }, []);
   const [uploadDocumentOpen, setUploadDocumentOpen] = useState(false);
@@ -1053,277 +1060,178 @@ const PatientListPage: React.FC = () => {
 
   return (
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4, flex: 1, overflow: 'auto' }}>
-          {/* Enhanced Auto-sync Info Card */}
-          <Card 
-            sx={{ 
-              mb: 3,
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              color: 'white',
-              position: 'relative',
-              overflow: 'hidden',
-              boxShadow: '0 8px 32px rgba(102, 126, 234, 0.25)',
-            }}
-          >
-            <CardContent sx={{ p: 3, position: 'relative', zIndex: 2 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <Box
-                    sx={{
-                      width: 56,
-                      height: 56,
-                      borderRadius: '16px',
-                      backgroundColor: 'rgba(255,255,255,0.2)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      backdropFilter: 'blur(10px)',
+          {/* Enhanced Unified Header Section */}
+          <Box sx={{ 
+            mb: 4, 
+            p: 4,
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            borderRadius: 4,
+            color: 'white',
+            position: 'relative',
+            overflow: 'hidden',
+            boxShadow: '0 8px 32px rgba(102, 126, 234, 0.25)',
+          }}>
+            
+
+            {/* Responsive Main Header Content */}
+            <Box sx={{ 
+              display: 'flex', 
+              flexDirection: { xs: 'column', md: 'row' },
+              alignItems: { xs: 'flex-start', md: 'center' }, 
+              justifyContent: 'space-between', 
+              gap: { xs: 3, md: 0 },
+              position: 'relative', 
+              zIndex: 2 
+            }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', width: { xs: '100%', md: 'auto' } }}>
+                <Box
+                  sx={{
+                    width: { xs: 48, sm: 56, md: 64 },
+                    height: { xs: 48, sm: 56, md: 64 },
+                    borderRadius: { xs: '16px', md: '20px' },
+                    backgroundColor: 'rgba(255,255,255,0.2)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    mr: { xs: 2, sm: 2.5, md: 3 },
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255,255,255,0.3)',
+                    flexShrink: 0
+                  }}
+                >
+                  <People sx={{ fontSize: { xs: 24, sm: 28, md: 32 }, color: 'white' }} />
+                </Box>
+                <Box>
+                  <Typography 
+                    variant="h3"
+                    sx={{ 
+                      fontWeight: 800, 
+                      color: 'white',
+                      mb: { xs: 0.5, md: 1 },
+                      textShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                      fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' },
+                      lineHeight: 1.2
                     }}
                   >
-                    <CalendarToday sx={{ fontSize: 28, color: 'white' }} />
-                  </Box>
-                  <Box>
-                    <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>
-                      🔄 {t('automatic_sync_active')}
-                    </Typography>
-                  </Box>
+                    {t('patient_management')}
+                  </Typography>
+                  <Typography 
+                    variant="h6"
+                    sx={{ 
+                      color: 'rgba(255,255,255,0.9)',
+                      fontWeight: 400,
+                      fontSize: { xs: '0.9rem', sm: '1.1rem', md: '1.25rem' }
+                    }}
+                  >
+                    🩺 {t('patient dashboard ')}
+                  </Typography>
                 </Box>
+              </Box>
+              
+              {/* Responsive Action Buttons */}
+              <Box sx={{ 
+                display: 'flex', 
+                flexDirection: { xs: 'column', sm: 'row' },
+                gap: { xs: 1.5, sm: 2 },
+                width: { xs: '100%', md: 'auto' }
+              }}>
                 <Button
                   variant="contained"
+                  startIcon={<WhatsApp />}
+                  onClick={handleWhatsAppAll}
+                  size="medium"
+                  sx={{ 
+                    borderRadius: 3,
+                    backgroundColor: 'rgba(37, 211, 102, 0.2)',
+                    color: 'white',
+                    border: '1px solid rgba(37, 211, 102, 0.3)',
+                    fontWeight: 600,
+                    px: { xs: 2, sm: 3 },
+                    py: { xs: 1, sm: 1.5 },
+                    backdropFilter: 'blur(10px)',
+                    fontSize: { xs: '0.8rem', sm: '0.875rem' },
+                    '&:hover': {
+                      backgroundColor: 'rgba(37, 211, 102, 0.3)',
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 8px 25px rgba(37, 211, 102, 0.25)',
+                    },
+                    transition: 'all 0.3s ease'
+                  }}
+                >
+                  {t('whatsapp_all')}
+                </Button>
+                <Button
+                  variant="contained"
+                  startIcon={<Schedule />}
                   onClick={() => {
+                    // Force sync appointments to patients
                     const syncedPatients = sendAppointmentDataToPatients();
                     setPatients(syncedPatients);
+                    
+                    // Refresh organized data
                     const organizedData = organizeAppointmentsByCompletion();
                     const organizedPatients = getPatientsOrganizedByAppointmentStatus();
                     setOrganizedAppointmentData(organizedData);
                     setPatientsWithAppointments(organizedPatients.allPatients);
+                    
+                    console.log('🔄 Manual sync completed!');
                   }}
-                  startIcon={<CheckCircle />}
-                  sx={{
-                    backgroundColor: 'rgba(255,255,255,0.2)',
-                    color: 'white',
-                    fontWeight: 700,
+                  size="medium"
+                  sx={{ 
                     borderRadius: 3,
+                    backgroundColor: 'rgba(33, 150, 243, 0.2)',
+                    color: 'white',
+                    border: '1px solid rgba(33, 150, 243, 0.3)',
+                    fontWeight: 600,
+                    px: { xs: 2, sm: 3 },
+                    py: { xs: 1, sm: 1.5 },
                     backdropFilter: 'blur(10px)',
+                    fontSize: { xs: '0.8rem', sm: '0.875rem' },
                     '&:hover': {
-                      backgroundColor: 'rgba(255,255,255,0.3)',
-                    }
+                      backgroundColor: 'rgba(33, 150, 243, 0.3)',
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 8px 25px rgba(33, 150, 243, 0.25)',
+                    },
+                    transition: 'all 0.3s ease'
                   }}
                 >
-                  {t('sync_now')}
+                  {t('sync_appointments')}
+                </Button>
+                <Button
+                  variant="contained"
+                  startIcon={<PersonAdd />}
+                  onClick={() => setAddPatientOpen(true)}
+                  size="medium"
+                  sx={{ 
+                    borderRadius: { xs: 2, md: 3 },
+                    backgroundColor: 'rgba(255,255,255,0.2)',
+                    color: 'white',
+                    border: '1px solid rgba(255,255,255,0.3)',
+                    fontWeight: 700,
+                    px: { xs: 3, sm: 4 },
+                    py: { xs: 1.5, sm: 1.5 },
+                    minHeight: { xs: 48, md: 'auto' },
+                    backdropFilter: 'blur(10px)',
+                    fontSize: { xs: '0.875rem', sm: '0.875rem' },
+                    '&:hover': {
+                      backgroundColor: 'rgba(255,255,255,0.3)',
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 8px 25px rgba(255,255,255,0.2)',
+                    },
+                    transition: 'all 0.3s ease'
+                  }}
+                >
+                  <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                    {t('add_new_patient')}
+                  </Box>
+                  <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
+                    Add Patient
+                  </Box>
                 </Button>
               </Box>
-            </CardContent>
+            </Box>
+            
             {/* Decorative background elements */}
-            <Box sx={{
-              position: 'absolute',
-              top: -30,
-              right: -30,
-              width: 120,
-              height: 120,
-              borderRadius: '50%',
-              backgroundColor: 'rgba(255,255,255,0.1)',
-              zIndex: 1,
-            }} />
-            <Box sx={{
-              position: 'absolute',
-              bottom: -20,
-              left: -20,
-              width: 80,
-              height: 80,
-              borderRadius: '50%',
-              backgroundColor: 'rgba(255,255,255,0.05)',
-              zIndex: 1,
-            }} />
-          </Card>
-
-          {/* Enhanced Header Section */}
-          <Card sx={{ 
-            mb: 4, 
-            background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
-            borderRadius: 4,
-            boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-            position: 'relative',
-            overflow: 'hidden'
-          }}>
-            <CardContent sx={{ p: 4, position: 'relative', zIndex: 2 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <Box
-                    sx={{
-                      width: 64,
-                      height: 64,
-                      borderRadius: '20px',
-                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      mr: 3,
-                      boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)',
-                    }}
-                  >
-                    <People sx={{ fontSize: 32, color: 'white' }} />
-                  </Box>
-                  <Box>
-                    <Typography variant="h3" sx={{ fontWeight: 800, color: 'text.primary', mb: 0.5 }}>
-                      {t('patient_management')}
-                    </Typography>
-                    <Typography variant="h6" color="text.secondary" sx={{ fontWeight: 400 }}>
-                      🩺 {t('patient dashboard ')}
-                    </Typography>
-                  </Box>
-                </Box>
-                <Box sx={{ display: 'flex', gap: 2 }}>
-                  <Button
-                    variant="outlined"
-                    startIcon={<WhatsApp />}
-                    onClick={handleWhatsAppAll}
-                    sx={{ 
-                      borderRadius: 3, 
-                      color: '#25D366', 
-                      borderColor: '#25D366',
-                      fontWeight: 600,
-                      px: 3,
-                      py: 1.5,
-                      '&:hover': {
-                        backgroundColor: 'rgba(37, 211, 102, 0.1)',
-                        borderColor: '#25D366',
-                        transform: 'translateY(-2px)',
-                      },
-                      transition: 'all 0.3s ease'
-                    }}
-                  >
-                    {t('whatsapp_all')}
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    startIcon={<Schedule />}
-                    onClick={() => {
-                      // Force sync appointments to patients
-                      const syncedPatients = sendAppointmentDataToPatients();
-                      setPatients(syncedPatients);
-                      
-                      // Refresh organized data
-                      const organizedData = organizeAppointmentsByCompletion();
-                      const organizedPatients = getPatientsOrganizedByAppointmentStatus();
-                      setOrganizedAppointmentData(organizedData);
-                      setPatientsWithAppointments(organizedPatients.allPatients);
-                      
-                      console.log('🔄 Manual sync completed!');
-                    }}
-                    sx={{ 
-                      borderRadius: 3, 
-                      color: '#2196f3', 
-                      borderColor: '#2196f3',
-                      fontWeight: 600,
-                      px: 3,
-                      py: 1.5,
-                      '&:hover': {
-                        backgroundColor: 'rgba(33, 150, 243, 0.1)',
-                        borderColor: '#2196f3',
-                        transform: 'translateY(-2px)',
-                      },
-                      transition: 'all 0.3s ease'
-                    }}
-                  >
-                    {t('sync_appointments')}
-                  </Button>
-                  <Button
-                    variant="contained"
-                    startIcon={<PersonAdd />}
-                    onClick={() => setAddPatientOpen(true)}
-                    sx={{ 
-                      borderRadius: 3,
-                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                      fontWeight: 700,
-                      px: 4,
-                      py: 1.5,
-                      boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)',
-                      '&:hover': {
-                        background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
-                        transform: 'translateY(-2px)',
-                        boxShadow: '0 12px 40px rgba(102, 126, 234, 0.4)',
-                      },
-                      transition: 'all 0.3s ease'
-                    }}
-                  >
-                    {t('add_new_patient')}
-                  </Button>
-                </Box>
-              </Box>
-              
-              {/* Stats Overview */}
-              <Grid container spacing={3}>
-                <Grid item xs={12} sm={6} md={3}>
-                  <Box sx={{ 
-                    textAlign: 'center', 
-                    p: 2, 
-                    backgroundColor: 'rgba(255,255,255,0.8)', 
-                    borderRadius: 3,
-                    backdropFilter: 'blur(10px)',
-                    border: '1px solid rgba(255,255,255,0.2)'
-                  }}>
-                    <Typography variant="h4" sx={{ fontWeight: 800, color: 'primary.main', mb: 0.5 }}>
-                      {patients.length}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
-                      {t('total_patients')}
-                    </Typography>
-                  </Box>
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
-                  <Box sx={{ 
-                    textAlign: 'center', 
-                    p: 2, 
-                    backgroundColor: 'rgba(255,255,255,0.8)', 
-                    borderRadius: 3,
-                    backdropFilter: 'blur(10px)',
-                    border: '1px solid rgba(255,255,255,0.2)'
-                  }}>
-                    <Typography variant="h4" sx={{ fontWeight: 800, color: 'success.main', mb: 0.5 }}>
-                      {patients.filter(p => p.status === 'new').length}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
-                      {t('new_patients')}
-                    </Typography>
-                  </Box>
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
-                  <Box sx={{ 
-                    textAlign: 'center', 
-                    p: 2, 
-                    backgroundColor: 'rgba(255,255,255,0.8)', 
-                    borderRadius: 3,
-                    backdropFilter: 'blur(10px)',
-                    border: '1px solid rgba(255,255,255,0.2)'
-                  }}>
-                    <Typography variant="h4" sx={{ fontWeight: 800, color: 'warning.main', mb: 0.5 }}>
-                      {patients.filter(p => p.status === 'follow-up').length}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
-                      {t('follow_up')}
-                    </Typography>
-                  </Box>
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
-                  <Box sx={{ 
-                    textAlign: 'center', 
-                    p: 2, 
-                    backgroundColor: 'rgba(255,255,255,0.8)', 
-                    borderRadius: 3,
-                    backdropFilter: 'blur(10px)',
-                    border: '1px solid rgba(255,255,255,0.2)'
-                  }}>
-                    <Typography variant="h4" sx={{ fontWeight: 800, color: 'info.main', mb: 0.5 }}>
-                      {patients.filter(p => p._createdFromAppointment).length || 0}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
-                      {t('from_appointments')}
-                    </Typography>
-                  </Box>
-                </Grid>
-              </Grid>
-            </CardContent>
-            {/* Decorative elements */}
             <Box sx={{
               position: 'absolute',
               top: -40,
@@ -1331,7 +1239,7 @@ const PatientListPage: React.FC = () => {
               width: 120,
               height: 120,
               borderRadius: '50%',
-              backgroundColor: 'rgba(102, 126, 234, 0.1)',
+              backgroundColor: 'rgba(255,255,255,0.1)',
               zIndex: 1,
             }} />
             <Box sx={{
@@ -1341,10 +1249,12 @@ const PatientListPage: React.FC = () => {
               width: 80,
               height: 80,
               borderRadius: '50%',
-              backgroundColor: 'rgba(118, 75, 162, 0.1)',
+              backgroundColor: 'rgba(255,255,255,0.05)',
               zIndex: 1,
             }} />
-          </Card>
+          </Box>
+
+
 
 
 
@@ -3294,6 +3204,14 @@ const PatientListPage: React.FC = () => {
                               variant="contained" 
                               onClick={() => setAddPatientOpen(true)}
                               startIcon={<PersonAdd />}
+                              sx={{
+                                minHeight: { xs: 48, md: 'auto' },
+                                px: { xs: 3, md: 4 },
+                                py: { xs: 1.5, md: 1.5 },
+                                fontSize: { xs: '0.9rem', md: '1rem' },
+                                borderRadius: { xs: 2, md: 1 },
+                                fontWeight: 600
+                              }}
                             >
                               Add New Patient
                             </Button>

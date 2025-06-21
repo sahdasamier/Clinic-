@@ -302,6 +302,11 @@ const AppointmentListPage: React.FC = () => {
     const patients = loadPatientsFromStorage();
     setAvailablePatients(patients);
 
+    // Listen for mobile FAB action
+    const handleOpenAddAppointment = () => {
+      setAddAppointmentOpen(true);
+    };
+
     // Listen for user data clearing
     const handleUserDataCleared = () => {
       // Reset to default state
@@ -348,9 +353,11 @@ const AppointmentListPage: React.FC = () => {
     };
 
     window.addEventListener('userDataCleared', handleUserDataCleared);
+    window.addEventListener('openAddAppointment', handleOpenAddAppointment);
     
     return () => {
       window.removeEventListener('userDataCleared', handleUserDataCleared);
+      window.removeEventListener('openAddAppointment', handleOpenAddAppointment);
     };
   }, []);
 
@@ -758,45 +765,74 @@ const AppointmentListPage: React.FC = () => {
             position: 'relative',
             overflow: 'hidden'
           }}>
-            <CardContent sx={{ p: 4, position: 'relative', zIndex: 2 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <CardContent sx={{ p: { xs: 2, sm: 3, md: 4 }, position: 'relative', zIndex: 2 }}>
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: { xs: 'flex-start', md: 'center' }, 
+                justifyContent: 'space-between', 
+                mb: 3,
+                flexDirection: { xs: 'column', md: 'row' },
+                gap: { xs: 3, md: 0 }
+              }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', width: { xs: '100%', md: 'auto' } }}>
                   <Box
                     sx={{
-                      width: 64,
-                      height: 64,
-                      borderRadius: '20px',
+                      width: { xs: 48, md: 64 },
+                      height: { xs: 48, md: 64 },
+                      borderRadius: { xs: '16px', md: '20px' },
                       background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      mr: 3,
+                      mr: { xs: 2, md: 3 },
                       boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)',
+                      flexShrink: 0,
                     }}
                   >
-                    <CalendarToday sx={{ fontSize: 32, color: 'white' }} />
+                    <CalendarToday sx={{ fontSize: { xs: 24, md: 32 }, color: 'white' }} />
                   </Box>
-                  <Box>
-                    <Typography variant="h3" sx={{ fontWeight: 800, color: 'text.primary', mb: 0.5 }}>
+                  <Box sx={{ minWidth: 0 }}>
+                    <Typography variant="h3" sx={{ 
+                      fontWeight: 800, 
+                      color: 'text.primary', 
+                      mb: 0.5,
+                      fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' },
+                      lineHeight: 1.2
+                    }}>
                       {t('appointment_scheduling')}
                     </Typography>
-                    <Typography variant="h6" color="text.secondary" sx={{ fontWeight: 400 }}>
+                    <Typography variant="h6" color="text.secondary" sx={{ 
+                      fontWeight: 400,
+                      fontSize: { xs: '0.9rem', md: '1.25rem' },
+                      lineHeight: 1.3
+                    }}>
                       🩺 {t('professional_appointment_management')}
                     </Typography>
                   </Box>
                 </Box>
-                <Box sx={{ display: 'flex', gap: 2 }}>
+                
+                {/* Responsive Button Container */}
+                <Box sx={{ 
+                  display: 'flex', 
+                  gap: { xs: 1.5, md: 2 },
+                  width: { xs: '100%', md: 'auto' },
+                  flexDirection: { xs: 'column', sm: 'row' },
+                  alignItems: 'stretch'
+                }}>
                   <Button
                     variant="outlined"
                     startIcon={<Today />}
                     onClick={() => setSelectedDate(new Date().toISOString().split('T')[0])}
                     sx={{ 
-                      borderRadius: 3, 
+                      borderRadius: { xs: 2, md: 3 }, 
                       color: '#2196f3', 
                       borderColor: '#2196f3',
                       fontWeight: 600,
-                      px: 3,
-                      py: 1.5,
+                      px: { xs: 2, md: 3 },
+                      py: { xs: 1.5, md: 1.5 },
+                      minHeight: { xs: 48, md: 'auto' },
+                      fontSize: { xs: '0.875rem', md: '1rem' },
+                      flex: { xs: 1, sm: 'none' },
                       '&:hover': {
                         backgroundColor: 'rgba(33, 150, 243, 0.1)',
                         borderColor: '#2196f3',
@@ -805,18 +841,26 @@ const AppointmentListPage: React.FC = () => {
                       transition: 'all 0.3s ease'
                     }}
                   >
-                    {t('todays_schedule')}
+                    <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                      {t('todays_schedule')}
+                    </Box>
+                    <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
+                      {t('today')}
+                    </Box>
                   </Button>
                   <Button
                     variant="contained"
                     startIcon={<Add />}
                     onClick={() => setAddAppointmentOpen(true)}
                     sx={{ 
-                      borderRadius: 3,
+                      borderRadius: { xs: 2, md: 3 },
                       background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                       fontWeight: 700,
-                      px: 4,
-                      py: 1.5,
+                      px: { xs: 2, md: 4 },
+                      py: { xs: 1.5, md: 1.5 },
+                      minHeight: { xs: 48, md: 'auto' },
+                      fontSize: { xs: '0.875rem', md: '1rem' },
+                      flex: { xs: 1, sm: 'none' },
                       boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)',
                       '&:hover': {
                         background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
@@ -826,7 +870,12 @@ const AppointmentListPage: React.FC = () => {
                       transition: 'all 0.3s ease'
                     }}
                   >
-                    {t('schedule_new_appointment')}
+                    <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                      {t('schedule_new_appointment')}
+                    </Box>
+                    <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
+                      {t('new_appointment')}
+                    </Box>
                   </Button>
                 </Box>
               </Box>
@@ -1602,10 +1651,17 @@ const AppointmentListPage: React.FC = () => {
                               tabValue === 8 ? t('no_patients_missed_appointments') :
                               t('schedule_first_appointment')}
                            </Typography>
-                           <Button 
-                             variant="contained" 
-                             onClick={() => setAddAppointmentOpen(true)}
-                             startIcon={<Add />}
+                                                    <Button 
+                           variant="contained" 
+                           onClick={() => setAddAppointmentOpen(true)}
+                           startIcon={<Add />}
+                           sx={{
+                             minHeight: { xs: 48, md: 'auto' },
+                             px: { xs: 3, md: 4 },
+                             py: { xs: 1.5, md: 2 },
+                             fontSize: { xs: '0.9rem', md: '1rem' },
+                             borderRadius: { xs: 2, md: 1 }
+                           }}
                            >
                              {t('schedule_appointment')}
                            </Button>
@@ -1811,7 +1867,14 @@ const AppointmentListPage: React.FC = () => {
                        <Typography variant="body2" sx={{ opacity: 0.7, mb: 3 }}>
                          {t('enjoy_free_day_or_schedule')}
                        </Typography>
-                       <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
+                       <Box sx={{ 
+                         display: 'flex', 
+                         gap: { xs: 1.5, md: 2 }, 
+                         justifyContent: 'center', 
+                         flexWrap: 'wrap',
+                         flexDirection: { xs: 'column', sm: 'row' },
+                         alignItems: 'center'
+                       }}>
                          <Button
                            variant="outlined"
                            startIcon={<Add />}
@@ -1819,6 +1882,13 @@ const AppointmentListPage: React.FC = () => {
                            sx={{ 
                              color: 'white', 
                              borderColor: 'rgba(255,255,255,0.5)',
+                             minHeight: { xs: 48, md: 'auto' },
+                             px: { xs: 3, md: 2 },
+                             py: { xs: 1.5, md: 1 },
+                             fontSize: { xs: '0.9rem', md: '1rem' },
+                             width: { xs: '100%', sm: 'auto' },
+                             maxWidth: { xs: '280px', sm: 'none' },
+                             borderRadius: { xs: 2, md: 1 },
                              '&:hover': { 
                                borderColor: 'white',
                                backgroundColor: 'rgba(255,255,255,0.1)'
@@ -1834,6 +1904,13 @@ const AppointmentListPage: React.FC = () => {
                            sx={{ 
                              color: 'white', 
                              borderColor: 'rgba(255,255,255,0.5)',
+                             minHeight: { xs: 48, md: 'auto' },
+                             px: { xs: 3, md: 2 },
+                             py: { xs: 1.5, md: 1 },
+                             fontSize: { xs: '0.9rem', md: '1rem' },
+                             width: { xs: '100%', sm: 'auto' },
+                             maxWidth: { xs: '280px', sm: 'none' },
+                             borderRadius: { xs: 2, md: 1 },
                              '&:hover': { 
                                borderColor: 'white',
                                backgroundColor: 'rgba(255,255,255,0.1)'

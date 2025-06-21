@@ -338,6 +338,11 @@ useEffect(() => {
   setPayments(loadedPayments);
   setIsDataLoaded(true);
 
+  // Listen for mobile FAB action
+  const handleOpenAddPayment = () => {
+    setAddPaymentOpen(true);
+  };
+
   // Listen for user data clearing
   const handleUserDataCleared = () => {
     // Reset to default state
@@ -368,9 +373,11 @@ useEffect(() => {
   };
 
   window.addEventListener('userDataCleared', handleUserDataCleared);
+  window.addEventListener('openAddPayment', handleOpenAddPayment);
   
   return () => {
     window.removeEventListener('userDataCleared', handleUserDataCleared);
+    window.removeEventListener('openAddPayment', handleOpenAddPayment);
   };
 }, []);
 
@@ -894,56 +901,79 @@ return (
           position: 'relative',
           overflow: 'hidden',
         }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative', zIndex: 1 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: { xs: 'flex-start', md: 'center' }, 
+            justifyContent: 'space-between', 
+            position: 'relative', 
+            zIndex: 1,
+            flexDirection: { xs: 'column', md: 'row' },
+            gap: { xs: 3, md: 0 }
+          }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', width: { xs: '100%', md: 'auto' } }}>
               <Box sx={{
-                width: 60,
-                height: 60,
+                width: { xs: 48, md: 60 },
+                height: { xs: 48, md: 60 },
                 borderRadius: '50%',
                 backgroundColor: 'rgba(255,255,255,0.2)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                mr: isRTL ? 0 : 3,
-                ml: isRTL ? 3 : 0,
+                mr: isRTL ? 0 : { xs: 2, md: 3 },
+                ml: isRTL ? { xs: 2, md: 3 } : 0,
                 backdropFilter: 'blur(10px)',
+                flexShrink: 0,
               }}>
-                <MonetizationOn sx={{ fontSize: 32, color: 'white' }} />
+                <MonetizationOn sx={{ fontSize: { xs: 24, md: 32 }, color: 'white' }} />
               </Box>
-              <Box>
+              <Box sx={{ minWidth: 0 }}>
                 <Typography variant="h3" sx={{ 
                   fontWeight: 800, 
                   color: 'white',
                   mb: 1,
-                  textShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                  textShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                  fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' },
+                  lineHeight: 1.2
                 }}>
                   {t('payment.title')}
                 </Typography>
                 <Typography variant="h6" sx={{ 
                   color: 'rgba(255,255,255,0.9)',
-                  fontWeight: 400
+                  fontWeight: 400,
+                  fontSize: { xs: '0.9rem', md: '1.25rem' },
+                  lineHeight: 1.3
                 }}>
                   {t('payment.subtitle')}
                 </Typography>
               </Box>
             </Box>
-            <Box sx={{ display: 'flex', gap: 2 }}>
+            
+            {/* Responsive Button Container */}
+            <Box sx={{ 
+              display: 'flex', 
+              gap: { xs: 1.5, md: 2 },
+              width: { xs: '100%', md: 'auto' },
+              flexDirection: { xs: 'column', sm: 'row' },
+              alignItems: 'stretch'
+            }}>
               <Button
                 variant="contained"
                 size="large"
                 startIcon={<Add />}
                 onClick={() => setAddPaymentOpen(true)}
                 sx={{ 
-                  borderRadius: 4,
-                  px: 4,
-                  py: 1.5,
+                  borderRadius: { xs: 2, md: 4 },
+                  px: { xs: 3, md: 4 },
+                  py: { xs: 1.5, md: 1.5 },
+                  minHeight: { xs: 48, md: 'auto' },
                   backgroundColor: 'rgba(255,255,255,0.2)',
                   backdropFilter: 'blur(10px)',
                   border: '1px solid rgba(255,255,255,0.3)',
                   color: 'white',
                   fontWeight: 700,
                   textTransform: 'none',
-                  fontSize: '1.1rem',
+                  fontSize: { xs: '0.9rem', md: '1.1rem' },
+                  flex: { xs: 1, sm: 'none' },
                   '&:hover': {
                     backgroundColor: 'rgba(255,255,255,0.3)',
                     transform: 'translateY(-2px)',
@@ -952,7 +982,12 @@ return (
                   transition: 'all 0.3s ease'
                 }}
               >
-                {t('payment.actions.createNewInvoice')}
+                <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                  {t('payment.actions.createNewInvoice')}
+                </Box>
+                <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
+                  New Invoice
+                </Box>
               </Button>
               <Button
                 variant="outlined"
@@ -960,15 +995,18 @@ return (
                 startIcon={<Download />}
                 onClick={() => setExportOptionsOpen(true)}
                 sx={{ 
-                  borderRadius: 4,
-                  px: 3,
-                  py: 1.5,
+                  borderRadius: { xs: 2, md: 4 },
+                  px: { xs: 2, md: 3 },
+                  py: { xs: 1.5, md: 1.5 },
+                  minHeight: { xs: 48, md: 'auto' },
                   backgroundColor: 'rgba(255,255,255,0.1)',
                   backdropFilter: 'blur(10px)',
                   border: '1px solid rgba(255,255,255,0.3)',
                   color: 'white',
                   fontWeight: 600,
                   textTransform: 'none',
+                  fontSize: { xs: '0.9rem', md: '1rem' },
+                  flex: { xs: 1, sm: 'none' },
                   '&:hover': {
                     backgroundColor: 'rgba(255,255,255,0.2)',
                     transform: 'translateY(-2px)',
@@ -977,7 +1015,12 @@ return (
                   transition: 'all 0.3s ease'
                 }}
               >
-                {t('payment.actions.exportAll')}
+                <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                  {t('payment.actions.exportAll')}
+                </Box>
+                <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
+                  Export
+                </Box>
               </Button>
             </Box>
           </Box>
@@ -1069,32 +1112,88 @@ return (
                       />
                     </Grid>
                     <Grid item xs={12} md={6}>
-                      <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                      <Box sx={{ 
+                        display: 'flex', 
+                        gap: { xs: 1, md: 1 }, 
+                        justifyContent: { xs: 'flex-start', md: 'flex-end' },
+                        flexWrap: 'wrap',
+                        alignItems: 'center'
+                      }}>
                         <Button
                           variant="outlined"
                           startIcon={<FilterList />}
                           onClick={(e) => setFilterAnchor(e.currentTarget)}
+                          sx={{
+                            minHeight: { xs: 44, md: 'auto' },
+                            px: { xs: 2, md: 3 },
+                            py: { xs: 1, md: 1.5 },
+                            fontSize: { xs: '0.8rem', md: '0.875rem' },
+                            borderRadius: { xs: 2, md: 1 }
+                          }}
                         >
-                          {t('payment.actions.filter')}
+                          <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                            {t('payment.actions.filter')}
+                          </Box>
+                          <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
+                            Filter
+                          </Box>
                         </Button>
                         <Button
                           variant="outlined"
                           startIcon={<Download />}
                           onClick={() => setExportOptionsOpen(true)}
+                          sx={{
+                            minHeight: { xs: 44, md: 'auto' },
+                            px: { xs: 2, md: 3 },
+                            py: { xs: 1, md: 1.5 },
+                            fontSize: { xs: '0.8rem', md: '0.875rem' },
+                            borderRadius: { xs: 2, md: 1 }
+                          }}
                         >
-                          {t('payment.actions.export')}
+                          <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                            {t('payment.actions.export')}
+                          </Box>
+                          <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
+                            Export
+                          </Box>
                         </Button>
                         <Button
                           variant={viewMode === 'table' ? 'contained' : 'outlined'}
                           onClick={() => setViewMode('table')}
+                          sx={{
+                            minHeight: { xs: 44, md: 'auto' },
+                            px: { xs: 2, md: 3 },
+                            py: { xs: 1, md: 1.5 },
+                            fontSize: { xs: '0.8rem', md: '0.875rem' },
+                            borderRadius: { xs: 2, md: 1 },
+                            minWidth: { xs: 'auto', md: 'fit-content' }
+                          }}
                         >
-                          {t('payment.view.table')}
+                          <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                            {t('payment.view.table')}
+                          </Box>
+                          <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
+                            Table
+                          </Box>
                         </Button>
                         <Button
                           variant={viewMode === 'cards' ? 'contained' : 'outlined'}
                           onClick={() => setViewMode('cards')}
+                          sx={{
+                            minHeight: { xs: 44, md: 'auto' },
+                            px: { xs: 2, md: 3 },
+                            py: { xs: 1, md: 1.5 },
+                            fontSize: { xs: '0.8rem', md: '0.875rem' },
+                            borderRadius: { xs: 2, md: 1 },
+                            minWidth: { xs: 'auto', md: 'fit-content' }
+                          }}
                         >
-                          {t('payment.view.cards')}
+                          <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                            {t('payment.view.cards')}
+                          </Box>
+                          <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
+                            Cards
+                          </Box>
                         </Button>
                       </Box>
                     </Grid>

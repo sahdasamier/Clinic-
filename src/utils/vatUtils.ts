@@ -136,5 +136,4 @@ export const calculateReverseVAT = (
   };
 };
 
-// Export types for use in other components
-export type { VATCalculation }; 
+// VATCalculation type is already exported as interface above 
