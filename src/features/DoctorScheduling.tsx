@@ -41,6 +41,8 @@ import {
   Menu,
   ListItemSecondaryAction,
   Snackbar,
+  Switch,
+  FormControlLabel,
 } from '@mui/material';
 import {
   Schedule,
@@ -200,6 +202,35 @@ const DoctorSchedulingPage: React.FC = () => {
     appointment?: Appointment;
   } | null>(null);
   const [timeSlotFormData, setTimeSlotFormData] = useState(defaultTimeSlotFormData);
+
+  // Weekly scheduling state
+  const [weeklyScheduleDialogOpen, setWeeklyScheduleDialogOpen] = useState(false);
+  const [selectedDoctorForWeekly, setSelectedDoctorForWeekly] = useState<any>(null);
+  const [currentWeekStart, setCurrentWeekStart] = useState(() => {
+    const today = new Date();
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - today.getDay() + 1);
+    return monday.toISOString().split('T')[0];
+  });
+  const [weeklyScheduleData, setWeeklyScheduleData] = useState<{
+    [day: string]: {
+      isWorking: boolean;
+      timeSlots: string[];
+      notes: string;
+    }
+  }>({});
+
+  // Recurring appointments state
+  const [recurringAppointmentsDialogOpen, setRecurringAppointmentsDialogOpen] = useState(false);
+  const [recurringSettings, setRecurringSettings] = useState({
+    enabled: true,
+    weeksToRepeat: 4,
+    includeOffDays: false,
+    autoApprove: false,
+  });
+
+  // Time slot input state for weekly scheduling
+  const [newTimeSlot, setNewTimeSlot] = useState('');
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
@@ -653,6 +684,402 @@ const DoctorSchedulingPage: React.FC = () => {
     });
   };
 
+  // Weekly scheduling functions
+  const handleOpenWeeklySchedule = (doctor: any) => {
+    console.log('🔧 Opening weekly schedule for doctor:', doctor.name, doctor.id);
+    setSelectedDoctorForWeekly(doctor);
+    
+    // Check if doctor already has custom weekly schedule in localStorage
+    const existingScheduleKey = `weekly_schedule_${doctor.id}`;
+    const existingSchedule = localStorage.getItem(existingScheduleKey);
+    
+    let initialWeeklyData: any = {};
+    
+    if (existingSchedule) {
+      // Load existing custom schedule
+      try {
+        initialWeeklyData = JSON.parse(existingSchedule);
+        console.log('📅 Loaded existing weekly schedule for Dr.', doctor.name);
+      } catch (error) {
+        console.warn('Error loading existing schedule, creating default');
+        initialWeeklyData = {};
+      }
+    }
+    
+    // Initialize or fill missing days with default settings
+    daysOfWeek.forEach(day => {
+      if (!initialWeeklyData[day]) {
+        initialWeeklyData[day] = {
+          isWorking: !doctor.offDays.includes(day),
+          timeSlots: [],
+          notes: ''
+        };
+        
+        // Only add default time slots if no existing schedule
+        if (!existingSchedule && !doctor.offDays.includes(day)) {
+          const slots = [];
+          const startHour = parseInt(doctor.workingHours.start.split(':')[0]);
+          const startMinute = parseInt(doctor.workingHours.start.split(':')[1]);
+          const endHour = parseInt(doctor.workingHours.end.split(':')[0]);
+          const endMinute = parseInt(doctor.workingHours.end.split(':')[1]);
+          
+          const startTime = startHour * 60 + startMinute;
+          const endTime = endHour * 60 + endMinute;
+          
+          for (let time = startTime; time < endTime; time += doctor.consultationDuration) {
+            const hour = Math.floor(time / 60);
+            const minute = time % 60;
+            const timeSlot = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+            slots.push(timeSlot);
+          }
+          initialWeeklyData[day].timeSlots = slots;
+        }
+      }
+    });
+    
+    setWeeklyScheduleData(initialWeeklyData);
+    setWeeklyScheduleDialogOpen(true);
+    console.log('✅ Weekly schedule dialog should now be open');
+  };
+
+  const handleSaveWeeklySchedule = () => {
+    if (!selectedDoctorForWeekly) return;
+
+    // Save the weekly schedule to localStorage for persistence
+    const scheduleKey = `weekly_schedule_${selectedDoctorForWeekly.id}`;
+    localStorage.setItem(scheduleKey, JSON.stringify(weeklyScheduleData));
+
+    // Update doctor's off days based on weekly schedule
+    const newOffDays = daysOfWeek.filter(day => !weeklyScheduleData[day]?.isWorking);
+    
+    const updatedDoctor = {
+      ...selectedDoctorForWeekly,
+      offDays: newOffDays
+    };
+
+    setDoctors(prev => prev.map(doc => 
+      doc.id === selectedDoctorForWeekly.id ? updatedDoctor : doc
+    ));
+
+    // Generate appointments for the entire week
+    const newAppointments: Appointment[] = [];
+    const weekStart = new Date(currentWeekStart);
+    
+    daysOfWeek.forEach((day, index) => {
+      if (weeklyScheduleData[day]?.isWorking && weeklyScheduleData[day]?.timeSlots.length > 0) {
+        const dayDate = new Date(weekStart);
+        dayDate.setDate(weekStart.getDate() + index);
+        const dateString = dayDate.toISOString().split('T')[0];
+        
+        weeklyScheduleData[day].timeSlots.forEach(timeSlot => {
+          // Check if appointment already exists
+          const existingApt = appointments.find(apt => 
+            apt.doctor === selectedDoctorForWeekly.name && 
+            apt.date === dateString && 
+            apt.timeSlot === timeSlot
+          );
+          
+          if (!existingApt) {
+            const timeDisplay = new Date(`2024-01-01T${timeSlot}`).toLocaleTimeString('en-US', {
+              hour: 'numeric',
+              minute: '2-digit',
+              hour12: true
+            });
+
+            const newAppointment: Appointment = {
+              id: Math.max(...(appointments.length > 0 ? appointments.map(a => a.id || 0) : [0])) + newAppointments.length + 1,
+              doctor: selectedDoctorForWeekly.name,
+              date: dateString,
+              time: timeDisplay,
+              timeSlot: timeSlot,
+              patient: t('available_slot'),
+              patientAvatar: 'AS',
+              duration: selectedDoctorForWeekly.consultationDuration || 30,
+              type: t('available_slot'),
+              status: 'pending',
+              location: `${t('room')} ${100 + selectedDoctorForWeekly.id}`,
+              phone: '',
+              notes: weeklyScheduleData[day].notes || t('weekly_schedule_generated'),
+              completed: false,
+              priority: 'normal',
+              createdAt: new Date().toISOString(),
+              isAvailableSlot: true,
+            };
+            
+            newAppointments.push(newAppointment);
+          }
+        });
+      }
+    });
+
+    // Save all new appointments
+    if (newAppointments.length > 0) {
+      const updatedAppointments = [...appointments, ...newAppointments];
+      setAppointments(updatedAppointments);
+      saveAppointmentsToStorage(updatedAppointments);
+    }
+
+    setWeeklyScheduleDialogOpen(false);
+    setSnackbar({
+      open: true,
+      message: `✅ ${t('weekly_schedule_saved', { doctor: selectedDoctorForWeekly.name, count: newAppointments.length })}`,
+      severity: 'success'
+    });
+  };
+
+  const addTimeSlotToDay = (day: string) => {
+    if (!newTimeSlot) {
+      setSnackbar({
+        open: true,
+        message: `⚠️ Please select a time first`,
+        severity: 'error'
+      });
+      return;
+    }
+
+    // Check if time slot already exists for this day
+    const existingSlots = weeklyScheduleData[day]?.timeSlots || [];
+    if (existingSlots.includes(newTimeSlot)) {
+      setSnackbar({
+        open: true,
+        message: `⚠️ Time slot ${newTimeSlot} already exists for ${t(day)}`,
+        severity: 'error'
+      });
+      return;
+    }
+
+    setWeeklyScheduleData(prev => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        timeSlots: [...(prev[day]?.timeSlots || []), newTimeSlot].sort()
+      }
+    }));
+
+    setSnackbar({
+      open: true,
+      message: `✅ Added time slot ${newTimeSlot} to ${t(day)}`,
+      severity: 'success'
+    });
+
+    // Clear the input
+    setNewTimeSlot('');
+  };
+
+  // Copy time slots from one day to another
+  const copyTimeSlotsToDay = (fromDay: string, toDay: string) => {
+    const fromDayData = weeklyScheduleData[fromDay];
+    if (fromDayData?.timeSlots) {
+      setWeeklyScheduleData(prev => ({
+        ...prev,
+        [toDay]: {
+          ...prev[toDay],
+          timeSlots: [...fromDayData.timeSlots]
+        }
+      }));
+      
+      setSnackbar({
+        open: true,
+        message: `✅ Copied ${fromDayData.timeSlots.length} time slots from ${t(fromDay)} to ${t(toDay)}`,
+        severity: 'success'
+      });
+    }
+  };
+
+  // Apply doctor's default hours to a specific day
+  const applyDefaultHoursToDay = (day: string) => {
+    if (!selectedDoctorForWeekly) return;
+    
+    const slots = [];
+    const startHour = parseInt(selectedDoctorForWeekly.workingHours.start.split(':')[0]);
+    const startMinute = parseInt(selectedDoctorForWeekly.workingHours.start.split(':')[1]);
+    const endHour = parseInt(selectedDoctorForWeekly.workingHours.end.split(':')[0]);
+    const endMinute = parseInt(selectedDoctorForWeekly.workingHours.end.split(':')[1]);
+    
+    const startTime = startHour * 60 + startMinute;
+    const endTime = endHour * 60 + endMinute;
+    
+    for (let time = startTime; time < endTime; time += selectedDoctorForWeekly.consultationDuration) {
+      const hour = Math.floor(time / 60);
+      const minute = time % 60;
+      const timeSlot = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+      slots.push(timeSlot);
+    }
+    
+    setWeeklyScheduleData(prev => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        timeSlots: slots
+      }
+    }));
+    
+    setSnackbar({
+      open: true,
+      message: `✅ Applied default hours (${selectedDoctorForWeekly.workingHours.start} - ${selectedDoctorForWeekly.workingHours.end}) to ${t(day)}`,
+      severity: 'success'
+    });
+  };
+
+  // Clear all time slots for a day
+  const clearAllTimeSlotsForDay = (day: string) => {
+    setWeeklyScheduleData(prev => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        timeSlots: []
+      }
+    }));
+    
+    setSnackbar({
+      open: true,
+      message: `🗑️ Cleared all time slots for ${t(day)}`,
+      severity: 'success'
+    });
+  };
+
+  // Quick availability presets
+  const applyQuickAvailability = (day: string, preset: 'morning' | 'afternoon' | 'evening' | 'full') => {
+    let slots = [];
+    
+    switch (preset) {
+      case 'morning':
+        slots = ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30'];
+        break;
+      case 'afternoon':
+        slots = ['14:00', '14:30', '15:00', '15:30', '16:00', '16:30'];
+        break;
+      case 'evening':
+        slots = ['18:00', '18:30', '19:00', '19:30', '20:00', '20:30'];
+        break;
+      case 'full':
+        slots = ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30'];
+        break;
+    }
+    
+    setWeeklyScheduleData(prev => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        timeSlots: slots
+      }
+    }));
+    
+    setSnackbar({
+      open: true,
+      message: `⏰ Applied ${preset} availability to ${t(day)} (${slots.length} slots)`,
+      severity: 'success'
+    });
+  };
+
+  const removeTimeSlotFromDay = (day: string, slotIndex: number) => {
+    setWeeklyScheduleData(prev => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        timeSlots: prev[day]?.timeSlots.filter((_, index) => index !== slotIndex) || []
+      }
+    }));
+  };
+
+  const updateTimeSlot = (day: string, slotIndex: number, newTime: string) => {
+    setWeeklyScheduleData(prev => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        timeSlots: prev[day]?.timeSlots.map((slot, index) => 
+          index === slotIndex ? newTime : slot
+        ) || []
+      }
+    }));
+  };
+
+  // Recurring appointments functions
+  const handleSetupRecurringAppointments = () => {
+    setRecurringAppointmentsDialogOpen(true);
+  };
+
+  const handleApplyRecurringSchedule = () => {
+    if (!recurringSettings.enabled) return;
+
+    const currentWeekAppointments = appointments.filter(apt => {
+      const aptDate = new Date(apt.date);
+      const weekStart = new Date(currentWeekStart);
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 6);
+      
+      return aptDate >= weekStart && aptDate <= weekEnd;
+    });
+
+    const newRecurringAppointments: Appointment[] = [];
+
+    for (let week = 1; week <= recurringSettings.weeksToRepeat; week++) {
+      currentWeekAppointments.forEach(apt => {
+        if (!recurringSettings.includeOffDays) {
+          const doctor = doctors.find(d => d.name === apt.doctor);
+          const aptDate = new Date(apt.date);
+          const dayName = daysOfWeek[aptDate.getDay()];
+          if (doctor?.offDays.includes(dayName)) return;
+        }
+
+        const futureDate = new Date(apt.date);
+        futureDate.setDate(futureDate.getDate() + (week * 7));
+        const futureDateString = futureDate.toISOString().split('T')[0];
+
+        // Check if appointment already exists
+        const existingApt = appointments.find(existingApt => 
+          existingApt.doctor === apt.doctor && 
+          existingApt.date === futureDateString && 
+          existingApt.timeSlot === apt.timeSlot
+        );
+
+        if (!existingApt) {
+          const recurringAppointment: Appointment = {
+            ...apt,
+            id: Math.max(...(appointments.length > 0 ? appointments.map(a => a.id || 0) : [0])) + newRecurringAppointments.length + 1,
+            date: futureDateString,
+            status: recurringSettings.autoApprove ? 'confirmed' : 'pending',
+            notes: `${apt.notes || ''} (${t('recurring_appointment')} - ${t('week')} ${week + 1})`,
+            createdAt: new Date().toISOString(),
+          };
+          
+          newRecurringAppointments.push(recurringAppointment);
+        }
+      });
+    }
+
+    if (newRecurringAppointments.length > 0) {
+      const updatedAppointments = [...appointments, ...newRecurringAppointments];
+      setAppointments(updatedAppointments);
+      saveAppointmentsToStorage(updatedAppointments);
+    }
+
+    setRecurringAppointmentsDialogOpen(false);
+    setSnackbar({
+      open: true,
+      message: `✅ ${t('recurring_appointments_created', { count: newRecurringAppointments.length, weeks: recurringSettings.weeksToRepeat })}`,
+      severity: 'success'
+    });
+  };
+
+  const getWeekDates = () => {
+    const weekStart = new Date(currentWeekStart);
+    const dates = [];
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(weekStart);
+      date.setDate(weekStart.getDate() + i);
+      dates.push(date.toISOString().split('T')[0]);
+    }
+    return dates;
+  };
+
+  const navigateWeek = (direction: 'prev' | 'next') => {
+    const current = new Date(currentWeekStart);
+    const offset = direction === 'next' ? 7 : -7;
+    current.setDate(current.getDate() + offset);
+    setCurrentWeekStart(current.toISOString().split('T')[0]);
+  };
+
   // Calculate statistics
   const totalWorkingDoctors = getWorkingDoctors().length;
   const totalAppointmentsToday = appointments.filter((apt: Appointment) => apt.date === selectedDate).length;
@@ -754,6 +1181,35 @@ const DoctorSchedulingPage: React.FC = () => {
                       Today
                     </Box>
                     </Button>
+                 <Button
+                   variant="outlined"
+                   startIcon={<EventAvailable />}
+                   onClick={handleSetupRecurringAppointments}
+                   sx={{ 
+                     borderRadius: { xs: 2, md: 3 }, 
+                     color: '#ff9800', 
+                     borderColor: '#ff9800',
+                     fontWeight: 600,
+                     px: { xs: 2, md: 3 },
+                     py: { xs: 1.5, md: 1.5 },
+                     minHeight: { xs: 48, md: 'auto' },
+                     fontSize: { xs: '0.875rem', md: '1rem' },
+                     flex: { xs: 1, sm: 'none' },
+                     '&:hover': {
+                       backgroundColor: 'rgba(255, 152, 0, 0.1)',
+                       borderColor: '#ff9800',
+                       transform: 'translateY(-2px)',
+                     },
+                     transition: 'all 0.3s ease'
+                   }}
+                 >
+                   <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                     Recurring Schedule
+                   </Box>
+                   <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
+                     Recurring
+                   </Box>
+                 </Button>
                  <Button
                    variant="contained"
                    startIcon={<Add />}
@@ -1196,6 +1652,25 @@ const DoctorSchedulingPage: React.FC = () => {
                                </Box>
                              </Box>
                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                               <Tooltip title={t('weekly_schedule')}>
+                                 <IconButton 
+                                   onClick={() => handleOpenWeeklySchedule(doctor)}
+                                   sx={{
+                                     background: 'linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%)',
+                                     color: 'white',
+                                     boxShadow: '0 4px 16px rgba(76, 175, 80, 0.3)',
+                                     '&:hover': {
+                                       background: 'linear-gradient(135deg, #388E3C 0%, #1B5E20 100%)',
+                                       transform: 'scale(1.1)',
+                                       boxShadow: '0 6px 20px rgba(76, 175, 80, 0.4)',
+                                     },
+                                     transition: 'all 0.3s ease'
+                                   }}
+                                   size="small"
+                                 >
+                                   <Schedule />
+                                 </IconButton>
+                               </Tooltip>
                                <Tooltip title={t('add_time_slot')}>
                                  <IconButton 
                                    onClick={() => handleAddAppointment(doctor.id)}
@@ -1641,25 +2116,52 @@ const DoctorSchedulingPage: React.FC = () => {
                            </TableCell>
                          ))}
                          <TableCell sx={{ textAlign: 'center' }}>
-                           <Tooltip title={t('edit_doctor_schedule')}>
-                             <IconButton 
-                               onClick={() => handleEditDoctor(doctor)}
-                               sx={{
-                                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                                 color: 'white',
-                                 boxShadow: '0 4px 16px rgba(102, 126, 234, 0.3)',
-                                 '&:hover': {
-                                   background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
-                                   transform: 'scale(1.05)',
-                                   boxShadow: '0 6px 20px rgba(102, 126, 234, 0.4)',
-                                 },
-                                 transition: 'all 0.3s ease'
-                               }}
-                               size="small"
-                             >
-                               <Edit fontSize="small" />
-                             </IconButton>
-                           </Tooltip>
+                           <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
+                             <Tooltip title={t('weekly_schedule')}>
+                               <Button
+                                 variant="contained"
+                                 size="small"
+                                 startIcon={<Schedule />}
+                                 onClick={() => handleOpenWeeklySchedule(doctor)}
+                                 sx={{
+                                   background: 'linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%)',
+                                   color: 'white',
+                                   boxShadow: '0 4px 16px rgba(76, 175, 80, 0.3)',
+                                   borderRadius: 2,
+                                   fontSize: '0.75rem',
+                                   fontWeight: 600,
+                                   px: 2,
+                                   '&:hover': {
+                                     background: 'linear-gradient(135deg, #388E3C 0%, #1B5E20 100%)',
+                                     transform: 'scale(1.05)',
+                                     boxShadow: '0 6px 20px rgba(76, 175, 80, 0.4)',
+                                   },
+                                   transition: 'all 0.3s ease'
+                                 }}
+                               >
+                                 Weekly Schedule
+                               </Button>
+                             </Tooltip>
+                             <Tooltip title={t('edit_doctor_profile')}>
+                               <IconButton 
+                                 onClick={() => handleEditDoctor(doctor)}
+                                 sx={{
+                                   background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                   color: 'white',
+                                   boxShadow: '0 4px 16px rgba(102, 126, 234, 0.3)',
+                                   '&:hover': {
+                                     background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
+                                     transform: 'scale(1.05)',
+                                     boxShadow: '0 6px 20px rgba(102, 126, 234, 0.4)',
+                                   },
+                                   transition: 'all 0.3s ease'
+                                 }}
+                                 size="small"
+                               >
+                                 <Edit fontSize="small" />
+                               </IconButton>
+                             </Tooltip>
+                           </Box>
                          </TableCell>
                        </TableRow>
                      ))}
@@ -2678,6 +3180,590 @@ const DoctorSchedulingPage: React.FC = () => {
                }}
              >
                {t('save_changes')}
+             </Button>
+           </DialogActions>
+         </Dialog>
+
+         {/* Weekly Schedule Dialog */}
+         <Dialog 
+           open={weeklyScheduleDialogOpen} 
+           onClose={() => setWeeklyScheduleDialogOpen(false)}
+           maxWidth="lg"
+           fullWidth
+           PaperProps={{
+             sx: {
+               borderRadius: 4,
+               background: 'linear-gradient(145deg, #f8f9fa 0%, #ffffff 100%)',
+               boxShadow: '0 20px 40px rgba(76, 175, 80, 0.15)',
+               maxHeight: '90vh',
+             }
+           }}
+         >
+           <DialogTitle sx={{ 
+             background: 'linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%)',
+             color: 'white',
+             borderRadius: 0,
+           }}>
+             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+               <Schedule sx={{ fontSize: 32 }} />
+               <Box>
+                 <Typography variant="h5" sx={{ fontWeight: 700 }}>
+                   📅 Weekly Schedule for Dr. {selectedDoctorForWeekly?.name}
+                 </Typography>
+                 <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                   Set working days, time slots, and off days for the entire week
+                 </Typography>
+               </Box>
+             </Box>
+           </DialogTitle>
+           
+                       <DialogContent sx={{ p: 4, maxHeight: '60vh', overflow: 'auto' }}>
+              {/* Helpful Info */}
+              <Box sx={{ mb: 4, p: 3, backgroundColor: '#e8f5e9', borderRadius: 3, border: '1px solid #4CAF50' }}>
+                <Typography variant="h6" sx={{ fontWeight: 700, color: '#2e7d32', mb: 1 }}>
+                  💡 Flexible Weekly Scheduling
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  • <strong>Different schedules per day:</strong> Monday 9-12, Tuesday 2-5, Wednesday off, etc.<br/>
+                  • <strong>Custom time slots:</strong> Add any time slots you want for each day<br/>
+                  • <strong>Copy & Apply:</strong> Use helper buttons to copy slots between days<br/>
+                  • <strong>Persistent:</strong> Your custom schedule is saved and remembered
+                </Typography>
+              </Box>
+
+              {/* Week Navigation */}
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 4, p: 3, backgroundColor: '#f5f5f5', borderRadius: 3 }}>
+                <Button 
+                  onClick={() => navigateWeek('prev')}
+                  variant="outlined"
+                  startIcon={<Add sx={{ transform: 'rotate(180deg)' }} />}
+                  sx={{ borderRadius: 2 }}
+                >
+                  Previous Week
+                </Button>
+                <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                  Week of {new Date(currentWeekStart).toLocaleDateString()}
+                </Typography>
+                <Button 
+                  onClick={() => navigateWeek('next')}
+                  variant="outlined"
+                  endIcon={<Add />}
+                  sx={{ borderRadius: 2 }}
+                >
+                  Next Week
+                </Button>
+              </Box>
+
+             {/* Daily Schedule Grid */}
+             <Grid container spacing={3}>
+               {daysOfWeek.map((day, index) => {
+                 const dayData = weeklyScheduleData[day] || { isWorking: false, timeSlots: [], notes: '' };
+                 const weekDate = getWeekDates()[index];
+                 
+                 return (
+                   <Grid item xs={12} key={day}>
+                     <Card sx={{ 
+                       border: dayData.isWorking ? '2px solid #4CAF50' : '2px solid #e0e0e0',
+                       backgroundColor: dayData.isWorking ? '#f1f8e9' : '#fafafa',
+                       borderRadius: 3,
+                     }}>
+                       <CardContent sx={{ p: 3 }}>
+                         {/* Day Header */}
+                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                             <Typography variant="h6" sx={{ fontWeight: 700, textTransform: 'capitalize' }}>
+                               {t(day)} ({new Date(weekDate).toLocaleDateString()})
+                             </Typography>
+                             <Chip 
+                               label={dayData.isWorking ? 'Working Day' : 'Day Off'}
+                               size="small"
+                               sx={{
+                                 backgroundColor: dayData.isWorking ? '#c8e6c8' : '#ffcdd2',
+                                 color: dayData.isWorking ? '#2e7d32' : '#d32f2f',
+                                 fontWeight: 600
+                               }}
+                             />
+                           </Box>
+                           <Button
+                             variant={dayData.isWorking ? "contained" : "outlined"}
+                             color={dayData.isWorking ? "success" : "primary"}
+                             onClick={() => setWeeklyScheduleData(prev => ({
+                               ...prev,
+                               [day]: {
+                                 ...prev[day],
+                                 isWorking: !dayData.isWorking,
+                                 timeSlots: !dayData.isWorking ? [] : prev[day]?.timeSlots || []
+                               }
+                             }))}
+                             sx={{ borderRadius: 2 }}
+                           >
+                             {dayData.isWorking ? 'Set as Day Off' : 'Set as Working Day'}
+                           </Button>
+                         </Box>
+
+                                                   {/* Time Slots (only for working days) */}
+                          {dayData.isWorking && (
+                            <Box>
+                              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                                  Time Slots ({dayData.timeSlots.length})
+                                </Typography>
+                              </Box>
+
+                              {/* Quick Availability Presets */}
+                              <Box sx={{ mb: 3, p: 2, backgroundColor: '#f8f9fa', borderRadius: 2, border: '1px solid #e0e0e0' }}>
+                                <Typography variant="body2" sx={{ fontWeight: 600, mb: 1.5, color: '#333' }}>
+                                  ⚡ Quick Availability Presets:
+                                </Typography>
+                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                                  <Button
+                                    size="small"
+                                    variant="outlined"
+                                    onClick={() => applyQuickAvailability(day, 'morning')}
+                                    sx={{ 
+                                      borderRadius: 2, 
+                                      fontSize: '0.75rem',
+                                      backgroundColor: '#e3f2fd',
+                                      '&:hover': { backgroundColor: '#bbdefb' }
+                                    }}
+                                  >
+                                    🌅 Morning (9-12)
+                                  </Button>
+                                  <Button
+                                    size="small"
+                                    variant="outlined"
+                                    onClick={() => applyQuickAvailability(day, 'afternoon')}
+                                    sx={{ 
+                                      borderRadius: 2, 
+                                      fontSize: '0.75rem',
+                                      backgroundColor: '#fff3e0',
+                                      '&:hover': { backgroundColor: '#ffe0b2' }
+                                    }}
+                                  >
+                                    ☀️ Afternoon (2-5)
+                                  </Button>
+                                  <Button
+                                    size="small"
+                                    variant="outlined"
+                                    onClick={() => applyQuickAvailability(day, 'evening')}
+                                    sx={{ 
+                                      borderRadius: 2, 
+                                      fontSize: '0.75rem',
+                                      backgroundColor: '#f3e5f5',
+                                      '&:hover': { backgroundColor: '#e1bee7' }
+                                    }}
+                                  >
+                                    🌙 Evening (6-9)
+                                  </Button>
+                                  <Button
+                                    size="small"
+                                    variant="outlined"
+                                    onClick={() => applyQuickAvailability(day, 'full')}
+                                    sx={{ 
+                                      borderRadius: 2, 
+                                      fontSize: '0.75rem',
+                                      backgroundColor: '#e8f5e9',
+                                      color: '#2e7d32',
+                                      borderColor: '#4caf50',
+                                      '&:hover': { backgroundColor: '#c8e6c9', borderColor: '#2e7d32' }
+                                    }}
+                                  >
+                                    🌈 Full Day
+                                  </Button>
+                                  <Button
+                                    size="small"
+                                    variant="outlined"
+                                    startIcon={<Schedule />}
+                                    onClick={() => applyDefaultHoursToDay(day)}
+                                    sx={{ 
+                                      borderRadius: 2, 
+                                      fontSize: '0.75rem',
+                                      backgroundColor: '#e8eaf6'
+                                    }}
+                                  >
+                                    📋 Default Hours
+                                  </Button>
+                                  <Button
+                                    size="small"
+                                    variant="outlined"
+                                    onClick={() => clearAllTimeSlotsForDay(day)}
+                                    sx={{ 
+                                      borderRadius: 2, 
+                                      fontSize: '0.75rem',
+                                      backgroundColor: '#ffebee',
+                                      color: '#d32f2f',
+                                      borderColor: '#f44336',
+                                      '&:hover': { backgroundColor: '#ffcdd2', borderColor: '#d32f2f' }
+                                    }}
+                                  >
+                                    🗑️ Clear All
+                                  </Button>
+                                </Box>
+                              </Box>
+
+                              {/* Current Time Slots */}
+                              <Box sx={{ mb: 2 }}>
+                                <Typography variant="body2" sx={{ fontWeight: 600, mb: 1.5, color: '#333' }}>
+                                  📅 Current Time Slots:
+                                </Typography>
+                                {dayData.timeSlots.length === 0 ? (
+                                  <Box sx={{ 
+                                    p: 3, 
+                                    textAlign: 'center', 
+                                    backgroundColor: '#f5f5f5', 
+                                    borderRadius: 2,
+                                    border: '2px dashed #ccc'
+                                  }}>
+                                    <Typography variant="body2" color="text.secondary">
+                                      No time slots added yet. Use quick presets above or add custom slots below.
+                                    </Typography>
+                                  </Box>
+                                ) : (
+                                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
+                                    {dayData.timeSlots.map((timeSlot, slotIndex) => (
+                                      <Box 
+                                        key={slotIndex} 
+                                        sx={{ 
+                                          display: 'flex', 
+                                          alignItems: 'center', 
+                                          gap: 1,
+                                          p: 1,
+                                          backgroundColor: '#ffffff',
+                                          border: '1px solid #e0e0e0',
+                                          borderRadius: 2,
+                                          boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                                        }}
+                                      >
+                                        <TextField
+                                          size="small"
+                                          type="time"
+                                          value={timeSlot}
+                                          onChange={(e) => updateTimeSlot(day, slotIndex, e.target.value)}
+                                          sx={{ 
+                                            width: 130,
+                                            '& .MuiOutlinedInput-root': { 
+                                              borderRadius: 2,
+                                              '& fieldset': { borderColor: '#e0e0e0' },
+                                              '&:hover fieldset': { borderColor: '#2196f3' },
+                                              '&.Mui-focused fieldset': { borderColor: '#2196f3' }
+                                            }
+                                          }}
+                                        />
+                                        <IconButton 
+                                          size="small" 
+                                          color="error"
+                                          onClick={() => removeTimeSlotFromDay(day, slotIndex)}
+                                          sx={{
+                                            backgroundColor: '#ffebee',
+                                            '&:hover': { backgroundColor: '#ffcdd2' }
+                                          }}
+                                        >
+                                          <Delete />
+                                        </IconButton>
+                                      </Box>
+                                    ))}
+                                  </Box>
+                                )}
+                              </Box>
+
+                              {/* Add Custom Time Slot */}
+                              <Box sx={{ p: 2, backgroundColor: '#f8f9fa', borderRadius: 2, border: '1px solid #e0e0e0' }}>
+                                <Typography variant="body2" sx={{ fontWeight: 600, mb: 1.5, color: '#333' }}>
+                                  ➕ Add Custom Time Slot:
+                                </Typography>
+                                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                                  <TextField
+                                    size="small"
+                                    type="time"
+                                    value={newTimeSlot}
+                                    onChange={(e) => setNewTimeSlot(e.target.value)}
+                                    placeholder="Select time"
+                                    sx={{ 
+                                      width: 150,
+                                      '& .MuiOutlinedInput-root': { 
+                                        borderRadius: 2,
+                                        backgroundColor: '#ffffff'
+                                      }
+                                    }}
+                                  />
+                                  <Button
+                                    variant="contained"
+                                    startIcon={<Add />}
+                                    onClick={() => addTimeSlotToDay(day)}
+                                    disabled={!newTimeSlot}
+                                    sx={{ 
+                                      borderRadius: 2,
+                                      background: 'linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%)',
+                                      '&:hover': {
+                                        background: 'linear-gradient(135deg, #388E3C 0%, #1B5E20 100%)',
+                                      }
+                                    }}
+                                  >
+                                    Add Slot
+                                  </Button>
+                                </Box>
+                              </Box>
+
+                             {/* Notes for the day */}
+                             <TextField
+                               fullWidth
+                               size="small"
+                               label={`Notes for ${t(day)}`}
+                               value={dayData.notes}
+                               onChange={(e) => setWeeklyScheduleData(prev => ({
+                                 ...prev,
+                                 [day]: {
+                                   ...prev[day],
+                                   notes: e.target.value
+                                 }
+                               }))}
+                               placeholder="Special notes or instructions for this day..."
+                               sx={{ 
+                                 '& .MuiOutlinedInput-root': { borderRadius: 2 }
+                               }}
+                             />
+                           </Box>
+                         )}
+                       </CardContent>
+                     </Card>
+                   </Grid>
+                 );
+               })}
+             </Grid>
+
+             {/* Weekly Schedule Summary */}
+             <Box sx={{ mt: 4, p: 3, backgroundColor: '#f8f9fa', borderRadius: 3, border: '1px solid #e0e0e0' }}>
+               <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
+                 📋 Weekly Schedule Summary
+               </Typography>
+               <Grid container spacing={1}>
+                 {daysOfWeek.map(day => {
+                   const dayData = weeklyScheduleData[day] || { isWorking: false, timeSlots: [] };
+                   return (
+                     <Grid item xs={12} sm={6} md={4} lg={3} key={day}>
+                       <Box sx={{ 
+                         p: 2, 
+                         backgroundColor: dayData.isWorking ? '#e8f5e8' : '#ffebee',
+                         borderRadius: 2,
+                         border: `1px solid ${dayData.isWorking ? '#4CAF50' : '#f44336'}`
+                       }}>
+                         <Typography variant="body2" sx={{ fontWeight: 700, textTransform: 'capitalize' }}>
+                           {t(day)}
+                         </Typography>
+                         {dayData.isWorking ? (
+                           <Typography variant="caption" color="text.secondary">
+                             {dayData.timeSlots.length} time slots
+                             {dayData.timeSlots.length > 0 && (
+                               <><br/>{dayData.timeSlots[0]} - {dayData.timeSlots[dayData.timeSlots.length - 1]}</>
+                             )}
+                           </Typography>
+                         ) : (
+                           <Typography variant="caption" sx={{ color: '#d32f2f' }}>
+                             Day Off
+                           </Typography>
+                         )}
+                       </Box>
+                     </Grid>
+                   );
+                 })}
+               </Grid>
+             </Box>
+           </DialogContent>
+           
+           <DialogActions sx={{ p: 4, gap: 3, backgroundColor: '#f8f9fa' }}>
+             <Button 
+               onClick={() => setWeeklyScheduleDialogOpen(false)}
+               variant="outlined"
+               size="large"
+               sx={{ borderRadius: 3, px: 4 }}
+             >
+               Cancel
+             </Button>
+             <Button 
+               onClick={handleSaveWeeklySchedule}
+               variant="contained"
+               size="large"
+               sx={{ 
+                 borderRadius: 3, 
+                 px: 6,
+                 background: 'linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%)',
+                 boxShadow: '0 8px 32px rgba(76, 175, 80, 0.3)',
+                 '&:hover': {
+                   background: 'linear-gradient(135deg, #388E3C 0%, #1B5E20 100%)',
+                   boxShadow: '0 12px 40px rgba(76, 175, 80, 0.4)',
+                 }
+               }}
+             >
+               ✅ Save Weekly Schedule
+             </Button>
+           </DialogActions>
+         </Dialog>
+
+         {/* Recurring Appointments Dialog */}
+         <Dialog 
+           open={recurringAppointmentsDialogOpen} 
+           onClose={() => setRecurringAppointmentsDialogOpen(false)}
+           maxWidth="md"
+           fullWidth
+           PaperProps={{
+             sx: {
+               borderRadius: 4,
+               background: 'linear-gradient(145deg, #fff3e0 0%, #ffffff 100%)',
+               boxShadow: '0 20px 40px rgba(255, 152, 0, 0.15)',
+             }
+           }}
+         >
+           <DialogTitle sx={{ 
+             background: 'linear-gradient(135deg, #ff9800 0%, #f57c00 100%)',
+             color: 'white',
+             borderRadius: 0,
+           }}>
+             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+               <EventAvailable sx={{ fontSize: 32 }} />
+               <Box>
+                 <Typography variant="h5" sx={{ fontWeight: 700 }}>
+                   🔄 Recurring Appointments Setup
+                 </Typography>
+                 <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                   Automatically repeat current week's schedule for upcoming weeks
+                 </Typography>
+               </Box>
+             </Box>
+           </DialogTitle>
+           
+           <DialogContent sx={{ p: 4 }}>
+             <Grid container spacing={3}>
+               <Grid item xs={12}>
+                 <Box sx={{ p: 3, backgroundColor: '#f5f5f5', borderRadius: 2, mb: 3 }}>
+                   <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+                     ℹ️ How Recurring Appointments Work
+                   </Typography>
+                   <Typography variant="body2" color="text.secondary">
+                     This feature will copy all appointments from the current week (week of {new Date(currentWeekStart).toLocaleDateString()}) 
+                     and create them for the specified number of future weeks. Perfect for doctors with regular schedules!
+                   </Typography>
+                 </Box>
+               </Grid>
+
+               <Grid item xs={12} md={6}>
+                 <TextField
+                   fullWidth
+                   label="Number of Weeks to Repeat"
+                   type="number"
+                   value={recurringSettings.weeksToRepeat}
+                   onChange={(e) => setRecurringSettings(prev => ({ 
+                     ...prev, 
+                     weeksToRepeat: parseInt(e.target.value) || 1 
+                   }))}
+                   inputProps={{ min: 1, max: 12 }}
+                   helperText="How many future weeks to create appointments for"
+                   sx={{
+                     '& .MuiOutlinedInput-root': {
+                       borderRadius: 2,
+                       '&:hover fieldset': { borderColor: '#ff9800' },
+                       '&.Mui-focused fieldset': { borderColor: '#ff9800' },
+                     },
+                     '& .MuiInputLabel-root.Mui-focused': { color: '#ff9800' },
+                   }}
+                 />
+               </Grid>
+
+               <Grid item xs={12} md={6}>
+                 <FormControl fullWidth>
+                   <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+                     Recurring Options
+                   </Typography>
+                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                     <FormControlLabel
+                       control={
+                         <Switch
+                           checked={recurringSettings.enabled}
+                           onChange={(e) => setRecurringSettings(prev => ({ 
+                             ...prev, 
+                             enabled: e.target.checked 
+                           }))}
+                           color="warning"
+                         />
+                       }
+                       label="Enable Recurring Appointments"
+                     />
+                     <FormControlLabel
+                       control={
+                         <Switch
+                           checked={recurringSettings.includeOffDays}
+                           onChange={(e) => setRecurringSettings(prev => ({ 
+                             ...prev, 
+                             includeOffDays: e.target.checked 
+                           }))}
+                           color="warning"
+                         />
+                       }
+                       label="Include Doctor's Off Days"
+                     />
+                     <FormControlLabel
+                       control={
+                         <Switch
+                           checked={recurringSettings.autoApprove}
+                           onChange={(e) => setRecurringSettings(prev => ({ 
+                             ...prev, 
+                             autoApprove: e.target.checked 
+                           }))}
+                           color="warning"
+                         />
+                       }
+                       label="Auto-approve Recurring Appointments"
+                     />
+                   </Box>
+                 </FormControl>
+               </Grid>
+
+               <Grid item xs={12}>
+                 <Box sx={{ p: 3, backgroundColor: '#fff3e0', borderRadius: 2, border: '1px solid #ffcc02' }}>
+                   <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#e65100', mb: 1 }}>
+                     ⚠️ Preview
+                   </Typography>
+                   <Typography variant="body2" color="text.secondary">
+                     This will create <strong>{appointments.filter(apt => {
+                       const aptDate = new Date(apt.date);
+                       const weekStart = new Date(currentWeekStart);
+                       const weekEnd = new Date(weekStart);
+                       weekEnd.setDate(weekStart.getDate() + 6);
+                       return aptDate >= weekStart && aptDate <= weekEnd;
+                     }).length * recurringSettings.weeksToRepeat}</strong> new appointments 
+                     across <strong>{recurringSettings.weeksToRepeat}</strong> weeks, starting from{' '}
+                     <strong>{new Date(new Date(currentWeekStart).getTime() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString()}</strong>.
+                   </Typography>
+                 </Box>
+               </Grid>
+             </Grid>
+           </DialogContent>
+           
+           <DialogActions sx={{ p: 4, gap: 3, backgroundColor: '#f8f9fa' }}>
+             <Button 
+               onClick={() => setRecurringAppointmentsDialogOpen(false)}
+               variant="outlined"
+               size="large"
+               sx={{ borderRadius: 3, px: 4 }}
+             >
+               Cancel
+             </Button>
+             <Button 
+               onClick={handleApplyRecurringSchedule}
+               variant="contained"
+               size="large"
+               disabled={!recurringSettings.enabled}
+               sx={{ 
+                 borderRadius: 3, 
+                 px: 6,
+                 background: 'linear-gradient(135deg, #ff9800 0%, #f57c00 100%)',
+                 boxShadow: '0 8px 32px rgba(255, 152, 0, 0.3)',
+                 '&:hover': {
+                   background: 'linear-gradient(135deg, #f57c00 0%, #e65100 100%)',
+                   boxShadow: '0 12px 40px rgba(255, 152, 0, 0.4)',
+                 }
+               }}
+             >
+               🔄 Create Recurring Schedule
              </Button>
            </DialogActions>
          </Dialog>

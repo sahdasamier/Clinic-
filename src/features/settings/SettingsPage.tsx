@@ -68,6 +68,7 @@ import {
   MedicalServices,
   Payment,
   Palette,
+  Delete,
 } from '@mui/icons-material';
 
 import { sendSupportEmail, sendFeedbackEmail, getSetupInstructions, type SupportEmailData } from '../../services/emailService';
@@ -3582,6 +3583,49 @@ const SettingsPage: React.FC = () => {
                             disabled={loading}
                           >
                             {loading ? 'Exporting...' : 'Export'}
+                          </Button>
+                        </ListItemSecondaryAction>
+                      </ListItem>
+                      <Divider />
+                      <ListItem>
+                        <ListItemIcon>
+                          <Delete color="error" />
+                        </ListItemIcon>
+                        <ListItemText
+                          primary="Clear All Data"
+                          secondary="Remove all patients, appointments, payments, and notifications (cannot be undone)"
+                        />
+                        <ListItemSecondaryAction>
+                          <Button 
+                            variant="outlined" 
+                            size="small"
+                            color="error"
+                            startIcon={<Delete />}
+                            onClick={() => {
+                              setConfirmMessage('Are you sure you want to clear ALL clinic data? This will remove all patients, appointments, payments, and notifications. This action cannot be undone.');
+                              setConfirmAction(() => () => {
+                                // Clear all localStorage data
+                                localStorage.removeItem('clinic_patients_data');
+                                localStorage.removeItem('clinic_appointments_data');
+                                localStorage.removeItem('clinic_payments_data');
+                                localStorage.removeItem('clinic_notifications_data');
+                                localStorage.removeItem('clinic_inventory_data');
+                                
+                                // Trigger application-wide data clearing
+                                window.dispatchEvent(new CustomEvent('userDataCleared'));
+                                
+                                // Show success message
+                                showSnackbar('All clinic data cleared successfully! The application will refresh.', 'success');
+                                
+                                // Refresh the page after a short delay
+                                setTimeout(() => {
+                                  window.location.reload();
+                                }, 2000);
+                              });
+                              setConfirmDialogOpen(true);
+                            }}
+                          >
+                            Clear All
                           </Button>
                         </ListItemSecondaryAction>
                       </ListItem>

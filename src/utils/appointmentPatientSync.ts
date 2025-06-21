@@ -103,23 +103,23 @@ export const sendAppointmentDataToPatients = (): PatientWithAppointments[] => {
           return {
         id: Math.max(0, ...existingPatients.map(p => p.id)) + index + 1,
         name: patientName,
-        age: 30, // Default age
-        gender: 'Unknown',
-        phone: firstAppointment?.phone || 'N/A',
-        email: `${patientName.toLowerCase().replace(/\s+/g, '.')}@example.com`,
+        age: null, // Age not provided
+        gender: '',
+        phone: firstAppointment?.phone || '',
+        email: '',
         lastVisit: patientAppointments
           .filter(apt => apt.status === 'completed' || apt.completed)
-          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0]?.date || 'N/A',
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0]?.date || '',
         nextAppointment: patientAppointments
           .filter(apt => new Date(apt.date) >= new Date() && (apt.status !== 'completed' && !apt.completed))
-          .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0]?.date || 'Not scheduled',
-        condition: firstAppointment?.type || 'Initial consultation',
+          .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0]?.date || '',
+        condition: firstAppointment?.type || '',
         status: 'new',
         avatar: patientName.split(' ').map((n: string) => n[0]).join('').toUpperCase(),
-        address: 'Address not provided',
-        bloodType: 'Unknown',
+        address: '',
+        bloodType: '',
         allergies: [],
-        emergencyContact: 'Not provided',
+        emergencyContact: '',
         medicalHistory: [],
         medications: [],
         visitNotes: [],

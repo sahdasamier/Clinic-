@@ -534,6 +534,22 @@ const resources = {
       'none': 'None',
       'max_patients_per_hour_template': 'Max {{max}} patients/hour',
       'consultation_duration_min': '{{duration}} min consultations',
+      
+      // Daily availability management
+      'quick_availability_presets': 'Quick Availability Presets',
+      'morning_preset': '🌅 Morning (9-12)',
+      'afternoon_preset': '☀️ Afternoon (2-5)',
+      'evening_preset': '🌙 Evening (6-9)',
+      'full_day_preset': '🌈 Full Day',
+      'default_hours': '📋 Default Hours',
+      'clear_all': '🗑️ Clear All',
+      'current_time_slots': 'Current Time Slots',
+      'add_custom_time': 'Add Custom Time',
+      'no_slots_message': 'No time slots added yet. Use quick presets above or add custom slots below.',
+      'availability_presets': 'Availability Presets',
+      'add_custom_time_slot': 'Add Custom Time Slot',
+      'select_time': 'Select time',
+      'add_slot': 'Add Slot',
       'create_availability_for': 'Create availability for {{doctor}}',
       'what_this_does': 'What this does',
       'add_time_slot_description': 'This adds an available time slot to the doctor\'s schedule. You can add time slots to ANY doctor, even if they already have existing appointments.',
@@ -565,6 +581,7 @@ const resources = {
       'doctor_name': 'Doctor Name',
       'working_hours_and_schedule': 'Working Hours & Schedule',
       'update_doctor': 'Update Doctor',
+      'edit_doctor_profile': 'Edit Doctor Profile',
       'edit_time_slot_time': 'Edit Time Slot: {{time}}',
       'configure_slot_type_and_patient': 'Configure slot type and patient details',
       'current_status': 'Current Status',
@@ -889,7 +906,7 @@ const resources = {
         
         // Placeholders
         placeholders: {
-          patientName: 'e.g., Ahmed Al-Rashid',
+          patientName: 'e.g., Patient Name',
           description: 'Description of services provided...'
         },
         
@@ -1237,7 +1254,7 @@ const resources = {
       "appointment_time": "وقت الموعد",
       "appointment_details": "تفاصيل الموعد",
       "appointment_type": "نوع الموعد",
-      "phone_placeholder": "مثال: +20 10 1234 5678",
+      "phone_placeholder": "مثال: +20 XXX XXX XXXX",
       "location_placeholder": "مثال: غرفة 101، غرفة استشارة أ",
       "notes_placeholder": "أدخل أي ملاحظات إضافية حول الموعد أو التاريخ الطبي أو المتطلبات الخاصة...",
       "appointment_notes_placeholder": "أدخل أي ملاحظات خاصة أو تعليمات لهذا الموعد...",
@@ -1459,6 +1476,32 @@ const resources = {
       'doctor_schedule': 'جدول الطبيب',
       'review': 'مراجعة',
       
+      // Weekly scheduling and recurring appointments - NEW
+      'weekly_schedule': 'جدول أسبوعي',
+      'weekly_schedule_saved': 'تم حفظ الجدول الأسبوعي للدكتور {{doctor}} مع {{count}} موعد جديد',
+      'weekly_schedule_generated': 'تم إنشاؤه من الجدول الأسبوعي',
+      'day_off': 'يوم راحة',
+      'off': 'راحة',
+      'recurring_appointment': 'موعد متكرر',
+      'recurring_appointments_created': 'تم إنشاء {{count}} موعد متكرر لمدة {{weeks}} أسابيع',
+      'week': 'أسبوع',
+      
+      // Daily availability management - إدارة التوفر اليومي
+      'quick_availability_presets': 'الإعدادات السريعة للتوفر',
+      'morning_preset': '🌅 الصباح (9-12)',
+      'afternoon_preset': '☀️ بعد الظهر (2-5)',
+      'evening_preset': '🌙 المساء (6-9)',
+      'full_day_preset': '🌈 يوم كامل',
+      'default_hours': '📋 الساعات الافتراضية',
+      'clear_all': '🗑️ مسح الكل',
+      'current_time_slots': 'الأوقات الحالية',
+      'add_custom_time': 'إضافة وقت مخصص',
+      'no_slots_message': 'لم يتم إضافة أوقات بعد. استخدم الإعدادات السريعة أعلاه أو أضف أوقات مخصصة أدناه.',
+      'availability_presets': 'الإعدادات المسبقة للتوفر',
+      'add_custom_time_slot': 'إضافة فترة زمنية مخصصة',
+      'select_time': 'اختر الوقت',
+      'add_slot': 'إضافة فترة',
+      
       // Days of the week - أيام الأسبوع
       'monday': 'الاثنين',
       'tuesday': 'الثلاثاء',
@@ -1495,6 +1538,7 @@ const resources = {
       'add_doctor_to_clinic': 'إضافة طبيب إلى العيادة',
       'doctor_added_successfully': 'تم إضافة الطبيب {{name}} بنجاح!',
       'doctor_updated_successfully': 'تم تحديث الطبيب {{name}} بنجاح!',
+      'edit_doctor_profile': 'تعديل ملف الطبيب',
       'please_fill_doctor_name_specialty': 'يرجى ملء اسم الطبيب والتخصص',
       
       // Create Availability Dialog - حوار إنشاء التوفر
