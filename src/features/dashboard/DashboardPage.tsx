@@ -207,10 +207,54 @@ const DashboardPage: React.FC = () => {
   const [refreshKey, setRefreshKey] = useState(0);
   const [dataLoading, setDataLoading] = useState(true);
   
-  // Load real data directly from the pages
-  const [appointments, setAppointments] = useState<any[]>([]);
-  const [patients, setPatients] = useState<any[]>([]);
-  const [payments, setPayments] = useState<any[]>([]);
+  // ✅ Initialize dashboard data from localStorage FIRST
+  const [appointments, setAppointments] = useState<any[]>(() => {
+    try {
+      const saved = localStorage.getItem('clinic_appointments_data');
+      if (saved) {
+        const parsedData = JSON.parse(saved);
+        if (Array.isArray(parsedData) && parsedData.length > 0) {
+          console.log('✅ DashboardPage: Loaded appointments from localStorage on init:', parsedData.length);
+          return parsedData;
+        }
+      }
+    } catch (error) {
+      console.error('❌ DashboardPage: Error loading appointments from localStorage:', error);
+    }
+    return getDefaultAppointments();
+  });
+
+  const [patients, setPatients] = useState<any[]>(() => {
+    try {
+      const saved = localStorage.getItem('clinic_patients_data');
+      if (saved) {
+        const parsedData = JSON.parse(saved);
+        if (Array.isArray(parsedData) && parsedData.length > 0) {
+          console.log('✅ DashboardPage: Loaded patients from localStorage on init:', parsedData.length);
+          return parsedData;
+        }
+      }
+    } catch (error) {
+      console.error('❌ DashboardPage: Error loading patients from localStorage:', error);
+    }
+    return [];
+  });
+
+  const [payments, setPayments] = useState<any[]>(() => {
+    try {
+      const saved = localStorage.getItem('clinic_payments_data');
+      if (saved) {
+        const parsedData = JSON.parse(saved);
+        if (Array.isArray(parsedData) && parsedData.length > 0) {
+          console.log('✅ DashboardPage: Loaded payments from localStorage on init:', parsedData.length);
+          return parsedData;
+        }
+      }
+    } catch (error) {
+      console.error('❌ DashboardPage: Error loading payments from localStorage:', error);
+    }
+    return [];
+  });
   const doctors = doctorSchedules;
 
   // Load all data directly from the pages and setup sync

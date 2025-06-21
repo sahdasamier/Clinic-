@@ -266,7 +266,23 @@ const AppointmentListPage: React.FC = () => {
   const [addAppointmentOpen, setAddAppointmentOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'table' | 'cards' | 'calendar'>('table');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [appointmentList, setAppointmentList] = useState<Appointment[]>([]);
+  // ✅ Initialize appointments from localStorage FIRST
+  const [appointmentList, setAppointmentList] = useState<Appointment[]>(() => {
+    try {
+      const saved = localStorage.getItem(APPOINTMENTS_STORAGE_KEY);
+      if (saved) {
+        const parsedData = JSON.parse(saved);
+        if (Array.isArray(parsedData) && parsedData.length > 0) {
+          console.log('✅ AppointmentListPage: Loaded appointments from localStorage on init:', parsedData.length);
+          return parsedData;
+        }
+      }
+    } catch (error) {
+      console.error('❌ AppointmentListPage: Error loading from localStorage:', error);
+    }
+    console.log('ℹ️ AppointmentListPage: Using default appointments');
+    return getDefaultAppointments();
+  });
   const [dataLoading, setDataLoading] = useState(true);
   const [doctorStartTime] = useState('15:00');
   const [activeFilters, setActiveFilters] = useState<FilterState>({
@@ -296,8 +312,39 @@ const AppointmentListPage: React.FC = () => {
     phone: '',
     paymentStatus: 'pending'
   });
-  const [availableDoctors] = useState(doctorSchedules);
-  const [availablePatients, setAvailablePatients] = useState<any[]>([]);
+  // ✅ Initialize doctors from shared localStorage (same as DoctorScheduling)
+  const [availableDoctors, setAvailableDoctors] = useState(() => {
+    try {
+      const saved = localStorage.getItem('clinic_doctor_schedules');
+      if (saved) {
+        const parsedData = JSON.parse(saved);
+        if (Array.isArray(parsedData) && parsedData.length > 0) {
+          console.log('✅ AppointmentListPage: Loaded doctors from localStorage on init:', parsedData.length);
+          return parsedData;
+        }
+      }
+    } catch (error) {
+      console.error('❌ AppointmentListPage: Error loading doctors from localStorage:', error);
+    }
+    console.log('ℹ️ AppointmentListPage: Using default doctor schedules');
+    return doctorSchedules;
+  });
+  // ✅ Initialize available patients from localStorage FIRST
+  const [availablePatients, setAvailablePatients] = useState<any[]>(() => {
+    try {
+      const saved = localStorage.getItem('clinic_patients_data');
+      if (saved) {
+        const parsedData = JSON.parse(saved);
+        if (Array.isArray(parsedData) && parsedData.length > 0) {
+          console.log('✅ AppointmentListPage: Loaded patients from localStorage on init:', parsedData.length);
+          return parsedData;
+        }
+      }
+    } catch (error) {
+      console.error('❌ AppointmentListPage: Error loading patients from localStorage:', error);
+    }
+    return [];
+  });
 
   // Effects - wait for auth initialization
   useEffect(() => {
@@ -387,6 +434,29 @@ const AppointmentListPage: React.FC = () => {
       window.removeEventListener('openAddAppointment', handleOpenAddAppointment);
     };
   }, [initialized, authLoading, user]);
+
+  // ✅ Listen for doctor updates from localStorage (shared with DoctorScheduling)
+  useEffect(() => {
+    const updateDoctorsFromStorage = () => {
+      try {
+        const saved = localStorage.getItem('clinic_doctor_schedules');
+        if (saved) {
+          const parsedData = JSON.parse(saved);
+          if (Array.isArray(parsedData) && parsedData.length > 0) {
+            console.log('🔄 AppointmentListPage: Updated doctors from localStorage:', parsedData.length);
+            setAvailableDoctors(parsedData);
+          }
+        }
+      } catch (error) {
+        console.error('❌ AppointmentListPage: Error updating doctors from localStorage:', error);
+      }
+    };
+
+    // Check for changes periodically (since localStorage doesn't emit events in same tab)
+    const interval = setInterval(updateDoctorsFromStorage, 2000);
+    
+    return () => clearInterval(interval);
+  }, []);
 
   // Event Handlers
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {

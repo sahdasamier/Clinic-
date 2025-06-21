@@ -189,16 +189,42 @@ const DoctorSchedulingPage: React.FC = () => {
     severity: 'success' as 'success' | 'error'
   });
 
-  // Translate doctor specialties and initialize state
-  const doctorSchedules = baseDoctorSchedules.map(doctor => ({
-    ...doctor,
-    specialty: t(doctor.specialty)
-  }));
-  
-  // New state for doctor management
-  const [doctors, setDoctors] = useState(doctorSchedules);
-  const [addDoctorDialogOpen, setAddDoctorDialogOpen] = useState(false);
-  const [editDoctorDialogOpen, setEditDoctorDialogOpen] = useState(false);
+  // ✅ Initialize doctors from localStorage FIRST
+  const [doctors, setDoctors] = useState(() => {
+    try {
+      const saved = localStorage.getItem('clinic_doctor_schedules');
+      if (saved) {
+        const parsedData = JSON.parse(saved);
+        if (Array.isArray(parsedData) && parsedData.length > 0) {
+          console.log('✅ DoctorScheduling: Loaded doctors from localStorage on init:', parsedData.length);
+          return parsedData.map(doctor => ({
+            ...doctor,
+            specialty: t(doctor.specialty)
+          }));
+        }
+      }
+    } catch (error) {
+      console.error('❌ DoctorScheduling: Error loading doctors from localStorage:', error);
+    }
+    console.log('ℹ️ DoctorScheduling: Using default doctor schedules');
+    return baseDoctorSchedules.map(doctor => ({
+      ...doctor,
+      specialty: t(doctor.specialty)
+    }));
+     });
+
+   // Save doctors to localStorage whenever they change
+   useEffect(() => {
+     try {
+       localStorage.setItem('clinic_doctor_schedules', JSON.stringify(doctors));
+       console.log('✅ DoctorScheduling: Saved doctors to localStorage');
+     } catch (error) {
+       console.error('❌ DoctorScheduling: Error saving doctors:', error);
+     }
+   }, [doctors]);
+
+   const [addDoctorDialogOpen, setAddDoctorDialogOpen] = useState(false);
+   const [editDoctorDialogOpen, setEditDoctorDialogOpen] = useState(false);
   const [selectedDoctorForEdit, setSelectedDoctorForEdit] = useState<any>(null);
   const { 
     formData: doctorFormData, 
@@ -2447,7 +2473,7 @@ const DoctorSchedulingPage: React.FC = () => {
                                {doctor.specialty} • {doctor.workingHours.start} - {doctor.workingHours.end}
                              </Typography>
                              <Typography variant="caption" color="text.secondary">
-                               {t('off_days')}: {doctor.offDays.length > 0 ? doctor.offDays.map(day => t(day)).join(', ') : t('none')} • 
+                                                               {t('off_days')}: {doctor.offDays.length > 0 ? doctor.offDays.map((day: string) => t(day)).join(', ') : t('none')} • 
                                {t('max_patients_per_hour', { max: doctor.maxPatientsPerHour })} • 
                                {t('consultation_duration_min', { duration: doctor.consultationDuration })}
                              </Typography>

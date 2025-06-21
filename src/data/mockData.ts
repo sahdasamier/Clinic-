@@ -278,6 +278,7 @@ export interface PaymentData {
   invoiceId: string;
   patient: string;
   patientAvatar: string;
+  doctor: string; // Added doctor field for clinic management
   amount: number;
   currency: string;
   date: string;
@@ -396,6 +397,7 @@ export const vatRateOptions = [
 // Default form data for new invoice/payment
 export const defaultNewInvoiceData = {
   patient: '',
+  doctor: '', // Added doctor field for clinic management
   amount: '',
   category: '',
   invoiceDate: new Date().toISOString().split('T')[0],

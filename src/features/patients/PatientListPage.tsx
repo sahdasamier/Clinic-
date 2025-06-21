@@ -189,7 +189,23 @@ const PatientListPage: React.FC = () => {
   const [editingMedication, setEditingMedication] = useState<any>(null);
   const [editNoteOpen, setEditNoteOpen] = useState(false);
   const [editingNote, setEditingNote] = useState<any>(null);
-  const [patients, setPatients] = useState<any[]>([]);
+  // ✅ Initialize patients from localStorage FIRST
+  const [patients, setPatients] = useState<any[]>(() => {
+    try {
+      const saved = localStorage.getItem(PATIENTS_STORAGE_KEY);
+      if (saved) {
+        const parsedData = JSON.parse(saved);
+        if (Array.isArray(parsedData) && parsedData.length > 0) {
+          console.log('✅ PatientListPage: Loaded patients from localStorage on init:', parsedData.length);
+          return parsedData;
+        }
+      }
+    } catch (error) {
+      console.error('❌ PatientListPage: Error loading from localStorage:', error);
+    }
+    console.log('ℹ️ PatientListPage: Using default patients');
+    return initialPatients;
+  });
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
   const [organizedAppointmentData, setOrganizedAppointmentData] = useState<any>(null);
@@ -364,8 +380,30 @@ const PatientListPage: React.FC = () => {
   const [statusEditPatient, setStatusEditPatient] = useState<any>(null);
   const [statusMenuAnchor, setStatusMenuAnchor] = useState<null | HTMLElement>(null);
   
-  // New Patient Form State
-  const [newPatientData, setNewPatientData] = useState(defaultNewPatientData);
+  // New Patient Form State - Initialize from localStorage
+  const [newPatientData, setNewPatientData] = useState(() => {
+    try {
+      const saved = localStorage.getItem('clinic_new_patient_form');
+      if (saved) {
+        const parsedData = JSON.parse(saved);
+        console.log('✅ PatientListPage: Loaded new patient form from localStorage');
+        return { ...defaultNewPatientData, ...parsedData };
+      }
+    } catch (error) {
+      console.error('❌ PatientListPage: Error loading new patient form:', error);
+    }
+    return defaultNewPatientData;
+  });
+
+  // Save new patient form data to localStorage whenever it changes
+  React.useEffect(() => {
+    try {
+      localStorage.setItem('clinic_new_patient_form', JSON.stringify(newPatientData));
+      console.log('✅ PatientListPage: Saved new patient form to localStorage');
+    } catch (error) {
+      console.error('❌ PatientListPage: Error saving new patient form:', error);
+    }
+  }, [newPatientData]);
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);

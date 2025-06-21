@@ -88,6 +88,7 @@ import {
   type VATCalculation 
 } from '../../utils/vatUtils';
 import InvoiceGenerator from './InvoiceGenerator';
+import { doctorSchedules } from '../../data/mockData';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -114,6 +115,7 @@ function TabPanel(props: TabPanelProps) {
 
 interface NewInvoiceData {
   patient: string;
+  doctor: string; // Added doctor field for clinic management
   amount: string;
   category: string;
   invoiceDate: string;
@@ -325,16 +327,68 @@ const PaymentListPage: React.FC = () => {
   const [statusMenuAnchor, setStatusMenuAnchor] = useState<null | HTMLElement>(null);
   const [selectedPaymentForStatusChange, setSelectedPaymentForStatusChange] = useState<PaymentData | null>(null);
   const [exportOptionsOpen, setExportOptionsOpen] = useState(false);
-  const [payments, setPayments] = useState<PaymentData[]>([]);
+  // ✅ Initialize payments from localStorage FIRST
+  const [payments, setPayments] = useState<PaymentData[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsedData = JSON.parse(saved);
+        if (Array.isArray(parsedData) && parsedData.length > 0) {
+          console.log('✅ PaymentListPage: Loaded payments from localStorage on init:', parsedData.length);
+          return parsedData;
+        }
+      }
+    } catch (error) {
+      console.error('❌ PaymentListPage: Error loading from localStorage:', error);
+    }
+    console.log('ℹ️ PaymentListPage: Using default payments');
+    return generateDefaultPayments();
+  });
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
-  const [newInvoiceData, setNewInvoiceData] = useState<NewInvoiceData>({
-    ...defaultNewInvoiceData,
-    includeVAT: getVATSettings().defaultIncludeVAT,
-    vatRate: getVATSettings().rate,
+  // ✅ Initialize invoice form from localStorage FIRST
+  const [newInvoiceData, setNewInvoiceData] = useState<NewInvoiceData>(() => {
+    try {
+      const saved = localStorage.getItem('clinic_new_invoice_form');
+      if (saved) {
+        const parsedData = JSON.parse(saved);
+        console.log('✅ PaymentListPage: Loaded invoice form from localStorage');
+        return {
+          ...defaultNewInvoiceData,
+          includeVAT: getVATSettings().defaultIncludeVAT,
+          vatRate: getVATSettings().rate,
+          ...parsedData
+        };
+      }
+    } catch (error) {
+      console.error('❌ PaymentListPage: Error loading invoice form:', error);
+    }
+    return {
+      ...defaultNewInvoiceData,
+      includeVAT: getVATSettings().defaultIncludeVAT,
+      vatRate: getVATSettings().rate,
+    };
   });
   const [vatSettings, setVATSettings] = useState<VATSettings>(getVATSettings());
   const [currentVATCalculation, setCurrentVATCalculation] = useState<VATCalculation | null>(null);
+  
+  // ✅ Initialize doctors from shared localStorage (same as DoctorScheduling)
+  const [availableDoctors, setAvailableDoctors] = useState(() => {
+    try {
+      const saved = localStorage.getItem('clinic_doctor_schedules');
+      if (saved) {
+        const parsedData = JSON.parse(saved);
+        if (Array.isArray(parsedData) && parsedData.length > 0) {
+          console.log('✅ PaymentListPage: Loaded doctors from localStorage on init:', parsedData.length);
+          return parsedData;
+        }
+      }
+    } catch (error) {
+      console.error('❌ PaymentListPage: Error loading doctors from localStorage:', error);
+    }
+    console.log('ℹ️ PaymentListPage: Using default doctor schedules');
+    return doctorSchedules;
+  });
 
 // Load data from localStorage on component mount - wait for auth
 useEffect(() => {
@@ -405,12 +459,45 @@ useEffect(() => {
   };
 }, [initialized, authLoading, user]);
 
+// ✅ Listen for doctor updates from localStorage (shared with DoctorScheduling)
+useEffect(() => {
+  const updateDoctorsFromStorage = () => {
+    try {
+      const saved = localStorage.getItem('clinic_doctor_schedules');
+      if (saved) {
+        const parsedData = JSON.parse(saved);
+        if (Array.isArray(parsedData) && parsedData.length > 0) {
+          console.log('🔄 PaymentListPage: Updated doctors from localStorage:', parsedData.length);
+          setAvailableDoctors(parsedData);
+        }
+      }
+    } catch (error) {
+      console.error('❌ PaymentListPage: Error updating doctors from localStorage:', error);
+    }
+  };
+
+  // Check for changes periodically (since localStorage doesn't emit events in same tab)
+  const interval = setInterval(updateDoctorsFromStorage, 2000);
+  
+  return () => clearInterval(interval);
+}, []);
+
 // Save data to localStorage whenever payments change
 useEffect(() => {
   if (isDataLoaded && payments.length > 0) {
     savePaymentsToStorage(payments);
   }
 }, [payments, isDataLoaded]);
+
+// Save invoice form data to localStorage whenever it changes
+useEffect(() => {
+  try {
+    localStorage.setItem('clinic_new_invoice_form', JSON.stringify(newInvoiceData));
+    console.log('✅ PaymentListPage: Saved invoice form to localStorage');
+  } catch (error) {
+    console.error('❌ PaymentListPage: Error saving invoice form:', error);
+  }
+}, [newInvoiceData]);
 
 // Calculate VAT whenever amount or VAT settings change
 useEffect(() => {
@@ -604,6 +691,7 @@ const handleCreatePayment = () => {
     status: 'pending',
     currency: 'EGP',
     patient: newInvoiceData.patient,
+    doctor: newInvoiceData.doctor, // Added doctor field
     amount: vatCalculation.totalAmountWithVAT, // Total amount including VAT if applicable
     category: newInvoiceData.category,
     dueDate: newInvoiceData.dueDate,
@@ -727,6 +815,7 @@ const handleSendReminder = (payment: PaymentData) => {
 const handleEditPayment = (payment: PaymentData) => {
   setNewInvoiceData({
     patient: payment.patient,
+    doctor: payment.doctor || '', // Added doctor field
     amount: payment.baseAmount?.toString() || payment.amount.toString(),
     category: payment.category,
     invoiceDate: payment.date,
@@ -1693,20 +1782,31 @@ return (
                  />
                </Grid>
                <Grid item xs={12} md={6}>
-                 <TextField
-                   fullWidth
-                   name="invoiceDate"
-                   label={t('payment.fields.invoiceDate')}
-                   type="date"
-                   required
-                   value={newInvoiceData.invoiceDate}
-                   onChange={(e) => setNewInvoiceData(prev => ({ ...prev, invoiceDate: e.target.value }))}
-                   InputLabelProps={{ shrink: true }}
-                   inputProps={{ 
-                     max: new Date().toISOString().split('T')[0]
-                   }}
-                   helperText={t('payment.helpers.serviceDate')}
-                 />
+                 <FormControl fullWidth required>
+                   <InputLabel>Doctor</InputLabel>
+                   <Select 
+                     name="doctor" 
+                     label="Doctor"
+                     value={newInvoiceData.doctor}
+                     onChange={(e) => setNewInvoiceData(prev => ({ ...prev, doctor: e.target.value }))}
+                   >
+                     {availableDoctors.map((doctor) => (
+                       <MenuItem key={doctor.id} value={doctor.name}>
+                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                           <LocalHospital sx={{ fontSize: 18, color: 'primary.main' }} />
+                           <Box>
+                             <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                               Dr. {doctor.name}
+                             </Typography>
+                             <Typography variant="caption" color="text.secondary">
+                               {doctor.specialty}
+                             </Typography>
+                           </Box>
+                         </Box>
+                       </MenuItem>
+                     ))}
+                   </Select>
+                 </FormControl>
                </Grid>
                <Grid item xs={12} md={6}>
                  <TextField
@@ -1721,6 +1821,22 @@ return (
                      startAdornment: <InputAdornment position="start">EGP</InputAdornment>,
                    }}
                    inputProps={{ min: 0, step: 0.01 }}
+                 />
+               </Grid>
+               <Grid item xs={12} md={6}>
+                 <TextField
+                   fullWidth
+                   name="invoiceDate"
+                   label={t('payment.fields.invoiceDate')}
+                   type="date"
+                   required
+                   value={newInvoiceData.invoiceDate}
+                   onChange={(e) => setNewInvoiceData(prev => ({ ...prev, invoiceDate: e.target.value }))}
+                   InputLabelProps={{ shrink: true }}
+                   inputProps={{ 
+                     max: new Date().toISOString().split('T')[0]
+                   }}
+                   helperText={t('payment.helpers.serviceDate')}
                  />
                </Grid>
                <Grid item xs={12} md={6}>
