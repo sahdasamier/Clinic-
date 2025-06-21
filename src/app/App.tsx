@@ -3,8 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { ThemeProvider } from "./ThemeProvider";
 import { AuthProvider } from "./AuthProvider";
 import { UserProvider } from "../contexts/UserContext";
-import { NotificationProvider } from "../contexts/NotificationContext";
+import { NotificationProvider as LegacyNotificationProvider } from "../contexts/NotificationContext";
 import { SidebarProvider } from "../contexts/SidebarContext";
+import { NotificationProvider } from "../contexts/NotificationProvider";
 import { ensureDemoClinicExists } from "../scripts/initFirestore";
 import Router from "./Router";
 
@@ -33,11 +34,13 @@ const App: React.FC = () => (
   <ThemeProvider>
     <AuthProvider>
       <UserProvider>
-        <NotificationProvider>
+        <LegacyNotificationProvider>
           <SidebarProvider>
-            <AppContent />
+            <NotificationProvider>
+              <AppContent />
+            </NotificationProvider>
           </SidebarProvider>
-        </NotificationProvider>
+        </LegacyNotificationProvider>
       </UserProvider>
     </AuthProvider>
   </ThemeProvider>
