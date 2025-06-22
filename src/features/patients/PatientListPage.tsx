@@ -84,7 +84,8 @@ import {
   getPatientsOrganizedByAppointmentStatus,
   sendAppointmentDataToPatients,
   PatientWithAppointments,
-  forceSyncAllPatients
+  forceSyncAllPatients,
+  syncAllCompletedAppointmentsToMedicalHistory
 } from '../../utils/appointmentPatientSync';
 import {
   initialPatients,
@@ -475,6 +476,22 @@ const PatientListPage: React.FC = () => {
     // Set smart default for treatment type based on existing medications
     const hasExistingMedications = patient.medications && patient.medications.length > 0;
     setTreatmentType(hasExistingMedications ? 'existing' : 'new');
+    
+    // Trigger sync to ensure latest appointment data is reflected
+    console.log('🔄 Syncing patient appointment data before opening profile...');
+    setTimeout(() => {
+      forceSyncAllPatients();
+      // Reload the patient data after sync
+      setTimeout(() => {
+        const updatedPatients = loadPatientsFromStorage();
+        setPatients(updatedPatients);
+        const updatedPatient = updatedPatients.find(p => p.id === patient.id);
+        if (updatedPatient) {
+          setSelectedPatient(updatedPatient);
+          console.log('✅ Patient profile data synced and updated');
+        }
+      }, 1000);
+    }, 100);
   };
 
   const handleClosePatientProfile = () => {
@@ -2191,7 +2208,22 @@ const PatientListPage: React.FC = () => {
                               </TableCell>
                               <TableCell>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                  <Typography variant="body2">{patient.lastVisit}</Typography>
+                                  {patient.allCompletedVisits && patient.allCompletedVisits.length > 0 ? (
+                                    <Box>
+                                      <Typography variant="body2" fontWeight={600}>
+                                        {patient.allCompletedVisits[0].date} (Latest)
+                                      </Typography>
+                                      {patient.allCompletedVisits.length > 1 && (
+                                        <Typography variant="caption" color="text.secondary">
+                                          +{patient.allCompletedVisits.length - 1} more visits
+                                        </Typography>
+                                      )}
+                                    </Box>
+                                  ) : (
+                                    <Typography variant="body2" color="text.secondary">
+                                      {patient.lastVisit || 'No visits yet'}
+                                    </Typography>
+                                  )}
                                   <Tooltip title="Edit Last Visit Date" arrow>
                                     <IconButton 
                                       size="small" 
@@ -4912,14 +4944,106 @@ const PatientListPage: React.FC = () => {
                                   ))}
                                 </Box>
                               </Box>
+                              {selectedPatient.allCompletedVisits && selectedPatient.allCompletedVisits.length > 0 ? (
+                                <Box sx={{ mb: 2 }}>
+                                  <Typography variant="body2" color="text.secondary">
+                                    All Completed Visits ({selectedPatient.allCompletedVisits.length})
+                                  </Typography>
+                                  <Box sx={{ maxHeight: 150, overflowY: 'auto', mt: 1, p: 1, backgroundColor: '#f8f9fa', borderRadius: 1 }}>
+                                    {selectedPatient.allCompletedVisits.map((visit: any, index: number) => {
+                                      // Check if this is a past appointment (auto-completed) or explicitly completed
+                                      const visitDate = new Date(visit.date);
+                                      const today = new Date();
+                                      const isPastVisit = visitDate < today;
+                                      
+                                      return (
+                                        <Box key={index} sx={{ 
+                                          display: 'flex', 
+                                          justifyContent: 'space-between', 
+                                          alignItems: 'center',
+                                          py: 1,
+                                          px: 1,
+                                          mb: index < selectedPatient.allCompletedVisits.length - 1 ? 1 : 0,
+                                          backgroundColor: 'white',
+                                          borderRadius: 1,
+                                          border: '1px solid #e0e0e0'
+                                        }}>
+                                          <Box>
+                                            <Typography variant="body2" fontWeight={600}>
+                                              {visit.date} at {visit.time}
+                                            </Typography>
+                                            <Typography variant="caption" color="text.secondary">
+                                              {visit.type || 'Medical Visit'} • {visit.doctor || 'Dr. Unknown'}
+                                            </Typography>
+                                            {isPastVisit && (
+                                              <Typography variant="caption" color="success.main" sx={{ display: 'block', fontStyle: 'italic' }}>
+                                                📅 Auto-completed (past date)
+                                              </Typography>
+                                            )}
+                                          </Box>
+                                          <Chip 
+                                            label={isPastVisit ? "Past Visit" : "Completed"} 
+                                            size="small" 
+                                            color="success" 
+                                            variant="outlined"
+                                            sx={{ fontSize: '0.65rem' }}
+                                          />
+                                        </Box>
+                                      );
+                                    })}
+                                  </Box>
+                                  <Typography variant="caption" color="primary.main" sx={{ fontStyle: 'italic', display: 'block', mt: 1 }}>
+                                    💡 All visits also appear in Medical History tab
+                                  </Typography>
+                                </Box>
+                              ) : (
+                                <Box sx={{ mb: 2 }}>
+                                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                                    <Typography variant="body2" color="text.secondary">Last Visits</Typography>
+                                    <Button 
+                                      variant="text" 
+                                      size="small"
+                                      onClick={() => {
+                                        console.log('🔄 Manual sync triggered for Last Visits...');
+                                        forceSyncAllPatients();
+                                        // Reload the patient data after sync
+                                        setTimeout(() => {
+                                          const updatedPatients = loadPatientsFromStorage();
+                                          setPatients(updatedPatients);
+                                          const updatedPatient = updatedPatients.find(p => p.id === selectedPatient.id);
+                                          if (updatedPatient) {
+                                            setSelectedPatient(updatedPatient);
+                                            console.log('✅ Last Visits data synced and updated');
+                                          }
+                                        }, 1000);
+                                      }}
+                                      startIcon={<History />}
+                                      sx={{ color: 'primary.main', fontSize: '0.75rem' }}
+                                    >
+                                      🔄 Sync Now
+                                    </Button>
+                                  </Box>
+                                  <Typography variant="body1" fontWeight={600} color="text.secondary">
+                                    No completed visits yet
+                                  </Typography>
+                                  <Typography variant="caption" color="text.secondary">
+                                    Completed appointments and past appointments will appear here automatically
+                                  </Typography>
+                                  <Typography variant="caption" color="primary.main" sx={{ display: 'block', mt: 1, fontStyle: 'italic' }}>
+                                    💡 Click "Sync Now" if you have past appointments that should appear here
+                                  </Typography>
+                                </Box>
+                              )}
                               <Box sx={{ mb: 2 }}>
-                                <Typography variant="body2" color="text.secondary">Last Visit</Typography>
-                                <Typography variant="body1" fontWeight={600}>{selectedPatient.lastVisit}</Typography>
+                                <Typography variant="body2" color="text.secondary">Today's Appointment</Typography>
+                                <Typography variant="body1" fontWeight={600} color="success.main">
+                                  {selectedPatient.todayAppointment || 'No appointment today'}
+                                </Typography>
                               </Box>
                               <Box>
                                 <Typography variant="body2" color="text.secondary">Next Appointment</Typography>
                                 <Typography variant="body1" fontWeight={600} color="primary.main">
-                                  {selectedPatient.nextAppointment}
+                                  {selectedPatient.nextAppointment || 'Not scheduled'}
                                 </Typography>
                               </Box>
                             </CardContent>
@@ -4986,9 +5110,17 @@ const PatientListPage: React.FC = () => {
                   {profileTab === 1 && (
                     <Box sx={{ p: 3 }}>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                        <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                          Medical History
-                        </Typography>
+                        <Box>
+                          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                            Medical History ({selectedPatient.medicalHistory?.length || 0})
+                          </Typography>
+                          {selectedPatient.medicalHistory && selectedPatient.medicalHistory.length > 0 && (
+                            <Typography variant="caption" color="text.secondary">
+                              {selectedPatient.medicalHistory.filter((h: any) => h._autoGeneratedFromAppointment).length} from visits • {' '}
+                              {selectedPatient.medicalHistory.filter((h: any) => !h._autoGeneratedFromAppointment).length} manually added
+                            </Typography>
+                          )}
+                        </Box>
                         <Box sx={{ display: 'flex', gap: 1 }}>
                           <Button 
                             variant="outlined" 
@@ -5012,20 +5144,22 @@ const PatientListPage: React.FC = () => {
                           <Button 
                             variant="text" 
                             size="small"
-                            color="primary"
                             onClick={() => {
-                              // Test popup manually
-                              setPendingMedication({
-                                id: 999,
-                                name: 'Test Medication',
-                                dosage: '⚠️ Pending',
-                                frequency: '⚠️ Pending',
-                                duration: '⚠️ Pending'
-                              });
-                              setMedicationDetailsPopup(true);
+                              // Sync completed appointments to medical history
+                              syncAllCompletedAppointmentsToMedicalHistory();
+                              // Refresh patient data
+                              const updatedPatients = loadPatientsFromStorage();
+                              setPatients(updatedPatients);
+                              const currentPatient = updatedPatients.find(p => p.id === selectedPatient.id);
+                              if (currentPatient) {
+                                setSelectedPatient(currentPatient);
+                              }
+                              console.log('📋 Synced completed appointments to medical history');
                             }}
+                            startIcon={<History />}
+                            sx={{ color: 'success.main' }}
                           >
-                            Test Popup
+                            📋 Sync Visits
                           </Button>
                         </Box>
                       </Box>
@@ -5034,26 +5168,61 @@ const PatientListPage: React.FC = () => {
                         <Grid item xs={12} md={8}>
                           {selectedPatient.medicalHistory?.length > 0 ? (
                             selectedPatient.medicalHistory.map((history: any, index: number) => (
-                              <Card key={index} sx={{ mb: 2 }}>
+                              <Card 
+                                key={index} 
+                                sx={{ 
+                                  mb: 2,
+                                  border: history._autoGeneratedFromAppointment ? '2px solid #e8f5e8' : '1px solid #e0e0e0',
+                                  backgroundColor: history._autoGeneratedFromAppointment ? '#f8fffe' : 'white'
+                                }}
+                              >
                                 <CardContent>
                                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', mb: 2 }}>
-                                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                                      {history.condition}
-                                    </Typography>
+                                    <Box>
+                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                                        <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                                          {history.condition}
+                                        </Typography>
+                                        {history._autoGeneratedFromAppointment && (
+                                          <Chip
+                                            label="Auto-Generated"
+                                            size="small"
+                                            color="success"
+                                            variant="outlined"
+                                            sx={{ 
+                                              fontSize: '0.65rem', 
+                                              height: 20,
+                                              backgroundColor: '#e8f5e8',
+                                              borderColor: '#4caf50'
+                                            }}
+                                          />
+                                        )}
+                                      </Box>
+                                      {history._autoGeneratedFromAppointment && (
+                                        <Typography variant="caption" color="success.main" sx={{ fontStyle: 'italic' }}>
+                                          {history._isPastVisit ? 
+                                            '📅 Auto-generated from past appointment' : 
+                                            '📋 Auto-generated from completed appointment'
+                                          }
+                                        </Typography>
+                                      )}
+                                    </Box>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                       <Typography variant="body2" color="text.secondary">
                                         {history.date}
                                       </Typography>
-                                      <IconButton 
-                                        size="small" 
-                                        color="primary"
-                                        onClick={() => {
-                                          // Edit medical history functionality can be added here
-                                          console.log('Edit medical history:', history);
-                                        }}
-                                      >
-                                        <Edit fontSize="small" />
-                                      </IconButton>
+                                      {!history._autoGeneratedFromAppointment && (
+                                        <IconButton 
+                                          size="small" 
+                                          color="primary"
+                                          onClick={() => {
+                                            // Edit medical history functionality can be added here
+                                            console.log('Edit medical history:', history);
+                                          }}
+                                        >
+                                          <Edit fontSize="small" />
+                                        </IconButton>
+                                      )}
                                     </Box>
                                   </Box>
                                   <Typography variant="body2" sx={{ mb: 1 }}>
@@ -5076,8 +5245,11 @@ const PatientListPage: React.FC = () => {
                               <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
                                 No Medical History
                               </Typography>
-                              <Typography variant="body2" color="text.secondary">
-                                Click "Add Medical History" to record the patient's medical background
+                              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                                No medical history found. Completed appointments will automatically appear here.
+                              </Typography>
+                              <Typography variant="body2" color="success.main">
+                                📋 Click "Sync Visits" to sync completed appointments, or "Add Medical History" to add manual entries.
                               </Typography>
                             </Card>
                           )}
