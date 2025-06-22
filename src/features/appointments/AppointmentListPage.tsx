@@ -322,6 +322,8 @@ const AppointmentListPage: React.FC = () => {
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [statusMenuAnchor, setStatusMenuAnchor] = useState<null | HTMLElement>(null);
   const [statusEditAppointment, setStatusEditAppointment] = useState<Appointment | null>(null);
+  const [paymentStatusMenuAnchor, setPaymentStatusMenuAnchor] = useState<null | HTMLElement>(null);
+  const [paymentStatusEditAppointment, setPaymentStatusEditAppointment] = useState<Appointment | null>(null);
   const [newAppointment, setNewAppointment] = useState<NewAppointment>({
     patient: '',
     doctor: '',
@@ -637,6 +639,12 @@ const AppointmentListPage: React.FC = () => {
     setStatusMenuAnchor(event.currentTarget as HTMLElement);
   };
 
+  const handleQuickPaymentStatusEdit = (appointment: Appointment, event: React.MouseEvent) => {
+    event.stopPropagation(); // Prevent row click
+    setPaymentStatusEditAppointment(appointment);
+    setPaymentStatusMenuAnchor(event.currentTarget as HTMLElement);
+  };
+
   const handleStatusChange = (newStatus: string) => {
     if (!statusEditAppointment) return;
 
@@ -660,6 +668,39 @@ const AppointmentListPage: React.FC = () => {
     
     setStatusMenuAnchor(null);
     setStatusEditAppointment(null);
+  };
+
+  const handlePaymentStatusChange = (newPaymentStatus: string) => {
+    if (!paymentStatusEditAppointment) return;
+
+    const updatedList = appointmentList.map(apt => 
+      apt.id === paymentStatusEditAppointment.id 
+        ? { ...apt, paymentStatus: newPaymentStatus as any }
+        : apt
+    );
+    
+    setAppointmentList(updatedList);
+    saveAppointmentsToStorage(updatedList);
+    
+    // Update related payment records if they exist
+    try {
+      const payments = JSON.parse(localStorage.getItem('payments') || '[]');
+      const updatedPayments = payments.map((payment: any) => 
+        payment.appointmentId === paymentStatusEditAppointment.id?.toString()
+          ? { ...payment, status: newPaymentStatus === 'completed' ? 'paid' : newPaymentStatus }
+          : payment
+      );
+      localStorage.setItem('payments', JSON.stringify(updatedPayments));
+      console.log(`✅ Payment status updated for appointment ${paymentStatusEditAppointment.id}: ${newPaymentStatus}`);
+    } catch (error) {
+      console.warn('Error updating payment records:', error);
+    }
+    
+    // Immediately sync this patient's appointment data when payment status changes
+    updatePatientAppointmentFields(paymentStatusEditAppointment.patient);
+    
+    setPaymentStatusMenuAnchor(null);
+    setPaymentStatusEditAppointment(null);
   };
 
   // Handle appointment completion and auto-payment creation
@@ -1737,17 +1778,26 @@ const AppointmentListPage: React.FC = () => {
                                </Box>
                              </TableCell>
                              <TableCell>
-                               <Chip
-                                 label={t((appointment as any).paymentStatus || 'pending')}
-                                 size="small"
-                                 variant="filled"
-                                 color={getPaymentStatusColor((appointment as any).paymentStatus || 'pending') as any}
-                                 sx={{ 
-                                   minWidth: 80,
-                                   fontWeight: 600,
-                                   textTransform: 'capitalize'
-                                 }}
-                               />
+                               <Tooltip title={t('click_to_change_payment_status')} arrow>
+                                 <Chip
+                                   label={t((appointment as any).paymentStatus || 'pending')}
+                                   size="small"
+                                   variant="filled"
+                                   color={getPaymentStatusColor((appointment as any).paymentStatus || 'pending') as any}
+                                   onClick={(e) => handleQuickPaymentStatusEdit(appointment, e)}
+                                   sx={{ 
+                                     minWidth: 80,
+                                     fontWeight: 600,
+                                     textTransform: 'capitalize',
+                                     cursor: 'pointer',
+                                     '&:hover': { 
+                                       backgroundColor: 'primary.light',
+                                       transform: 'scale(1.05)'
+                                     },
+                                     transition: 'all 0.2s ease'
+                                   }}
+                                 />
+                               </Tooltip>
                              </TableCell>
                              <TableCell>
                                <Tooltip title={t('click_to_change_status')} arrow>
@@ -3336,6 +3386,88 @@ const AppointmentListPage: React.FC = () => {
              </Box>
            </MenuItem>
                  </Menu>
+
+         {/* Quick Payment Status Edit Menu */}
+         <Menu
+           anchorEl={paymentStatusMenuAnchor}
+           open={Boolean(paymentStatusMenuAnchor)}
+           onClose={() => {
+             setPaymentStatusMenuAnchor(null);
+             setPaymentStatusEditAppointment(null);
+           }}
+           PaperProps={{
+             sx: { minWidth: 200 }
+           }}
+         >
+           <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
+             <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+               {t('change_payment_status')}
+             </Typography>
+             <Typography variant="caption" color="text.secondary">
+               {paymentStatusEditAppointment?.patient}
+             </Typography>
+           </Box>
+           
+           <MenuItem 
+             onClick={() => handlePaymentStatusChange('pending')}
+             selected={paymentStatusEditAppointment?.paymentStatus === 'pending'}
+           >
+             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+               <Chip 
+                 label="🟡 Pending" 
+                 color="warning" 
+                 size="small" 
+                 variant="outlined" 
+               />
+               <Typography variant="body2">{t('payment_pending')}</Typography>
+             </Box>
+           </MenuItem>
+           
+           <MenuItem 
+             onClick={() => handlePaymentStatusChange('completed')}
+             selected={paymentStatusEditAppointment?.paymentStatus === 'completed'}
+           >
+             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+               <Chip 
+                 label="🟢 Paid" 
+                 color="success" 
+                 size="small" 
+                 variant="outlined" 
+               />
+               <Typography variant="body2">{t('payment_completed')}</Typography>
+             </Box>
+           </MenuItem>
+           
+           <MenuItem 
+             onClick={() => handlePaymentStatusChange('partial')}
+             selected={paymentStatusEditAppointment?.paymentStatus === 'partial'}
+           >
+             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+               <Chip 
+                 label="🟠 Partial" 
+                 color="info" 
+                 size="small" 
+                 variant="outlined" 
+               />
+               <Typography variant="body2">{t('payment_partial')}</Typography>
+             </Box>
+           </MenuItem>
+           
+           <MenuItem 
+             onClick={() => handlePaymentStatusChange('failed')}
+             selected={paymentStatusEditAppointment?.paymentStatus === 'failed'}
+           >
+             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+               <Chip 
+                 label="🔴 Failed" 
+                 color="error" 
+                 size="small" 
+                 variant="outlined" 
+               />
+               <Typography variant="body2">{t('payment_failed')}</Typography>
+             </Box>
+           </MenuItem>
+         </Menu>
         </Container>
   );
 };

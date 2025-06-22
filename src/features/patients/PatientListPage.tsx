@@ -824,15 +824,18 @@ const PatientListPage: React.FC = () => {
     });
 
     // Create real appointment record that will appear in appointment page
-    const appointmentId = Math.floor(Date.now() + Math.random() * 1000); // Unique integer ID
+    const appointmentId = Math.floor(Date.now() + Math.random() * 1000);     // Ensure time is properly formatted
+    const appointmentTime = appointmentData.time?.trim() || `${new Date().getHours().toString().padStart(2, '0')}:${new Date().getMinutes().toString().padStart(2, '0')}`;
+    
+    // Unique integer ID
     const newAppointmentRecord = {
       id: appointmentId,
       patient: appointmentPatient.name,
       patientAvatar: appointmentPatient.name.split(' ').map((n: string) => n[0]).join('').toUpperCase(),
       doctor: 'Dr. Ahmad', // You can make this dynamic
       date: appointmentData.date,
-      time: appointmentData.time,
-      timeSlot: appointmentData.time,
+      time: appointmentTime,
+      timeSlot: appointmentTime,
       type: appointmentData.type || 'Follow-up',
       duration: parseInt(appointmentData.duration) || 30,
       priority: appointmentData.priority?.toLowerCase() || 'normal',
@@ -848,6 +851,19 @@ const PatientListPage: React.FC = () => {
       patientId: appointmentPatient.id,
       scheduledFromPatientPage: true
     };
+    
+    // Get today's date for comparison  
+    const today = new Date().toISOString().split('T')[0];
+    const appointmentDate = appointmentData.date;
+    const isToday = appointmentDate === today;
+    
+    console.log('🆕 Creating appointment record:', {
+      patientName: appointmentPatient.name,
+      date: appointmentData.date,
+      time: appointmentTime,
+      isToday: isToday,
+      appointmentRecord: newAppointmentRecord
+    });
 
     // Load existing appointments and add the new one
     const existingAppointments = JSON.parse(localStorage.getItem('clinic_appointments_data') || '[]');
@@ -867,20 +883,16 @@ const PatientListPage: React.FC = () => {
     } catch (error) {
       console.error('❌ Error creating auto-payment for appointment:', error);
     }
-
-    // Update patient's appointment display (today or next)
-    const appointmentDate = appointmentData.date;
-    const today = new Date().toISOString().split('T')[0];
-    const isToday = appointmentDate === today;
     
     const updatedPatients = patients.map(patient => 
       patient.id === appointmentPatient.id 
         ? { 
             ...patient, 
-            todayAppointment: isToday ? `Today ${appointmentData.time}` : patient.todayAppointment,
+            todayAppointment: isToday ? `Today ${appointmentTime}` : patient.todayAppointment,
             nextAppointment: isToday ? patient.nextAppointment : appointmentDisplay,
             appointmentDetails: {
               ...appointmentData,
+              time: appointmentTime, // Use formatted time
               dateTime: appointmentDateTime,
               scheduledOn: new Date().toISOString()
             }
@@ -894,20 +906,41 @@ const PatientListPage: React.FC = () => {
     if (selectedPatient?.id === appointmentPatient.id) {
       setSelectedPatient({
         ...selectedPatient,
-        todayAppointment: isToday ? `Today ${appointmentData.time}` : selectedPatient.todayAppointment,
+        todayAppointment: isToday ? `Today ${appointmentTime}` : selectedPatient.todayAppointment,
         nextAppointment: isToday ? selectedPatient.nextAppointment : appointmentDisplay,
         appointmentDetails: {
           ...appointmentData,
+          time: appointmentTime, // Use formatted time
           dateTime: appointmentDateTime,
           scheduledOn: new Date().toISOString()
         }
       });
     }
 
-    // Sync patient appointment fields immediately
+    // Sync patient appointment fields immediately AFTER saving appointment
     const { updatePatientAppointmentFields, syncAppointmentChangesToPatients } = await import('../../utils/appointmentPatientSync');
-    updatePatientAppointmentFields(appointmentPatient.name);
-    syncAppointmentChangesToPatients();
+    
+    // Wait a moment to ensure appointment is saved, then sync
+    setTimeout(() => {
+      console.log('🔄 Starting appointment sync after creation...');
+      updatePatientAppointmentFields(appointmentPatient.name);
+      syncAppointmentChangesToPatients();
+      
+      // Force refresh patient data to show the new appointment time
+      const refreshedPatients = loadPatientsFromStorage();
+      setPatients(refreshedPatients);
+      
+      // Update selectedPatient with refreshed data
+      const refreshedSelectedPatient = refreshedPatients.find(p => p.id === appointmentPatient.id);
+      if (refreshedSelectedPatient) {
+        setSelectedPatient(refreshedSelectedPatient);
+        console.log('✅ Patient data refreshed after appointment creation:', {
+          patientName: refreshedSelectedPatient.name,
+          todayAppointment: refreshedSelectedPatient.todayAppointment,
+          nextAppointment: refreshedSelectedPatient.nextAppointment
+        });
+      }
+    }, 100); // Small delay to ensure localStorage update is complete
 
     // Dispatch multiple events to notify all components
     window.dispatchEvent(new CustomEvent('appointmentPatientSync', {
@@ -946,7 +979,8 @@ const PatientListPage: React.FC = () => {
 
     } catch (error) {
       console.error('❌ Error saving appointment:', error);
-      alert(`Error scheduling appointment: ${error.message || 'Unknown error'}. Please try again.`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      alert(`Error scheduling appointment: ${errorMessage}. Please try again.`);
     }
   };
 
@@ -1126,6 +1160,98 @@ const PatientListPage: React.FC = () => {
     }
   };
 
+  /**
+   * Get priority badge for a patient based on their appointment status
+   */
+  const getPriorityBadge = (patient: any) => {
+    const appointmentData = patient.appointmentData || { completed: [], notCompleted: [], totalAppointments: 0 };
+    
+    // Get today's date for comparison
+    const today = new Date();
+    const todayString = today.getFullYear() + '-' + 
+      String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+      String(today.getDate()).padStart(2, '0');
+    
+    // Check if patient has today's appointment
+    const hasTodayAppointment = patient.todayAppointment && patient.todayAppointment !== 'No appointment today';
+    
+    if (hasTodayAppointment) {
+      // Check if today's appointment is completed/paid
+      const todayCompletedAppointment = appointmentData.completed?.find((apt: any) => {
+        const appointmentDate = new Date(apt.date);
+        const aptDateString = appointmentDate.getFullYear() + '-' + 
+          String(appointmentDate.getMonth() + 1).padStart(2, '0') + '-' + 
+          String(appointmentDate.getDate()).padStart(2, '0');
+        return aptDateString === todayString;
+      });
+      
+      if (todayCompletedAppointment) {
+        // Get completion time for display using same logic as priority calculation
+        let completionTime = null;
+        
+        // Try to get completion time from different sources
+        if (todayCompletedAppointment.updatedAt) {
+          completionTime = new Date(todayCompletedAppointment.updatedAt);
+        } else if (todayCompletedAppointment.createdAt) {
+          const createdAt = new Date(todayCompletedAppointment.createdAt);
+          const createdDateString = createdAt.getFullYear() + '-' + 
+            String(createdAt.getMonth() + 1).padStart(2, '0') + '-' + 
+            String(createdAt.getDate()).padStart(2, '0');
+          if (createdDateString === todayString) {
+            completionTime = createdAt;
+          }
+        }
+        
+        // Get payment completion time if available
+        if (!completionTime) {
+          try {
+            const payments = JSON.parse(localStorage.getItem('payments') || '[]');
+            const appointmentPayment = payments.find((p: any) => 
+              p.appointmentId === todayCompletedAppointment.id?.toString() && 
+              p.status === 'paid'
+            );
+            if (appointmentPayment && appointmentPayment.date === todayString) {
+              completionTime = new Date(); // Rough estimate
+            }
+          } catch (error) {
+            // Ignore error for display purposes
+          }
+        }
+        
+        const timeDisplay = completionTime ? 
+          ` (${completionTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})})` : '';
+        
+        return {
+          label: `PAID${timeDisplay}`,
+          color: 'error',
+          icon: '🔴',
+          description: `Today's appointment is PAID/COMPLETED${completionTime ? ` at ${completionTime.toLocaleTimeString()}` : ''} - Ready for Doctor (Highest Priority - Earlier payment = Higher priority)`,
+          style: { fontWeight: 'bold', border: '2px solid' }
+        };
+      }
+      // Note: No badge for unpaid today appointments - let them blend in normally
+    }
+    
+    // Only show badge for patients with completed appointments (high activity)
+    if (appointmentData.completed && appointmentData.completed.length > 0) {
+      const hasRecentCompletion = appointmentData.completed.some((apt: any) => {
+        const daysDiff = Math.floor((new Date().getTime() - new Date(apt.date).getTime()) / (1000 * 60 * 60 * 24));
+        return daysDiff <= 30;
+      });
+      
+      if (hasRecentCompletion || appointmentData.completed.length >= 3) {
+        return {
+          label: 'Active',
+          color: 'success',
+          icon: '🟢',
+          description: `${appointmentData.completed.length} completed appointments`
+        };
+      }
+    }
+    
+    return null; // Only show badges for important statuses
+  };
+
   const getFilteredPatients = () => {
     let filtered = patients;
 
@@ -1236,7 +1362,200 @@ const PatientListPage: React.FC = () => {
       }
     }
 
-    return filtered;
+    // 🎯 PRIORITY SORTING: Sort by appointment completion status
+    const sortedFiltered = sortPatientsByAppointmentPriority(filtered);
+    
+    // Debug: Log the sorting applied (simplified to avoid hoisting issues)
+    if (sortedFiltered.length > 0) {
+      console.log('🎯 Patients sorted by appointment priority:', {
+        totalPatients: sortedFiltered.length,
+        topPatients: sortedFiltered.slice(0, 5).map(p => ({
+          name: p.name,
+          priority: calculateAppointmentPriority(p.appointmentData || {}, p),
+          todayAppointment: p.todayAppointment,
+          completedCount: p.appointmentData?.completed?.length || 0,
+          pendingCount: p.appointmentData?.notCompleted?.length || 0
+        }))
+      });
+    }
+
+    return sortedFiltered;
+  };
+
+  /**
+   * Sort patients by appointment completion priority
+   * Priority order: Completed appointments → Pending appointments → No appointments
+   */
+  const sortPatientsByAppointmentPriority = (patients: any[]) => {
+    return patients.sort((a, b) => {
+      // Get appointment data for both patients
+      const aAppointmentData = a.appointmentData || { completed: [], notCompleted: [], totalAppointments: 0 };
+      const bAppointmentData = b.appointmentData || { completed: [], notCompleted: [], totalAppointments: 0 };
+      
+      // Calculate priority scores
+      const aPriority = calculateAppointmentPriority(aAppointmentData, a);
+      const bPriority = calculateAppointmentPriority(bAppointmentData, b);
+      
+      // Sort by priority (higher priority first)
+      if (aPriority !== bPriority) {
+        return bPriority - aPriority;
+      }
+      
+      // If same priority, sort by most recent activity
+      const aRecentActivity = getRecentActivity(aAppointmentData, a);
+      const bRecentActivity = getRecentActivity(bAppointmentData, b);
+      
+      return bRecentActivity - aRecentActivity;
+    });
+  };
+
+  /**
+   * Calculate appointment priority score for a patient
+   */
+  const calculateAppointmentPriority = (appointmentData: any, patient: any) => {
+    let priority = 0;
+    
+    // Get today's date for comparison
+    const today = new Date();
+    const todayString = today.getFullYear() + '-' + 
+      String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+      String(today.getDate()).padStart(2, '0');
+    
+    // 🔴 HIGHEST PRIORITY: Patients with TODAY'S appointment that is COMPLETED (PAID)
+    const hasTodayAppointment = patient.todayAppointment && patient.todayAppointment !== 'No appointment today';
+    if (hasTodayAppointment) {
+      // Check if today's appointment is completed/paid
+      const todayCompletedAppointment = appointmentData.completed?.find((apt: any) => {
+        const appointmentDate = new Date(apt.date);
+        const aptDateString = appointmentDate.getFullYear() + '-' + 
+          String(appointmentDate.getMonth() + 1).padStart(2, '0') + '-' + 
+          String(appointmentDate.getDate()).padStart(2, '0');
+        return aptDateString === todayString;
+      });
+      
+      if (todayCompletedAppointment) {
+        priority += 10000; // ABSOLUTE HIGHEST PRIORITY BASE for today's paid appointments
+        
+        // 🎯 CRITICAL: Add completion time bonus - earlier completion = higher priority
+        // This ensures patients who paid first are seen first (ready to enter doctor)
+        
+        // Try to get completion time from different sources
+        let completionTime = null;
+        
+        // 1. Check if appointment has updatedAt (when it was marked as completed)
+        if (todayCompletedAppointment.updatedAt) {
+          completionTime = new Date(todayCompletedAppointment.updatedAt);
+        }
+        // 2. Check if appointment has createdAt and it's today (completed on creation)
+        else if (todayCompletedAppointment.createdAt) {
+          const createdAt = new Date(todayCompletedAppointment.createdAt);
+          const createdDateString = createdAt.getFullYear() + '-' + 
+            String(createdAt.getMonth() + 1).padStart(2, '0') + '-' + 
+            String(createdAt.getDate()).padStart(2, '0');
+          if (createdDateString === todayString) {
+            completionTime = createdAt;
+          }
+        }
+        // 3. Find associated payment for this appointment (payment creation time = completion time)
+        if (!completionTime) {
+          try {
+            const payments = JSON.parse(localStorage.getItem('payments') || '[]');
+            const appointmentPayment = payments.find((p: any) => 
+              p.appointmentId === todayCompletedAppointment.id?.toString() && 
+              p.status === 'paid'
+            );
+            if (appointmentPayment && appointmentPayment.date === todayString) {
+              // Use current time as rough estimate since payment was created today
+              completionTime = new Date();
+            }
+          } catch (error) {
+            console.warn('Error loading payments for completion time:', error);
+          }
+        }
+        
+        if (completionTime) {
+          // Convert to minutes since midnight for easier comparison
+          const completionMinutes = completionTime.getHours() * 60 + completionTime.getMinutes();
+          // Earlier completion gets higher priority (subtract from max minutes in day)
+          const timePriority = 1440 - completionMinutes; // 1440 = 24 hours * 60 minutes
+          priority += timePriority;
+          console.log(`🔴 PAID TODAY (${completionTime.toLocaleTimeString()}): ${patient.name} - Priority: ${priority}`);
+        } else {
+          // If no completion time, still high priority but lower than those with times
+          priority += 500;
+          console.log(`🔴 PAID TODAY (no time): ${patient.name} - Priority: ${priority}`);
+        }
+      } else {
+        priority += 5000; // High priority for today's unpaid appointments (but lower than paid)
+        console.log(`🟡 UNPAID TODAY: ${patient.name} - Priority: ${priority}`);
+      }
+    }
+    
+    // ✅ HIGH PRIORITY: Patients with completed appointments (recent activity)
+    if (appointmentData.completed && appointmentData.completed.length > 0) {
+      priority += 1000; // Base score for having completed appointments
+      priority += appointmentData.completed.length * 10; // Extra points per completed appointment
+      
+      // Extra priority for recent completions
+      const recentCompletions = appointmentData.completed.filter((apt: any) => {
+        const appointmentDate = new Date(apt.date);
+        const daysDiff = Math.floor((new Date().getTime() - appointmentDate.getTime()) / (1000 * 60 * 60 * 24));
+        return daysDiff <= 30; // Completed in last 30 days
+      });
+      priority += recentCompletions.length * 50;
+    }
+    
+    // 🟡 MEDIUM PRIORITY: Patients with pending appointments (need attention)
+    if (appointmentData.notCompleted && appointmentData.notCompleted.length > 0) {
+      priority += 500; // Base score for having pending appointments
+      priority += appointmentData.notCompleted.length * 20; // Extra points per pending appointment
+      
+      // Extra priority for upcoming appointments
+      const upcomingAppointments = appointmentData.notCompleted.filter((apt: any) => {
+        const appointmentDate = new Date(apt.date);
+        const daysDiff = Math.floor((appointmentDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+        return daysDiff >= 0 && daysDiff <= 7; // Upcoming in next 7 days
+      });
+      priority += upcomingAppointments.length * 30;
+    }
+    
+    // 🟠 SPECIAL PRIORITY: Manually set last visits
+    if (patient.lastVisit && !appointmentData.completed?.some((apt: any) => apt.date === patient.lastVisit)) {
+      priority += 800; // High priority for manual last visits
+    }
+    
+    // ⚪ LOW PRIORITY: Patients with no appointments
+    if (appointmentData.totalAppointments === 0) {
+      priority += 100; // Base score for having no appointments
+    }
+    
+    return priority;
+  };
+
+  /**
+   * Get recent activity timestamp for tie-breaking
+   */
+  const getRecentActivity = (appointmentData: any, patient: any) => {
+    let mostRecentTime = 0;
+    
+    // Check most recent completed appointment
+    if (appointmentData.completed && appointmentData.completed.length > 0) {
+      const recentCompleted = Math.max(...appointmentData.completed.map((apt: any) => new Date(apt.date).getTime()));
+      mostRecentTime = Math.max(mostRecentTime, recentCompleted);
+    }
+    
+    // Check most recent pending appointment
+    if (appointmentData.notCompleted && appointmentData.notCompleted.length > 0) {
+      const recentPending = Math.max(...appointmentData.notCompleted.map((apt: any) => new Date(apt.date).getTime()));
+      mostRecentTime = Math.max(mostRecentTime, recentPending);
+    }
+    
+    // Check patient registration/update time
+    if (patient.createdAt) {
+      mostRecentTime = Math.max(mostRecentTime, new Date(patient.createdAt).getTime());
+    }
+    
+    return mostRecentTime;
   };
 
   const filteredPatients = getFilteredPatients();
@@ -2133,6 +2452,20 @@ const PatientListPage: React.FC = () => {
                         </Typography>
                       </Alert>
                     )}
+
+                    {/* 🎯 PRIORITY SORTING INFO */}
+                    {filteredPatients.length > 0 && (
+                      <Alert severity="success" sx={{ m: 3, mb: 2 }}>
+                        <Typography variant="body2">
+                          🎯 <strong>Smart Priority Sorting:</strong> Patients are sorted by appointment activity - 
+                          <strong style={{ color: '#d32f2f' }}>🔴 Today's appointments</strong> appear first, followed by 
+                          <strong style={{ color: '#2e7d32' }}>🟢 Active patients</strong> (with completed appointments), 
+                          <strong style={{ color: '#ed6c02' }}>🟡 Upcoming appointments</strong>, and 
+                          <strong style={{ color: '#1976d2' }}>🔵 Scheduled patients</strong>. 
+                          This helps you focus on the most important patients first based on real appointment data.
+                        </Typography>
+                      </Alert>
+                    )}
                     <TableContainer>
                       <Table>
                         <TableHead>
@@ -2200,7 +2533,7 @@ const PatientListPage: React.FC = () => {
                                     {patient.avatar}
                                   </Avatar>
                                   <Box>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5, flexWrap: 'wrap' }}>
                                       <Typography 
                                         variant="body2" 
                                         fontWeight={600}
@@ -2213,6 +2546,30 @@ const PatientListPage: React.FC = () => {
                                       >
                                         {patient.name}
                                       </Typography>
+                                      
+                                      {/* 🎯 PRIORITY BADGE based on appointment status */}
+                                      {(() => {
+                                        const priorityBadge = getPriorityBadge(patient);
+                                        return priorityBadge ? (
+                                          <Tooltip title={priorityBadge.description} arrow>
+                                            <Chip
+                                              label={`${priorityBadge.icon} ${priorityBadge.label}`}
+                                              size="small"
+                                              color={priorityBadge.color as any}
+                                              variant="outlined"
+                                              sx={{ 
+                                                fontSize: '0.65rem', 
+                                                height: 20,
+                                                fontWeight: 600,
+                                                border: '1.5px solid',
+                                                ...priorityBadge.style,
+                                              }}
+                                            />
+                                          </Tooltip>
+                                        ) : null;
+                                      })()}
+                                      
+                                      {/* Existing "Today" registration badge */}
                                       {isReceivedToday(patient) && (
                                         <Chip
                                           label="Today"

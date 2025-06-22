@@ -388,8 +388,8 @@ const syncCompletedAppointmentsToMedicalHistory = (patientIndex: number, patient
   // Get existing appointment IDs in medical history to avoid duplicates
   const existingAppointmentIds = new Set(
     existingMedicalHistory
-      .filter(history => history._appointmentId)
-      .map(history => history._appointmentId)
+      .filter((history: any) => history._appointmentId)
+      .map((history: any) => history._appointmentId)
   );
   
   // Convert new completed appointments to medical history entries
@@ -502,7 +502,10 @@ export const updatePatientAppointmentFields = (patientName: string) => {
       const isNotCompleted = apt.status !== 'completed' && apt.completed !== true;
       
       console.log(`🔍 Checking appointment for today:`, {
+        patientName,
+        appointmentId: apt.id,
         appointmentDate: apt.date,
+        appointmentTime: apt.time,
         normalizedDate,
         todayString,
         isToday,
@@ -517,8 +520,13 @@ export const updatePatientAppointmentFields = (patientName: string) => {
     .sort((a, b) => (a.time || '').localeCompare(b.time || '')); // Sort by time
   
   const todayAppointment = todayAppointments.length > 0 
-    ? `Today ${todayAppointments[0].time}` 
+    ? `Today ${todayAppointments[0].time || 'Time TBD'}` 
     : '';
+  
+  console.log(`📅 Today appointment result for ${patientName}:`, {
+    todayAppointments: todayAppointments.map(apt => ({ id: apt.id, date: apt.date, time: apt.time })),
+    finalTodayAppointment: todayAppointment
+  });
   
   // Calculate next appointment (next upcoming non-completed appointment AFTER today)
   const futureAppointments = patientAppointments
