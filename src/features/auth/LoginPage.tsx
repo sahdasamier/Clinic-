@@ -108,15 +108,55 @@ const LoginPage: React.FC = () => {
       return;
     }
 
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(resetEmail)) {
+      setError('Please enter a valid email address');
+      return;
+    }
+
     setResetLoading(true);
     setError('');
 
     try {
-      await sendPasswordResetEmail(auth, resetEmail);
+      console.log('🔄 Attempting to send password reset email to:', resetEmail);
+      console.log('🔧 Firebase Auth Domain:', auth.app.options.authDomain);
+      
+      await sendPasswordResetEmail(auth, resetEmail, {
+        url: `${window.location.origin}/login`, // Redirect back to login after reset
+        handleCodeInApp: false,
+      });
+      
+      console.log('✅ Password reset email sent successfully to:', resetEmail);
       setResetSuccess(true);
     } catch (error: any) {
-      console.error('Password reset error:', error);
-      setError(error.message || 'Failed to send password reset email. Please try again.');
+      console.error('❌ Password reset error:', error);
+      console.error('Error code:', error.code);
+      console.error('Error message:', error.message);
+      
+      // Provide more specific error messages
+      let userFriendlyError = '';
+      switch (error.code) {
+        case 'auth/user-not-found':
+          userFriendlyError = 'No account found with this email address. Please check the email or contact your administrator.';
+          break;
+        case 'auth/invalid-email':
+          userFriendlyError = 'Please enter a valid email address.';
+          break;
+        case 'auth/too-many-requests':
+          userFriendlyError = 'Too many attempts. Please try again later.';
+          break;
+        case 'auth/network-request-failed':
+          userFriendlyError = 'Network error. Please check your internet connection and try again.';
+          break;
+        case 'auth/unauthorized-domain':
+          userFriendlyError = 'This domain is not authorized for password reset. Please contact your administrator.';
+          break;
+        default:
+          userFriendlyError = error.message || 'Failed to send password reset email. Please try again or contact support.';
+      }
+      
+      setError(userFriendlyError);
     } finally {
       setResetLoading(false);
     }
