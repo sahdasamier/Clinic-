@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useUser } from '../contexts/UserContext';
+import { 
+  autoSyncDoctorsIfNeeded, 
+  forceSyncDoctors, 
+  SchedulingDoctor,
+  loadSchedulingDoctorsFromStorage,
+  saveSchedulingDoctorsToStorage
+} from '../utils/doctorSync';
 import {
   Box,
   Container,
@@ -43,6 +51,7 @@ import {
   Snackbar,
   Switch,
   FormControlLabel,
+  CircularProgress,
 } from '@mui/material';
 import {
   Schedule,
@@ -55,6 +64,7 @@ import {
   Edit,
   Delete,
   MoreVert,
+  Sync,
 } from '@mui/icons-material';
 
 import { loadAppointmentsFromStorage, saveAppointmentsToStorage } from './appointments/AppointmentListPage';
@@ -106,6 +116,7 @@ const findDoctorByName = (doctorName: string, doctors: any[]) => {
 
 const DoctorSchedulingPage: React.FC = () => {
   const { t } = useTranslation();
+  const { userProfile } = useUser();
   const [tabValue, setTabValue] = useState(0);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -134,10 +145,7 @@ const DoctorSchedulingPage: React.FC = () => {
     const handleUserDataCleared = () => {
       // Reset to default state
       setAppointments([]);
-      setDoctors(baseDoctorSchedules.map(doctor => ({
-        ...doctor,
-        specialty: t(doctor.specialty)
-      })));
+      setDoctors([]); // Clear doctors - will be reloaded from Firebase
       setTabValue(0);
       setSelectedDate(new Date().toISOString().split('T')[0]);
       resetFormData();
@@ -191,39 +199,78 @@ const DoctorSchedulingPage: React.FC = () => {
     severity: 'success' as 'success' | 'error'
   });
 
-  // ✅ Initialize doctors from localStorage FIRST
-  const [doctors, setDoctors] = useState(() => {
-    try {
-      const saved = localStorage.getItem('clinic_doctor_schedules');
-      if (saved) {
-        const parsedData = JSON.parse(saved);
-        if (Array.isArray(parsedData) && parsedData.length > 0) {
-          console.log('✅ DoctorScheduling: Loaded doctors from localStorage on init:', parsedData.length);
-          return parsedData.map(doctor => ({
-            ...doctor,
-            specialty: t(doctor.specialty)
-          }));
-        }
-      }
-    } catch (error) {
-      console.error('❌ DoctorScheduling: Error loading doctors from localStorage:', error);
-    }
-    console.log('ℹ️ DoctorScheduling: Using default doctor schedules');
-    return baseDoctorSchedules.map(doctor => ({
-      ...doctor,
-      specialty: t(doctor.specialty)
-    }));
-     });
+  // 🔄 Initialize doctors with Firebase sync
+  const [doctors, setDoctors] = useState<SchedulingDoctor[]>([]);
+  const [loadingDoctors, setLoadingDoctors] = useState(true);
+  const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
 
-   // Save doctors to localStorage whenever they change using sync manager
+  // Auto-sync Firebase doctors when component loads
+  useEffect(() => {
+    const syncDoctors = async () => {
+      if (!userProfile?.clinicId) {
+        console.log('⏳ Waiting for clinic ID...');
+        return;
+      }
+
+      setLoadingDoctors(true);
+      try {
+        console.log(`🔄 Auto-syncing doctors for clinic: ${userProfile.clinicId}`);
+        const syncedDoctors = await autoSyncDoctorsIfNeeded(userProfile.clinicId);
+        setDoctors(syncedDoctors);
+        setLastSyncTime(new Date().toLocaleTimeString());
+        console.log(`✅ Synced ${syncedDoctors.length} doctors from Firebase`);
+      } catch (error) {
+        console.error('❌ Error syncing doctors:', error);
+        // Fallback to localStorage
+        const fallbackDoctors = loadSchedulingDoctorsFromStorage(userProfile.clinicId);
+        setDoctors(fallbackDoctors);
+      } finally {
+        setLoadingDoctors(false);
+      }
+    };
+
+    syncDoctors();
+  }, [userProfile?.clinicId]);
+
+  // Manual sync function
+  const handleManualSync = async () => {
+    if (!userProfile?.clinicId) return;
+    
+    setLoadingDoctors(true);
+    try {
+      console.log('🔄 Force syncing doctors...');
+      const syncedDoctors = await forceSyncDoctors(userProfile.clinicId);
+      setDoctors(syncedDoctors);
+      setLastSyncTime(new Date().toLocaleTimeString());
+      
+      setSnackbar({
+        open: true,
+        message: `✅ Synced ${syncedDoctors.length} doctors from Firebase`,
+        severity: 'success'
+      });
+    } catch (error) {
+      console.error('❌ Error in manual sync:', error);
+      setSnackbar({
+        open: true,
+        message: '❌ Failed to sync doctors',
+        severity: 'error'
+      });
+    } finally {
+      setLoadingDoctors(false);
+    }
+  };
+
+   // Save doctors to clinic-specific storage whenever they change
    useEffect(() => {
-     try {
-       // ✅ Use centralized sync manager for consistent event dispatching
-       doctorSync.save(doctors, 'DoctorScheduling');
-     } catch (error) {
-       console.error('❌ DoctorScheduling: Error saving doctors:', error);
+     if (doctors.length > 0 && userProfile?.clinicId) {
+       try {
+         saveSchedulingDoctorsToStorage(userProfile.clinicId, doctors);
+         console.log(`💾 Saved ${doctors.length} doctors for clinic ${userProfile.clinicId}`);
+       } catch (error) {
+         console.error('❌ DoctorScheduling: Error saving doctors:', error);
+       }
      }
-   }, [doctors]);
+   }, [doctors, userProfile?.clinicId]);
 
    const [addDoctorDialogOpen, setAddDoctorDialogOpen] = useState(false);
    const [editDoctorDialogOpen, setEditDoctorDialogOpen] = useState(false);
@@ -287,7 +334,7 @@ const DoctorSchedulingPage: React.FC = () => {
   };
 
   // Check if doctor is working on selected date
-  const isDoctorWorking = (doctor: Doctor) => {
+  const isDoctorWorking = (doctor: SchedulingDoctor) => {
     const dayOfWeek = getSelectedDayOfWeek();
     return !doctor.offDays.includes(dayOfWeek);
   };
@@ -307,7 +354,7 @@ const DoctorSchedulingPage: React.FC = () => {
 
 
   // Generate time slots for a doctor (uses the new getAllTimeSlots function)
-  const generateDoctorTimeSlots = (doctor: Doctor) => {
+  const generateDoctorTimeSlots = (doctor: SchedulingDoctor) => {
     return getAllTimeSlots(doctor.id);
   };
 
@@ -575,8 +622,9 @@ const DoctorSchedulingPage: React.FC = () => {
       ? `${nameParts[0][0]}${nameParts[1][0]}`.toUpperCase()
       : doctorFormData.name.substring(0, 2).toUpperCase();
 
-    const newDoctor = {
+    const newDoctor: SchedulingDoctor = {
       id: Math.max(...doctors.map(d => d.id)) + 1,
+      firebaseId: '', // Manual doctor, no Firebase ID
       name: doctorFormData.name.trim(),
       avatar: avatar,
       specialty: doctorFormData.specialty.trim(),
@@ -587,6 +635,9 @@ const DoctorSchedulingPage: React.FC = () => {
       offDays: doctorFormData.offDays,
       maxPatientsPerHour: doctorFormData.maxPatientsPerHour,
       consultationDuration: doctorFormData.consultationDuration,
+      clinicId: userProfile?.clinicId || '',
+      isActive: true,
+      syncedAt: new Date().toISOString()
     };
 
     setDoctors(prev => [...prev, newDoctor]);
@@ -1289,6 +1340,31 @@ const DoctorSchedulingPage: React.FC = () => {
                   {t('recurring_schedule')}
                 </Button>
                 <Button
+                  variant="outlined"
+                  startIcon={loadingDoctors ? <CircularProgress size={16} /> : <Sync />}
+                  onClick={handleManualSync}
+                  disabled={loadingDoctors}
+                  sx={{ 
+                    borderRadius: 3,
+                    backgroundColor: 'rgba(255,255,255,0.1)',
+                    color: 'white',
+                    border: '1px solid rgba(255,255,255,0.3)',
+                    fontWeight: 600,
+                    px: { xs: 2, sm: 3 },
+                    py: { xs: 1, sm: 1.5 },
+                    backdropFilter: 'blur(10px)',
+                    fontSize: { xs: '0.8rem', sm: '0.875rem' },
+                    '&:hover': {
+                      backgroundColor: 'rgba(255,255,255,0.2)',
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 8px 25px rgba(255,255,255,0.25)',
+                    },
+                    transition: 'all 0.3s ease'
+                  }}
+                >
+                  {loadingDoctors ? 'Syncing...' : `🔄 Sync Doctors`}
+                </Button>
+                <Button
                   variant="contained"
                   startIcon={<Add />}
                   onClick={handleAddDoctor}
@@ -1473,6 +1549,32 @@ const DoctorSchedulingPage: React.FC = () => {
                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
                      {t('available_doctors')}
                    </Typography>
+                 </Box>
+               </Grid>
+               
+               {/* Sync Status */}
+               <Grid item xs={12}>
+                 <Box sx={{ 
+                   textAlign: 'center', 
+                   p: 2, 
+                   backgroundColor: 'rgba(255,255,255,0.8)', 
+                   borderRadius: 3,
+                   backdropFilter: 'blur(10px)',
+                   border: '1px solid rgba(255,255,255,0.2)',
+                   display: 'flex',
+                   alignItems: 'center',
+                   justifyContent: 'center',
+                   gap: 2
+                 }}>
+                   <Sync sx={{ color: 'primary.main' }} />
+                   <Box>
+                     <Typography variant="body1" sx={{ fontWeight: 700, color: 'primary.main' }}>
+                       🔄 Firebase Doctors: {doctors.length} synced from admin panel
+                     </Typography>
+                     <Typography variant="caption" color="text.secondary">
+                       {lastSyncTime ? `Last sync: ${lastSyncTime}` : 'Not synced yet'}
+                     </Typography>
+                   </Box>
                  </Box>
                </Grid>
              </Grid>

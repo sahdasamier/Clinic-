@@ -45,6 +45,9 @@ import {
   CircularProgress,
 } from '@mui/material';
 import { useAuth } from '../../contexts/AuthContext';
+import { useUser } from '../../contexts/UserContext';
+import DoctorPatientAssignment from '../../components/DoctorPatientAssignment';
+import { getPatientsByDoctor } from '../../api/doctorPatients';
 import {
   Search,
   Add,
@@ -164,6 +167,7 @@ function TabPanel(props: TabPanelProps) {
 const PatientListPage: React.FC = () => {
   const { t } = useTranslation();
   const { user, loading: authLoading, initialized } = useAuth();
+  const { userProfile } = useUser();
 
   // Helper function to translate patient status and conditions
   const translatePatientData = (text: string) => {
@@ -217,34 +221,60 @@ const PatientListPage: React.FC = () => {
   // Load data from localStorage on component mount - wait for auth
   React.useEffect(() => {
     // Wait for auth to be initialized and user to be available
-    if (!initialized || authLoading || !user) {
-      console.log('🔄 PatientListPage: Waiting for auth initialization...', {
+    if (!initialized || authLoading || !user || !userProfile) {
+      console.log('🔄 PatientListPage: Waiting for auth and user profile initialization...', {
         initialized,
         authLoading,
-        hasUser: !!user
+        hasUser: !!user,
+        hasUserProfile: !!userProfile
       });
       return;
     }
 
-    console.log('✅ PatientListPage: Auth initialized, loading patient data...');
-    setDataLoading(true);
+    const loadPatientData = async () => {
+      console.log('✅ PatientListPage: Auth and user profile initialized, loading patient data...');
+      setDataLoading(true);
 
-    try {
-      const loadedPatients = loadPatientsFromStorage();
-      setPatients(loadedPatients);
-      setIsDataLoaded(true);
-      console.log('✅ PatientListPage: Patient data loaded successfully');
-      
-      // Force sync all patients with their appointment data
-      setTimeout(() => {
-        forceSyncAllPatients();
-      }, 500);
-    } catch (error) {
-      console.error('❌ PatientListPage: Error loading patient data:', error);
-    } finally {
-      setDataLoading(false);
-    }
-  }, [initialized, authLoading, user]);
+      try {
+        // 🆕 Check if current user is a doctor
+        const userIsDoctor = userProfile.role === 'doctor';
+        setIsDoctor(userIsDoctor);
+        
+        if (userIsDoctor) {
+          console.log('👨‍⚕️ User is a doctor, loading assigned patients only...');
+          // Load patients assigned to this doctor from Firebase
+          const assignedPatients = await getPatientsByDoctor(userProfile.id, userProfile.clinicId);
+          setDoctorPatients(assignedPatients);
+          setPatients(assignedPatients);
+          console.log(`✅ Loaded ${assignedPatients.length} patients assigned to doctor`);
+        } else {
+          console.log('👑 User is management/admin, loading all patients...');
+          // Load all patients from localStorage for management
+          const loadedPatients = loadPatientsFromStorage();
+          setPatients(loadedPatients);
+          console.log(`✅ Loaded ${loadedPatients.length} total patients`);
+        }
+        
+        setIsDataLoaded(true);
+        console.log('✅ PatientListPage: Patient data loaded successfully');
+        
+        // Force sync all patients with their appointment data
+        setTimeout(() => {
+          forceSyncAllPatients();
+        }, 500);
+      } catch (error) {
+        console.error('❌ PatientListPage: Error loading patient data:', error);
+        // Fallback to localStorage data
+        const loadedPatients = loadPatientsFromStorage();
+        setPatients(loadedPatients);
+        setIsDataLoaded(true);
+      } finally {
+        setDataLoading(false);
+      }
+    };
+
+    loadPatientData();
+  }, [initialized, authLoading, user, userProfile]);
 
   // Save data to localStorage whenever patients change
   React.useEffect(() => {
@@ -394,6 +424,12 @@ const PatientListPage: React.FC = () => {
   const [appointmentData, setAppointmentData] = useState(defaultAppointmentData);
   const [statusEditPatient, setStatusEditPatient] = useState<any>(null);
   const [statusMenuAnchor, setStatusMenuAnchor] = useState<null | HTMLElement>(null);
+  
+  // 🆕 Doctor-Patient Assignment State
+  const [assignmentDialogOpen, setAssignmentDialogOpen] = useState(false);
+  const [assignmentPatient, setAssignmentPatient] = useState<any>(null);
+  const [isDoctor, setIsDoctor] = useState(false);
+  const [doctorPatients, setDoctorPatients] = useState<any[]>([]);
   
   // New Patient Form State - Initialize from localStorage
   const [newPatientData, setNewPatientData] = useState(() => {
@@ -1650,6 +1686,35 @@ const PatientListPage: React.FC = () => {
     setNewLastVisitDate('');
   };
 
+  // 🆕 Doctor-Patient Assignment Handlers
+  const handleOpenAssignment = (patient: any) => {
+    setAssignmentPatient(patient);
+    setAssignmentDialogOpen(true);
+  };
+
+  const handleCloseAssignment = () => {
+    setAssignmentDialogOpen(false);
+    setAssignmentPatient(null);
+  };
+
+  const handleAssignmentChange = async () => {
+    // Reload patient data after assignment changes
+    if (isDoctor && userProfile) {
+      try {
+        const updatedPatients = await getPatientsByDoctor(userProfile.id, userProfile.clinicId);
+        setDoctorPatients(updatedPatients);
+        setPatients(updatedPatients);
+        console.log('✅ Patient data refreshed after assignment change');
+      } catch (error) {
+        console.error('❌ Error refreshing patient data after assignment:', error);
+      }
+    } else {
+      // For management, reload from localStorage
+      const loadedPatients = loadPatientsFromStorage();
+      setPatients(loadedPatients);
+    }
+  };
+
   // Show loading spinner while data is loading
   if (dataLoading) {
     return (
@@ -2723,6 +2788,18 @@ const PatientListPage: React.FC = () => {
                                       <CalendarToday fontSize="small" />
                                     </IconButton>
                                   </Tooltip>
+                                  {/* 🆕 Doctor Assignment Button - Only for Management */}
+                                  {!isDoctor && userProfile?.role === 'management' && (
+                                    <Tooltip title="Assign to Doctor">
+                                      <IconButton 
+                                        size="small" 
+                                        color="secondary"
+                                        onClick={() => handleOpenAssignment(patient)}
+                                      >
+                                        <AssignmentIcon fontSize="small" />
+                                      </IconButton>
+                                    </Tooltip>
+                                  )}
                                 </Box>
                               </TableCell>
                             </TableRow>
@@ -7444,6 +7521,14 @@ const PatientListPage: React.FC = () => {
               </Box>
             </MenuItem>
           </Menu>
+
+          {/* 🆕 Doctor-Patient Assignment Dialog */}
+          <DoctorPatientAssignment
+            open={assignmentDialogOpen}
+            onClose={handleCloseAssignment}
+            patient={assignmentPatient}
+            onAssignmentChange={handleAssignmentChange}
+          />
         </Container>
   );
 };

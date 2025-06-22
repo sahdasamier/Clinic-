@@ -52,6 +52,7 @@ import {
   CircularProgress,
 } from '@mui/material';
 import { useAuth } from '../../contexts/AuthContext';
+import { useUser } from '../../contexts/UserContext';
 import {
   CalendarToday,
   Schedule,
@@ -114,6 +115,7 @@ import {
   createAutoPaymentForAppointment,
   loadClinicPaymentSettings 
 } from '../../utils/paymentUtils';
+import { enhanceAppointmentWithDoctorId } from '../../utils/doctorMatcher';
 
 // Types
 interface TabPanelProps {
@@ -278,6 +280,7 @@ const StatCard: React.FC<{
 const AppointmentListPage: React.FC = () => {
   const { t } = useTranslation();
   const { user, loading: authLoading, initialized } = useAuth();
+  const { userProfile } = useUser();
   
   // State Management
   const [tabValue, setTabValue] = useState(0);
@@ -791,7 +794,7 @@ const AppointmentListPage: React.FC = () => {
     }
   };
 
-  const handleSaveAppointment = () => {
+  const handleSaveAppointment = async () => {
     if (!newAppointment.patient || !newAppointment.doctor || !newAppointment.date || !newAppointment.time) {
       alert(t('fill_required_fields'));
       return;
@@ -804,17 +807,20 @@ const AppointmentListPage: React.FC = () => {
       : newAppointment.time;
     
     if (selectedAppointment) {
+      const updatedApt = { 
+        ...selectedAppointment, 
+        ...newAppointment,
+        timeSlot: timeSlot,
+        patientAvatar: selectedAppointment.patient === newAppointment.patient 
+          ? selectedAppointment.patientAvatar 
+          : newAppointment.patient.split(' ').map(n => n[0]).join('').toUpperCase()
+      };
+      
+      // 🆕 Enhance updated appointment with doctor Firebase ID
+      const enhancedUpdatedApt = await enhanceAppointmentWithDoctorId(updatedApt, userProfile?.clinicId || '');
+      
       updatedList = appointmentList.map(apt => 
-        apt.id === selectedAppointment.id 
-          ? { 
-              ...apt, 
-              ...newAppointment,
-              timeSlot: timeSlot,
-              patientAvatar: apt.patient === newAppointment.patient 
-                ? apt.patientAvatar 
-                : newAppointment.patient.split(' ').map(n => n[0]).join('').toUpperCase()
-            }
-          : apt
+        apt.id === selectedAppointment.id ? enhancedUpdatedApt : apt
       );
       setEditDialogOpen(false);
     } else {
@@ -838,7 +844,10 @@ const AppointmentListPage: React.FC = () => {
         createdAt: new Date().toISOString(),
       } as any;
       
-      updatedList = [...appointmentList, newApt];
+      // 🆕 Enhance appointment with doctor Firebase ID
+      const enhancedApt = await enhanceAppointmentWithDoctorId(newApt, userProfile?.clinicId || '');
+      
+      updatedList = [...appointmentList, enhancedApt];
       setAddAppointmentOpen(false);
     }
     

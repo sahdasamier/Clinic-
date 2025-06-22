@@ -23,6 +23,7 @@ export interface Patient extends FirebaseDocument {
   phone: string;
   medicalHistory: string;
   clinicId: string;
+  doctorId: string; // 🆕 Assigned doctor ID
   createdBy: string;
 }
 
