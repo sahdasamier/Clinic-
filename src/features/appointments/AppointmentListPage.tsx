@@ -105,6 +105,10 @@ import {
   doctorSync,
   debugStorageState 
 } from '../../utils/dataSyncManager';
+import { 
+  createAutoPaymentForAppointment,
+  loadClinicPaymentSettings 
+} from '../../utils/paymentUtils';
 
 // Types
 interface TabPanelProps {
@@ -166,7 +170,12 @@ export const loadAppointmentsFromStorage = (): Appointment[] => {
     if (stored) {
       const parsedData = JSON.parse(stored);
       if (Array.isArray(parsedData) && parsedData.length > 0) {
-        return parsedData;
+        // Ensure all appointments have a paymentStatus field for backward compatibility
+        const appointmentsWithPaymentStatus = parsedData.map(appointment => ({
+          ...appointment,
+          paymentStatus: appointment.paymentStatus || 'pending'
+        }));
+        return appointmentsWithPaymentStatus;
       }
     }
   } catch (error) {
@@ -280,7 +289,12 @@ const AppointmentListPage: React.FC = () => {
         const parsedData = JSON.parse(saved);
         if (Array.isArray(parsedData) && parsedData.length > 0) {
           console.log('✅ AppointmentListPage: Loaded appointments from localStorage on init:', parsedData.length);
-          return parsedData;
+          // Ensure all appointments have a paymentStatus field for backward compatibility
+          const appointmentsWithPaymentStatus = parsedData.map(appointment => ({
+            ...appointment,
+            paymentStatus: appointment.paymentStatus || 'pending'
+          }));
+          return appointmentsWithPaymentStatus;
         }
       }
     } catch (error) {
@@ -475,11 +489,23 @@ const AppointmentListPage: React.FC = () => {
   };
 
   const toggleAppointmentCompletion = (appointmentId: number) => {
+    const appointment = appointmentList.find(apt => apt.id === appointmentId);
+    if (!appointment) return;
+
+    const wasCompleted = appointment.completed;
+    const newCompletedStatus = !wasCompleted;
+    
     const updatedList = appointmentList.map(apt => 
       apt.id === appointmentId 
-        ? { ...apt, completed: !apt.completed, status: apt.completed ? 'confirmed' : 'completed' as any }
+        ? { ...apt, completed: newCompletedStatus, status: newCompletedStatus ? 'completed' : 'confirmed' as any }
         : apt
     );
+    
+    // If appointment is being marked as completed (not uncompleted), create auto-payment
+    if (newCompletedStatus && !wasCompleted) {
+      handleAppointmentCompletion(appointment);
+    }
+    
     setAppointmentList(updatedList);
     saveAppointmentsToStorage(updatedList);
   };
@@ -606,16 +632,65 @@ const AppointmentListPage: React.FC = () => {
   const handleStatusChange = (newStatus: string) => {
     if (!statusEditAppointment) return;
 
+    const previousStatus = statusEditAppointment.status;
     const updatedList = appointmentList.map(apt => 
       apt.id === statusEditAppointment.id 
-        ? { ...apt, status: newStatus as any }
+        ? { ...apt, status: newStatus as any, completed: newStatus === 'completed' }
         : apt
     );
+    
+    // If appointment is being marked as completed, create auto-payment
+    if (newStatus === 'completed' && previousStatus !== 'completed') {
+      handleAppointmentCompletion(statusEditAppointment);
+    }
     
     setAppointmentList(updatedList);
     saveAppointmentsToStorage(updatedList);
     setStatusMenuAnchor(null);
     setStatusEditAppointment(null);
+  };
+
+  // Handle appointment completion and auto-payment creation
+  const handleAppointmentCompletion = (appointment: Appointment) => {
+    try {
+      const clinicSettings = loadClinicPaymentSettings();
+      
+      // Check if auto-payment creation is enabled
+      if (!clinicSettings.autoCreatePaymentOnCompletion) {
+        console.log('Auto-payment creation is disabled');
+        return;
+      }
+
+      // Create auto-payment for the completed appointment
+      const createdPayment = createAutoPaymentForAppointment({
+        appointmentId: appointment.id,
+        patientName: appointment.patient,
+        patientAvatar: appointment.patientAvatar,
+        doctorName: appointment.doctor,
+        appointmentType: appointment.type,
+        appointmentDate: appointment.date,
+        appointmentDuration: appointment.duration
+      });
+
+      if (createdPayment) {
+        // Show success notification
+        console.log(`💰 Payment created for completed appointment: ${createdPayment.invoiceId}`);
+        
+        // Dispatch event to update payment status in the appointment
+        const updatedAppointments = appointmentList.map(apt => 
+          apt.id === appointment.id 
+            ? { ...apt, paymentStatus: 'pending' as 'pending' }
+            : apt
+        );
+        setAppointmentList(updatedAppointments);
+        saveAppointmentsToStorage(updatedAppointments);
+
+        // Optional: Show a toast notification (if you have a notification system)
+        console.log(`✅ Auto-payment of ${createdPayment.amount} ${createdPayment.currency} created for ${appointment.patient}'s ${appointment.type} appointment`);
+      }
+    } catch (error) {
+      console.error('Error handling appointment completion:', error);
+    }
   };
 
   const handleSaveAppointment = () => {
@@ -661,8 +736,8 @@ const AppointmentListPage: React.FC = () => {
         notes: newAppointment.notes,
         completed: false,
         priority: newAppointment.priority,
+        paymentStatus: newAppointment.paymentStatus || 'pending',
         createdAt: new Date().toISOString(),
-        ...(newAppointment.paymentStatus && { paymentStatus: newAppointment.paymentStatus }),
       } as any;
       
       updatedList = [...appointmentList, newApt];
@@ -3176,6 +3251,22 @@ const AppointmentListPage: React.FC = () => {
                  variant="outlined" 
                />
                <Typography variant="body2">{t('rescheduled')}</Typography>
+             </Box>
+           </MenuItem>
+           
+           <MenuItem 
+             onClick={() => handleStatusChange('completed')}
+             selected={statusEditAppointment?.status === 'completed'}
+           >
+             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+               <Chip 
+                 icon={<CheckCircle fontSize="small" />}
+                 label={t('completed')} 
+                 color="success" 
+                 size="small" 
+                 variant="outlined" 
+               />
+               <Typography variant="body2">{t('completed')} 💰</Typography>
              </Box>
            </MenuItem>
            

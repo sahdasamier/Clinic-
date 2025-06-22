@@ -88,6 +88,7 @@ export interface Appointment {
   notes: string;
   completed: boolean;
   priority: 'normal' | 'high' | 'urgent';
+  paymentStatus: 'pending' | 'completed' | 'partial' | 'failed';
   createdAt: string;
   isAvailableSlot?: boolean; // New field to distinguish available slots from actual appointments
 }
@@ -264,6 +265,7 @@ export interface AppointmentData {
   notes: string;
   completed: boolean;
   priority: 'normal' | 'high' | 'urgent';
+  paymentStatus: 'pending' | 'completed' | 'partial' | 'failed';
   createdAt: string;
 }
 
@@ -552,4 +554,98 @@ export const STORAGE_KEYS_DATA = {
   PATIENTS: 'clinic_patients_data',
   INVENTORY: 'clinic_inventory_data',
   SETTINGS: 'clinic_notification_settings'
+};
+
+// Clinic appointment settings with costs
+export interface AppointmentTypeSettings {
+  type: string;
+  cost: number;
+  currency: string;
+  description: string;
+  category: string;
+  includeVAT: boolean;
+}
+
+export const defaultAppointmentTypesSettings: AppointmentTypeSettings[] = [
+  {
+    type: 'Consultation',
+    cost: 200,
+    currency: 'EGP',
+    description: 'General consultation with doctor',
+    category: 'consultation',
+    includeVAT: true
+  },
+  {
+    type: 'Check-up',
+    cost: 150,
+    currency: 'EGP', 
+    description: 'Routine health check-up',
+    category: 'checkup',
+    includeVAT: true
+  },
+  {
+    type: 'Follow-up',
+    cost: 100,
+    currency: 'EGP',
+    description: 'Follow-up appointment',
+    category: 'followup',
+    includeVAT: true
+  },
+  {
+    type: 'Emergency',
+    cost: 500,
+    currency: 'EGP',
+    description: 'Emergency consultation',
+    category: 'emergency',
+    includeVAT: true
+  },
+  {
+    type: 'Surgery Consultation',
+    cost: 300,
+    currency: 'EGP',
+    description: 'Surgical consultation',
+    category: 'surgery',
+    includeVAT: true
+  },
+  {
+    type: 'Diagnostic',
+    cost: 180,
+    currency: 'EGP',
+    description: 'Diagnostic examination',
+    category: 'diagnostic',
+    includeVAT: true
+  },
+  {
+    type: 'Therapy',
+    cost: 250,
+    currency: 'EGP',
+    description: 'Therapy session',
+    category: 'therapy',
+    includeVAT: true
+  },
+  {
+    type: 'Routine Checkup',
+    cost: 120,
+    currency: 'EGP',
+    description: 'Routine medical checkup',
+    category: 'checkup',
+    includeVAT: true
+  }
+];
+
+// Clinic settings for auto-payment creation
+export interface ClinicPaymentSettings {
+  autoCreatePaymentOnCompletion: boolean;
+  defaultPaymentMethod: string;
+  defaultPaymentDueDays: number;
+  includeVATByDefault: boolean;
+  appointmentTypes: AppointmentTypeSettings[];
+}
+
+export const defaultClinicPaymentSettings: ClinicPaymentSettings = {
+  autoCreatePaymentOnCompletion: true,
+  defaultPaymentMethod: 'Cash',
+  defaultPaymentDueDays: 0, // Pay immediately
+  includeVATByDefault: true,
+  appointmentTypes: defaultAppointmentTypesSettings
 }; 

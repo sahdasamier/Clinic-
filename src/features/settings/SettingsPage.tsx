@@ -71,6 +71,8 @@ import {
   Delete,
 } from '@mui/icons-material';
 
+import ClinicPaymentSettingsComponent from './components/ClinicPaymentSettings';
+
 import { sendSupportEmail, sendFeedbackEmail, getSetupInstructions, type SupportEmailData } from '../../services/emailService';
 
 
@@ -1102,6 +1104,11 @@ const SettingsPage: React.FC = () => {
                     iconPosition="top"
                   />
                   <Tab 
+                    label={t('payments')} 
+                    icon={<Payment sx={{ fontSize: 18 }} />}
+                    iconPosition="top"
+                  />
+                  <Tab 
                     label={t('notifications')} 
                     icon={<Notifications sx={{ fontSize: 18 }} />}
                     iconPosition="top"
@@ -1204,6 +1211,11 @@ const SettingsPage: React.FC = () => {
                      <Tab 
                        label={t('clinic_settings_tab')} 
                        icon={<LocalHospital sx={{ fontSize: 26 }} />}
+                       iconPosition="start"
+                     />
+                     <Tab 
+                       label={t('payment_settings')} 
+                       icon={<Payment sx={{ fontSize: 26 }} />}
                        iconPosition="start"
                      />
                      <Tab 
@@ -3609,8 +3621,13 @@ const SettingsPage: React.FC = () => {
                 </Grid>
               </TabPanel>
 
-              {/* Notification Settings */}
+              {/* Payment Settings */}
               <TabPanel value={tabValue} index={2}>
+                <ClinicPaymentSettingsComponent />
+              </TabPanel>
+
+              {/* Notification Settings */}
+              <TabPanel value={tabValue} index={3}>
                 <Card sx={{ 
                   borderRadius: 4, 
                   boxShadow: '0 12px 50px rgba(0,0,0,0.12), 0 6px 30px rgba(0,0,0,0.08)',
@@ -3767,7 +3784,7 @@ const SettingsPage: React.FC = () => {
               </TabPanel>
 
               {/* Security Settings */}
-              <TabPanel value={tabValue} index={3}>
+              <TabPanel value={tabValue} index={4}>
                 <Card sx={{ 
                   borderRadius: 4, 
                   boxShadow: '0 12px 50px rgba(0,0,0,0.12), 0 6px 30px rgba(0,0,0,0.08)',
@@ -3892,7 +3909,7 @@ const SettingsPage: React.FC = () => {
               </TabPanel>
 
               {/* System Settings */}
-              <TabPanel value={tabValue} index={4}>
+              <TabPanel value={tabValue} index={5}>
                 <Card sx={{ 
                   borderRadius: 4, 
                   boxShadow: '0 12px 50px rgba(0,0,0,0.12), 0 6px 30px rgba(0,0,0,0.08)',

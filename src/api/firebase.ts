@@ -5,7 +5,12 @@ import {
   persistentLocalCache,
   persistentSingleTabManager
 } from "firebase/firestore";
-import { getAuth } from "firebase/auth";
+import { 
+  getAuth, 
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut as firebaseSignOut
+} from "firebase/auth";
 
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
@@ -30,6 +35,21 @@ const firestore = initializeFirestore(app, {
 });
 
 const auth = getAuth(app);
+
+// Auth helpers for AuthContext
+export const authHelpers = {
+  signIn: async (email: string, password: string) => {
+    return await signInWithEmailAndPassword(auth, email, password);
+  },
+  
+  signUp: async (email: string, password: string) => {
+    return await createUserWithEmailAndPassword(auth, email, password);
+  },
+  
+  signOut: async () => {
+    return await firebaseSignOut(auth);
+  }
+};
 
 // Export for use in other files
 export { auth, firestore, firebaseConfig };

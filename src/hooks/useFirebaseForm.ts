@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useContext } from 'react';
 import { doc, getDoc, setDoc, onSnapshot, serverTimestamp, Timestamp } from 'firebase/firestore';
-import { db } from '../services/firebase';
+import { db } from '../api/firebase';
 import { AuthContext } from '../app/AuthProvider';
 import { 
   FirebaseFormOptions, 

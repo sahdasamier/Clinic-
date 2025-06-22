@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, onAuthStateChanged } from 'firebase/auth';
-import { auth, authHelpers } from '../services/firebase';
+import { auth, authHelpers } from '../api/firebase';
 import { CircularProgress, Box } from '@mui/material';
 
 interface AuthContextType {

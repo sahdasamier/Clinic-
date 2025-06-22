@@ -442,6 +442,7 @@ const DoctorSchedulingPage: React.FC = () => {
       notes: t('available_time_slot_created'),
       completed: false,
       priority: 'normal',
+      paymentStatus: 'pending',
       createdAt: new Date().toISOString(),
       isAvailableSlot: true,
     };
@@ -695,6 +696,7 @@ const DoctorSchedulingPage: React.FC = () => {
         notes: timeSlotFormData.notes || (timeSlotFormData.type === 'available' ? t('available_time_slot') : ''),
         completed: false,
         priority: 'normal',
+        paymentStatus: 'pending',
         createdAt: new Date().toISOString(),
         isAvailableSlot: timeSlotFormData.type === 'available',
       };
@@ -843,6 +845,7 @@ const DoctorSchedulingPage: React.FC = () => {
               notes: weeklyScheduleData[day].notes || t('weekly_schedule_generated'),
               completed: false,
               priority: 'normal',
+              paymentStatus: 'pending',
               createdAt: new Date().toISOString(),
               isAvailableSlot: true,
             };

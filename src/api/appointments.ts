@@ -27,6 +27,7 @@ export interface Appointment {
   status: 'confirmed' | 'pending' | 'cancelled' | 'rescheduled' | 'no-show' | 'completed';
   location: string;
   priority: 'normal' | 'high' | 'urgent';
+  paymentStatus: 'pending' | 'completed' | 'partial' | 'failed';
   notes?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -42,6 +43,7 @@ export interface AppointmentFormData {
   duration: number;
   location: string;
   priority: 'normal' | 'high' | 'urgent';
+  paymentStatus?: 'pending' | 'completed' | 'partial' | 'failed';
   notes?: string;
 }
 
@@ -64,6 +66,7 @@ export const createAppointment = async (appointmentData: AppointmentFormData): P
       status: 'pending',
       location: appointmentData.location,
       priority: appointmentData.priority,
+      paymentStatus: appointmentData.paymentStatus || 'pending',
       notes: appointmentData.notes,
       createdAt: new Date(),
       updatedAt: new Date()
@@ -173,6 +176,20 @@ export const updateAppointmentStatus = async (appointmentId: string, status: App
   } catch (error) {
     console.error('Error updating appointment status:', error);
     throw new Error('Failed to update appointment status');
+  }
+};
+
+// Update appointment payment status
+export const updateAppointmentPaymentStatus = async (appointmentId: string, paymentStatus: Appointment['paymentStatus']): Promise<void> => {
+  try {
+    const appointmentRef = doc(db, APPOINTMENTS_COLLECTION, appointmentId);
+    await updateDoc(appointmentRef, {
+      paymentStatus,
+      updatedAt: Timestamp.fromDate(new Date())
+    });
+  } catch (error) {
+    console.error('Error updating appointment payment status:', error);
+    throw new Error('Failed to update appointment payment status');
   }
 };
 
