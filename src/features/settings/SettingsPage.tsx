@@ -1,7 +1,7 @@
-import React, { useState, useRef, useContext, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
-import { AuthContext } from '../../app/AuthProvider';
+import { useAuth } from '../../contexts/AuthContext';
 import {
   Box,
   Container,
@@ -102,7 +102,7 @@ function TabPanel(props: TabPanelProps) {
 
 const SettingsPage: React.FC = () => {
   const { t, i18n } = useTranslation();
-  const { user } = useContext(AuthContext);
+  const { user } = useAuth();
   const [tabValue, setTabValue] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(false);
   const [errors, setErrors] = useState<any>({});

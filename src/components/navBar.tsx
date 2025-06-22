@@ -1,9 +1,9 @@
-import React, { useContext } from 'react';
+import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { auth } from '../api/firebase';
-import { AuthContext } from '../app/AuthProvider';
+import { useAuth } from '../contexts/AuthContext';
 import { useUser } from '../contexts/UserContext';
 import { useNotifications } from '../contexts/NotificationContext';
 import { useSidebar } from '../contexts/SidebarContext';
@@ -50,7 +50,7 @@ const NavBar: React.FC = () => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const theme = useTheme();
-  const { user } = useContext(AuthContext);
+  const { user } = useAuth();
   const { userProfile } = useUser();
   const { unreadCount } = useNotifications();
   const { isCollapsed, toggleSidebar } = useSidebar();

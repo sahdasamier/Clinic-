@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback, useContext } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { doc, getDoc, setDoc, onSnapshot, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { db } from '../api/firebase';
-import { AuthContext } from '../app/AuthProvider';
+import { useAuth } from '../contexts/AuthContext';
 import { 
   FirebaseFormOptions, 
   FirebaseFormReturn, 
@@ -17,7 +17,7 @@ import {
 export const useFirebaseForm = <T extends Record<string, any>>(
   options: FirebaseFormOptions<T>
 ): FirebaseFormReturn<T> => {
-  const { user } = useContext(AuthContext);
+  const { user } = useAuth();
   const {
     collection,
     documentId,

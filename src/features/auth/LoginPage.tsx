@@ -1,10 +1,10 @@
-import React, { useState, useContext } from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '../../api/firebase';
 import { loginWithInvitationCheck } from '../../api/auth';
-import { AuthContext } from '../../app/AuthProvider';
+import { useAuth } from '../../contexts/AuthContext';
 import { isSuperAdmin } from '../../utils/adminConfig';
 import {
   Box,
@@ -42,7 +42,7 @@ const LoginPage: React.FC = () => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useContext(AuthContext);
+  const { user } = useAuth();
   
   // Get success message from navigation state
   const successMessage = location.state?.message;

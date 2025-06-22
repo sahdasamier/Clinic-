@@ -2,7 +2,7 @@ import React, { useState, useContext } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../../api/firebase';
-import { AuthContext } from '../../app/AuthProvider';
+import { useAuth } from '../../contexts/AuthContext';
 import { isSuperAdmin } from '../../utils/adminConfig';
 import {
   Box,
@@ -28,7 +28,7 @@ import {
 const AdminLoginPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useContext(AuthContext);
+  const { user } = useAuth();
   
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');

@@ -19,7 +19,7 @@ import { auth, db, firebaseConfig } from '../../api/firebase';
 import { createUserAccount, createUserInvitation, isValidEmail, checkEmailExists, doubleCheckEmailBeforeCreation, createUserAccountWithCleanup, suggestAlternativeEmails } from '../../api/auth';
 import { fixClinicAccess } from '../../utils/clinicUtils';
 import { initializeDemoClinicAfterAuth } from '../../scripts/initFirestore';
-import { AuthContext } from '../../app/AuthProvider';
+import { useAuth } from '../../contexts/AuthContext';
 import { Clinic, User } from '../../types/models';
 import { validateUserLimit, getPlanInfo, canAddUser } from '../../utils/subscriptionUtils';
 import { formatDateForTable, formatDateTime, formatDateForInput, timestampToDate, getRelativeTime } from '../../utils/dateUtils';
@@ -81,7 +81,7 @@ import { Tooltip } from '@mui/material';
 
 const AdminPanelPage: React.FC = () => {
   const navigate = useNavigate();
-  const { user } = useContext(AuthContext);
+  const { user } = useAuth();
   
   const [activeTab, setActiveTab] = useState(0);
   const [clinics, setClinics] = useState<Clinic[]>([]);

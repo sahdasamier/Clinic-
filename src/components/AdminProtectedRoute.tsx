@@ -1,7 +1,7 @@
 import React, { useContext } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { Box, CircularProgress } from '@mui/material';
-import { AuthContext } from '../app/AuthProvider';
+import { useAuth } from '../contexts/AuthContext';
 import { isSuperAdmin } from '../utils/adminConfig';
 
 interface AdminProtectedRouteProps {
@@ -9,7 +9,7 @@ interface AdminProtectedRouteProps {
 }
 
 const AdminProtectedRoute: React.FC<AdminProtectedRouteProps> = ({ children }) => {
-  const { user, loading } = useContext(AuthContext);
+  const { user, loading } = useAuth();
   const location = useLocation();
 
   // Show loading spinner while checking auth state
