@@ -324,6 +324,8 @@ const AppointmentListPage: React.FC = () => {
   const [statusEditAppointment, setStatusEditAppointment] = useState<Appointment | null>(null);
   const [paymentStatusMenuAnchor, setPaymentStatusMenuAnchor] = useState<null | HTMLElement>(null);
   const [paymentStatusEditAppointment, setPaymentStatusEditAppointment] = useState<Appointment | null>(null);
+  const [typeMenuAnchor, setTypeMenuAnchor] = useState<null | HTMLElement>(null);
+  const [typeEditAppointment, setTypeEditAppointment] = useState<Appointment | null>(null);
   const [newAppointment, setNewAppointment] = useState<NewAppointment>({
     patient: '',
     doctor: '',
@@ -645,6 +647,12 @@ const AppointmentListPage: React.FC = () => {
     setPaymentStatusMenuAnchor(event.currentTarget as HTMLElement);
   };
 
+  const handleQuickTypeEdit = (appointment: Appointment, event: React.MouseEvent) => {
+    event.stopPropagation(); // Prevent row click
+    setTypeEditAppointment(appointment);
+    setTypeMenuAnchor(event.currentTarget as HTMLElement);
+  };
+
   const handleStatusChange = (newStatus: string) => {
     if (!statusEditAppointment) return;
 
@@ -701,6 +709,39 @@ const AppointmentListPage: React.FC = () => {
     
     setPaymentStatusMenuAnchor(null);
     setPaymentStatusEditAppointment(null);
+  };
+
+  const handleTypeChange = (newType: string) => {
+    if (!typeEditAppointment) return;
+
+    const updatedList = appointmentList.map(apt => 
+      apt.id === typeEditAppointment.id 
+        ? { ...apt, type: newType }
+        : apt
+    );
+    
+    setAppointmentList(updatedList);
+    saveAppointmentsToStorage(updatedList);
+    
+    // Update related payment records if they exist
+    try {
+      const payments = JSON.parse(localStorage.getItem('payments') || '[]');
+      const updatedPayments = payments.map((payment: any) => 
+        payment.appointmentId === typeEditAppointment.id?.toString()
+          ? { ...payment, description: `${newType} appointment with Dr. ${typeEditAppointment.doctor}` }
+          : payment
+      );
+      localStorage.setItem('payments', JSON.stringify(updatedPayments));
+      console.log(`✅ Appointment type updated for appointment ${typeEditAppointment.id}: ${newType}`);
+    } catch (error) {
+      console.warn('Error updating payment records:', error);
+    }
+    
+    // Immediately sync this patient's appointment data when type changes
+    updatePatientAppointmentFields(typeEditAppointment.patient);
+    
+    setTypeMenuAnchor(null);
+    setTypeEditAppointment(null);
   };
 
   // Handle appointment completion and auto-payment creation
@@ -1754,7 +1795,24 @@ const AppointmentListPage: React.FC = () => {
                                </Box>
                              </TableCell>
                              <TableCell>
-                               <Typography variant="body2">{t(appointment.type.toLowerCase().replace(/\s+/g, '_'))}</Typography>
+                               <Tooltip title={t('click_to_change_type')} arrow>
+                                 <Chip
+                                   label={t(appointment.type.toLowerCase().replace(/\s+/g, '_'))}
+                                   size="small"
+                                   variant="outlined"
+                                   color="primary"
+                                   onClick={(e) => handleQuickTypeEdit(appointment, e)}
+                                   sx={{ 
+                                     fontWeight: 600,
+                                     cursor: 'pointer',
+                                     '&:hover': { 
+                                       backgroundColor: 'primary.light',
+                                       transform: 'scale(1.05)'
+                                     },
+                                     transition: 'all 0.2s ease'
+                                   }}
+                                 />
+                               </Tooltip>
                              </TableCell>
                              <TableCell>
                                <Chip
@@ -3465,6 +3523,98 @@ const AppointmentListPage: React.FC = () => {
                  variant="outlined" 
                />
                <Typography variant="body2">{t('payment_failed')}</Typography>
+             </Box>
+           </MenuItem>
+         </Menu>
+
+         {/* Quick Type Edit Menu */}
+         <Menu
+           anchorEl={typeMenuAnchor}
+           open={Boolean(typeMenuAnchor)}
+           onClose={() => {
+             setTypeMenuAnchor(null);
+             setTypeEditAppointment(null);
+           }}
+           PaperProps={{
+             sx: { minWidth: 220 }
+           }}
+         >
+           <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
+             <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+               {t('change_appointment_type')}
+             </Typography>
+             <Typography variant="caption" color="text.secondary">
+               {typeEditAppointment?.patient}
+             </Typography>
+           </Box>
+           
+           <MenuItem 
+             onClick={() => handleTypeChange('Consultation')}
+             selected={typeEditAppointment?.type === 'Consultation'}
+           >
+             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+               <MedicalServices fontSize="small" color="primary" />
+               <Typography variant="body2">{t('consultation')}</Typography>
+             </Box>
+           </MenuItem>
+           
+           <MenuItem 
+             onClick={() => handleTypeChange('Check-up')}
+             selected={typeEditAppointment?.type === 'Check-up'}
+           >
+             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+               <Assignment fontSize="small" color="info" />
+               <Typography variant="body2">{t('check_up')}</Typography>
+             </Box>
+           </MenuItem>
+           
+           <MenuItem 
+             onClick={() => handleTypeChange('Follow-up')}
+             selected={typeEditAppointment?.type === 'Follow-up'}
+           >
+             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+               <Schedule fontSize="small" color="warning" />
+               <Typography variant="body2">{t('follow_up')}</Typography>
+             </Box>
+           </MenuItem>
+           
+           <MenuItem 
+             onClick={() => handleTypeChange('Surgery Consultation')}
+             selected={typeEditAppointment?.type === 'Surgery Consultation'}
+           >
+             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+               <LocalHospital fontSize="small" color="error" />
+               <Typography variant="body2">{t('surgery_consultation')}</Typography>
+             </Box>
+           </MenuItem>
+           
+           <MenuItem 
+             onClick={() => handleTypeChange('Emergency')}
+             selected={typeEditAppointment?.type === 'Emergency'}
+           >
+             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+               <Warning fontSize="small" color="error" />
+               <Typography variant="body2">{t('emergency')}</Typography>
+             </Box>
+           </MenuItem>
+           
+           <MenuItem 
+             onClick={() => handleTypeChange('Vaccination')}
+             selected={typeEditAppointment?.type === 'Vaccination'}
+           >
+             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+               <MedicalServices fontSize="small" color="success" />
+               <Typography variant="body2">{t('vaccination')}</Typography>
+             </Box>
+           </MenuItem>
+           
+           <MenuItem 
+             onClick={() => handleTypeChange('Lab Review')}
+             selected={typeEditAppointment?.type === 'Lab Review'}
+           >
+             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+               <Assignment fontSize="small" color="info" />
+               <Typography variant="body2">{t('lab_review')}</Typography>
              </Box>
            </MenuItem>
          </Menu>
