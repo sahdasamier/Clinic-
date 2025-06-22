@@ -8,6 +8,7 @@ import { useUser } from '../contexts/UserContext';
 import { useNotifications } from '../contexts/NotificationContext';
 import { useSidebar } from '../contexts/SidebarContext';
 import { useClinicSettings } from '../hooks/useClinicSettings';
+import logoImage from '../images/Logo.png';
 import {
   AppBar,
   Toolbar,
@@ -26,6 +27,7 @@ import {
   Tooltip,
   useTheme,
   Paper,
+  useMediaQuery,
 } from '@mui/material';
 import {
   Search,
@@ -53,6 +55,11 @@ const NavBar: React.FC = () => {
   const { unreadCount } = useNotifications();
   const { isCollapsed, toggleSidebar } = useSidebar();
   const { getClinicDisplayName, getClinicTagline, isBrandingConfigured } = useClinicSettings();
+  
+  // Responsive breakpoints
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isTablet = useMediaQuery(theme.breakpoints.between('md', 'lg'));
+  const isDesktop = useMediaQuery(theme.breakpoints.up('lg'));
   
   // Language menu state
   const [languageAnchorEl, setLanguageAnchorEl] = React.useState<null | HTMLElement>(null);
@@ -140,9 +147,11 @@ const NavBar: React.FC = () => {
         backdropFilter: 'blur(25px)',
         borderBottom: '1px solid rgba(0, 0, 0, 0.06)',
         color: 'text.primary',
-        boxShadow: '0 2px 24px rgba(0, 0, 0, 0.03), 0 1px 0 rgba(255, 255, 255, 0.8) inset',
-        position: 'relative',
-        height: '90px',
+                  boxShadow: '0 2px 24px rgba(0, 0, 0, 0.03), 0 1px 0 rgba(255, 255, 255, 0.8) inset',
+          position: 'relative',
+          width: '100%',
+          height: { xs: '70px', sm: '80px', md: '90px', lg: '100px' },
+        transition: 'height 0.3s ease',
         '&::before': {
           content: '""',
           position: 'absolute',
@@ -156,10 +165,12 @@ const NavBar: React.FC = () => {
     >
       <Toolbar sx={{ 
         justifyContent: 'space-between', 
-        py: { xs: 1, sm: 1.5, md: 2 }, 
-        px: { xs: 2, sm: 3, md: 4 }, 
+        py: { xs: 0.5, sm: 1, md: 1.5, lg: 2 }, 
+        px: { xs: 1.5, sm: 2, md: 3, lg: 4 }, 
         position: 'relative',
-        minHeight: { xs: '56px', md: '64px' }
+        minHeight: { xs: '56px', sm: '60px', md: '64px', lg: '68px' },
+        maxWidth: '100%',
+        overflow: 'hidden',
       }}>
         {/* Left Side - Sidebar Toggle & Title */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 2 } }}>
@@ -167,9 +178,9 @@ const NavBar: React.FC = () => {
             <IconButton
               onClick={toggleSidebar}
               sx={{
-                width: { xs: 40, md: 48 },
-                height: { xs: 40, md: 48 },
-                borderRadius: '14px',
+                width: { xs: 40, sm: 44, md: 48, lg: 52 },
+                height: { xs: 40, sm: 44, md: 48, lg: 52 },
+                borderRadius: { xs: '12px', md: '14px', lg: '16px' },
                 background: isCollapsed 
                   ? 'linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(22, 163, 74, 0.05) 100%)'
                   : 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.05) 100%)',
@@ -184,7 +195,7 @@ const NavBar: React.FC = () => {
                   background: isCollapsed
                     ? 'linear-gradient(135deg, rgba(34, 197, 94, 0.2) 0%, rgba(22, 163, 74, 0.1) 100%)'
                     : 'linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(37, 99, 235, 0.1) 100%)',
-                  transform: 'scale(1.08)',
+                  transform: { xs: 'scale(1.05)', md: 'scale(1.08)' },
                   boxShadow: isCollapsed
                     ? '0 6px 20px rgba(34, 197, 94, 0.25)'
                     : '0 6px 20px rgba(59, 130, 246, 0.25)',
@@ -217,18 +228,43 @@ const NavBar: React.FC = () => {
                   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                 }}
               >
-                {isCollapsed ? (
-                  <ChevronRight sx={{ 
-                    fontSize: 24,
-                    filter: 'drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1))',
-                    transition: 'all 0.3s ease',
-                  }} />
+                {/* Show logo on large screens, chevrons on smaller screens */}
+                {isDesktop ? (
+                  <Box
+                    component="img"
+                    src={logoImage}
+                    alt="Clinic Logo"
+                    sx={{
+                      width: { lg: 28, xl: 32 },
+                      height: { lg: 28, xl: 32 },
+                      objectFit: 'contain',
+                      filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15)) brightness(1.1) contrast(1.2)',
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      borderRadius: '4px',
+                      opacity: 0.95,
+                      '&:hover': {
+                        filter: 'drop-shadow(0 3px 6px rgba(0, 0, 0, 0.25)) brightness(1.3) contrast(1.3)',
+                        transform: 'scale(1.05)',
+                      },
+                    }}
+                  />
                 ) : (
-                  <ChevronLeft sx={{ 
-                    fontSize: 24,
-                    filter: 'drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1))',
-                    transition: 'all 0.3s ease',
-                  }} />
+                  // Show chevron icons on mobile and tablet
+                  <>
+                    {isCollapsed ? (
+                      <ChevronRight sx={{ 
+                        fontSize: { xs: 20, sm: 22, md: 24 },
+                        filter: 'drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1))',
+                        transition: 'all 0.3s ease',
+                      }} />
+                    ) : (
+                      <ChevronLeft sx={{ 
+                        fontSize: { xs: 20, sm: 22, md: 24 },
+                        filter: 'drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1))',
+                        transition: 'all 0.3s ease',
+                      }} />
+                    )}
+                  </>
                 )}
               </Box>
               
@@ -236,10 +272,10 @@ const NavBar: React.FC = () => {
               <Box
                 sx={{
                   position: 'absolute',
-                  top: 4,
-                  right: 4,
-                  width: 6,
-                  height: 6,
+                  top: { xs: 3, md: 4 },
+                  right: { xs: 3, md: 4 },
+                  width: { xs: 5, md: 6 },
+                  height: { xs: 5, md: 6 },
                   borderRadius: '50%',
                   background: isCollapsed 
                     ? 'linear-gradient(45deg, #10b981, #059669)'
@@ -263,13 +299,19 @@ const NavBar: React.FC = () => {
             </IconButton>
           </Tooltip>
           
-          <Box sx={{ position: 'relative', display: { xs: 'none', sm: 'block' } }}>
+          <Box sx={{ 
+            position: 'relative', 
+            display: { xs: 'none', sm: 'block' },
+            flex: { sm: '1', md: 'none' },
+            maxWidth: { sm: '200px', md: '300px', lg: '400px' },
+            overflow: 'hidden',
+          }}>
             <Typography 
               variant="h5" 
               sx={{ 
                 fontFamily: "'Inter', 'SF Pro Display', sans-serif",
                 fontWeight: 800, 
-                fontSize: { xs: '1.2rem', sm: '1.4rem', md: '1.6rem' },
+                fontSize: { sm: '1.1rem', md: '1.4rem', lg: '1.6rem', xl: '1.8rem' },
                 background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 30%, #334155 70%, #475569 100%)',
                 backgroundClip: 'text',
                 WebkitBackgroundClip: 'text',
@@ -278,12 +320,15 @@ const NavBar: React.FC = () => {
                 lineHeight: 1.1,
                 textShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
                 position: 'relative',
+                whiteSpace: 'nowrap',
+                textOverflow: 'ellipsis',
+                overflow: 'hidden',
                 '&::after': {
                   content: '""',
                   position: 'absolute',
                   bottom: -2,
                   left: 0,
-                  width: '30%',
+                  width: { sm: '20%', md: '30%' },
                   height: '2px',
                   background: 'linear-gradient(90deg, rgba(59, 130, 246, 0.6) 0%, transparent 100%)',
                   borderRadius: '1px',
@@ -292,11 +337,16 @@ const NavBar: React.FC = () => {
             >
               {getClinicDisplayName()}
             </Typography>
-            <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center', gap: 1, mt: 0.5 }}>
+            <Box sx={{ 
+              display: { xs: 'none', md: 'flex', lg: 'flex' }, 
+              alignItems: 'center', 
+              gap: { md: 0.5, lg: 1 }, 
+              mt: 0.5 
+            }}>
               <Box
                 sx={{
-                  width: 4,
-                  height: 4,
+                  width: { md: 3, lg: 4 },
+                  height: { md: 3, lg: 4 },
                   borderRadius: '50%',
                   background: 'linear-gradient(45deg, #10b981, #059669)',
                   boxShadow: '0 0 6px rgba(16, 185, 129, 0.4)',
@@ -313,32 +363,41 @@ const NavBar: React.FC = () => {
                   fontFamily: "'Inter', sans-serif",
                   color: 'rgba(0, 0, 0, 0.6)',
                   fontWeight: 600,
-                  fontSize: '0.73rem',
+                  fontSize: { md: '0.65rem', lg: '0.73rem' },
                   letterSpacing: '0.03em',
                   textTransform: 'uppercase',
+                  whiteSpace: 'nowrap',
                 }}
               >
-                {new Date().toLocaleDateString(undefined, {
-                  weekday: 'short',
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric',
-                })} • Live
+                {isMobile 
+                  ? new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' • Live'
+                  : new Date().toLocaleDateString(undefined, {
+                      weekday: 'short',
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                    }) + ' • Live'
+                }
               </Typography>
             </Box>
           </Box>
         </Box>
 
         {/* Right Side - Actions */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1, md: 2 } }}>
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: { xs: 0.3, sm: 0.5, md: 1, lg: 1.5 },
+          flexShrink: 0,
+        }}>
           {/* Language Switcher */}
           <Tooltip title={t('change_language')}>
             <IconButton
               onClick={handleLanguageMenuOpen}
               sx={{
-                width: { xs: 36, md: 42 },
-                height: { xs: 36, md: 42 },
-                borderRadius: '12px',
+                width: { xs: 32, sm: 36, md: 40, lg: 42 },
+                height: { xs: 32, sm: 36, md: 40, lg: 42 },
+                borderRadius: { xs: '10px', md: '12px' },
                 background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.03) 0%, rgba(0, 0, 0, 0.06) 100%)',
                 color: 'text.secondary',
                 border: '1px solid rgba(0, 0, 0, 0.05)',
@@ -352,7 +411,7 @@ const NavBar: React.FC = () => {
                 },
               }}
             >
-              <Language sx={{ fontSize: 19 }} />
+              <Language sx={{ fontSize: { xs: 16, sm: 18, md: 19 } }} />
             </IconButton>
           </Tooltip>
           <Menu
@@ -384,9 +443,9 @@ const NavBar: React.FC = () => {
             <IconButton
               onClick={handleNotificationClick}
               sx={{
-                width: { xs: 36, md: 42 },
-                height: { xs: 36, md: 42 },
-                borderRadius: '12px',
+                width: { xs: 32, sm: 36, md: 40, lg: 42 },
+                height: { xs: 32, sm: 36, md: 40, lg: 42 },
+                borderRadius: { xs: '10px', md: '12px' },
                 background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.03) 0%, rgba(0, 0, 0, 0.06) 100%)',
                 color: 'text.secondary',
                 border: '1px solid rgba(0, 0, 0, 0.05)',
@@ -412,17 +471,17 @@ const NavBar: React.FC = () => {
                 color="error"
                 sx={{
                   '& .MuiBadge-badge': {
-                    fontSize: '0.7rem',
-                    minWidth: '18px',
-                    height: '18px',
-                    borderRadius: '9px',
+                    fontSize: { xs: '0.65rem', md: '0.7rem' },
+                    minWidth: { xs: '16px', md: '18px' },
+                    height: { xs: '16px', md: '18px' },
+                    borderRadius: { xs: '8px', md: '9px' },
                     fontWeight: 600,
                     boxShadow: '0 2px 8px rgba(239, 68, 68, 0.3)',
                     border: '1.5px solid rgba(255, 255, 255, 0.8)',
                   }
                 }}
               >
-                <Notifications sx={{ fontSize: 19 }} />
+                <Notifications sx={{ fontSize: { xs: 16, sm: 18, md: 19 } }} />
               </Badge>
             </IconButton>
           </Tooltip>
@@ -433,14 +492,16 @@ const NavBar: React.FC = () => {
             sx={{ 
               display: 'flex', 
               alignItems: 'center', 
-              gap: 1.5,
-              pl: 3,
-              pr: 1,
-              py: 1,
+              gap: { xs: 0.5, sm: 1, md: 1.5 },
+              pl: { xs: 1, sm: 2, md: 3 },
+              pr: { xs: 0.5, md: 1 },
+              py: { xs: 0.5, md: 1 },
               background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(248, 250, 252, 0.6) 100%)',
               backdropFilter: 'blur(10px)',
               border: '1px solid rgba(0, 0, 0, 0.06)',
-              borderRadius: '16px',
+              borderRadius: { xs: '12px', md: '16px' },
+              maxWidth: { xs: 'auto', sm: '200px', md: '250px', lg: 'none' },
+              minWidth: { xs: 'auto', lg: '200px' },
               transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
               '&:hover': {
                 background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.8) 100%)',
@@ -450,29 +511,46 @@ const NavBar: React.FC = () => {
               },
             }}
           >
-            {/* User Info */}
-            <Box sx={{ textAlign: 'right', display: { xs: 'none', lg: 'block' } }}>
+            {/* User Info - Show on medium screens and up */}
+            <Box sx={{ 
+              textAlign: 'right', 
+              display: { xs: 'none', md: 'block', lg: 'block' },
+              flex: 1,
+              overflow: 'hidden',
+            }}>
               <Typography 
                 variant="body2" 
                 sx={{ 
                   fontFamily: "'Inter', sans-serif",
                   fontWeight: 600, 
                   lineHeight: 1.2,
-                  fontSize: { md: '0.85rem', lg: '0.9rem' },
+                  fontSize: { md: '0.8rem', lg: '0.85rem', xl: '0.9rem' },
                   color: 'text.primary',
+                  whiteSpace: 'nowrap',
+                  textOverflow: 'ellipsis',
+                  overflow: 'hidden',
                 }}
               >
                 {getUserDisplayName()}
               </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, justifyContent: 'flex-end' }}>
-                <Circle sx={{ fontSize: 6, color: '#10b981' }} />
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 0.5, 
+                justifyContent: 'flex-end',
+                overflow: 'hidden',
+              }}>
+                <Circle sx={{ fontSize: { md: 5, lg: 6 }, color: '#10b981', flexShrink: 0 }} />
                 <Typography 
                   variant="caption" 
                   sx={{
                     fontFamily: "'Inter', sans-serif",
                     color: 'text.secondary',
-                    fontSize: { md: '0.65rem', lg: '0.7rem' },
+                    fontSize: { md: '0.6rem', lg: '0.65rem', xl: '0.7rem' },
                     fontWeight: 500,
+                    whiteSpace: 'nowrap',
+                    textOverflow: 'ellipsis',
+                    overflow: 'hidden',
                   }}
                 >
                   {userProfile?.role ? t(userProfile.role) : t('general_practitioner')}
@@ -486,10 +564,10 @@ const NavBar: React.FC = () => {
               sx={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: 1.5,
+                gap: { xs: 0.5, md: 1, lg: 1.5 },
                 cursor: 'pointer',
-                p: 1.5,
-                borderRadius: '14px',
+                p: { xs: 0.8, md: 1.2, lg: 1.5 },
+                borderRadius: { xs: '10px', md: '14px' },
                 transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                 '&:hover': {
                   background: 'rgba(59, 130, 246, 0.08)',
@@ -499,13 +577,13 @@ const NavBar: React.FC = () => {
             >
               <Avatar
                 sx={{
-                  width: { xs: 40, md: 48 },
-                  height: { xs: 40, md: 48 },
+                  width: { xs: 32, sm: 36, md: 42, lg: 48 },
+                  height: { xs: 32, sm: 36, md: 42, lg: 48 },
                   background: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #667eea 100%)',
                   fontFamily: "'Inter', 'SF Pro Display', sans-serif",
                   fontWeight: 800,
-                  fontSize: '1.1rem',
-                  border: '3px solid rgba(255, 255, 255, 0.9)',
+                  fontSize: { xs: '0.9rem', sm: '1rem', md: '1.05rem', lg: '1.1rem' },
+                  border: { xs: '2px solid rgba(255, 255, 255, 0.9)', md: '3px solid rgba(255, 255, 255, 0.9)' },
                   boxShadow: '0 6px 20px rgba(102, 126, 234, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
                   transition: 'all 0.3s ease',
                   '&:hover': {
@@ -518,11 +596,12 @@ const NavBar: React.FC = () => {
               </Avatar>
               <KeyboardArrowDown 
                 sx={{ 
-                  fontSize: 18, 
+                  fontSize: { xs: 16, md: 18 }, 
                   color: 'rgba(0, 0, 0, 0.5)',
                   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                   transform: Boolean(userAnchorEl) ? 'rotate(180deg)' : 'rotate(0deg)',
                   filter: 'drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1))',
+                  display: { xs: 'block', sm: 'block' },
                 }} 
               />
             </Box>
