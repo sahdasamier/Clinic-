@@ -1,6 +1,6 @@
 {
   "hosting": {
-    "site": "clinic-d9c0a-230db",
+    "site": "clinic-d9c0a",
     "public": "dist",
     "ignore": [
       "firebase.json",
