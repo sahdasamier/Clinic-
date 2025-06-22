@@ -233,9 +233,9 @@ const PatientListPage: React.FC = () => {
 
     const loadPatientData = async () => {
       console.log('✅ PatientListPage: Auth and user profile initialized, loading patient data...');
-      setDataLoading(true);
+    setDataLoading(true);
 
-      try {
+    try {
         // 🆕 Check if current user is a doctor
         const userIsDoctor = userProfile.role === 'doctor';
         setIsDoctor(userIsDoctor);
@@ -250,27 +250,27 @@ const PatientListPage: React.FC = () => {
         } else {
           console.log('👑 User is management/admin, loading all patients...');
           // Load all patients from localStorage for management
-          const loadedPatients = loadPatientsFromStorage();
-          setPatients(loadedPatients);
+      const loadedPatients = loadPatientsFromStorage();
+      setPatients(loadedPatients);
           console.log(`✅ Loaded ${loadedPatients.length} total patients`);
         }
         
-        setIsDataLoaded(true);
-        console.log('✅ PatientListPage: Patient data loaded successfully');
+      setIsDataLoaded(true);
+      console.log('✅ PatientListPage: Patient data loaded successfully');
         
         // Force sync all patients with their appointment data
         setTimeout(() => {
           forceSyncAllPatients();
         }, 500);
-      } catch (error) {
-        console.error('❌ PatientListPage: Error loading patient data:', error);
+    } catch (error) {
+      console.error('❌ PatientListPage: Error loading patient data:', error);
         // Fallback to localStorage data
         const loadedPatients = loadPatientsFromStorage();
         setPatients(loadedPatients);
         setIsDataLoaded(true);
-      } finally {
-        setDataLoading(false);
-      }
+    } finally {
+      setDataLoading(false);
+    }
     };
 
     loadPatientData();
@@ -919,7 +919,7 @@ const PatientListPage: React.FC = () => {
     } catch (error) {
       console.error('❌ Error creating auto-payment for appointment:', error);
     }
-    
+
     const updatedPatients = patients.map(patient => 
       patient.id === appointmentPatient.id 
         ? { 
@@ -2599,18 +2599,18 @@ const PatientListPage: React.FC = () => {
                                   </Avatar>
                                   <Box>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5, flexWrap: 'wrap' }}>
-                                      <Typography 
-                                        variant="body2" 
-                                        fontWeight={600}
-                                        sx={{ 
-                                          color: 'primary.main', 
-                                          cursor: 'pointer',
-                                          '&:hover': { textDecoration: 'underline' }
-                                        }}
-                                        onClick={() => handleOpenPatientProfile(patient)}
-                                      >
-                                        {patient.name}
-                                      </Typography>
+                                    <Typography 
+                                      variant="body2" 
+                                      fontWeight={600}
+                                      sx={{ 
+                                        color: 'primary.main', 
+                                        cursor: 'pointer',
+                                        '&:hover': { textDecoration: 'underline' }
+                                      }}
+                                      onClick={() => handleOpenPatientProfile(patient)}
+                                    >
+                                      {patient.name}
+                                    </Typography>
                                       
                                       {/* 🎯 PRIORITY BADGE based on appointment status */}
                                       {(() => {
@@ -2717,9 +2717,9 @@ const PatientListPage: React.FC = () => {
                               </TableCell>
                               <TableCell>
                                 <Box>
-                                  <Typography variant="body2" color="primary.main" fontWeight={600}>
+                                <Typography variant="body2" color="primary.main" fontWeight={600}>
                                     {patient.nextAppointment || 'Not scheduled'}
-                                  </Typography>
+                                </Typography>
                                   {patient.appointmentDetails?.scheduledOn && (
                                     <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
                                       Scheduled: {new Date(patient.appointmentDetails.scheduledOn).toLocaleDateString()}
@@ -5424,7 +5424,7 @@ const PatientListPage: React.FC = () => {
                                 </Box>
                               </Box>
                               {selectedPatient.allCompletedVisits && selectedPatient.allCompletedVisits.length > 0 ? (
-                                <Box sx={{ mb: 2 }}>
+                              <Box sx={{ mb: 2 }}>
                                   <Typography variant="body2" color="text.secondary">
                                     All Completed Visits ({selectedPatient.allCompletedVisits.length})
                                   </Typography>
@@ -5590,9 +5590,9 @@ const PatientListPage: React.FC = () => {
                     <Box sx={{ p: 3 }}>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                         <Box>
-                          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                        <Typography variant="h6" sx={{ fontWeight: 600 }}>
                             Medical History ({selectedPatient.medicalHistory?.length || 0})
-                          </Typography>
+                        </Typography>
                           {selectedPatient.medicalHistory && selectedPatient.medicalHistory.length > 0 && (
                             <Typography variant="caption" color="text.secondary">
                               {selectedPatient.medicalHistory.filter((h: any) => h._autoGeneratedFromAppointment).length} from visits • {' '}
@@ -5659,9 +5659,9 @@ const PatientListPage: React.FC = () => {
                                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', mb: 2 }}>
                                     <Box>
                                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                                        <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                                          {history.condition}
-                                        </Typography>
+                                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                                      {history.condition}
+                                    </Typography>
                                         {history._autoGeneratedFromAppointment && (
                                           <Chip
                                             label="Auto-Generated"
@@ -5691,16 +5691,16 @@ const PatientListPage: React.FC = () => {
                                         {history.date}
                                       </Typography>
                                       {!history._autoGeneratedFromAppointment && (
-                                        <IconButton 
-                                          size="small" 
-                                          color="primary"
-                                          onClick={() => {
-                                            // Edit medical history functionality can be added here
-                                            console.log('Edit medical history:', history);
-                                          }}
-                                        >
-                                          <Edit fontSize="small" />
-                                        </IconButton>
+                                      <IconButton 
+                                        size="small" 
+                                        color="primary"
+                                        onClick={() => {
+                                          // Edit medical history functionality can be added here
+                                          console.log('Edit medical history:', history);
+                                        }}
+                                      >
+                                        <Edit fontSize="small" />
+                                      </IconButton>
                                       )}
                                     </Box>
                                   </Box>
@@ -7407,8 +7407,8 @@ const PatientListPage: React.FC = () => {
               >
                 Save Last Visit Date
               </Button>
-            </DialogActions>
-          </Dialog>
+                         </DialogActions>
+           </Dialog>
 
           {/* Quick Status Edit Menu */}
           <Menu

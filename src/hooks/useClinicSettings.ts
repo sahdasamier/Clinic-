@@ -111,13 +111,15 @@ export const useClinicSettings = () => {
     return 'Clinicy Healthcare'; // Default fallback
   };
 
-  // Get clinic display tagline (with fallback)
+  // Get clinic tagline (with fallback)
   const getClinicTagline = () => {
     if (clinicSettings.tagline && clinicSettings.tagline.trim()) {
       return clinicSettings.tagline;
     }
-    return 'Professional Healthcare Services'; // Default fallback
+    return 'Professional Healthcare'; // Default fallback
   };
+
+ 
 
   // Check if clinic branding is configured
   const isBrandingConfigured = () => {
