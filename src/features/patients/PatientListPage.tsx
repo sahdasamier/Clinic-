@@ -805,11 +805,13 @@ const PatientListPage: React.FC = () => {
     setScheduleAppointmentOpen(true);
   };
 
-  const handleSaveAppointment = () => {
+  const handleSaveAppointment = async () => {
     if (!appointmentData.date || !appointmentData.time || !appointmentPatient) {
       alert('Please fill in the date and time');
       return;
     }
+
+    try {
 
     // Create actual appointment record for appointment page
     const appointmentDateTime = `${appointmentData.date} ${appointmentData.time}`;
@@ -822,10 +824,11 @@ const PatientListPage: React.FC = () => {
     });
 
     // Create real appointment record that will appear in appointment page
+    const appointmentId = Math.floor(Date.now() + Math.random() * 1000); // Unique integer ID
     const newAppointmentRecord = {
-      id: Date.now() + Math.random(), // Unique ID
+      id: appointmentId,
       patient: appointmentPatient.name,
-      patientAvatar: appointmentPatient.name.charAt(0).toUpperCase(),
+      patientAvatar: appointmentPatient.name.split(' ').map((n: string) => n[0]).join('').toUpperCase(),
       doctor: 'Dr. Ahmad', // You can make this dynamic
       date: appointmentData.date,
       time: appointmentData.time,
@@ -840,6 +843,7 @@ const PatientListPage: React.FC = () => {
       completed: false,
       paymentStatus: 'pending',
       createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
       // Additional fields for compatibility
       patientId: appointmentPatient.id,
       scheduledFromPatientPage: true
@@ -849,6 +853,20 @@ const PatientListPage: React.FC = () => {
     const existingAppointments = JSON.parse(localStorage.getItem('clinic_appointments_data') || '[]');
     const updatedAppointments = [...existingAppointments, newAppointmentRecord];
     localStorage.setItem('clinic_appointments_data', JSON.stringify(updatedAppointments));
+
+    // 🆕 CREATE AUTOMATIC PAYMENT for the appointment
+    try {
+      const { createPaymentForAllAppointments } = await import('../../utils/paymentUtils');
+      const newPayment = createPaymentForAllAppointments(newAppointmentRecord);
+      
+      if (newPayment) {
+        console.log('✅ Auto-payment created for appointment from patient page:', newPayment);
+      } else {
+        console.log('⚠️ No payment created - may be disabled in settings');
+      }
+    } catch (error) {
+      console.error('❌ Error creating auto-payment for appointment:', error);
+    }
 
     // Update patient's appointment display (today or next)
     const appointmentDate = appointmentData.date;
@@ -887,22 +905,49 @@ const PatientListPage: React.FC = () => {
     }
 
     // Sync patient appointment fields immediately
-    import('../../utils/appointmentPatientSync').then(({ updatePatientAppointmentFields }) => {
-      updatePatientAppointmentFields(appointmentPatient.name);
-    });
+    const { updatePatientAppointmentFields, syncAppointmentChangesToPatients } = await import('../../utils/appointmentPatientSync');
+    updatePatientAppointmentFields(appointmentPatient.name);
+    syncAppointmentChangesToPatients();
 
-    // Dispatch event to notify appointment page of the new appointment
+    // Dispatch multiple events to notify all components
     window.dispatchEvent(new CustomEvent('appointmentPatientSync', {
       detail: { 
         timestamp: new Date().toISOString(),
         newAppointment: newAppointmentRecord,
-        patientName: appointmentPatient.name
+        patientName: appointmentPatient.name,
+        source: 'patientPage'
+      }
+    }));
+
+    // Also dispatch storage event for appointment updates
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: 'clinic_appointments_data',
+      newValue: JSON.stringify(updatedAppointments),
+      storageArea: localStorage
+    }));
+
+    // Trigger appointment list page reload
+    window.dispatchEvent(new CustomEvent('appointmentsUpdated', {
+      detail: { 
+        appointments: updatedAppointments,
+        newAppointment: newAppointmentRecord
       }
     }));
 
     setScheduleAppointmentOpen(false);
     setAppointmentPatient(null);
-    alert(`Appointment scheduled for ${appointmentPatient.name} on ${appointmentDisplay}`);
+    
+    // Enhanced success message
+    const message = `✅ Appointment scheduled for ${appointmentPatient.name} on ${appointmentDisplay}\n` +
+                   `📋 Appointment added to schedule\n` +
+                   `💰 Payment record created automatically\n` +
+                   `🔄 Patient data synced`;
+    alert(message);
+
+    } catch (error) {
+      console.error('❌ Error saving appointment:', error);
+      alert(`Error scheduling appointment: ${error.message || 'Unknown error'}. Please try again.`);
+    }
   };
 
   const handleQuickStatusEdit = (patient: any, event: React.MouseEvent) => {
