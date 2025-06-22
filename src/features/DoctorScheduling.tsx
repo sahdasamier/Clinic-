@@ -58,6 +58,7 @@ import {
 } from '@mui/icons-material';
 
 import { loadAppointmentsFromStorage, saveAppointmentsToStorage } from './appointments/AppointmentListPage';
+import { updatePatientAppointmentFields, syncAllPatientsAppointmentFields } from '../utils/appointmentPatientSync';
 import { usePersistentForm } from '../hooks/usePersistentForm';
 import {
   baseDoctorSchedules,
@@ -380,6 +381,12 @@ const DoctorSchedulingPage: React.FC = () => {
     const updatedAppointments = appointments.filter(apt => apt.id !== appointment.id);
     setAppointments(updatedAppointments);
     saveAppointmentsToStorage(updatedAppointments); // Save to shared storage
+    
+    // Sync patient data if this appointment had a real patient (not just available slot)
+    if (appointment.patient && !appointment.isAvailableSlot && appointment.patient !== t('available_slot')) {
+      updatePatientAppointmentFields(appointment.patient);
+    }
+    
     setMenuAnchor(null);
   };
 
@@ -450,6 +457,12 @@ const DoctorSchedulingPage: React.FC = () => {
     const updatedAppointments = [...appointments, newAppointment];
     setAppointments(updatedAppointments);
     saveAppointmentsToStorage(updatedAppointments); // Save to shared storage
+    
+    // Sync patient data if this appointment has a real patient (not just available slot)
+    if (newAppointment.patient && !newAppointment.isAvailableSlot && newAppointment.patient !== t('available_slot')) {
+      updatePatientAppointmentFields(newAppointment.patient);
+    }
+    
     setAddDialogOpen(false);
     
     // Success notification
@@ -508,6 +521,12 @@ const DoctorSchedulingPage: React.FC = () => {
     
     setAppointments(updatedAppointments);
     saveAppointmentsToStorage(updatedAppointments); // Save to shared storage
+    
+    // Sync patient data if this appointment has a real patient (not just available slot)
+    if (selectedAppointment.patient && !selectedAppointment.isAvailableSlot && selectedAppointment.patient !== t('available_slot')) {
+      updatePatientAppointmentFields(selectedAppointment.patient);
+    }
+    
     setEditDialogOpen(false);
     setSelectedAppointment(null);
     updateFormField('time', '');
@@ -861,6 +880,14 @@ const DoctorSchedulingPage: React.FC = () => {
       const updatedAppointments = [...appointments, ...newAppointments];
       setAppointments(updatedAppointments);
       saveAppointmentsToStorage(updatedAppointments);
+      
+      // Sync patient data for any real patient appointments (not just available slots)
+      const realPatientAppointments = newAppointments.filter(apt => 
+        apt.patient && !apt.isAvailableSlot && apt.patient !== t('available_slot')
+      );
+      realPatientAppointments.forEach(apt => {
+        updatePatientAppointmentFields(apt.patient);
+      });
     }
 
     setWeeklyScheduleDialogOpen(false);
@@ -1096,6 +1123,14 @@ const DoctorSchedulingPage: React.FC = () => {
       const updatedAppointments = [...appointments, ...newRecurringAppointments];
       setAppointments(updatedAppointments);
       saveAppointmentsToStorage(updatedAppointments);
+      
+      // Sync patient data for any real patient appointments (not just available slots)
+      const realPatientAppointments = newRecurringAppointments.filter(apt => 
+        apt.patient && !apt.isAvailableSlot && apt.patient !== t('available_slot')
+      );
+      realPatientAppointments.forEach(apt => {
+        updatePatientAppointmentFields(apt.patient);
+      });
     }
 
     setRecurringAppointmentsDialogOpen(false);

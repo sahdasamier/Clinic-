@@ -90,7 +90,12 @@ import {
 
 
 
-import { syncAppointmentChangesToPatients, setupAppointmentPatientSync } from '../../utils/appointmentPatientSync';
+import { 
+  syncAppointmentChangesToPatients, 
+  setupAppointmentPatientSync,
+  updatePatientAppointmentFields,
+  syncAllPatientsAppointmentFields
+} from '../../utils/appointmentPatientSync';
 import { doctorSchedules } from '../DoctorScheduling';
 import { loadPatientsFromStorage } from '../patients/PatientListPage';
 import {
@@ -508,6 +513,9 @@ const AppointmentListPage: React.FC = () => {
     
     setAppointmentList(updatedList);
     saveAppointmentsToStorage(updatedList);
+    
+    // Immediately sync this patient's appointment data when completion status changes
+    updatePatientAppointmentFields(appointment.patient);
   };
 
   const calculateEstimatedFinishTime = () => {
@@ -646,6 +654,10 @@ const AppointmentListPage: React.FC = () => {
     
     setAppointmentList(updatedList);
     saveAppointmentsToStorage(updatedList);
+    
+    // Immediately sync this patient's appointment data when status changes
+    updatePatientAppointmentFields(statusEditAppointment.patient);
+    
     setStatusMenuAnchor(null);
     setStatusEditAppointment(null);
   };
@@ -750,6 +762,14 @@ const AppointmentListPage: React.FC = () => {
     
     setAppointmentList(updatedList);
     saveAppointmentsToStorage(updatedList);
+    
+    // Immediately sync this specific patient's appointment data
+    updatePatientAppointmentFields(newAppointment.patient);
+    
+    // If editing an appointment with a different patient name, sync the old patient too
+    if (selectedAppointment && selectedAppointment.patient !== newAppointment.patient) {
+      updatePatientAppointmentFields(selectedAppointment.patient);
+    }
     
     setNewAppointment({
       patient: '',

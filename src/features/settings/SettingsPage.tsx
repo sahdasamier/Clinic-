@@ -2858,10 +2858,7 @@ const SettingsPage: React.FC = () => {
                     </Card>
                   </Grid>
 
-                  {/* Clinic Branding Preview */}
-                  <Grid item xs={12}>
-                    {/* Temporarily removed ClinicBrandingPreview */}
-                  </Grid>
+                  
 
                   {/* Services & Specializations */}
                   <Grid item xs={12} md={6}>
@@ -3421,143 +3418,7 @@ const SettingsPage: React.FC = () => {
                     </Card>
                   </Grid>
 
-                  {/* Clinic Branding */}
-                  <Grid item xs={12} md={6}>
-                    <Card sx={{ 
-                      borderRadius: 4, 
-                      boxShadow: '0 12px 50px rgba(0,0,0,0.12), 0 6px 30px rgba(0,0,0,0.08)',
-                      border: 'none',
-                      background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
-                      overflow: 'hidden'
-                    }}>
-                      <CardContent sx={{ p: 0 }}>
-                        {/* Card Header */}
-                        <Box sx={{ 
-                          p: 4,
-                          background: 'linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%)',
-                          position: 'relative',
-                          borderBottom: '1px solid rgba(196, 181, 253, 0.3)',
-                          '&::before': {
-                            content: '""',
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            height: '4px',
-                            background: 'linear-gradient(90deg, #8b5cf6 0%, #7c3aed 100%)'
-                          }
-                        }}>
-                          <Box sx={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            gap: 2.5
-                          }}>
-                            <Box sx={{
-                              p: 2,
-                              borderRadius: 3,
-                              background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
-                              color: 'white',
-                              boxShadow: '0 8px 25px rgba(139, 92, 246, 0.3)'
-                            }}>
-                              <Palette sx={{ fontSize: 24 }} />
-                            </Box>
-                            <Box>
-                              <Typography variant="h6" sx={{ 
-                                fontWeight: 800, 
-                                color: 'grey.800',
-                                fontSize: '1.3rem',
-                                mb: 0.2
-                              }}>
-                          Clinic Branding
-                        </Typography>
-                              <Typography variant="body2" sx={{ 
-                                color: 'grey.600',
-                                fontWeight: 500
-                              }}>
-                                Customize your clinic's visual identity
-                              </Typography>
-                            </Box>
-                          </Box>
-                        </Box>
-                        
-                        {/* Card Content */}
-                        <Box sx={{ p: 4 }}>
-                        <Box sx={{ textAlign: 'center', mb: 3 }}>
-                          <Avatar
-                            src={clinicSettings.logo}
-                            sx={{
-                              width: 80,
-                              height: 80,
-                              mx: 'auto',
-                              mb: 2,
-                              backgroundColor: 'primary.main',
-                              fontSize: '1.5rem',
-                            }}
-                          >
-                            {clinicSettings.name.split(' ').map((n: string) => n[0]).join('')}
-                          </Avatar>
-                          <Button 
-                            variant="outlined" 
-                            size="small"
-                            startIcon={loading ? <CircularProgress size={16} /> : <CloudUpload />}
-                            onClick={() => logoUploadRef.current?.click()}
-                            disabled={loading}
-                          >
-                            {loading ? 'Uploading...' : 'Upload Logo'}
-                          </Button>
-                          <input
-                            type="file"
-                            ref={logoUploadRef}
-                            style={{ display: 'none' }}
-                            accept="image/*"
-                            onChange={(e) => handleFileUpload(e, 'logo')}
-                          />
-                        </Box>
-
-                        <Grid container spacing={2}>
-                          <Grid item xs={12}>
-                            <TextField
-                              fullWidth
-                              label="Clinic Tagline"
-                              value={clinicSettings.tagline}
-                              onChange={(e) => setClinicSettings({ ...clinicSettings, tagline: e.target.value })}
-                              placeholder={t('enter_clinic_tagline')}
-                            />
-                          </Grid>
-                          <Grid item xs={12} md={6}>
-                            <TextField
-                              fullWidth
-                              label="Primary Color"
-                              value={clinicSettings.primaryColor}
-                              onChange={(e) => setClinicSettings({ ...clinicSettings, primaryColor: e.target.value })}
-                              type="color"
-                            />
-                          </Grid>
-                          <Grid item xs={12} md={6}>
-                            <TextField
-                              fullWidth
-                              label="Secondary Color"
-                              value={clinicSettings.secondaryColor}
-                              onChange={(e) => setClinicSettings({ ...clinicSettings, secondaryColor: e.target.value })}
-                              type="color"
-                            />
-                          </Grid>
-                          <Grid item xs={12}>
-                            <TextField
-                              fullWidth
-                              label="Clinic Description"
-                              multiline
-                              rows={3}
-                              value={clinicSettings.description}
-                              onChange={(e) => setClinicSettings({ ...clinicSettings, description: e.target.value })}
-                              placeholder={t('enter_clinic_description')}
-                            />
-                          </Grid>
-                        </Grid>
-                        </Box>
-                      </CardContent>
-                    </Card>
-                  </Grid>
+                 
 
                   {/* Save Button */}
                   <Grid item xs={12}>

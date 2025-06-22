@@ -83,7 +83,8 @@ import {
   organizeAppointmentsByCompletion, 
   getPatientsOrganizedByAppointmentStatus,
   sendAppointmentDataToPatients,
-  PatientWithAppointments 
+  PatientWithAppointments,
+  forceSyncAllPatients
 } from '../../utils/appointmentPatientSync';
 import {
   initialPatients,
@@ -232,6 +233,11 @@ const PatientListPage: React.FC = () => {
       setPatients(loadedPatients);
       setIsDataLoaded(true);
       console.log('✅ PatientListPage: Patient data loaded successfully');
+      
+      // Force sync all patients with their appointment data
+      setTimeout(() => {
+        forceSyncAllPatients();
+      }, 500);
     } catch (error) {
       console.error('❌ PatientListPage: Error loading patient data:', error);
     } finally {
@@ -286,6 +292,11 @@ const PatientListPage: React.FC = () => {
     const handleSync = () => {
       console.log('🔄 Received appointment sync event, reloading data...');
       loadOrganizedData();
+      
+      // Also reload patient data to reflect sync changes
+      const updatedPatients = loadPatientsFromStorage();
+      setPatients(updatedPatients);
+      console.log('✅ Patient data reloaded after sync');
     };
 
     // Listen for user data clearing
@@ -374,6 +385,9 @@ const PatientListPage: React.FC = () => {
   const [newTreatmentMedication, setNewTreatmentMedication] = useState(defaultMedicationData);
   const [medicationDetailsPopup, setMedicationDetailsPopup] = useState(false);
   const [pendingMedication, setPendingMedication] = useState<any>(null);
+  const [editLastVisitOpen, setEditLastVisitOpen] = useState(false);
+  const [editLastVisitPatient, setEditLastVisitPatient] = useState<any>(null);
+  const [newLastVisitDate, setNewLastVisitDate] = useState('');
   const [scheduleAppointmentOpen, setScheduleAppointmentOpen] = useState(false);
   const [appointmentPatient, setAppointmentPatient] = useState<any>(null);
   const [appointmentData, setAppointmentData] = useState(defaultAppointmentData);
@@ -780,7 +794,7 @@ const PatientListPage: React.FC = () => {
       return;
     }
 
-    // Update patient's next appointment
+    // Create actual appointment record for appointment page
     const appointmentDateTime = `${appointmentData.date} ${appointmentData.time}`;
     const appointmentDisplay = new Date(`${appointmentData.date}T${appointmentData.time}`).toLocaleDateString('en-US', {
       month: 'short',
@@ -790,11 +804,46 @@ const PatientListPage: React.FC = () => {
       minute: '2-digit'
     });
 
+    // Create real appointment record that will appear in appointment page
+    const newAppointmentRecord = {
+      id: Date.now() + Math.random(), // Unique ID
+      patient: appointmentPatient.name,
+      patientAvatar: appointmentPatient.name.charAt(0).toUpperCase(),
+      doctor: 'Dr. Ahmad', // You can make this dynamic
+      date: appointmentData.date,
+      time: appointmentData.time,
+      timeSlot: appointmentData.time,
+      type: appointmentData.type || 'Follow-up',
+      duration: parseInt(appointmentData.duration) || 30,
+      priority: appointmentData.priority?.toLowerCase() || 'normal',
+      location: 'Main Clinic', // You can make this dynamic
+      notes: appointmentData.notes || '',
+      phone: appointmentPatient.phone || '',
+      status: 'confirmed',
+      completed: false,
+      paymentStatus: 'pending',
+      createdAt: new Date().toISOString(),
+      // Additional fields for compatibility
+      patientId: appointmentPatient.id,
+      scheduledFromPatientPage: true
+    };
+
+    // Load existing appointments and add the new one
+    const existingAppointments = JSON.parse(localStorage.getItem('clinic_appointments_data') || '[]');
+    const updatedAppointments = [...existingAppointments, newAppointmentRecord];
+    localStorage.setItem('clinic_appointments_data', JSON.stringify(updatedAppointments));
+
+    // Update patient's appointment display (today or next)
+    const appointmentDate = appointmentData.date;
+    const today = new Date().toISOString().split('T')[0];
+    const isToday = appointmentDate === today;
+    
     const updatedPatients = patients.map(patient => 
       patient.id === appointmentPatient.id 
         ? { 
             ...patient, 
-            nextAppointment: appointmentDisplay,
+            todayAppointment: isToday ? `Today ${appointmentData.time}` : patient.todayAppointment,
+            nextAppointment: isToday ? patient.nextAppointment : appointmentDisplay,
             appointmentDetails: {
               ...appointmentData,
               dateTime: appointmentDateTime,
@@ -810,7 +859,8 @@ const PatientListPage: React.FC = () => {
     if (selectedPatient?.id === appointmentPatient.id) {
       setSelectedPatient({
         ...selectedPatient,
-        nextAppointment: appointmentDisplay,
+        todayAppointment: isToday ? `Today ${appointmentData.time}` : selectedPatient.todayAppointment,
+        nextAppointment: isToday ? selectedPatient.nextAppointment : appointmentDisplay,
         appointmentDetails: {
           ...appointmentData,
           dateTime: appointmentDateTime,
@@ -818,6 +868,20 @@ const PatientListPage: React.FC = () => {
         }
       });
     }
+
+    // Sync patient appointment fields immediately
+    import('../../utils/appointmentPatientSync').then(({ updatePatientAppointmentFields }) => {
+      updatePatientAppointmentFields(appointmentPatient.name);
+    });
+
+    // Dispatch event to notify appointment page of the new appointment
+    window.dispatchEvent(new CustomEvent('appointmentPatientSync', {
+      detail: { 
+        timestamp: new Date().toISOString(),
+        newAppointment: newAppointmentRecord,
+        patientName: appointmentPatient.name
+      }
+    }));
 
     setScheduleAppointmentOpen(false);
     setAppointmentPatient(null);
@@ -1136,6 +1200,73 @@ const PatientListPage: React.FC = () => {
 
   const getActiveFilterCount = () => {
     return Object.values(activeFilters).filter(value => value !== '').length + (searchQuery ? 1 : 0);
+  };
+
+  // Check if patient was received/registered today
+  const isReceivedToday = (patient: any) => {
+    if (!patient.createdAt && !patient.registrationDate) return false;
+    
+    const patientDate = new Date(patient.createdAt || patient.registrationDate);
+    const today = new Date();
+    
+    return patientDate.toDateString() === today.toDateString();
+  };
+
+  // Get formatted received date
+  const getReceivedDate = (patient: any) => {
+    if (!patient.createdAt && !patient.registrationDate) return null;
+    
+    const patientDate = new Date(patient.createdAt || patient.registrationDate);
+    return patientDate.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  };
+
+  // Handle last visit editing
+  const handleEditLastVisit = (patient: any) => {
+    setEditLastVisitPatient(patient);
+    setNewLastVisitDate(patient.lastVisit ? 
+      new Date(patient.lastVisit).toISOString().split('T')[0] : 
+      new Date().toISOString().split('T')[0]
+    );
+    setEditLastVisitOpen(true);
+  };
+
+  const handleSaveLastVisit = () => {
+    if (!editLastVisitPatient || !newLastVisitDate) return;
+
+    const formattedDate = new Date(newLastVisitDate).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+
+    const updatedPatients = patients.map(patient => 
+      patient.id === editLastVisitPatient.id 
+        ? { ...patient, lastVisit: formattedDate }
+        : patient
+    );
+
+    setPatients(updatedPatients);
+
+    // Update selectedPatient if it's the same patient
+    if (selectedPatient?.id === editLastVisitPatient.id) {
+      setSelectedPatient({
+        ...selectedPatient,
+        lastVisit: formattedDate
+      });
+    }
+
+    // Sync appointment data
+    import('../../utils/appointmentPatientSync').then(({ updatePatientAppointmentFields }) => {
+      updatePatientAppointmentFields(editLastVisitPatient.name);
+    });
+
+    setEditLastVisitOpen(false);
+    setEditLastVisitPatient(null);
+    setNewLastVisitDate('');
   };
 
   // Show loading spinner while data is loading
@@ -1947,6 +2078,7 @@ const PatientListPage: React.FC = () => {
                             <TableCell sx={{ fontWeight: 600 }}>{t('patient')}</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>{t('contact')}</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>{t('last_visit')}</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Today's Appointment</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>{t('next_appointment')}</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>{t('condition')}</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>{t('status')}</TableCell>
@@ -1956,7 +2088,7 @@ const PatientListPage: React.FC = () => {
                         <TableBody>
                           {filteredPatients.length === 0 && getActiveFilterCount() > 0 ? (
                             <TableRow>
-                              <TableCell colSpan={7} sx={{ textAlign: 'center', py: 6 }}>
+                              <TableCell colSpan={8} sx={{ textAlign: 'center', py: 6 }}>
                                 <Box>
                                   <FilterList sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
                                   <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
@@ -1977,7 +2109,7 @@ const PatientListPage: React.FC = () => {
                             </TableRow>
                           ) : filteredPatients.length === 0 ? (
                             <TableRow>
-                              <TableCell colSpan={7} sx={{ textAlign: 'center', py: 6 }}>
+                              <TableCell colSpan={8} sx={{ textAlign: 'center', py: 6 }}>
                                 <Box>
                                   <People sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
                                   <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
@@ -2006,21 +2138,43 @@ const PatientListPage: React.FC = () => {
                                     {patient.avatar}
                                   </Avatar>
                                   <Box>
-                                    <Typography 
-                                      variant="body2" 
-                                      fontWeight={600}
-                                      sx={{ 
-                                        color: 'primary.main', 
-                                        cursor: 'pointer',
-                                        '&:hover': { textDecoration: 'underline' }
-                                      }}
-                                      onClick={() => handleOpenPatientProfile(patient)}
-                                    >
-                                      {patient.name}
-                                    </Typography>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                                      <Typography 
+                                        variant="body2" 
+                                        fontWeight={600}
+                                        sx={{ 
+                                          color: 'primary.main', 
+                                          cursor: 'pointer',
+                                          '&:hover': { textDecoration: 'underline' }
+                                        }}
+                                        onClick={() => handleOpenPatientProfile(patient)}
+                                      >
+                                        {patient.name}
+                                      </Typography>
+                                      {isReceivedToday(patient) && (
+                                        <Chip
+                                          label="Today"
+                                          size="small"
+                                          color="success"
+                                          variant="filled"
+                                          sx={{ 
+                                            fontSize: '0.65rem', 
+                                            height: 18,
+                                            backgroundColor: '#4caf50',
+                                            color: 'white',
+                                            fontWeight: 600
+                                          }}
+                                        />
+                                      )}
+                                    </Box>
                                     <Typography variant="caption" color="text.secondary">
                                       {patient.gender}, {patient.age} years
                                     </Typography>
+                                    {getReceivedDate(patient) && !isReceivedToday(patient) && (
+                                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                        Registered: {getReceivedDate(patient)}
+                                      </Typography>
+                                    )}
                                   </Box>
                                 </Box>
                               </TableCell>
@@ -2036,12 +2190,43 @@ const PatientListPage: React.FC = () => {
                                 </Box>
                               </TableCell>
                               <TableCell>
-                                <Typography variant="body2">{patient.lastVisit}</Typography>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                  <Typography variant="body2">{patient.lastVisit}</Typography>
+                                  <Tooltip title="Edit Last Visit Date" arrow>
+                                    <IconButton 
+                                      size="small" 
+                                      onClick={() => handleEditLastVisit(patient)}
+                                      sx={{ p: 0.5 }}
+                                    >
+                                      <Edit sx={{ fontSize: 14 }} />
+                                    </IconButton>
+                                  </Tooltip>
+                                </Box>
                               </TableCell>
                               <TableCell>
-                                <Typography variant="body2" color="primary.main" fontWeight={600}>
-                                  {patient.nextAppointment}
-                                </Typography>
+                                <Box>
+                                  {patient.todayAppointment ? (
+                                    <Typography variant="body2" color="success.main" fontWeight={600}>
+                                      {patient.todayAppointment}
+                                    </Typography>
+                                  ) : (
+                                    <Typography variant="body2" color="text.secondary">
+                                      No appointment today
+                                    </Typography>
+                                  )}
+                                </Box>
+                              </TableCell>
+                              <TableCell>
+                                <Box>
+                                  <Typography variant="body2" color="primary.main" fontWeight={600}>
+                                    {patient.nextAppointment || 'Not scheduled'}
+                                  </Typography>
+                                  {patient.appointmentDetails?.scheduledOn && (
+                                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                      Scheduled: {new Date(patient.appointmentDetails.scheduledOn).toLocaleDateString()}
+                                    </Typography>
+                                  )}
+                                </Box>
                               </TableCell>
                               <TableCell>
                                 <Typography variant="body2">{translatePatientData(patient.condition)}</Typography>
@@ -6495,6 +6680,84 @@ const PatientListPage: React.FC = () => {
               </Button>
                          </DialogActions>
            </Dialog>
+
+          {/* Edit Last Visit Dialog */}
+          <Dialog
+            open={editLastVisitOpen}
+            onClose={() => setEditLastVisitOpen(false)}
+            maxWidth="sm"
+            fullWidth
+          >
+            <DialogTitle>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Box>
+                  <Typography variant="h5" sx={{ fontWeight: 600 }}>
+                    Edit Last Visit Date
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {editLastVisitPatient?.name}
+                  </Typography>
+                </Box>
+                <IconButton onClick={() => setEditLastVisitOpen(false)}>
+                  <Close />
+                </IconButton>
+              </Box>
+            </DialogTitle>
+            <DialogContent>
+              <Box sx={{ mt: 2 }}>
+                <Alert severity="info" sx={{ mb: 3 }}>
+                  <Typography variant="body2">
+                    Select the date of the patient's last visit. You can choose any past date up to today.
+                  </Typography>
+                </Alert>
+                
+                <TextField
+                  fullWidth
+                  label="Last Visit Date"
+                  type="date"
+                  value={newLastVisitDate}
+                  onChange={(e) => setNewLastVisitDate(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  inputProps={{ 
+                    max: new Date().toISOString().split('T')[0] // Prevent future dates
+                  }}
+                  helperText="Select the date when the patient last visited the clinic"
+                />
+                
+                <Box sx={{ mt: 2, p: 2, backgroundColor: '#f8f9fa', borderRadius: 2 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    <strong>Current Last Visit:</strong> {editLastVisitPatient?.lastVisit || 'Not set'}
+                  </Typography>
+                  {newLastVisitDate && (
+                    <Typography variant="body2" color="primary.main" sx={{ mt: 1 }}>
+                      <strong>New Last Visit:</strong> {new Date(newLastVisitDate).toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })}
+                    </Typography>
+                  )}
+                </Box>
+              </Box>
+            </DialogContent>
+            <DialogActions sx={{ p: 3, pt: 0 }}>
+              <Button 
+                onClick={() => setEditLastVisitOpen(false)}
+                color="inherit"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="contained"
+                startIcon={<Save />}
+                onClick={handleSaveLastVisit}
+                disabled={!newLastVisitDate}
+              >
+                Save Last Visit Date
+              </Button>
+            </DialogActions>
+          </Dialog>
 
           {/* Quick Status Edit Menu */}
           <Menu

@@ -132,6 +132,7 @@ const resources = {
       'date_received': 'Date Received',
       'received': 'Received',
       'time_duration': 'Time & Duration',
+      'today_appointment': 'Today\'s Appointment',
       
       // Patients
       'add_edit_patient': 'Add/Edit Patient',
@@ -1168,6 +1169,7 @@ const resources = {
       "time_duration": "الوقت والمدة",
       "date_received": "تاريخ الاستلام",
       "received": "تم الاستلام",
+      "today_appointment": "موعد اليوم",
       "type": "النوع",
       "priority": "الأولوية",
       "actions": "الإجراءات",
