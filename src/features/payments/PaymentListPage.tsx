@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Box,
@@ -67,6 +67,7 @@ import {
   Share,
   LocalHospital,
   Percent,
+  Business,
 } from '@mui/icons-material';
 
 import {
@@ -87,6 +88,12 @@ import {
   formatCurrencyWithVAT,
   type VATCalculation 
 } from '../../utils/vatUtils';
+import { 
+  calculateFinancialSummary,
+  loadVATAdjustmentsFromStorage,
+  saveVATAdjustmentsToStorage,
+  type FinancialSummary 
+} from '../../utils/expenseUtils';
 import InvoiceGenerator from './InvoiceGenerator';
 import { doctorSchedules } from '../../data/mockData';
 import { loadAppointmentsFromStorage } from '../appointments/AppointmentListPage';
@@ -97,7 +104,15 @@ import {
   initializeBidirectionalSync,
   debugStorageState 
 } from '../../utils/dataSyncManager';
-import { testPaymentNotificationSystem } from '../../utils/paymentUtils';
+import { 
+  testPaymentNotificationSystem,
+  processAllAppointmentsForPayments,
+  loadPaymentsFromStorage as loadPaymentsFromPaymentUtils,
+  updatePaymentStatus,
+  updatePaymentAmount
+} from '../../utils/paymentUtils';
+import VATAdjustmentModal from './components/VATAdjustmentModal';
+import ExpenseManagementModal from './components/ExpenseManagementModal';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -336,6 +351,30 @@ const PaymentListPage: React.FC = () => {
   const [exportOptionsOpen, setExportOptionsOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [showAppointmentSelection, setShowAppointmentSelection] = useState(false);
+  const [vatAdjustmentModalOpen, setVatAdjustmentModalOpen] = useState(false);
+  const [expenseManagementModalOpen, setExpenseManagementModalOpen] = useState(false);
+  
+  // Payment amount editing state
+  const [editPaymentModalOpen, setEditPaymentModalOpen] = useState(false);
+  const [selectedPaymentForEdit, setSelectedPaymentForEdit] = useState<PaymentData | null>(null);
+  const [editPaymentForm, setEditPaymentForm] = useState({
+    amount: '',
+    paidAmount: ''
+  });
+  
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  
+  // Load VAT adjustments from localStorage using utility function
+  const [vatAdjustments, setVatAdjustments] = useState(() => {
+    try {
+      const loaded = loadVATAdjustmentsFromStorage();
+      console.log('✅ PaymentListPage: Loaded VAT adjustments from localStorage:', loaded.length);
+      return loaded;
+    } catch (error) {
+      console.error('❌ PaymentListPage: Error loading VAT adjustments:', error);
+      return [];
+    }
+  });
   
   // ✅ Initialize appointments from localStorage FIRST
   const [appointments, setAppointments] = useState(() => {
@@ -491,12 +530,29 @@ useEffect(() => {
     console.log('🔄 PaymentListPage: Synced doctors from event');
   }, 'PaymentListPage');
 
+  // Set up VAT adjustments listener
+  const handleVATAdjustmentsUpdate = () => {
+    try {
+      const updatedAdjustments = loadVATAdjustmentsFromStorage();
+      setVatAdjustments(updatedAdjustments);
+      console.log('🔄 PaymentListPage: Synced VAT adjustments from storage event');
+      
+      // Trigger financial summary recalculation
+      setRefreshTrigger(prev => prev + 1);
+    } catch (error) {
+      console.error('Error syncing VAT adjustments:', error);
+    }
+  };
+
+  window.addEventListener('vatAdjustmentsUpdated', handleVATAdjustmentsUpdate);
+
   // Debug current state
   debugStorageState();
   
   return () => {
     cleanupAppointmentSync();
     cleanupDoctorSync();
+    window.removeEventListener('vatAdjustmentsUpdated', handleVATAdjustmentsUpdate);
   };
 }, []);
 
@@ -565,6 +621,11 @@ const todayAppointments = getAppointmentsByDate(new Date().toISOString().split('
 const completedTodayAppointments = getCompletedAppointmentsByDate(new Date().toISOString().split('T')[0]);
 const pendingTodayAppointments = getPendingAppointmentsByDate(new Date().toISOString().split('T')[0]);
 const appointmentLinkedPayments = payments.filter(payment => payment.appointmentId);
+
+// Calculate today's appointment revenue
+const todayAppointmentRevenue = appointmentLinkedPayments
+  .filter(payment => payment.date === new Date().toISOString().split('T')[0])
+  .reduce((sum, payment) => sum + (payment.status === 'paid' ? payment.amount : 0), 0);
 
 // Helper functions
 const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
@@ -665,27 +726,65 @@ const getFilteredPayments = () => {
 
 const filteredPayments = getFilteredPayments();
 
-// Calculate statistics with VAT consideration
+// Calculate comprehensive financial summary with all expenses
 const paidPayments = payments.filter(p => p.status === 'paid');
-const totalRevenue = paidPayments.reduce((sum, p) => sum + p.amount, 0);
+const baseRevenue = paidPayments.reduce((sum, p) => sum + p.amount, 0);
 const totalInsurance = paidPayments.filter(p => p.insurance === 'Yes').reduce((sum, p) => sum + (p.insuranceAmount || 0), 0);
 
-// Calculate VAT deductions for profit calculation
-const totalVATDeducted = paidPayments
-  .filter(p => p.includeVAT)
-  .reduce((sum, p) => sum + (p.vatAmount || 0), 0);
+// Enhanced VAT calculations - only calculate VAT if there are actually VAT-enabled payments
+const paymentsWithVAT = paidPayments.filter(p => p.includeVAT && (p.vatAmount || 0) > 0);
+const automaticVATFromPayments = paymentsWithVAT.reduce((sum, p) => sum + (p.vatAmount || 0), 0);
+const hasVATPayments = paymentsWithVAT.length > 0;
 
-// Calculate profit with VAT considerations
-const profitCalculation = calculateProfitWithVAT(
-  totalRevenue,
-  totalInsurance,
-  totalVATDeducted,
-  true // VAT is included in revenue amounts
-);
+// Process appointments to create payments
+useEffect(() => {
+  if (appointments.length > 0) {
+    processAllAppointmentsForPayments(appointments);
+    
+    // Reload payments after processing appointments
+    setTimeout(() => {
+      const updatedPayments = loadPaymentsFromPaymentUtils();
+      setPayments(updatedPayments);
+      console.log(`🔄 Reloaded ${updatedPayments.length} payments after processing appointments`);
+    }, 100);
+  }
+}, [appointments]);
 
-const totalProfit = profitCalculation.finalProfit;
+// Calculate comprehensive financial summary including salaries, business expenses, and VAT adjustments
+// Use refreshTrigger to force recalculation when VAT adjustments change
+const financialSummary: FinancialSummary = useMemo(() => {
+  console.log('📊 Calculating financial summary with:', { 
+    baseRevenue, 
+    automaticVATFromPayments, 
+    vatAdjustments: vatAdjustments.length,
+    refreshTrigger 
+  });
+  
+  // Debug VAT adjustments
+  console.log('🔍 Current VAT adjustments in state:', vatAdjustments);
+  
+  const summary = calculateFinancialSummary(baseRevenue, automaticVATFromPayments);
+  console.log('💰 Financial summary calculated:', {
+    finalVATCollected: summary.finalVATCollected,
+    netVATAdjustments: summary.netVATAdjustments,
+    totalExpenses: summary.totalExpenses,
+    netProfit: summary.netProfit,
+    vatAdjustmentDetails: summary.vatAdjustmentDetails
+  });
+  
+  // Additional debug for VAT card display
+  console.log('🎯 VAT Card will show:', Math.abs(summary.finalVATCollected));
+  
+  return summary;
+}, [baseRevenue, automaticVATFromPayments, vatAdjustments, refreshTrigger]);
+
+// Extract key financial metrics
+const totalRevenue = financialSummary.adjustedRevenue; // Revenue including VAT adjustments
+const totalProfit = financialSummary.netProfit; // Profit after all expenses (salaries + business expenses)
+const grossProfit = financialSummary.grossProfit; // Profit before expenses (after VAT only)
+const totalExpenses = financialSummary.totalExpenses; // All expenses (salaries + business)
+const finalVATCollected = financialSummary.finalVATCollected; // Final VAT after all adjustments
 const pendingAmount = payments.filter(p => p.status === 'pending').reduce((sum, p) => sum + p.amount, 0);
-const overdueAmount = payments.filter(p => p.status === 'overdue').reduce((sum, p) => sum + p.amount, 0);
 
 // Event handlers
 const handleCreatePayment = () => {
@@ -789,13 +888,11 @@ const handleCreatePayment = () => {
 const handleUpdatePaymentStatus = async (paymentId: number, newStatus: string, paidAmount?: number) => {
   try {
     // Use the notification-enabled payment status update
-    const { updatePaymentStatus } = await import('../../utils/paymentUtils');
     const success = await updatePaymentStatus(paymentId, newStatus, paidAmount);
     
     if (success) {
       // Reload payments from storage to get the updated data
-      const { loadPaymentsFromStorage } = await import('../../utils/paymentUtils');
-      const updatedPayments = loadPaymentsFromStorage();
+      const updatedPayments = loadPaymentsFromPaymentUtils();
       setPayments(updatedPayments);
       
       const payment = updatedPayments.find(p => p.id === paymentId);
@@ -895,20 +992,65 @@ const handleSendReminder = (payment: PaymentData) => {
 };
 
 const handleEditPayment = (payment: PaymentData) => {
-  setNewInvoiceData({
-    patient: payment.patient,
-    doctor: payment.doctor || '', // Added doctor field
+  setSelectedPaymentForEdit(payment);
+  setEditPaymentForm({
     amount: payment.baseAmount?.toString() || payment.amount.toString(),
-    category: payment.category,
-    invoiceDate: payment.date,
-    dueDate: payment.dueDate,
-    description: payment.description,
-    method: payment.method,
-    insuranceAmount: payment.insuranceAmount?.toString() || '',
-    includeVAT: payment.includeVAT || false,
-    vatRate: payment.vatRate || vatSettings.rate,
+    paidAmount: payment.paidAmount?.toString() || '0'
   });
-  setAddPaymentOpen(true);
+  setEditPaymentModalOpen(true);
+};
+
+const handleSavePaymentEdit = async () => {
+  if (!selectedPaymentForEdit) return;
+  
+  const newAmount = parseFloat(editPaymentForm.amount);
+  const newPaidAmount = parseFloat(editPaymentForm.paidAmount);
+  
+  if (isNaN(newAmount) || newAmount <= 0) {
+    setSnackbar({
+      open: true,
+      message: 'Please enter a valid amount',
+      severity: 'error'
+    });
+    return;
+  }
+  
+  if (isNaN(newPaidAmount) || newPaidAmount < 0) {
+    setSnackbar({
+      open: true,
+      message: 'Please enter a valid paid amount',
+      severity: 'error'
+    });
+    return;
+  }
+  
+  try {
+    const success = updatePaymentAmount(selectedPaymentForEdit.id, newAmount, newPaidAmount);
+    
+    if (success) {
+      // Reload payments
+      const updatedPayments = loadPaymentsFromPaymentUtils();
+      setPayments(updatedPayments);
+      
+      setEditPaymentModalOpen(false);
+      setSelectedPaymentForEdit(null);
+      
+      setSnackbar({
+        open: true,
+        message: `Payment ${selectedPaymentForEdit.invoiceId} amount updated successfully!`,
+        severity: 'success'
+      });
+    } else {
+      throw new Error('Failed to update payment amount');
+    }
+  } catch (error) {
+    console.error('Error updating payment amount:', error);
+    setSnackbar({
+      open: true,
+      message: 'Failed to update payment amount. Please try again.',
+      severity: 'error'
+    });
+  }
 };
 
 const handleDeletePayment = (paymentId: number) => {
@@ -945,9 +1087,49 @@ const handleCloseSnackbar = () => {
   setSnackbar(prev => ({ ...prev, open: false }));
 };
 
-// Utility functions
+// Handle VAT adjustments
+const handleVATAdjustmentSave = (adjustments: any[]) => {
+  console.log('💰 VAT Adjustments saved:', adjustments);
+  
+  // Save to both state and localStorage
+  setVatAdjustments(adjustments);
+  
+  // Use the imported function to save to localStorage
+  saveVATAdjustmentsToStorage(adjustments);
+  console.log('💾 VAT adjustments saved to localStorage');
+  
+  // Trigger recalculation of financial summary by updating refresh trigger
+  setRefreshTrigger(prev => {
+    const newTrigger = prev + 1;
+    console.log('🔄 Triggering financial summary recalculation:', newTrigger);
+    return newTrigger;
+  });
+  
+  // Force immediate recalculation by checking localStorage
+  setTimeout(() => {
+    const reloadedAdjustments = loadVATAdjustmentsFromStorage();
+    console.log('🔍 Verification - Reloaded VAT adjustments from localStorage:', reloadedAdjustments);
+    
+    if (reloadedAdjustments.length !== adjustments.length) {
+      console.warn('⚠️ VAT adjustments count mismatch!');
+    }
+  }, 100);
+  
+  setSnackbar({
+    open: true,
+    message: `VAT adjustments saved successfully! ${adjustments.length} adjustments applied.`,
+    severity: 'success'
+  });
+};
+
+// Enhanced utility functions
 const generateInvoiceText = (payment: PaymentData): string => {
-  const totalAmount = payment.amount * 1.14; // Including VAT
+  // Enhanced VAT calculation - only apply if VAT is included
+  const hasVAT = payment.includeVAT && (payment.vatRate || 0) > 0;
+  const vatRate = hasVAT ? (payment.vatRate || 0) / 100 : 0;
+  const vatAmount = hasVAT ? payment.amount * vatRate : 0;
+  const totalAmount = payment.amount + vatAmount;
+  
   const patientBalance = payment.insurance === 'Yes' 
     ? totalAmount - (payment.insuranceAmount || 0)
     : totalAmount;
@@ -966,7 +1148,10 @@ ${t('invoice.table.paymentMethod')}: ${t(`payment.methods.${payment.method.toLow
 
 ----------------------------------------
 ${t('invoice.calculations.subtotal')}: ${payment.currency} ${formatCurrency(payment.amount)}
-${t('invoice.calculations.vat')} (14%): ${payment.currency} ${formatCurrency(payment.amount * 0.14)}
+${hasVAT 
+  ? `${t('invoice.calculations.vat')} (${(vatRate * 100).toFixed(1)}%): ${payment.currency} ${formatCurrency(vatAmount)}`
+  : `${t('invoice.calculations.vat')}: Not Applicable - ${payment.currency} 0.00`
+}
 ${t('invoice.calculations.totalAmount')}: ${payment.currency} ${formatCurrency(totalAmount)}
 
 ${payment.insurance === 'Yes' ? `
@@ -995,7 +1180,12 @@ const downloadTextFile = (content: string, filename: string) => {
 };
 
 const generatePrintableInvoice = (payment: PaymentData): string => {
-  const totalAmount = payment.amount * 1.14;
+  // Enhanced VAT calculation for printable invoice
+  const hasVAT = payment.includeVAT && (payment.vatRate || 0) > 0;
+  const vatRate = hasVAT ? (payment.vatRate || 0) / 100 : 0;
+  const vatAmount = hasVAT ? payment.amount * vatRate : 0;
+  const totalAmount = payment.amount + vatAmount;
+  
   const patientBalance = payment.insurance === 'Yes' 
     ? totalAmount - (payment.insuranceAmount || 0)
     : totalAmount;
@@ -1065,7 +1255,12 @@ const openPrintWindow = (content: string) => {
 };
 
 const generateReminderMessage = (payment: PaymentData): string => {
-  const totalAmount = payment.amount * 1.14;
+  // Enhanced VAT calculation for reminder message
+  const hasVAT = payment.includeVAT && (payment.vatRate || 0) > 0;
+  const vatRate = hasVAT ? (payment.vatRate || 0) / 100 : 0;
+  const vatAmount = hasVAT ? payment.amount * vatRate : 0;
+  const totalAmount = payment.amount + vatAmount;
+  
   const amountDue = payment.insurance === 'Yes' 
     ? totalAmount - (payment.insuranceAmount || 0)
     : totalAmount;
@@ -1260,14 +1455,11 @@ return (
           </Grid>
           <Grid item xs={12} sm={6} md={2}>
             <StatCard
-              title={vatSettings.enabled ? 'Net Profit (After VAT)' : t('payment.stats.totalProfit')}
+              title="Net Profit (After All Expenses)"
               value={`EGP ${formatCurrency(totalProfit)}`}
               icon={<MonetizationOn />}
               color="#8B5CF6"
-              subtitle={vatSettings.enabled 
-                ? `VAT Deducted: EGP ${formatCurrency(totalVATDeducted)}` 
-                : t('payment.stats.revenueMinusInsurance')
-              }
+              subtitle={`Revenue: EGP ${formatCurrency(totalRevenue)} | Total Expenses: EGP ${formatCurrency(totalExpenses)} | Net: EGP ${formatCurrency(totalProfit)}`}
               trend="+15.3%"
               trendDirection="up"
             />
@@ -1282,38 +1474,69 @@ return (
             />
           </Grid>
           <Grid item xs={12} sm={6} md={2}>
-            <StatCard
-              title={t('payment.stats.overdueAmount')}
-              value={`EGP ${formatCurrency(overdueAmount)}`}
-              icon={<Warning />}
-              color="#EF4444"
-              subtitle={t('payment.stats.overdueInvoices', { count: payments.filter(p => p.status === 'overdue').length })}
-            />
+            <Box 
+              onClick={() => setExpenseManagementModalOpen(true)}
+              sx={{ 
+                cursor: 'pointer',
+                '&:hover': {
+                  transform: 'scale(1.02)',
+                  transition: 'transform 0.2s ease'
+                }
+              }}
+            >
+              <StatCard
+                title="💼 Total Expenses (Click to Edit)"
+                value={`EGP ${formatCurrency(totalExpenses)}`}
+                icon={<Business />}
+                color="#EF4444"
+                subtitle={`Salaries: EGP ${formatCurrency(financialSummary.totalSalaryExpenses)} | Business: EGP ${formatCurrency(financialSummary.totalBusinessExpenses)}`}
+                trend={totalExpenses > 0 ? "Active" : "None"}
+                trendDirection={totalExpenses > 0 ? "up" : undefined}
+              />
+            </Box>
           </Grid>
           <Grid item xs={12} sm={6} md={2}>
             <StatCard
-              title="Today's Appointments"
-              value={todayAppointments.length}
+              title="Today's Appointments Revenue"
+              value={`EGP ${formatCurrency(todayAppointmentRevenue)}`}
               icon={<CalendarToday />}
               color="#2196F3"
-              subtitle={`${completedTodayAppointments.length} completed • ${pendingTodayAppointments.length} pending`}
-              trend={completedTodayAppointments.length > pendingTodayAppointments.length ? "+Good" : "Pending"}
-              trendDirection={completedTodayAppointments.length > pendingTodayAppointments.length ? "up" : "down"}
+              subtitle={`${todayAppointments.length} appointments: ${completedTodayAppointments.length} completed • ${pendingTodayAppointments.length} pending`}
+              trend={todayAppointmentRevenue > 0 ? `+EGP ${formatCurrency(todayAppointmentRevenue)}` : "No Revenue"}
+              trendDirection={todayAppointmentRevenue > 0 ? "up" : undefined}
             />
           </Grid>
           <Grid item xs={12} sm={6} md={2}>
-            <StatCard
-              title={vatSettings.enabled ? 'VAT Collected' : 'Appointment Payments'}
-              value={vatSettings.enabled ? `EGP ${formatCurrency(totalVATDeducted)}` : appointmentLinkedPayments.length}
-              icon={vatSettings.enabled ? <Percent /> : <Receipt />}
-              color={vatSettings.enabled ? "#F59E0B" : "#673AB7"}
-              subtitle={vatSettings.enabled 
-                ? `Rate: ${vatSettings.rate}% | Invoices: ${paidPayments.filter(p => p.includeVAT).length}`
-                : `${appointmentLinkedPayments.length} linked to appointments`
-              }
-              trend="+8.2%"
-              trendDirection="up"
-            />
+            <Box 
+              onClick={() => vatSettings.enabled && setVatAdjustmentModalOpen(true)}
+              sx={{ 
+                cursor: vatSettings.enabled ? 'pointer' : 'default',
+                '&:hover': vatSettings.enabled ? {
+                  transform: 'scale(1.02)',
+                  transition: 'transform 0.2s ease'
+                } : {}
+              }}
+            >
+              <StatCard
+                title={vatSettings.enabled ? 'VAT Adjustments (Click to Edit)' : 'Appointment Payments'}
+                value={
+                  vatSettings.enabled 
+                    ? `EGP ${formatCurrency(Math.abs(finalVATCollected))}`
+                    : appointmentLinkedPayments.length
+                }
+                icon={vatSettings.enabled ? <Percent /> : <Receipt />}
+                color={vatSettings.enabled ? (finalVATCollected !== 0 ? "#F59E0B" : "#9CA3AF") : "#673AB7"}
+                subtitle={
+                  vatSettings.enabled 
+                    ? finalVATCollected !== 0
+                      ? `Manual VAT Adjustments: ${financialSummary.netVATAdjustments >= 0 ? '+' : ''}EGP ${formatCurrency(Math.abs(financialSummary.netVATAdjustments))} | ${financialSummary.vatAdjustmentDetails.length} adjustment(s)`
+                      : `Rate: ${vatSettings.rate}% | Click to add manual VAT adjustments`
+                    : `${appointmentLinkedPayments.length} linked to appointments`
+                }
+                trend={finalVATCollected !== 0 ? (finalVATCollected > 0 ? "+Manual" : "-Manual") : "0%"}
+                trendDirection={finalVATCollected > 0 ? "up" : finalVATCollected < 0 ? "down" : undefined}
+              />
+            </Box>
           </Grid>
         </Grid>
 
@@ -2513,6 +2736,154 @@ return (
              {snackbar.message}
            </Alert>
          </Snackbar>
+
+         {/* VAT Adjustment Modal */}
+         <VATAdjustmentModal
+           open={vatAdjustmentModalOpen}
+           onClose={() => setVatAdjustmentModalOpen(false)}
+           currentRevenue={baseRevenue}
+           currentVATCollected={0}
+           onSave={handleVATAdjustmentSave}
+         />
+
+         {/* Expense Management Modal */}
+         <ExpenseManagementModal
+           open={expenseManagementModalOpen}
+           onClose={() => setExpenseManagementModalOpen(false)}
+           totalRevenue={baseRevenue}
+           automaticVATFromPayments={automaticVATFromPayments}
+         />
+
+         {/* Edit Payment Amount Modal */}
+         <Dialog
+           open={editPaymentModalOpen}
+           onClose={() => setEditPaymentModalOpen(false)}
+           maxWidth="sm"
+           fullWidth
+         >
+           <DialogTitle>
+             <Typography variant="h6" sx={{ fontWeight: 600 }}>
+               💰 Edit Payment Amount
+             </Typography>
+             {selectedPaymentForEdit && (
+               <Typography variant="body2" color="text.secondary">
+                 {selectedPaymentForEdit.invoiceId} • {selectedPaymentForEdit.patient}
+               </Typography>
+             )}
+           </DialogTitle>
+           <DialogContent>
+             <Box sx={{ pt: 2 }}>
+               <Grid container spacing={3}>
+                 <Grid item xs={12}>
+                   <TextField
+                     fullWidth
+                     label="Payment Amount"
+                     type="number"
+                     value={editPaymentForm.amount}
+                     onChange={(e) => setEditPaymentForm(prev => ({ ...prev, amount: e.target.value }))}
+                     InputProps={{
+                       startAdornment: <InputAdornment position="start">EGP</InputAdornment>,
+                     }}
+                     inputProps={{ min: 0, step: 0.01 }}
+                     helperText="Base amount (before VAT)"
+                   />
+                 </Grid>
+                 <Grid item xs={12}>
+                   <TextField
+                     fullWidth
+                     label="Paid Amount"
+                     type="number"
+                     value={editPaymentForm.paidAmount}
+                     onChange={(e) => setEditPaymentForm(prev => ({ ...prev, paidAmount: e.target.value }))}
+                     InputProps={{
+                       startAdornment: <InputAdornment position="start">EGP</InputAdornment>,
+                     }}
+                     inputProps={{ min: 0, step: 0.01 }}
+                     helperText="Amount already paid by patient"
+                   />
+                 </Grid>
+                 {selectedPaymentForEdit && (
+                   <Grid item xs={12}>
+                     <Box sx={{ 
+                       p: 2, 
+                       bgcolor: 'grey.50', 
+                       borderRadius: 2,
+                       border: '1px solid',
+                       borderColor: 'grey.200'
+                     }}>
+                       <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                         💳 Current Payment Info
+                       </Typography>
+                       <Typography variant="body2" color="text.secondary">
+                         Current Total: EGP {formatCurrency(selectedPaymentForEdit.amount)}<br/>
+                         Current Paid: EGP {formatCurrency(selectedPaymentForEdit.paidAmount || 0)}<br/>
+                         Current Status: {selectedPaymentForEdit.status}
+                       </Typography>
+                     </Box>
+                   </Grid>
+                 )}
+               </Grid>
+             </Box>
+           </DialogContent>
+           <DialogActions>
+             <Button onClick={() => setEditPaymentModalOpen(false)}>
+               Cancel
+             </Button>
+             <Button 
+               variant="contained" 
+               onClick={handleSavePaymentEdit}
+               sx={{ fontWeight: 600 }}
+             >
+               💾 Save Changes
+             </Button>
+           </DialogActions>
+         </Dialog>
+
+         {/* Process Appointments Button */}
+         <Tooltip title="Process All Appointments to Create Payments" placement="left">
+           <Button
+             variant="contained"
+             onClick={() => {
+               const created = processAllAppointmentsForPayments(appointments);
+               
+               // Reload payments
+               setTimeout(() => {
+                 const updatedPayments = loadPaymentsFromPaymentUtils();
+                 setPayments(updatedPayments);
+                 
+                 setSnackbar({
+                   open: true,
+                   message: `🔄 Processed ${appointments.length} appointments, ${created.length} payments created/updated!`,
+                   severity: 'success'
+                 });
+               }, 100);
+             }}
+             sx={{
+               position: 'fixed',
+               bottom: 100,
+               right: 24,
+               borderRadius: '50%',
+               width: 64,
+               height: 64,
+               minWidth: 64,
+               background: 'linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%)',
+               color: 'white',
+               boxShadow: '0 8px 32px rgba(76, 175, 80, 0.4)',
+               zIndex: 1000,
+               '&:hover': {
+                 background: 'linear-gradient(135deg, #2E7D32 0%, #4CAF50 100%)',
+                 transform: 'scale(1.1)',
+                 boxShadow: '0 12px 48px rgba(76, 175, 80, 0.6)',
+               },
+               transition: 'all 0.3s ease',
+               display: 'flex',
+               alignItems: 'center',
+               justifyContent: 'center'
+             }}
+           >
+             📋
+           </Button>
+         </Tooltip>
 
          {/* Test Notification Button */}
          <Tooltip title="Test Payment Notification System" placement="left">

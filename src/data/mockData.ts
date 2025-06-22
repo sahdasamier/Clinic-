@@ -648,4 +648,75 @@ export const defaultClinicPaymentSettings: ClinicPaymentSettings = {
   defaultPaymentDueDays: 0, // Pay immediately
   includeVATByDefault: true,
   appointmentTypes: defaultAppointmentTypesSettings
-}; 
+};
+
+// Expense Management Types
+export interface Employee {
+  id: string;
+  name: string;
+  position: string;
+  salary: number;
+  currency: string;
+  paymentFrequency: 'monthly' | 'weekly' | 'daily';
+  startDate: string;
+  isActive: boolean;
+  benefits?: {
+    healthInsurance?: number;
+    transportation?: number;
+    bonus?: number;
+  };
+}
+
+export interface BusinessExpense {
+  id: string;
+  category: string;
+  description: string;
+  amount: number;
+  currency: string;
+  date: string;
+  isRecurring: boolean;
+  frequency?: 'monthly' | 'quarterly' | 'yearly';
+  vatIncluded: boolean;
+  vatAmount?: number;
+  supplier?: string;
+  notes?: string;
+}
+
+export interface ExpenseCategory {
+  id: string;
+  name: string;
+  description: string;
+  color: string;
+  icon: string;
+  vatApplicable: boolean;
+}
+
+export interface VATAdjustment {
+  id: string;
+  amount: number;
+  reason: string;
+  type: 'deduction' | 'addition';
+  date: string;
+  description: string;
+  category: 'manual_correction' | 'external_payment' | 'refund' | 'other';
+}
+
+// Default expense categories
+export const defaultExpenseCategories: ExpenseCategory[] = [
+  { id: '1', name: 'Salaries & Benefits', description: 'Employee salaries and benefits', color: '#2196F3', icon: '👥', vatApplicable: false },
+  { id: '2', name: 'Rent & Utilities', description: 'Office rent, electricity, water', color: '#FF9800', icon: '🏢', vatApplicable: true },
+  { id: '3', name: 'Medical Supplies', description: 'Medical equipment and supplies', color: '#4CAF50', icon: '🏥', vatApplicable: true },
+  { id: '4', name: 'Office Supplies', description: 'Office equipment and supplies', color: '#9C27B0', icon: '📋', vatApplicable: true },
+  { id: '5', name: 'Marketing', description: 'Advertising and marketing expenses', color: '#E91E63', icon: '📢', vatApplicable: true },
+  { id: '6', name: 'Professional Services', description: 'Legal, accounting, consulting', color: '#607D8B', icon: '⚖️', vatApplicable: true },
+  { id: '7', name: 'Technology', description: 'Software, hardware, IT services', color: '#795548', icon: '💻', vatApplicable: true },
+  { id: '8', name: 'Insurance', description: 'Business insurance premiums', color: '#3F51B5', icon: '🛡️', vatApplicable: false },
+  { id: '9', name: 'Training & Development', description: 'Staff training and development', color: '#009688', icon: '📚', vatApplicable: true },
+  { id: '10', name: 'Maintenance', description: 'Equipment and facility maintenance', color: '#FFC107', icon: '🔧', vatApplicable: true },
+];
+
+// Default employees (empty by default)
+export const defaultEmployees: Employee[] = [];
+
+// Default business expenses (empty by default)
+export const defaultBusinessExpenses: BusinessExpense[] = []; 

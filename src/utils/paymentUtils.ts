@@ -115,14 +115,15 @@ export interface CreateAutoPaymentParams {
   appointmentDate: string;
   appointmentDuration: number;
   customAmount?: number; // Optional override amount
+  isCompleted?: boolean; // Whether appointment is already completed
 }
 
 export const createAutoPaymentForAppointment = (params: CreateAutoPaymentParams): PaymentData | null => {
   try {
     const clinicSettings = loadClinicPaymentSettings();
     
-    // Check if auto-payment creation is enabled
-    if (!clinicSettings.autoCreatePaymentOnCompletion) {
+    // For completed appointments, always create payment (override settings)
+    if (!params.isCompleted && !clinicSettings.autoCreatePaymentOnCompletion) {
       console.log('Auto-payment creation is disabled in clinic settings');
       return null;
     }
@@ -131,11 +132,16 @@ export const createAutoPaymentForAppointment = (params: CreateAutoPaymentParams)
     const typeSettings = getAppointmentTypeSettings(params.appointmentType);
     if (!typeSettings && !params.customAmount) {
       console.warn(`No cost settings found for appointment type: ${params.appointmentType}`);
-      return null;
+      // For completed appointments, use default amount if no settings found
+      if (params.isCompleted) {
+        console.log('Using default amount for completed appointment');
+      } else {
+        return null;
+      }
     }
 
     // Calculate amounts
-    const baseAmount = params.customAmount || typeSettings?.cost || 0;
+    const baseAmount = params.customAmount || typeSettings?.cost || (params.isCompleted ? 200 : 0); // Default to 200 EGP for completed appointments
     const vatSettings = loadVATSettings();
     const includeVAT = typeSettings?.includeVAT !== false && vatSettings.enabled;
     
@@ -155,7 +161,9 @@ export const createAutoPaymentForAppointment = (params: CreateAutoPaymentParams)
     const existingPayments = loadPaymentsFromStorage();
     const nextId = existingPayments.length > 0 ? Math.max(...existingPayments.map(p => p.id)) + 1 : 1;
 
-    // Create payment record
+    // Create payment record - if appointment is completed, mark as paid
+    const paymentStatus = params.isCompleted ? 'paid' : 'pending';
+    
     const newPayment: PaymentData = {
       id: nextId,
       invoiceId: generateInvoiceId(),
@@ -167,13 +175,13 @@ export const createAutoPaymentForAppointment = (params: CreateAutoPaymentParams)
       currency: typeSettings?.currency || 'EGP',
       date: new Date().toISOString().split('T')[0],
       dueDate: dueDate.toISOString().split('T')[0],
-      status: 'pending',
+      status: paymentStatus,
       method: clinicSettings.defaultPaymentMethod,
-      description: `${params.appointmentType} appointment with Dr. ${params.doctorName} (Auto-generated)`,
+      description: `${params.appointmentType} appointment with Dr. ${params.doctorName} ${params.isCompleted ? '(Completed - Auto-paid)' : '(Auto-generated)'}`,
       category: typeSettings?.category || params.appointmentType.toLowerCase(),
       insurance: 'No',
       insuranceAmount: 0,
-      paidAmount: 0,
+      paidAmount: params.isCompleted ? totalAmount : 0, // Full amount paid if completed
       includeVAT: includeVAT,
       vatRate: includeVAT ? vatSettings.rate : 0,
       vatAmount: vatAmount,
@@ -185,13 +193,30 @@ export const createAutoPaymentForAppointment = (params: CreateAutoPaymentParams)
     const updatedPayments = [...existingPayments, newPayment];
     savePaymentsToStorage(updatedPayments);
 
-    console.log(`✅ Auto-payment created for appointment ${params.appointmentId}:`, newPayment);
+    console.log(`✅ Auto-payment created for appointment ${params.appointmentId} (${paymentStatus}):`, newPayment);
+    
+    // Send notification if payment is marked as paid
+    if (params.isCompleted) {
+      const notificationService = PaymentNotificationService.getInstance();
+      notificationService.notifyPaymentCompleted({
+        patientName: newPayment.patient,
+        amount: newPayment.amount,
+        paymentId: newPayment.invoiceId,
+        method: newPayment.method
+      });
+    }
+    
     return newPayment;
 
   } catch (error) {
     console.error('Error creating auto-payment for appointment:', error);
     return null;
   }
+};
+
+// Create paid payment for completed appointment
+export const createPaidPaymentForCompletedAppointment = async (params: CreateAutoPaymentParams): Promise<PaymentData | null> => {
+  return createAutoPaymentForAppointment({ ...params, isCompleted: true });
 };
 
 // Update appointment payment status
@@ -374,4 +399,154 @@ export const triggerPaymentNotification = async (paymentId: number): Promise<boo
 export const testPaymentNotificationSystem = async (): Promise<void> => {
   const notificationService = PaymentNotificationService.getInstance();
   await notificationService.testPaymentNotification();
+};
+
+// Create payment for appointment (ALL appointments - completed or pending)
+export const createPaymentForAllAppointments = (appointment: any): PaymentData | null => {
+  try {
+    const clinicSettings = loadClinicPaymentSettings();
+    
+    // Get appointment type settings
+    const typeSettings = getAppointmentTypeSettings(appointment.type);
+    
+    // Calculate amounts - use default amount if no settings found
+    const baseAmount = typeSettings?.cost || 200; // Default to 200 EGP
+    const vatSettings = loadVATSettings();
+    const includeVAT = typeSettings?.includeVAT !== false && vatSettings.enabled;
+    
+    let vatAmount = 0;
+    let totalAmount = baseAmount;
+    
+    if (includeVAT) {
+      vatAmount = calculateVATAmount(baseAmount, vatSettings.rate);
+      totalAmount = calculateTotalWithVAT(baseAmount, vatSettings.rate);
+    }
+
+    // Calculate due date
+    const dueDate = new Date();
+    dueDate.setDate(dueDate.getDate() + clinicSettings.defaultPaymentDueDays);
+
+    // Load existing payments to get next ID
+    const existingPayments = loadPaymentsFromStorage();
+    
+    // Check if payment already exists for this appointment
+    const existingPayment = existingPayments.find(p => p.appointmentId === appointment.id?.toString());
+    if (existingPayment) {
+      console.log(`Payment already exists for appointment ${appointment.id}`);
+      return existingPayment;
+    }
+    
+    const nextId = existingPayments.length > 0 ? Math.max(...existingPayments.map(p => p.id)) + 1 : 1;
+
+    // Determine payment status based on appointment status
+    const isCompleted = appointment.status === 'completed' || appointment.completed === true;
+    const paymentStatus = isCompleted ? 'paid' : 'pending';
+    
+    const newPayment: PaymentData = {
+      id: nextId,
+      invoiceId: generateInvoiceId(),
+      patient: appointment.patient,
+      patientAvatar: appointment.patient.split(' ').map((n: string) => n[0]).join('').toUpperCase(),
+      doctor: appointment.doctor,
+      appointmentId: appointment.id?.toString() || nextId.toString(),
+      amount: totalAmount,
+      currency: typeSettings?.currency || 'EGP',
+      date: appointment.date,
+      dueDate: dueDate.toISOString().split('T')[0],
+      status: paymentStatus,
+      method: clinicSettings.defaultPaymentMethod,
+      description: `${appointment.type} appointment with Dr. ${appointment.doctor} ${isCompleted ? '(Completed - Auto-paid)' : '(Pending appointment)'}`,
+      category: typeSettings?.category || appointment.type.toLowerCase(),
+      insurance: 'No',
+      insuranceAmount: 0,
+      paidAmount: isCompleted ? totalAmount : 0, // Full amount paid if completed
+      includeVAT: includeVAT,
+      vatRate: includeVAT ? vatSettings.rate : 0,
+      vatAmount: vatAmount,
+      totalAmountWithVAT: totalAmount,
+      baseAmount: baseAmount
+    };
+
+    // Save payment
+    const updatedPayments = [...existingPayments, newPayment];
+    savePaymentsToStorage(updatedPayments);
+
+    console.log(`✅ Payment created for appointment ${appointment.id} (${paymentStatus}):`, newPayment);
+    
+    // Send notification if payment is marked as paid
+    if (isCompleted) {
+      const notificationService = PaymentNotificationService.getInstance();
+      notificationService.notifyPaymentCompleted({
+        patientName: newPayment.patient,
+        amount: newPayment.amount,
+        paymentId: newPayment.invoiceId,
+        method: newPayment.method
+      });
+    }
+    
+    return newPayment;
+
+  } catch (error) {
+    console.error('Error creating payment for appointment:', error);
+    return null;
+  }
+};
+
+// Process all appointments and create payments
+export const processAllAppointmentsForPayments = (appointments: any[]): PaymentData[] => {
+  const createdPayments: PaymentData[] = [];
+  
+  appointments.forEach(appointment => {
+    const payment = createPaymentForAllAppointments(appointment);
+    if (payment) {
+      createdPayments.push(payment);
+    }
+  });
+  
+  console.log(`📋 Processed ${appointments.length} appointments, created ${createdPayments.length} payments`);
+  return createdPayments;
+};
+
+// Update payment amount
+export const updatePaymentAmount = (paymentId: number, newAmount: number, newPaidAmount?: number): boolean => {
+  try {
+    const payments = loadPaymentsFromStorage();
+    const paymentIndex = payments.findIndex(p => p.id === paymentId);
+    
+    if (paymentIndex === -1) {
+      console.error('Payment not found:', paymentId);
+      return false;
+    }
+    
+    const payment = payments[paymentIndex];
+    const vatSettings = loadVATSettings();
+    
+    // Recalculate VAT if applicable
+    let vatAmount = 0;
+    let totalAmount = newAmount;
+    
+    if (payment.includeVAT && vatSettings.enabled) {
+      vatAmount = calculateVATAmount(newAmount, payment.vatRate || vatSettings.rate);
+      totalAmount = calculateTotalWithVAT(newAmount, payment.vatRate || vatSettings.rate);
+    }
+    
+    // Update payment
+    const updatedPayment = {
+      ...payment,
+      baseAmount: newAmount,
+      amount: totalAmount,
+      vatAmount: vatAmount,
+      totalAmountWithVAT: totalAmount,
+      paidAmount: newPaidAmount ?? payment.paidAmount
+    };
+    
+    payments[paymentIndex] = updatedPayment;
+    savePaymentsToStorage(payments);
+    
+    console.log(`✅ Payment amount updated for ${payment.invoiceId}: ${payment.amount} → ${totalAmount}`);
+    return true;
+  } catch (error) {
+    console.error('Error updating payment amount:', error);
+    return false;
+  }
 }; 

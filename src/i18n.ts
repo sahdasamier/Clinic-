@@ -129,6 +129,9 @@ const resources = {
       'appointment_status': 'Appointment Status',
       'save_appointment': 'Save Appointment',
       'next_appointment': 'Next Appointment',
+      'date_received': 'Date Received',
+      'received': 'Received',
+      'time_duration': 'Time & Duration',
       
       // Patients
       'add_edit_patient': 'Add/Edit Patient',
@@ -1163,6 +1166,8 @@ const resources = {
       "doctor": "الطبيب",
       "time": "الوقت",
       "time_duration": "الوقت والمدة",
+      "date_received": "تاريخ الاستلام",
+      "received": "تم الاستلام",
       "type": "النوع",
       "priority": "الأولوية",
       "actions": "الإجراءات",

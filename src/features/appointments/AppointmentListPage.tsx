@@ -653,15 +653,10 @@ const AppointmentListPage: React.FC = () => {
   // Handle appointment completion and auto-payment creation
   const handleAppointmentCompletion = (appointment: Appointment) => {
     try {
-      const clinicSettings = loadClinicPaymentSettings();
+      // Always create a PAID payment for completed appointments
+      console.log(`🏥 Creating paid payment for completed appointment: ${appointment.id}`);
       
-      // Check if auto-payment creation is enabled
-      if (!clinicSettings.autoCreatePaymentOnCompletion) {
-        console.log('Auto-payment creation is disabled');
-        return;
-      }
-
-      // Create auto-payment for the completed appointment
+      // Create auto-payment for the completed appointment (marked as paid)
       const createdPayment = createAutoPaymentForAppointment({
         appointmentId: appointment.id,
         patientName: appointment.patient,
@@ -669,24 +664,33 @@ const AppointmentListPage: React.FC = () => {
         doctorName: appointment.doctor,
         appointmentType: appointment.type,
         appointmentDate: appointment.date,
-        appointmentDuration: appointment.duration
+        appointmentDuration: appointment.duration,
+        isCompleted: true // This ensures the payment is created as 'paid'
       });
 
       if (createdPayment) {
-        // Show success notification
-        console.log(`💰 Payment created for completed appointment: ${createdPayment.invoiceId}`);
-        
-        // Dispatch event to update payment status in the appointment
+        // Update appointment payment status to 'completed'
         const updatedAppointments = appointmentList.map(apt => 
           apt.id === appointment.id 
-            ? { ...apt, paymentStatus: 'pending' as 'pending' }
+            ? { ...apt, paymentStatus: 'completed' as 'completed' }
             : apt
         );
         setAppointmentList(updatedAppointments);
         saveAppointmentsToStorage(updatedAppointments);
 
-        // Optional: Show a toast notification (if you have a notification system)
-        console.log(`✅ Auto-payment of ${createdPayment.amount} ${createdPayment.currency} created for ${appointment.patient}'s ${appointment.type} appointment`);
+        console.log(`✅ PAID payment of ${createdPayment.amount} ${createdPayment.currency} created for ${appointment.patient}'s ${appointment.type} appointment`);
+        console.log(`💰 Payment ${createdPayment.invoiceId} is now showing as PAID in Payment Management`);
+        
+        // Dispatch custom event to notify Payment Management about new revenue
+        window.dispatchEvent(new CustomEvent('appointmentCompletedWithPayment', {
+          detail: {
+            appointment,
+            payment: createdPayment,
+            revenue: createdPayment.amount
+          }
+        }));
+      } else {
+        console.warn(`❌ Failed to create payment for completed appointment: ${appointment.id}`);
       }
     } catch (error) {
       console.error('Error handling appointment completion:', error);
@@ -1548,18 +1552,20 @@ const AppointmentListPage: React.FC = () => {
                        <TableRow>
                          <TableCell sx={{ fontWeight: 600 }}>✓</TableCell>
                          <TableCell sx={{ fontWeight: 600 }}>{t('patient')}</TableCell>
+                         <TableCell sx={{ fontWeight: 600 }}>{t('appointment_date')}</TableCell>
                          <TableCell sx={{ fontWeight: 600 }}>{t('time_duration')}</TableCell>
                          <TableCell sx={{ fontWeight: 600 }}>{t('type')}</TableCell>
                          <TableCell sx={{ fontWeight: 600 }}>{t('priority')}</TableCell>
+                         <TableCell sx={{ fontWeight: 600 }}>{t('date_received')}</TableCell>
                          <TableCell sx={{ fontWeight: 600 }}>{t('payment_status')}</TableCell>
                          <TableCell sx={{ fontWeight: 600 }}>{t('status')}</TableCell>
                          <TableCell sx={{ fontWeight: 600 }}>{t('actions')}</TableCell>
                        </TableRow>
                      </TableHead>
                      <TableBody>
-                       {filteredAppointments.length === 0 && getActiveFilterCount() > 0 ? (
+                                                {filteredAppointments.length === 0 && getActiveFilterCount() > 0 ? (
                          <TableRow>
-                           <TableCell colSpan={8} sx={{ textAlign: 'center', py: 6 }}>
+                           <TableCell colSpan={10} sx={{ textAlign: 'center', py: 6 }}>
                              <Box>
                                <FilterList sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
                                <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
@@ -1580,7 +1586,7 @@ const AppointmentListPage: React.FC = () => {
                          </TableRow>
                        ) : filteredAppointments.length === 0 ? (
                          <TableRow>
-                           <TableCell colSpan={8} sx={{ textAlign: 'center', py: 6 }}>
+                           <TableCell colSpan={10} sx={{ textAlign: 'center', py: 6 }}>
                              <Box>
                                <CalendarToday sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
                                <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
@@ -1669,6 +1675,16 @@ const AppointmentListPage: React.FC = () => {
                              <TableCell>
                                <Box>
                                  <Typography variant="body2" fontWeight={600} color="primary.main">
+                                   {new Date(appointment.date).toLocaleDateString()}
+                                 </Typography>
+                                 <Typography variant="caption" color="text.secondary">
+                                   {new Date(appointment.date).toLocaleDateString('en-US', { weekday: 'short' })}
+                                 </Typography>
+                               </Box>
+                             </TableCell>
+                             <TableCell>
+                               <Box>
+                                 <Typography variant="body2" fontWeight={600} color="primary.main">
                                    {appointment.time}
                                  </Typography>
                                  <Typography variant="caption" color="text.secondary">
@@ -1689,6 +1705,16 @@ const AppointmentListPage: React.FC = () => {
                                    color: getPriorityColor(appointment.priority)
                                  }}
                                />
+                             </TableCell>
+                             <TableCell>
+                               <Box>
+                                 <Typography variant="body2" color="text.primary">
+                                   {new Date(appointment.createdAt).toLocaleDateString()}
+                                 </Typography>
+                                 <Typography variant="caption" color="text.secondary">
+                                   {new Date(appointment.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                 </Typography>
+                               </Box>
                              </TableCell>
                              <TableCell>
                                <Chip
@@ -1895,18 +1921,24 @@ const AppointmentListPage: React.FC = () => {
                                
                                <Divider sx={{ my: 2 }} />
                                
-                               <Grid container spacing={2}>
+                                                                <Grid container spacing={2}>
                                  <Grid item xs={6}>
                                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                                     <CalendarToday sx={{ fontSize: 16, mr: 1, color: 'text.secondary' }} />
-                                     <Typography variant="body2" color="text.secondary">
-                                       {appointment.date}
+                                     <CalendarToday sx={{ fontSize: 16, mr: 1, color: 'primary.main' }} />
+                                     <Typography variant="body2" color="primary.main" fontWeight={600}>
+                                       {t('appointment_date')}: {new Date(appointment.date).toLocaleDateString()}
                                      </Typography>
                                    </Box>
                                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                                      <AccessTime sx={{ fontSize: 16, mr: 1, color: 'text.secondary' }} />
-                                     <Typography variant="body2" color="primary.main" fontWeight={600}>
-                                       {appointment.time}
+                                     <Typography variant="body2" color="text.primary" fontWeight={600}>
+                                       {appointment.time} ({appointment.duration} {t('minutes')})
+                                     </Typography>
+                                   </Box>
+                                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                                     <Schedule sx={{ fontSize: 16, mr: 1, color: 'text.secondary' }} />
+                                     <Typography variant="body2" color="text.secondary">
+                                       {t('received')}: {new Date(appointment.createdAt).toLocaleDateString()}
                                      </Typography>
                                    </Box>
                                  </Grid>

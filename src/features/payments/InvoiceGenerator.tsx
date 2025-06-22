@@ -32,6 +32,9 @@ interface InvoiceData {
   category: string;
   insurance: 'Yes' | 'No';
   insuranceAmount: number;
+  includeVAT?: boolean;
+  vatRate?: number;
+  vatAmount?: number;
   clinicName?: string;
   clinicAddress?: string;
   clinicPhone?: string;
@@ -73,10 +76,11 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({
     clinicEmail = t('invoice.defaultClinic.email')
   } = invoiceData;
 
-  // Financial calculations
+  // Enhanced financial calculations - only apply VAT if it was included in the invoice
   const subtotal = amount;
-  const taxRate = 0.14; // 14% VAT
-  const taxAmount = subtotal * taxRate;
+  const hasVAT = invoiceData.includeVAT && (invoiceData.vatRate || 0) > 0;
+  const taxRate = hasVAT ? (invoiceData.vatRate || 0) / 100 : 0;
+  const taxAmount = hasVAT ? subtotal * taxRate : 0;
   const totalAmount = subtotal + taxAmount;
   const insuranceCoverage = insuranceAmount || 0;
   const patientBalance = totalAmount - insuranceCoverage;
@@ -363,14 +367,27 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({
                 </Typography>
               </Grid>
               
-              <Grid container justifyContent="space-between" sx={{ mb: 1 }}>
-                <Typography variant="body2">
-                  {t('invoice.calculations.vat')} (14%):
-                </Typography>
-                <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                  {currency} {formatCurrency(taxAmount)}
-                </Typography>
-              </Grid>
+              {hasVAT && (
+                <Grid container justifyContent="space-between" sx={{ mb: 1 }}>
+                  <Typography variant="body2">
+                    {t('invoice.calculations.vat')} ({(taxRate * 100).toFixed(1)}%):
+                  </Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    {currency} {formatCurrency(taxAmount)}
+                  </Typography>
+                </Grid>
+              )}
+              
+              {!hasVAT && (
+                <Grid container justifyContent="space-between" sx={{ mb: 1 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    {t('invoice.calculations.vat')}: {t('invoice.calculations.notApplicable')}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {currency} 0.00
+                  </Typography>
+                </Grid>
+              )}
               
               <Divider sx={{ my: 1 }} />
               

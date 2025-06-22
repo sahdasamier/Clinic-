@@ -48,7 +48,7 @@ export const calculateVAT = (
   };
 };
 
-// Calculate profit with VAT consideration
+// Calculate profit with enhanced VAT consideration
 export const calculateProfitWithVAT = (
   totalRevenue: number,
   totalInsurance: number,
@@ -63,13 +63,13 @@ export const calculateProfitWithVAT = (
 } => {
   const grossRevenue = totalRevenue;
   
-  // If VAT is included in the payment amount, we need to deduct it
-  const vatDeductions = includeVATInRevenue ? totalVATDeducted : 0;
+  // Enhanced VAT logic: Only deduct VAT if it's actually included in revenue AND there's VAT to deduct
+  const vatDeductions = (includeVATInRevenue && totalVATDeducted > 0) ? totalVATDeducted : 0;
   
-  // Net revenue after VAT (if VAT was included in payments)
+  // Net revenue after VAT (only if VAT was actually included in payments)
   const netRevenue = grossRevenue - vatDeductions;
   
-  // Final profit calculation
+  // Final profit calculation (revenue minus insurance minus VAT if applicable)
   const finalProfit = netRevenue - totalInsurance;
 
   return {
