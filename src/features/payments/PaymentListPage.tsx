@@ -97,6 +97,7 @@ import {
   initializeBidirectionalSync,
   debugStorageState 
 } from '../../utils/dataSyncManager';
+import { testPaymentNotificationSystem } from '../../utils/paymentUtils';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -785,12 +786,37 @@ const handleCreatePayment = () => {
   }, 1000);
 };
 
-const handleUpdatePaymentStatus = (paymentId: number, newStatus: string) => {
-  setPayments(prev => 
-    prev.map(payment => 
-      payment.id === paymentId ? { ...payment, status: newStatus as any } : payment
-    )
-  );
+const handleUpdatePaymentStatus = async (paymentId: number, newStatus: string, paidAmount?: number) => {
+  try {
+    // Use the notification-enabled payment status update
+    const { updatePaymentStatus } = await import('../../utils/paymentUtils');
+    const success = await updatePaymentStatus(paymentId, newStatus, paidAmount);
+    
+    if (success) {
+      // Reload payments from storage to get the updated data
+      const { loadPaymentsFromStorage } = await import('../../utils/paymentUtils');
+      const updatedPayments = loadPaymentsFromStorage();
+      setPayments(updatedPayments);
+      
+      const payment = updatedPayments.find(p => p.id === paymentId);
+      const statusText = t(`payment.status.${newStatus}`);
+      
+      setSnackbar({
+        open: true,
+        message: `Payment ${payment?.invoiceId} status updated to ${statusText}. ${newStatus === 'paid' ? 'Notifications sent!' : ''}`,
+        severity: 'success'
+      });
+    } else {
+      throw new Error('Failed to update payment status');
+    }
+  } catch (error) {
+    console.error('Error updating payment status:', error);
+    setSnackbar({
+      open: true,
+      message: 'Failed to update payment status. Please try again.',
+      severity: 'error'
+    });
+  }
 };
 
 const handleViewInvoice = (payment: PaymentData) => {
@@ -908,20 +934,9 @@ const handleCloseStatusMenu = () => {
   setSelectedPaymentForStatusChange(null);
 };
 
-const handleChangeStatus = (newStatus: string) => {
+const handleChangeStatus = async (newStatus: string) => {
   if (selectedPaymentForStatusChange) {
-    const oldStatus = selectedPaymentForStatusChange.status;
-    handleUpdatePaymentStatus(selectedPaymentForStatusChange.id, newStatus);
-    
-    setSnackbar({
-      open: true,
-      message: t('payment.success.statusChanged', { 
-        invoiceId: selectedPaymentForStatusChange.invoiceId,
-        oldStatus: t(`payment.status.${oldStatus}`),
-        newStatus: t(`payment.status.${newStatus}`)
-      }),
-      severity: 'success'
-    });
+    await handleUpdatePaymentStatus(selectedPaymentForStatusChange.id, newStatus);
   }
   handleCloseStatusMenu();
 };
@@ -2498,6 +2513,38 @@ return (
              {snackbar.message}
            </Alert>
          </Snackbar>
+
+         {/* Test Notification Button */}
+         <Tooltip title="Test Payment Notification System" placement="left">
+           <Button
+             variant="contained"
+             onClick={() => testPaymentNotificationSystem()}
+             sx={{
+               position: 'fixed',
+               bottom: 24,
+               right: 24,
+               borderRadius: '50%',
+               width: 64,
+               height: 64,
+               minWidth: 64,
+               background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+               color: 'white',
+               boxShadow: '0 8px 32px rgba(102, 126, 234, 0.4)',
+               zIndex: 1000,
+               '&:hover': {
+                 background: 'linear-gradient(135deg, #764ba2 0%, #f093fb 100%)',
+                 transform: 'scale(1.1)',
+                 boxShadow: '0 12px 48px rgba(102, 126, 234, 0.6)',
+               },
+               transition: 'all 0.3s ease',
+               display: 'flex',
+               alignItems: 'center',
+               justifyContent: 'center'
+             }}
+           >
+             💰
+           </Button>
+         </Tooltip>
        </Container>
  );
 };

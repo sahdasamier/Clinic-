@@ -6,11 +6,15 @@ import {
   defaultVATSettings,
   VATSettings 
 } from '../data/mockData';
+import { PaymentNotificationService } from '../services/paymentNotificationService';
+
 
 // Storage keys
 const PAYMENTS_STORAGE_KEY = 'clinic_payments_data';
 const CLINIC_SETTINGS_KEY = 'clinic_payment_settings';
 const VAT_SETTINGS_KEY = 'clinic_vat_settings';
+
+
 
 // Load clinic payment settings
 export const loadClinicPaymentSettings = (): ClinicPaymentSettings => {
@@ -237,4 +241,137 @@ export const getAppointmentPaymentSummary = (appointmentId: number) => {
     console.error('Error getting appointment payment summary:', error);
     return { hasPayment: false, totalAmount: 0, totalPaid: 0, status: 'error' };
   }
+};
+
+// Update payment status with notifications
+export const updatePaymentStatus = async (paymentId: number, newStatus: string, paidAmount?: number): Promise<boolean> => {
+  try {
+    const payments = loadPaymentsFromStorage();
+    const paymentIndex = payments.findIndex(p => p.id === paymentId);
+    
+    if (paymentIndex === -1) {
+      console.error('Payment not found:', paymentId);
+      return false;
+    }
+    
+    const oldPayment = payments[paymentIndex];
+    const oldStatus = oldPayment.status;
+    
+    // Update payment
+    const updatedPayment = {
+      ...oldPayment,
+      status: newStatus as any,
+      paidAmount: paidAmount ?? oldPayment.paidAmount
+    };
+    
+    payments[paymentIndex] = updatedPayment;
+    savePaymentsToStorage(payments);
+    
+    // Send notification if payment was just marked as paid
+    if (oldStatus !== 'paid' && newStatus === 'paid') {
+      const notificationService = PaymentNotificationService.getInstance();
+      await notificationService.notifyPaymentCompleted({
+        patientName: updatedPayment.patient,
+        amount: updatedPayment.amount,
+        paymentId: updatedPayment.invoiceId,
+        method: updatedPayment.method
+      });
+      
+      console.log(`✅ Payment ${updatedPayment.invoiceId} marked as paid - notification sent`);
+    }
+    
+    // Update appointment payment status if linked
+    if (updatedPayment.appointmentId) {
+      updateAppointmentPaymentStatusInPayments(parseInt(updatedPayment.appointmentId), newStatus);
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error updating payment status:', error);
+    return false;
+  }
+};
+
+// Mark payment as paid (convenience function)
+export const markPaymentAsPaid = async (paymentId: number, paidAmount?: number): Promise<boolean> => {
+  return await updatePaymentStatus(paymentId, 'paid', paidAmount);
+};
+
+// Create new payment with notification
+export const createPayment = async (paymentData: Omit<PaymentData, 'id' | 'invoiceId'>): Promise<PaymentData | null> => {
+  try {
+    const existingPayments = loadPaymentsFromStorage();
+    const nextId = existingPayments.length > 0 ? Math.max(...existingPayments.map(p => p.id)) + 1 : 1;
+    
+    const newPayment: PaymentData = {
+      ...paymentData,
+      id: nextId,
+      invoiceId: generateInvoiceId()
+    };
+    
+    const updatedPayments = [...existingPayments, newPayment];
+    savePaymentsToStorage(updatedPayments);
+    
+    console.log(`✅ New payment created: ${newPayment.invoiceId}`);
+    
+    // If payment is already marked as paid, send notification
+    if (newPayment.status === 'paid') {
+      const notificationService = PaymentNotificationService.getInstance();
+      await notificationService.notifyPaymentCompleted({
+        patientName: newPayment.patient,
+        amount: newPayment.amount,
+        paymentId: newPayment.invoiceId,
+        method: newPayment.method
+      });
+    }
+    
+    return newPayment;
+  } catch (error) {
+    console.error('Error creating payment:', error);
+    return null;
+  }
+};
+
+// Function to manually trigger payment notifications (for testing)
+export const triggerPaymentNotification = async (paymentId: number): Promise<boolean> => {
+  try {
+    const payments = loadPaymentsFromStorage();
+    const payment = payments.find(p => p.id === paymentId);
+    
+    if (!payment) {
+      console.error('Payment not found:', paymentId);
+      return false;
+    }
+    
+    const notificationService = PaymentNotificationService.getInstance();
+    
+    if (payment.status === 'paid') {
+      await notificationService.notifyPaymentCompleted({
+        patientName: payment.patient,
+        amount: payment.amount,
+        paymentId: payment.invoiceId,
+        method: payment.method
+      });
+    } else {
+      // For testing, allow notifications for any payment
+      await notificationService.notifyPaymentCompleted({
+        patientName: payment.patient,
+        amount: payment.amount,
+        paymentId: payment.invoiceId,
+        method: payment.method
+      });
+    }
+    
+    console.log(`✅ Notification triggered for payment: ${payment.invoiceId}`);
+    return true;
+  } catch (error) {
+    console.error('Error triggering payment notification:', error);
+    return false;
+  }
+};
+
+// Test payment notification system
+export const testPaymentNotificationSystem = async (): Promise<void> => {
+  const notificationService = PaymentNotificationService.getInstance();
+  await notificationService.testPaymentNotification();
 }; 

@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useUser } from '../contexts/UserContext';
 import { useSidebar } from '../contexts/SidebarContext';
+import { useClinicSettings } from '../hooks/useClinicSettings';
 import {
   Box,
   Drawer,
@@ -52,6 +53,7 @@ const Sidebar: React.FC = () => {
   const location = useLocation();
   const { userClinic } = useUser();
   const { isCollapsed, toggleSidebar } = useSidebar();
+  const { getClinicDisplayName, getClinicTagline } = useClinicSettings();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const isTablet = useMediaQuery(theme.breakpoints.down('lg'));
@@ -105,7 +107,7 @@ const Sidebar: React.FC = () => {
           }
         }}
       >
-        <Tooltip title={(isCollapsed && !isMobile) ? "Clinicy - Healthcare Excellence" : ""} placement="right">
+        <Tooltip title={(isCollapsed && !isMobile) ? `${getClinicDisplayName()} - ${getClinicTagline()}` : ""} placement="right">
           <Box
             sx={{
               width: (isCollapsed && !isMobile) ? 48 : { xs: 52, md: 56 },
@@ -248,7 +250,7 @@ const Sidebar: React.FC = () => {
                 whiteSpace: 'nowrap',
               }}
             >
-              clinicy
+              {getClinicDisplayName()}
             </Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Box 
@@ -273,7 +275,7 @@ const Sidebar: React.FC = () => {
                   whiteSpace: 'nowrap',
                 }}
               >
-                Healthcare Excellence
+                {getClinicTagline()}
               </Typography>
             </Box>
           </Box>

@@ -7,6 +7,7 @@ import { AuthContext } from '../app/AuthProvider';
 import { useUser } from '../contexts/UserContext';
 import { useNotifications } from '../contexts/NotificationContext';
 import { useSidebar } from '../contexts/SidebarContext';
+import { useClinicSettings } from '../hooks/useClinicSettings';
 import {
   AppBar,
   Toolbar,
@@ -48,9 +49,10 @@ const NavBar: React.FC = () => {
   const navigate = useNavigate();
   const theme = useTheme();
   const { user } = useContext(AuthContext);
-  const { userProfile, userClinic } = useUser();
+  const { userProfile } = useUser();
   const { unreadCount } = useNotifications();
   const { isCollapsed, toggleSidebar } = useSidebar();
+  const { getClinicDisplayName, getClinicTagline, isBrandingConfigured } = useClinicSettings();
   
   // Language menu state
   const [languageAnchorEl, setLanguageAnchorEl] = React.useState<null | HTMLElement>(null);
@@ -288,7 +290,7 @@ const NavBar: React.FC = () => {
                 },
               }}
             >
-              {userClinic?.name || 'Clinicy Dashboard'}
+              {getClinicDisplayName()}
             </Typography>
             <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center', gap: 1, mt: 0.5 }}>
               <Box

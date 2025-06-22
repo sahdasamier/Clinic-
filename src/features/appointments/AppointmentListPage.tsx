@@ -2635,7 +2635,6 @@ const AppointmentListPage: React.FC = () => {
                      <MenuItem value="custom">
                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'primary.main' }}>
                          <Add fontSize="small" />
-                         <Typography variant="body2">{t('enter_custom_patient_name')}</Typography>
                        </Box>
                      </MenuItem>
                      {availablePatients.map((patient) => (

@@ -226,60 +226,7 @@ const ClinicPaymentSettingsComponent: React.FC = () => {
         </Typography>
       </Alert>
 
-      {/* General Settings */}
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-            {t('general_settings')}
-          </Typography>
-          
-          <Grid container spacing={3}>
-            <Grid item xs={12} sm={6}>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={settings.autoCreatePaymentOnCompletion}
-                    onChange={(e) => handleSettingsChange('autoCreatePaymentOnCompletion', e.target.checked)}
-                  />
-                }
-                label={t('auto_create_payment_on_completion')}
-              />
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-                {t('automatically_create_payment_when_appointment_completed')}
-              </Typography>
-            </Grid>
-            
-            <Grid item xs={12} sm={6}>
-              <FormControl fullWidth>
-                <InputLabel>{t('default_payment_method')}</InputLabel>
-                <Select
-                  value={settings.defaultPaymentMethod}
-                  onChange={(e) => handleSettingsChange('defaultPaymentMethod', e.target.value)}
-                  label={t('default_payment_method')}
-                >
-                  {paymentMethods.map(method => (
-                    <MenuItem key={method} value={method}>
-                      {t(method.toLowerCase().replace(/\s+/g, '_'))}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                type="number"
-                label={t('default_payment_due_days')}
-                value={settings.defaultPaymentDueDays}
-                onChange={(e) => handleSettingsChange('defaultPaymentDueDays', parseInt(e.target.value) || 0)}
-                helperText={t('days_after_appointment_completion')}
-                inputProps={{ min: 0 }}
-              />
-            </Grid>
-          </Grid>
-        </CardContent>
-      </Card>
+      
 
       {/* Appointment Types Settings */}
       <Card>
@@ -293,7 +240,7 @@ const ClinicPaymentSettingsComponent: React.FC = () => {
               startIcon={<AddIcon />}
               onClick={() => handleEditAppointmentType()}
             >
-              {t('add_appointment_type')}
+              {t('Add Appointment type')}
             </Button>
           </Box>
 
@@ -421,15 +368,7 @@ const ClinicPaymentSettingsComponent: React.FC = () => {
         </DialogTitle>
         <DialogContent>
           <Grid container spacing={3} sx={{ mt: 1 }}>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label={t('appointment_type')}
-                value={appointmentTypeForm.type}
-                onChange={(e) => handleAppointmentTypeFormChange('type', e.target.value)}
-                required
-              />
-            </Grid>
+           
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth

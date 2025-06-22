@@ -69,6 +69,8 @@ import {
   Payment,
   Palette,
   Delete,
+  Email,
+  Phone,
 } from '@mui/icons-material';
 
 import ClinicPaymentSettingsComponent from './components/ClinicPaymentSettings';
@@ -104,6 +106,13 @@ const SettingsPage: React.FC = () => {
   const [tabValue, setTabValue] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(false);
   const [errors, setErrors] = useState<any>({});
+
+  // Insurance Provider interface
+  interface InsuranceProvider {
+    id: number;
+    name: string;
+    enabled: boolean;
+  }
 
 
   const [isEditingProfile, setIsEditingProfile] = useState<boolean>(false);
@@ -204,6 +213,11 @@ const SettingsPage: React.FC = () => {
       allowOnlineBooking: false,
       requirePaymentAtBooking: false,
       sendReminders: false,
+      insuranceProviders: [
+        { id: 1, name: 'Global Health Insurance', enabled: true },
+        { id: 2, name: 'National Insurance', enabled: true },
+        { id: 3, name: 'Private Medical Insurance', enabled: false }
+      ],
     };
   });
 
@@ -234,33 +248,72 @@ const SettingsPage: React.FC = () => {
     };
   });
 
-  const [insuranceProviders, setInsuranceProviders] = useState({
-    insurance1: false,
-    insurance2: false,
-    insurance3: false,
-    insurance4: false,
-    insurance5: false,
+
+
+  // ✅ Payment Methods with localStorage persistence
+  const [paymentMethods, setPaymentMethods] = useState(() => {
+    try {
+      const saved = localStorage.getItem('clinicPaymentMethods');
+      if (saved) {
+        const parsedData = JSON.parse(saved);
+        console.log('✅ Loaded payment methods from localStorage:', parsedData);
+        return parsedData;
+      }
+    } catch (error) {
+      console.error('❌ Failed to parse payment methods:', error);
+    }
+    
+    console.log('ℹ️ Using default payment methods');
+    return {
+      cash: true,
+      cards: true,
+      bankTransfer: false,
+      digitalWallets: false,
+    };
   });
 
-  const [paymentMethods, setPaymentMethods] = useState({
-    cash: true,
-    cards: true,
-    bankTransfer: false,
-    digitalWallets: false,
+  // ✅ Services with localStorage persistence
+  const [services, setServices] = useState(() => {
+    try {
+      const saved = localStorage.getItem('clinicServices');
+      if (saved) {
+        const parsedData = JSON.parse(saved);
+        console.log('✅ Loaded services from localStorage:', parsedData);
+        return parsedData;
+      }
+    } catch (error) {
+      console.error('❌ Failed to parse services:', error);
+    }
+    
+    console.log('ℹ️ Using default services');
+    return {
+      consultation: true,
+      checkups: true,
+      vaccinations: false,
+      labTests: false,
+      radiology: false,
+    };
   });
 
-  const [services, setServices] = useState({
-    consultation: true,
-    checkups: true,
-    vaccinations: false,
-    labTests: false,
-    radiology: false,
-  });
-
-  const [appointmentSettings, setAppointmentSettings] = useState({
-    onlineBooking: true,
-    paymentRequired: false,
-    reminders: true,
+  // ✅ Appointment Settings with localStorage persistence
+  const [appointmentSettings, setAppointmentSettings] = useState(() => {
+    try {
+      const saved = localStorage.getItem('clinicAppointmentSettings');
+      if (saved) {
+        const parsedData = JSON.parse(saved);
+        console.log('✅ Loaded appointment settings from localStorage:', parsedData);
+        return parsedData;
+      }
+    } catch (error) {
+      console.error('❌ Failed to parse appointment settings:', error);
+    }
+    
+    console.log('ℹ️ Using default appointment settings');
+    return {
+      onlineBooking: true,
+      paymentRequired: false,
+      reminders: true,
+    };
   });
 
   const [passwordForm, setPasswordForm] = useState({
@@ -306,16 +359,31 @@ const SettingsPage: React.FC = () => {
     supportType: 'general',
   });
 
+  // Insurance provider management
+  const [insuranceDialog, setInsuranceDialog] = useState(false);
+  const [editingInsurance, setEditingInsurance] = useState<{ id: number; name: string } | null>(null);
+  const [newInsuranceName, setNewInsuranceName] = useState('');
+
+
+
+
+
   // 🔍 STEP 1: Enhanced Debug - Check What's Actually Saved
   useEffect(() => {
     console.log('🔍 DEBUGGING DATA PERSISTENCE:');
     console.log('Profile data in localStorage:', localStorage.getItem('clinicProfile'));
     console.log('Clinic settings in localStorage:', localStorage.getItem('clinicSettings'));
     console.log('Preferences in localStorage:', localStorage.getItem('userPreferences'));
+    console.log('Services in localStorage:', localStorage.getItem('clinicServices'));
+    console.log('Payment methods in localStorage:', localStorage.getItem('clinicPaymentMethods'));
+    console.log('Appointment settings in localStorage:', localStorage.getItem('clinicAppointmentSettings'));
     console.log('Current profile state:', profile);
     console.log('Current clinic settings state:', clinicSettings);
     console.log('Current preferences state:', preferences);
-  }, [profile, clinicSettings, preferences]);
+    console.log('Current services state:', services);
+    console.log('Current payment methods state:', paymentMethods);
+    console.log('Current appointment settings state:', appointmentSettings);
+  }, [profile, clinicSettings, preferences, services, paymentMethods, appointmentSettings]);
 
   // 🎯 Auto-Save Profile Data (Debounced)
   useEffect(() => {
@@ -348,6 +416,24 @@ const SettingsPage: React.FC = () => {
       console.log('🔄 Auto-saved preferences data');
     }
   }, [preferences]);
+
+  // 🎯 Auto-Save Services Data (Immediate)
+  useEffect(() => {
+    localStorage.setItem('clinicServices', JSON.stringify(services));
+    console.log('🔄 Auto-saved services data');
+  }, [services]);
+
+  // 🎯 Auto-Save Payment Methods Data (Immediate)
+  useEffect(() => {
+    localStorage.setItem('clinicPaymentMethods', JSON.stringify(paymentMethods));
+    console.log('🔄 Auto-saved payment methods data');
+  }, [paymentMethods]);
+
+  // 🎯 Auto-Save Appointment Settings Data (Immediate)
+  useEffect(() => {
+    localStorage.setItem('clinicAppointmentSettings', JSON.stringify(appointmentSettings));
+    console.log('🔄 Auto-saved appointment settings data');
+  }, [appointmentSettings]);
 
   // Validation functions
   const validateEmail = (email: string) => {
@@ -534,6 +620,81 @@ const SettingsPage: React.FC = () => {
     }
   };
 
+  // ✅ Services Save Function
+  const handleSaveServices = async () => {
+    console.log('🔄 Save Services button clicked!');
+    console.log('📋 Services data to save:', services);
+    
+    setLoading(true);
+    try {
+      console.log('💾 Attempting to save services to localStorage...');
+      
+      // Save to localStorage
+      localStorage.setItem('clinicServices', JSON.stringify(services));
+      
+      // Verify it was saved
+      const saved = localStorage.getItem('clinicServices');
+      console.log('✅ Verification - Services data in localStorage:', saved);
+      
+      showSnackbar('Services & Specializations saved successfully', 'success');
+    } catch (error) {
+      console.error('❌ Services save error:', error);
+      showSnackbar('Failed to save services. Please try again.', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ✅ Payment Methods Save Function
+  const handleSavePaymentMethods = async () => {
+    console.log('🔄 Save Payment Methods button clicked!');
+    console.log('📋 Payment methods data to save:', paymentMethods);
+    
+    setLoading(true);
+    try {
+      console.log('💾 Attempting to save payment methods to localStorage...');
+      
+      // Save to localStorage
+      localStorage.setItem('clinicPaymentMethods', JSON.stringify(paymentMethods));
+      
+      // Verify it was saved
+      const saved = localStorage.getItem('clinicPaymentMethods');
+      console.log('✅ Verification - Payment methods data in localStorage:', saved);
+      
+      showSnackbar('Payment methods saved successfully', 'success');
+    } catch (error) {
+      console.error('❌ Payment methods save error:', error);
+      showSnackbar('Failed to save payment methods. Please try again.', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ✅ Appointment Settings Save Function
+  const handleSaveAppointmentSettings = async () => {
+    console.log('🔄 Save Appointment Settings button clicked!');
+    console.log('📋 Appointment settings data to save:', appointmentSettings);
+    
+    setLoading(true);
+    try {
+      console.log('💾 Attempting to save appointment settings to localStorage...');
+      
+      // Save to localStorage
+      localStorage.setItem('clinicAppointmentSettings', JSON.stringify(appointmentSettings));
+      
+      // Verify it was saved
+      const saved = localStorage.getItem('clinicAppointmentSettings');
+      console.log('✅ Verification - Appointment settings data in localStorage:', saved);
+      
+      showSnackbar('Appointment settings saved successfully', 'success');
+    } catch (error) {
+      console.error('❌ Appointment settings save error:', error);
+      showSnackbar('Failed to save appointment settings. Please try again.', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // 🛡️ Comprehensive Data Validation Helper
   const validateCompleteData = () => {
     const issues = [];
@@ -571,6 +732,9 @@ const SettingsPage: React.FC = () => {
     await handleSaveProfile();
     await handleSaveClinicSettings();
     await handleSavePreferences();
+    await handleSaveServices();
+    await handleSavePaymentMethods();
+    await handleSaveAppointmentSettings();
     
     console.log('✅ All data saved successfully!');
     showSnackbar('All settings saved successfully!', 'success');
@@ -815,7 +979,6 @@ const SettingsPage: React.FC = () => {
           profile: profile,
           clinicSettings: clinicSettings,
           preferences: preferences,
-          insuranceProviders: insuranceProviders,
           paymentMethods: paymentMethods,
           services: services,
           appointmentSettings: appointmentSettings,
@@ -884,6 +1047,80 @@ const SettingsPage: React.FC = () => {
         showSnackbar('Failed to export data. Please try again.', 'error');
       }
     }, 2000);
+  };
+
+  // Insurance provider management functions
+  const handleAddInsurance = () => {
+    if (!newInsuranceName.trim()) return;
+    
+    const newInsurance = {
+      id: Date.now(),
+      name: newInsuranceName.trim(),
+      enabled: true
+    };
+    
+    setClinicSettings({
+      ...clinicSettings,
+      insuranceProviders: [...clinicSettings.insuranceProviders, newInsurance]
+    });
+    
+    setNewInsuranceName('');
+    setInsuranceDialog(false);
+    showSnackbar('Insurance provider added successfully', 'success');
+  };
+
+  const handleEditInsurance = () => {
+    if (!newInsuranceName.trim() || !editingInsurance) return;
+    
+    setClinicSettings({
+      ...clinicSettings,
+      insuranceProviders: clinicSettings.insuranceProviders.map((provider: InsuranceProvider) =>
+        provider.id === editingInsurance.id
+          ? { ...provider, name: newInsuranceName.trim() }
+          : provider
+      )
+    });
+    
+    setNewInsuranceName('');
+    setEditingInsurance(null);
+    setInsuranceDialog(false);
+    showSnackbar('Insurance provider updated successfully', 'success');
+  };
+
+  const handleDeleteInsurance = (id: number) => {
+    setClinicSettings({
+      ...clinicSettings,
+      insuranceProviders: clinicSettings.insuranceProviders.filter((provider: InsuranceProvider) => provider.id !== id)
+    });
+    showSnackbar('Insurance provider removed successfully', 'success');
+  };
+
+  const handleToggleInsurance = (id: number) => {
+    setClinicSettings({
+      ...clinicSettings,
+      insuranceProviders: clinicSettings.insuranceProviders.map((provider: InsuranceProvider) =>
+        provider.id === id
+          ? { ...provider, enabled: !provider.enabled }
+          : provider
+      )
+    });
+  };
+
+  const openInsuranceDialog = (insurance?: { id: number; name: string }) => {
+    if (insurance) {
+      setEditingInsurance(insurance);
+      setNewInsuranceName(insurance.name);
+    } else {
+      setEditingInsurance(null);
+      setNewInsuranceName('');
+    }
+    setInsuranceDialog(true);
+  };
+
+  const closeInsuranceDialog = () => {
+    setInsuranceDialog(false);
+    setEditingInsurance(null);
+    setNewInsuranceName('');
   };
 
   const handleResetForm = (formType: 'profile' | 'clinic' | 'preferences') => {
@@ -1108,11 +1345,7 @@ const SettingsPage: React.FC = () => {
                     icon={<Payment sx={{ fontSize: 18 }} />}
                     iconPosition="top"
                   />
-                  <Tab 
-                    label={t('notifications')} 
-                    icon={<Notifications sx={{ fontSize: 18 }} />}
-                    iconPosition="top"
-                  />
+
                   <Tab 
                     label={t('security')} 
                     icon={<Security sx={{ fontSize: 18 }} />}
@@ -1218,11 +1451,7 @@ const SettingsPage: React.FC = () => {
                        icon={<Payment sx={{ fontSize: 26 }} />}
                        iconPosition="start"
                      />
-                     <Tab 
-                       label={t('notifications')} 
-                       icon={<Notifications sx={{ fontSize: 26 }} />}
-                       iconPosition="start"
-                     />
+
                      <Tab 
                        label={t('security_privacy')} 
                        icon={<Security sx={{ fontSize: 26 }} />}
@@ -1656,154 +1885,11 @@ const SettingsPage: React.FC = () => {
                                 </Grid>
                               </Grid>
                             </Box>
-
-                            {/* Languages & Bio Display */}
-                            <Box sx={{ mb: 4 }}>
-                              <Typography variant="subtitle1" sx={{ 
-                                fontWeight: 600, 
-                                mb: 2, 
-                                color: 'primary.main',
-                                fontSize: { xs: '1rem', md: '1.1rem' }
-                              }}>
-                                {t('languages_bio')}
-                              </Typography>
-                              <Grid container spacing={3}>
-                                <Grid item xs={12} sm={6}>
-                                  <Box sx={{ mb: 2 }}>
-                                    <Typography variant="body2" color="text.secondary" sx={{ 
-                                      mb: 0.5,
-                                      fontSize: { xs: '0.8rem', md: '0.875rem' }
-                                    }}>
-                                      {t('languages_spoken')}
-                                    </Typography>
-                                    <Typography variant="body1" sx={{ 
-                                      fontWeight: 500,
-                                      fontSize: { xs: '0.9rem', md: '1rem' }
-                                    }}>
-                                      {profile.languages || t('not_specified')}
-                                    </Typography>
-                                  </Box>
-                                </Grid>
-                                <Grid item xs={12} sm={6}>
-                                  <Box sx={{ mb: 2 }}>
-                                    <Typography variant="body2" color="text.secondary" sx={{ 
-                                      mb: 0.5,
-                                      fontSize: { xs: '0.8rem', md: '0.875rem' }
-                                    }}>
-                                      {t('consultation_fee')}
-                                    </Typography>
-                                    <Typography variant="body1" sx={{ 
-                                      fontWeight: 500,
-                                      fontSize: { xs: '0.9rem', md: '1rem' }
-                                    }}>
-                                      {profile.consultationFee ? t('egp_amount', { amount: profile.consultationFee }) : t('not_specified')}
-                                    </Typography>
-                                  </Box>
-                                </Grid>
-                                <Grid item xs={12}>
-                                  <Box sx={{ mb: 2 }}>
-                                    <Typography variant="body2" color="text.secondary" sx={{ 
-                                      mb: 0.5,
-                                      fontSize: { xs: '0.8rem', md: '0.875rem' }
-                                    }}>
-                                      {t('professional_bio')}
-                                    </Typography>
-                                    <Typography variant="body1" sx={{ 
-                                      fontWeight: 500, 
-                                      lineHeight: 1.6,
-                                      fontSize: { xs: '0.9rem', md: '1rem' }
-                                    }}>
-                                      {profile.bio || t('no_bio_available')}
-                                    </Typography>
-                                  </Box>
-                                </Grid>
-                              </Grid>
-                            </Box>
-
-                            {/* Availability Settings Display */}
-                            <Box>
-                              <Typography variant="subtitle1" sx={{ 
-                                fontWeight: 600, 
-                                mb: 2, 
-                                color: 'primary.main',
-                                fontSize: { xs: '1rem', md: '1.1rem' }
-                              }}>
-                                {t('availability_settings')}
-                              </Typography>
-                              <Grid container spacing={3}>
-                                <Grid item xs={12} sm={6}>
-                                  <Box sx={{ mb: 2 }}>
-                                    <Typography variant="body2" color="text.secondary" sx={{ 
-                                      mb: 0.5,
-                                      fontSize: { xs: '0.8rem', md: '0.875rem' }
-                                    }}>
-                                      {t('working_days')}
-                                    </Typography>
-                                    <Typography variant="body1" sx={{ 
-                                      fontWeight: 500,
-                                      fontSize: { xs: '0.9rem', md: '1rem' }
-                                    }}>
-                                      {profile.workingDays || t('not_specified')}
-                                    </Typography>
-                                  </Box>
-                                </Grid>
-                                <Grid item xs={12} sm={6}>
-                                  <Box sx={{ mb: 2 }}>
-                                    <Typography variant="body2" color="text.secondary" sx={{ 
-                                      mb: 0.5,
-                                      fontSize: { xs: '0.8rem', md: '0.875rem' }
-                                    }}>
-                                      {t('working_hours')}
-                                    </Typography>
-                                    <Typography variant="body1" sx={{ 
-                                      fontWeight: 500,
-                                      fontSize: { xs: '0.9rem', md: '1rem' }
-                                    }}>
-                                      {profile.workingHours || t('not_specified')}
-                                    </Typography>
-                                  </Box>
-                                </Grid>
-                                <Grid item xs={12} sm={6}>
-                                  <Box sx={{ mb: 2 }}>
-                                    <Typography variant="body2" color="text.secondary" sx={{ 
-                                      mb: 0.5,
-                                      fontSize: { xs: '0.8rem', md: '0.875rem' }
-                                    }}>
-                                      {t('lunch_break')}
-                                    </Typography>
-                                    <Typography variant="body1" sx={{ 
-                                      fontWeight: 500,
-                                      fontSize: { xs: '0.9rem', md: '1rem' }
-                                    }}>
-                                      {profile.lunchBreak || t('not_specified')}
-                                    </Typography>
-                                  </Box>
-                                </Grid>
-                                <Grid item xs={12} sm={6}>
-                                  <Box sx={{ mb: 2 }}>
-                                    <Typography variant="body2" color="text.secondary" sx={{ 
-                                      mb: 0.5,
-                                      fontSize: { xs: '0.8rem', md: '0.875rem' }
-                                    }}>
-                                      {t('current_status')}
-                                    </Typography>
-                                    <Chip 
-                                      label={profile.status?.charAt(0).toUpperCase() + profile.status?.slice(1) || 'Available'} 
-                                      color={profile.status === 'available' ? 'success' : profile.status === 'busy' ? 'warning' : profile.status === 'vacation' ? 'info' : 'default'}
-                                      size="small"
-                                    />
-                                  </Box>
-                                </Grid>
-                              </Grid>
-                            </Box>
                           </Box>
                         ) : (
-                          // Edit Mode - Show form fields
-                          <div id="profile-form">
-                            <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
-                              {t('edit_profile_information')}
-                            </Typography>
-
+                          // Edit Mode - Show editable form
+                          <Box>
+                        
                         {/* Basic Information */}
                             <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2, color: 'primary.main' }}>
                           {t('basic_information')}
@@ -2103,7 +2189,7 @@ const SettingsPage: React.FC = () => {
                                 {loading ? t('saving_profile') : t('save_changes')}
                           </Button>
                             </Box>
-                          </div>
+                          </Box>
                         )}
                         </Box>
                       </CardContent>
@@ -2765,48 +2851,16 @@ const SettingsPage: React.FC = () => {
                               </Grid>
                             </Box>
 
-                            {/* Additional Information */}
-                            <Box>
-                              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2, color: 'primary.main' }}>
-                                Additional Information
-                              </Typography>
-                              <Grid container spacing={3}>
-                          <Grid item xs={12} md={6}>
-                                  <Box sx={{ mb: 2 }}>
-                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                                      {t('establishment_date')}
-                                    </Typography>
-                                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                                      {t('not_specified')}
-                                    </Typography>
-                                  </Box>
-                          </Grid>
-                                <Grid item xs={12} md={6}>
-                                  <Box sx={{ mb: 2 }}>
-                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                                      {t('facility_type')}
-                                    </Typography>
-                                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                                      {t('not_specified')}
-                                    </Typography>
-                                  </Box>
-                        </Grid>
-                                <Grid item xs={12}>
-                                  <Box sx={{ mb: 2 }}>
-                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                                      Clinic Description
-                                    </Typography>
-                                    <Typography variant="body1" sx={{ fontWeight: 500, lineHeight: 1.6 }}>
-                                      {clinicSettings.description || t('not_specified')}
-                                    </Typography>
-                                  </Box>
-                                </Grid>
-                              </Grid>
-                            </Box>
+                            
                           </Box>
                         </Box>
                       </CardContent>
                     </Card>
+                  </Grid>
+
+                  {/* Clinic Branding Preview */}
+                  <Grid item xs={12}>
+                    {/* Temporarily removed ClinicBrandingPreview */}
                   </Grid>
 
                   {/* Services & Specializations */}
@@ -2946,16 +3000,33 @@ const SettingsPage: React.FC = () => {
                             />
                           </ListItem>
                         </List>
-
-                        <Button 
-                          variant="text" 
-                          size="small" 
-                          fullWidth
-                          startIcon={<Add />}
-                          onClick={() => showSnackbar('Custom service form opened', 'info')}
-                        >
-                          Add Custom Service
-                        </Button>
+                        
+                        {/* Save Button */}
+                        <Box sx={{ mt: 3, pt: 2, borderTop: '1px solid rgba(0,0,0,0.08)' }}>
+                          <Button
+                            fullWidth
+                            variant="contained"
+                            onClick={handleSaveServices}
+                            disabled={loading}
+                            startIcon={loading ? <CircularProgress size={18} color="inherit" /> : <Save />}
+                            sx={{
+                              py: 1.5,
+                              borderRadius: 2,
+                              fontWeight: 600,
+                              textTransform: 'none',
+                              fontSize: '1rem',
+                              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                              boxShadow: '0 8px 25px rgba(16, 185, 129, 0.3)',
+                              '&:hover': {
+                                background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+                                transform: 'translateY(-1px)',
+                                boxShadow: '0 12px 35px rgba(16, 185, 129, 0.4)'
+                              }
+                            }}
+                          >
+                            {loading ? 'Saving...' : 'Save Services'}
+                          </Button>
+                        </Box>
                         </Box>
                       </CardContent>
                     </Card>
@@ -3022,66 +3093,69 @@ const SettingsPage: React.FC = () => {
                         
                         {/* Card Content */}
                         <Box sx={{ p: 4 }}>
-                        <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
-                          Accepted Insurance Providers
-                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                            Accepted Insurance Providers
+                          </Typography>
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            startIcon={<Add />}
+                            onClick={() => openInsuranceDialog()}
+                            sx={{ textTransform: 'none' }}
+                          >
+                            Add Provider
+                          </Button>
+                        </Box>
                         
                         <List sx={{ p: 0, mb: 2 }}>
-                          <ListItem sx={{ px: 0, py: 0.5 }}>
-                            <FormControlLabel
-                              control={
-                                <Switch 
-                                  checked={insuranceProviders.insurance1}
-                                  onChange={(e) => setInsuranceProviders({ ...insuranceProviders, insurance1: e.target.checked })}
+                          {clinicSettings.insuranceProviders && clinicSettings.insuranceProviders.length > 0 ? (
+                            clinicSettings.insuranceProviders.map((provider: InsuranceProvider) => (
+                              <ListItem 
+                                key={provider.id} 
+                                sx={{ 
+                                  px: 0, 
+                                  py: 0.5, 
+                                  display: 'flex', 
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center'
+                                }}
+                              >
+                                <FormControlLabel
+                                  control={
+                                    <Switch 
+                                      checked={provider.enabled}
+                                      onChange={() => handleToggleInsurance(provider.id)}
+                                    />
+                                  }
+                                  label={provider.name}
+                                  sx={{ flexGrow: 1 }}
                                 />
-                              }
-                              label={t('insurance_provider_1')}
-                            />
-                          </ListItem>
-                          <ListItem sx={{ px: 0, py: 0.5 }}>
-                            <FormControlLabel
-                              control={
-                                <Switch 
-                                  checked={insuranceProviders.insurance2}
-                                  onChange={(e) => setInsuranceProviders({ ...insuranceProviders, insurance2: e.target.checked })}
-                                />
-                              }
-                              label={t('insurance_provider_2')}
-                            />
-                          </ListItem>
-                          <ListItem sx={{ px: 0, py: 0.5 }}>
-                            <FormControlLabel
-                              control={
-                                <Switch 
-                                  checked={insuranceProviders.insurance3}
-                                  onChange={(e) => setInsuranceProviders({ ...insuranceProviders, insurance3: e.target.checked })}
-                                />
-                              }
-                              label={t('insurance_provider_3')}
-                            />
-                          </ListItem>
-                          <ListItem sx={{ px: 0, py: 0.5 }}>
-                            <FormControlLabel
-                              control={
-                                <Switch 
-                                  checked={insuranceProviders.insurance4}
-                                  onChange={(e) => setInsuranceProviders({ ...insuranceProviders, insurance4: e.target.checked })}
-                                />
-                              }
-                              label={t('insurance_provider_4')}
-                            />
-                          </ListItem>
-                          <ListItem sx={{ px: 0, py: 0.5 }}>
-                            <FormControlLabel
-                              control={
-                                <Switch 
-                                  checked={insuranceProviders.insurance5}
-                                  onChange={(e) => setInsuranceProviders({ ...insuranceProviders, insurance5: e.target.checked })}
-                                />
-                              }
-                              label={t('insurance_provider_5')}
-                            />
-                          </ListItem>
+                                <Box sx={{ display: 'flex', gap: 0.5 }}>
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => openInsuranceDialog(provider)}
+                                    sx={{ p: 0.5 }}
+                                  >
+                                    <Edit fontSize="small" />
+                                  </IconButton>
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => handleDeleteInsurance(provider.id)}
+                                    sx={{ p: 0.5, color: 'error.main' }}
+                                  >
+                                    <Delete fontSize="small" />
+                                  </IconButton>
+                                </Box>
+                              </ListItem>
+                            ))
+                          ) : (
+                            <ListItem sx={{ px: 0, py: 1 }}>
+                              <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                                No insurance providers added yet. Click "Add Provider" to add one.
+                              </Typography>
+                            </ListItem>
+                          )}
                         </List>
 
                         <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
@@ -3134,150 +3208,40 @@ const SettingsPage: React.FC = () => {
                             />
                           </ListItem>
                         </List>
+                        
+                        {/* Save Button */}
+                        <Box sx={{ mt: 3, pt: 2, borderTop: '1px solid rgba(0,0,0,0.08)' }}>
+                          <Button
+                            fullWidth
+                            variant="contained"
+                            onClick={handleSavePaymentMethods}
+                            disabled={loading}
+                            startIcon={loading ? <CircularProgress size={18} color="inherit" /> : <Save />}
+                            sx={{
+                              py: 1.5,
+                              borderRadius: 2,
+                              fontWeight: 600,
+                              textTransform: 'none',
+                              fontSize: '1rem',
+                              background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                              boxShadow: '0 8px 25px rgba(245, 158, 11, 0.3)',
+                              '&:hover': {
+                                background: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)',
+                                transform: 'translateY(-1px)',
+                                boxShadow: '0 12px 35px rgba(245, 158, 11, 0.4)'
+                              }
+                            }}
+                          >
+                            {loading ? 'Saving...' : 'Save Payment Settings'}
+                          </Button>
+                        </Box>
                         </Box>
                       </CardContent>
                     </Card>
                   </Grid>
 
-                  {/* Staff Management */}
-                  <Grid item xs={12}>
-                    <Card sx={{ 
-                      borderRadius: 4, 
-                      boxShadow: '0 12px 50px rgba(0,0,0,0.12), 0 6px 30px rgba(0,0,0,0.08)',
-                      border: 'none',
-                      background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
-                      overflow: 'hidden'
-                    }}>
-                      <CardContent sx={{ p: 0 }}>
-                        {/* Card Header */}
-                        <Box sx={{ 
-                          p: 4,
-                          background: 'linear-gradient(135deg, #fdf2f8 0%, #fce7f3 100%)',
-                          position: 'relative',
-                          borderBottom: '1px solid rgba(244, 114, 182, 0.3)',
-                          '&::before': {
-                            content: '""',
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            height: '4px',
-                            background: 'linear-gradient(90deg, #ec4899 0%, #be185d 100%)'
-                          }
-                        }}>
-                          <Box sx={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            justifyContent: 'space-between'
-                          }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2.5 }}>
-                              <Box sx={{
-                                p: 2,
-                                borderRadius: 3,
-                                background: 'linear-gradient(135deg, #ec4899 0%, #be185d 100%)',
-                                color: 'white',
-                                boxShadow: '0 8px 25px rgba(236, 72, 153, 0.3)'
-                              }}>
-                                <People sx={{ fontSize: 24 }} />
-                              </Box>
-                              <Box>
-                                <Typography variant="h6" sx={{ 
-                                  fontWeight: 800, 
-                                  color: 'grey.800',
-                                  fontSize: '1.3rem',
-                                  mb: 0.2
-                                }}>
-                            Staff Management
-                          </Typography>
-                                <Typography variant="body2" sx={{ 
-                                  color: 'grey.600',
-                                  fontWeight: 500
-                                }}>
-                                  Manage clinic team members
-                                </Typography>
-                              </Box>
-                            </Box>
-                            <Button 
-                              variant="contained" 
-                              size="medium" 
-                              startIcon={<Person />}
-                              onClick={() => setStaffDialogOpen(true)}
-                              sx={{
-                                borderRadius: 2,
-                                textTransform: 'none',
-                                fontWeight: 600,
-                                px: 3,
-                                py: 1.5,
-                                boxShadow: 2,
-                                background: 'linear-gradient(135deg, #ec4899 0%, #be185d 100%)',
-                                '&:hover': {
-                                  background: 'linear-gradient(135deg, #be185d 0%, #9d174d 100%)',
-                                  boxShadow: 4
-                                }
-                              }}
-                            >
-                            Add Staff Member
-                          </Button>
-                          </Box>
-                        </Box>
-                        
-                        {/* Card Content */}
-                        <Box sx={{ p: 4 }}>
-                        <Grid container spacing={2}>
-                          <Grid item xs={12} md={6}>
-                            <TextField
-                              fullWidth
-                              label="Full Name"
-                              value={newStaffForm.name}
-                              onChange={(e) => setNewStaffForm({ ...newStaffForm, name: e.target.value })}
-                              error={!!errors.name}
-                              helperText={errors.name}
-                              required
-                            />
-                          </Grid>
-                          <Grid item xs={12} md={6}>
-                            <TextField
-                              fullWidth
-                              label="Email"
-                              value={newStaffForm.email}
-                              onChange={(e) => setNewStaffForm({ ...newStaffForm, email: e.target.value })}
-                              error={!!errors.email}
-                              helperText={errors.email}
-                              required
-                            />
-                          </Grid>
-                          <Grid item xs={12} md={6}>
-                            <FormControl fullWidth required>
-                              <InputLabel>Role</InputLabel>
-                              <Select
-                                value={newStaffForm.role}
-                                label="Role"
-                                onChange={(e) => setNewStaffForm({ ...newStaffForm, role: e.target.value })}
-                                error={!!errors.role}
-                              >
-                                <MenuItem value="doctor">Doctor</MenuItem>
-                                <MenuItem value="nurse">Nurse</MenuItem>
-                                <MenuItem value="receptionist">Receptionist</MenuItem>
-                                <MenuItem value="pharmacist">Pharmacist</MenuItem>
-                                <MenuItem value="technician">Technician</MenuItem>
-                              </Select>
-                              {errors.role && <FormHelperText error>{errors.role}</FormHelperText>}
-                            </FormControl>
-                          </Grid>
-                          <Grid item xs={12} md={6}>
-                            <TextField
-                              fullWidth
-                              label="Specialization"
-                              value={newStaffForm.specialization}
-                              onChange={(e) => setNewStaffForm({ ...newStaffForm, specialization: e.target.value })}
-                              placeholder="Optional"
-                            />
-                          </Grid>
-                        </Grid>
-                        </Box>
-                      </CardContent>
-                    </Card>
-                  </Grid>
+                 
+                     
 
                   {/* Appointment Settings */}
                   <Grid item xs={12} md={6}>
@@ -3421,6 +3385,35 @@ const SettingsPage: React.FC = () => {
                               }
                               label="Send Reminder Notifications"
                             />
+                          </Grid>
+                          
+                          {/* Save Button */}
+                          <Grid item xs={12}>
+                            <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid rgba(0,0,0,0.08)' }}>
+                              <Button
+                                fullWidth
+                                variant="contained"
+                                onClick={handleSaveAppointmentSettings}
+                                disabled={loading}
+                                startIcon={loading ? <CircularProgress size={18} color="inherit" /> : <Save />}
+                                sx={{
+                                  py: 1.5,
+                                  borderRadius: 2,
+                                  fontWeight: 600,
+                                  textTransform: 'none',
+                                  fontSize: '1rem',
+                                  background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                                  boxShadow: '0 8px 25px rgba(59, 130, 246, 0.3)',
+                                  '&:hover': {
+                                    background: 'linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%)',
+                                    transform: 'translateY(-1px)',
+                                    boxShadow: '0 12px 35px rgba(59, 130, 246, 0.4)'
+                                  }
+                                }}
+                              >
+                                {loading ? 'Saving...' : 'Save Appointment Settings'}
+                              </Button>
+                            </Box>
                           </Grid>
                         </Grid>
                         </Box>
@@ -3626,7 +3619,7 @@ const SettingsPage: React.FC = () => {
                 <ClinicPaymentSettingsComponent />
               </TabPanel>
 
-              {/* Notification Settings */}
+              {/* Security Settings */}
               <TabPanel value={tabValue} index={3}>
                 <Card sx={{ 
                   borderRadius: 4, 
@@ -3662,9 +3655,9 @@ const SettingsPage: React.FC = () => {
                           borderRadius: 3,
                           background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
                           color: 'white',
-                          boxShadow: '0 8px 25px rgba(245, 158, 11, 0.3)'
+                                                    boxShadow: '0 8px 25px rgba(245, 158, 11, 0.3)'
                         }}>
-                          <Notifications sx={{ fontSize: 32 }} />
+                          <Security sx={{ fontSize: 32 }} />
                         </Box>
                         <Box>
                           <Typography variant="h3" sx={{ 
@@ -3673,13 +3666,13 @@ const SettingsPage: React.FC = () => {
                             fontSize: '2rem',
                             mb: 0.5
                           }}>
-                      Notification Preferences
-                    </Typography>
+                            Security Settings
+                          </Typography>
                           <Typography variant="body1" sx={{ 
                             color: 'grey.600',
                             fontWeight: 500
                           }}>
-                            Configure how you receive alerts and updates
+                            Protect your account with advanced security features
                           </Typography>
                         </Box>
                       </Box>
@@ -3687,103 +3680,34 @@ const SettingsPage: React.FC = () => {
 
                     {/* Card Content */}
                     <Box sx={{ p: 6 }}>
-                    <Box sx={{ mb: 3 }}>
-                      <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
-                        Notification Methods
-                      </Typography>
-                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                      <FormControlLabel
-                        control={
-                          <Switch
-                            checked={preferences.notifications.email}
-                            onChange={(e) => setPreferences({
-                              ...preferences,
-                              notifications: { ...preferences.notifications, email: e.target.checked }
-                            })}
+                      <List>
+                        <Divider />
+                        <ListItem>
+                          <ListItemIcon>
+                            <Lock color="primary" />
+                          </ListItemIcon>
+                          <ListItemText
+                            primary="Change Password"
+                            secondary="Update your password regularly for better security"
                           />
-                        }
-                        label="Email Notifications"
-                      />
-                      <FormControlLabel
-                        control={
-                          <Switch
-                            checked={preferences.notifications.sms}
-                            onChange={(e) => setPreferences({
-                              ...preferences,
-                              notifications: { ...preferences.notifications, sms: e.target.checked }
-                            })}
-                          />
-                        }
-                        label="SMS Notifications"
-                      />
-                      <FormControlLabel
-                        control={
-                          <Switch
-                            checked={preferences.notifications.push}
-                            onChange={(e) => setPreferences({
-                              ...preferences,
-                              notifications: { ...preferences.notifications, push: e.target.checked }
-                            })}
-                          />
-                        }
-                        label="Push Notifications"
-                      />
-                      </Box>
-                    </Box>
-
-                    <Divider sx={{ my: 3 }} />
-
-                    <Box sx={{ mb: 3 }}>
-                      <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
-                        Language & Region
-                      </Typography>
-                      <Grid container spacing={3}>
-                        <Grid item xs={12} md={6}>
-                          <FormControl fullWidth>
-                            <InputLabel>{t('language')}</InputLabel>
-                        <Select
-                          value={preferences.language}
-                              label={t('language')}
-                          onChange={(e) => handleLanguageChange(e.target.value)}
-                        >
-                          <MenuItem value="en">English</MenuItem>
-                          <MenuItem value="ar">العربية</MenuItem>
-                        </Select>
-                      </FormControl>
-                        </Grid>
-                        <Grid item xs={12} md={6}>
-                          <FormControl fullWidth>
-                            <InputLabel>Theme</InputLabel>
-                            <Select
-                              value={preferences.theme}
-                              label="Theme"
-                              onChange={(e) => setPreferences({ ...preferences, theme: e.target.value })}
+                          <ListItemSecondaryAction>
+                            <Button 
+                              variant="outlined" 
+                              size="small"
+                              onClick={() => setPasswordDialogOpen(true)}
                             >
-                              <MenuItem value="light">Light</MenuItem>
-                              <MenuItem value="dark">Dark</MenuItem>
-                              <MenuItem value="auto">Auto</MenuItem>
-                            </Select>
-                          </FormControl>
-                        </Grid>
-                      </Grid>
-                    </Box>
-
-                    <Box sx={{ mt: 3 }}>
-                      <Button 
-                        variant="contained" 
-                        startIcon={loading ? <CircularProgress size={20} /> : <Save />}
-                        onClick={handleSavePreferences}
-                        disabled={loading}
-                      >
-                        {loading ? 'Saving...' : 'Save Preferences'}
-                      </Button>
-                    </Box>
+                              Change
+                            </Button>
+                          </ListItemSecondaryAction>
+                        </ListItem>
+                        <Divider />
+                      </List>
                     </Box>
                   </CardContent>
                 </Card>
               </TabPanel>
 
-              {/* Security Settings */}
+              {/* System Settings */}
               <TabPanel value={tabValue} index={4}>
                 <Card sx={{ 
                   borderRadius: 4, 
@@ -3844,26 +3768,10 @@ const SettingsPage: React.FC = () => {
 
                     {/* Card Content */}
                     <Box sx={{ p: 6 }}>
-                    <Alert severity="info" sx={{ mb: 3 }}>
-                      Keep your account secure by enabling two-factor authentication and using a strong password.
-                    </Alert>
+                    
 
                     <List>
-                      <ListItem>
-                        <ListItemIcon>
-                          <Shield color="primary" />
-                        </ListItemIcon>
-                        <ListItemText
-                          primary="Two-Factor Authentication"
-                          secondary="Add an extra layer of security to your account"
-                        />
-                        <ListItemSecondaryAction>
-                          <Switch
-                            checked={preferences.twoFactorAuth}
-                            onChange={(e) => setPreferences({ ...preferences, twoFactorAuth: e.target.checked })}
-                          />
-                        </ListItemSecondaryAction>
-                      </ListItem>
+                      
                       <Divider />
                       <ListItem>
                         <ListItemIcon>
@@ -3884,24 +3792,7 @@ const SettingsPage: React.FC = () => {
                         </ListItemSecondaryAction>
                       </ListItem>
                       <Divider />
-                      <ListItem>
-                        <ListItemIcon>
-                          <History color="primary" />
-                        </ListItemIcon>
-                        <ListItemText
-                          primary="Login History"
-                          secondary="View recent login activity for your account"
-                        />
-                        <ListItemSecondaryAction>
-                          <Button 
-                            variant="outlined" 
-                            size="small"
-                            onClick={() => setLoginHistoryDialogOpen(true)}
-                          >
-                            View
-                          </Button>
-                        </ListItemSecondaryAction>
-                      </ListItem>
+                     
                     </List>
                     </Box>
                   </CardContent>
@@ -3909,7 +3800,7 @@ const SettingsPage: React.FC = () => {
               </TabPanel>
 
               {/* System Settings */}
-              <TabPanel value={tabValue} index={5}>
+              <TabPanel value={tabValue} index={4}>
                 <Card sx={{ 
                   borderRadius: 4, 
                   boxShadow: '0 12px 50px rgba(0,0,0,0.12), 0 6px 30px rgba(0,0,0,0.08)',
@@ -3971,19 +3862,7 @@ const SettingsPage: React.FC = () => {
                     <Box sx={{ p: 6 }}>
                     <List>
                       <ListItem>
-                        <ListItemIcon>
-                          <Backup color="primary" />
-                        </ListItemIcon>
-                        <ListItemText
-                          primary="Auto Backup"
-                          secondary="Automatically backup your data daily"
-                        />
-                        <ListItemSecondaryAction>
-                          <Switch
-                            checked={preferences.autoBackup}
-                            onChange={(e) => setPreferences({ ...preferences, autoBackup: e.target.checked })}
-                          />
-                        </ListItemSecondaryAction>
+                        
                       </ListItem>
                       <Divider />
                       <ListItem>
@@ -4007,7 +3886,7 @@ const SettingsPage: React.FC = () => {
                         </ListItemSecondaryAction>
                       </ListItem>
                       <Divider />
-                      <ListItem>
+                      {/* <ListItem>
                         <ListItemIcon>
                           <Delete color="error" />
                         </ListItemIcon>
@@ -4048,7 +3927,7 @@ const SettingsPage: React.FC = () => {
                             Clear All
                           </Button>
                         </ListItemSecondaryAction>
-                      </ListItem>
+                      </ListItem> */}
                       <Divider />
                       <ListItem>
                         <ListItemIcon>
@@ -4070,11 +3949,7 @@ const SettingsPage: React.FC = () => {
                       </ListItem>
                     </List>
 
-                    <Alert severity="info" sx={{ mt: 3 }}>
-                      <Typography variant="body2">
-                        {t('system_version_info')}
-                      </Typography>
-                    </Alert>
+                    
                     </Box>
                   </CardContent>
                 </Card>
@@ -4736,25 +4611,7 @@ const SettingsPage: React.FC = () => {
             </Typography>
             
             <List sx={{ mb: 4 }}>
-              <ListItem sx={{ flexDirection: 'column', alignItems: 'flex-start', py: 2, px: 0 }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
-                  ❓ How do I backup my clinic data?
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Go to System Settings → Auto Backup to enable automatic daily backups, or use the Data Export feature to manually backup your data.
-                </Typography>
-              </ListItem>
-              <Divider />
               
-              <ListItem sx={{ flexDirection: 'column', alignItems: 'flex-start', py: 2, px: 0 }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
-                  ❓ How do I add new staff members?
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Navigate to Clinic Settings → Staff Management and click "Add Staff Member" to invite new team members to your clinic system.
-                </Typography>
-              </ListItem>
-              <Divider />
               
               <ListItem sx={{ flexDirection: 'column', alignItems: 'flex-start', py: 2, px: 0 }}>
                 <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
@@ -4934,6 +4791,53 @@ Your feedback helps us improve ClinicCare for everyone!
         <DialogActions sx={{ px: 3, pb: 3 }}>
           <Button onClick={() => setHelpDialogOpen(false)}>
             Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Insurance Provider Dialog */}
+      <Dialog open={insuranceDialog} onClose={closeInsuranceDialog} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Typography variant="h6">
+              {editingInsurance ? 'Edit Insurance Provider' : 'Add Insurance Provider'}
+            </Typography>
+            <IconButton onClick={closeInsuranceDialog} size="small">
+              <Close />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 2 }}>
+            <TextField
+              fullWidth
+              label="Insurance Provider Name"
+              value={newInsuranceName}
+              onChange={(e) => setNewInsuranceName(e.target.value)}
+              placeholder="e.g., Blue Cross Blue Shield, Aetna, Cigna"
+              autoFocus
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  editingInsurance ? handleEditInsurance() : handleAddInsurance();
+                }
+              }}
+            />
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+              Enter the name of the insurance provider that your clinic accepts.
+            </Typography>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button onClick={closeInsuranceDialog}>
+            Cancel
+          </Button>
+          <Button 
+            variant="contained" 
+            onClick={editingInsurance ? handleEditInsurance : handleAddInsurance}
+            disabled={!newInsuranceName.trim()}
+            startIcon={editingInsurance ? <Edit /> : <Add />}
+          >
+            {editingInsurance ? 'Update' : 'Add'} Provider
           </Button>
         </DialogActions>
       </Dialog>

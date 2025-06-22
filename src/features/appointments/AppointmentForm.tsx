@@ -23,7 +23,8 @@ import {
   Chip,
   InputAdornment,
   Snackbar,
-  CircularProgress
+  CircularProgress,
+  Tooltip
 } from '@mui/material';
 import {
   Person,
@@ -39,6 +40,7 @@ import Header from '../../components/NavBar';
 import Sidebar from '../../components/Sidebar';
 import { createAppointment, type AppointmentFormData as ApiAppointmentFormData } from '../../api/appointments';
 import { getDoctorSchedules, type DoctorSchedule } from '../../api/scheduling';
+import { testPaymentNotificationSystem } from '../../utils/paymentUtils';
 
 interface AppointmentFormData {
   patientName: string;
@@ -172,8 +174,10 @@ const AppointmentForm: React.FC = () => {
         notes: formData.notes
       };
 
-      await createAppointment(appointmentData);
+      const createdAppointment = await createAppointment(appointmentData);
       setSuccess(true);
+      
+      console.log('✅ Appointment created successfully');
       
       // ✅ Reset form using persistent form hook
       clearForm();
@@ -813,6 +817,38 @@ const AppointmentForm: React.FC = () => {
           {error || t('appointment_save_failed')}
         </Alert>
       </Snackbar>
+
+      {/* Test Payment Notification Button */}
+      <Tooltip title="Test Payment Notification System" placement="left">
+        <Button
+          variant="contained"
+          onClick={() => testPaymentNotificationSystem()}
+          sx={{
+            position: 'fixed',
+            bottom: 24,
+            left: 24,
+            borderRadius: '50%',
+            width: 64,
+            height: 64,
+            minWidth: 64,
+            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+            color: 'white',
+            boxShadow: '0 8px 32px rgba(16, 185, 129, 0.4)',
+            zIndex: 1000,
+            '&:hover': {
+              background: 'linear-gradient(135deg, #059669 0%, #065f46 100%)',
+              transform: 'scale(1.1)',
+              boxShadow: '0 12px 48px rgba(16, 185, 129, 0.6)',
+            },
+            transition: 'all 0.3s ease',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+        >
+          🔔
+        </Button>
+      </Tooltip>
     </Box>
   );
  };

@@ -7,10 +7,14 @@ import { NotificationProvider as LegacyNotificationProvider } from "../contexts/
 import { SidebarProvider } from "../contexts/SidebarContext";
 import { NotificationProvider } from "../contexts/NotificationProvider";
 import { ensureDemoClinicExists } from "../scripts/initFirestore";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import Router from "./Router";
 
 const AppContent: React.FC = () => {
   const { i18n } = useTranslation();
+  
+  // Update document title based on clinic branding
+  useDocumentTitle();
 
   // Set RTL direction globally when language changes
   useEffect(() => {
