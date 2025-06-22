@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { usePersistentForm } from '../../hooks/usePersistentForm';
 import { useTranslation } from 'react-i18next';
+import { useUser } from '../../contexts/UserContext';
 import {
   Box,
   Container,
@@ -39,7 +40,8 @@ import {
 import Header from '../../components/NavBar';
 import Sidebar from '../../components/Sidebar';
 import { createAppointment, type AppointmentFormData as ApiAppointmentFormData } from '../../api/appointments';
-import { getDoctorSchedules, type DoctorSchedule } from '../../api/scheduling';
+import { getDoctorsByClinic } from '../../api/doctorPatients';
+import { UserData } from '../../api/auth';
 import { testPaymentNotificationSystem } from '../../utils/paymentUtils';
 
 interface AppointmentFormData {
@@ -57,11 +59,12 @@ interface AppointmentFormData {
 
 const AppointmentForm: React.FC = () => {
   const { t } = useTranslation();
+  const { userProfile } = useUser();
   const [activeStep, setActiveStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [doctors, setDoctors] = useState<DoctorSchedule[]>([]);
+  const [doctors, setDoctors] = useState<UserData[]>([]);
   // ✅ Use persistent form hook for data persistence
   const defaultFormData: AppointmentFormData = {
     patientName: '',
@@ -92,15 +95,17 @@ const AppointmentForm: React.FC = () => {
 
   useEffect(() => {
     const loadDoctors = async () => {
+      if (!userProfile?.clinicId) return;
+      
       try {
-        const doctorSchedules = await getDoctorSchedules();
-        setDoctors(doctorSchedules);
+        const doctors = await getDoctorsByClinic(userProfile.clinicId);
+        setDoctors(doctors);
       } catch (error) {
         console.error('Error loading doctors:', error);
       }
     };
     loadDoctors();
-  }, []);
+  }, [userProfile?.clinicId]);
 
   const steps = [
     {
@@ -383,8 +388,8 @@ const AppointmentForm: React.FC = () => {
                   required
                 >
                   {doctors.map((doctor) => (
-                    <MenuItem key={doctor.id} value={doctor.name}>
-                      {doctor.name} - {doctor.specialty}
+                    <MenuItem key={doctor.id} value={`${doctor.firstName} ${doctor.lastName}`}>
+                      Dr. {doctor.firstName} {doctor.lastName} ({doctor.role})
                     </MenuItem>
                   ))}
                 </Select>
