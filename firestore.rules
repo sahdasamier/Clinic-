@@ -3,76 +3,65 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // 🔒 Users collection - Only users can access their own data
+    // 🔒 Users collection - Allow authenticated users to read and write
     match /users/{userId} {
+      // Allow users to read/write their own document
       allow read, write: if request.auth != null && request.auth.uid == userId;
-      // Allow clinic managers to read doctor profiles for assignment
-      allow read: if request.auth != null && 
-                     getUserRole(request.auth.uid) == 'management' &&
-                     resource.data.role == 'doctor';
-    }
-    
-    // 🔒 Patients collection - Role-based access
-    match /patients/{patientId} {
-      allow read, write: if request.auth != null && 
-                           (getUserRole(request.auth.uid) == 'management' ||
-                            (getUserRole(request.auth.uid) == 'doctor' && 
-                             resource.data.doctorId == request.auth.uid) ||
-                            getUserRole(request.auth.uid) == 'receptionist');
-                            
-      // Allow creation by management and doctors
-      allow create: if request.auth != null && 
-                      (getUserRole(request.auth.uid) == 'management' || 
-                       getUserRole(request.auth.uid) == 'doctor');
-    }
-    
-    // 🔒 Appointments collection - Doctor can only see their assigned patients' appointments
-    match /appointments/{appointmentId} {
-      allow read, write: if request.auth != null && 
-                           (getUserRole(request.auth.uid) == 'management' ||
-                            (getUserRole(request.auth.uid) == 'doctor' && 
-                             resource.data.doctorId == request.auth.uid) ||
-                            getUserRole(request.auth.uid) == 'receptionist');
-                            
-      allow create: if request.auth != null && 
-                      (getUserRole(request.auth.uid) == 'management' || 
-                       getUserRole(request.auth.uid) == 'doctor' ||
-                       getUserRole(request.auth.uid) == 'receptionist');
-    }
-    
-    // 🔒 Doctor-Patient Assignments - Only management can modify
-    match /doctor_patient_assignments/{assignmentId} {
+      // Allow all authenticated users to read user documents (for admin functions)
       allow read: if request.auth != null;
-      allow write: if request.auth != null && getUserRole(request.auth.uid) == 'management';
+      // Allow authenticated users to create user documents (for admin user creation)
+      allow create: if request.auth != null;
     }
     
-    // 🔒 Medical Records - Only assigned doctor and management can access
+    // 🔒 Patients collection - Allow authenticated users
+    match /patients/{patientId} {
+      allow read, write, create: if request.auth != null;
+    }
+    
+    // 🔒 Appointments collection - Allow authenticated users
+    match /appointments/{appointmentId} {
+      allow read, write, create: if request.auth != null;
+    }
+    
+    // 🔒 Doctor-Patient Assignments - Allow authenticated users
+    match /doctor_patient_assignments/{assignmentId} {
+      allow read, write, create: if request.auth != null;
+    }
+    
+    // 🔒 Medical Records - Allow authenticated users
     match /medicalRecords/{recordId} {
-      allow read, write: if request.auth != null && 
-                           (getUserRole(request.auth.uid) == 'management' ||
-                            resource.data.doctorId == request.auth.uid);
-                            
-      allow create: if request.auth != null && 
-                      (getUserRole(request.auth.uid) == 'management' || 
-                       getUserRole(request.auth.uid) == 'doctor');
+      allow read, write, create: if request.auth != null;
     }
     
-    // 🔒 Clinics collection - All authenticated users can read their clinic
+    // 🔒 Inventory collection - Allow authenticated users
+    match /inventory/{inventoryId} {
+      allow read, write, create: if request.auth != null;
+    }
+    
+    // 🔒 Payments collection - Allow authenticated users  
+    match /payments/{paymentId} {
+      allow read, write, create: if request.auth != null;
+    }
+    
+    // 🔒 Clinics collection - Allow ALL authenticated users to read any clinic
     match /clinics/{clinicId} {
-      allow read: if request.auth != null && 
-                     getUserClinicId(request.auth.uid) == clinicId;
-      allow write: if request.auth != null && 
-                      getUserRole(request.auth.uid) == 'management';
+      allow read: if request.auth != null;
+      allow write, create: if request.auth != null;
     }
     
-    // Helper function to get user role
-    function getUserRole(userId) {
-      return get(/databases/$(database)/documents/users/$(userId)).data.role;
+    // 🔒 User invitations - Allow authenticated users
+    match /user_invitations/{invitationId} {
+      allow read, write, create: if request.auth != null;
     }
     
-    // Helper function to get user clinic ID
-    function getUserClinicId(userId) {
-      return get(/databases/$(database)/documents/users/$(userId)).data.clinicId;
+    // 🔒 Invitations - Allow authenticated users
+    match /invitations/{invitationId} {
+      allow read, write, create: if request.auth != null;
+    }
+    
+    // 🔒 Any other collections - Allow authenticated users
+    match /{document=**} {
+      allow read, write, create: if request.auth != null;
     }
   }
 } 

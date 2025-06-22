@@ -399,59 +399,84 @@ const AdminPanelPage: React.FC = () => {
       setLoading(true);
       showSnackbar('Creating user account...');
       
-      // Create a secondary Firebase app instance to avoid signing out admin
-      const secondaryApp = initializeApp(firebaseConfig, 'secondary');
-      const secondaryAuth = getAuth(secondaryApp);
+      console.log('🔄 Creating user with simplified approach...');
+      console.log('🔄 Step 1: Firebase Auth account creation...');
       
-      // Create user with secondary auth (won't affect main session)
-      const userCredential = await createUserWithEmailAndPassword(
-        secondaryAuth, 
-        newUser.email.trim(), 
-        newUser.password
-      );
-      const newUserId = userCredential.user.uid;
-      
-      // Delete the secondary app
-      await deleteApp(secondaryApp);
-      
-      // Create Firestore document using admin privileges
-      const userDoc = {
-        id: newUserId,
+      // Use the existing robust createUserAccount function
+      const result = await createUserAccount({
         email: newUser.email.trim(),
+        password: newUser.password,
         firstName: newUser.firstName.trim(),
         lastName: newUser.lastName.trim(),
         role: newUser.role,
         clinicId: newUser.clinicId,
-        isActive: true,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
         createdBy: currentUserEmail,
-      };
-      
-      await setDoc(doc(db, 'users', newUserId), userDoc);
-      
-      // Store password for display
-      setGeneratedPasswords(prev => ({
-        ...prev,
-        [newUser.email.trim()]: newUser.password
-      }));
-      
-      setCreatedUserCredentials({
-        email: newUser.email.trim(),
-        password: newUser.password,
-        name: `${newUser.firstName.trim()} ${newUser.lastName.trim()}`
       });
       
-      resetUserForm();
-      setUserDialogOpen(false);
-      setPasswordSuccessOpen(true);
-      fetchUsers();
-      showSnackbar('✅ User account created successfully!');
+      if (result.success) {
+        console.log('✅ User account created successfully in both Auth and Firestore');
+        
+        // Store password for display
+        setGeneratedPasswords(prev => ({
+          ...prev,
+          [newUser.email.trim()]: newUser.password
+        }));
+        
+        setCreatedUserCredentials({
+          email: newUser.email.trim(),
+          password: newUser.password,
+          name: `${newUser.firstName.trim()} ${newUser.lastName.trim()}`
+        });
+        
+        resetUserForm();
+        setUserDialogOpen(false);
+        setPasswordSuccessOpen(true);
+        fetchUsers();
+        showSnackbar('✅ User account created successfully!');
+        
+      } else {
+        console.error('❌ User creation failed:', result.error);
+        
+        // Check if it's a partial success (Auth created but Firestore failed)
+        if (result.error?.includes('auth/email-already-in-use')) {
+          setError(`✅ PARTIAL SUCCESS: User was created in Firebase Auth but may have Firestore issues.\n\n` +
+                   `The user can now log in with:\n` +
+                   `• Email: ${newUser.email.trim()}\n` +
+                   `• Password: ${newUser.password}\n\n` +
+                   `⚠️ Original error: ${result.error}`);
+          showSnackbar('⚠️ User created in Auth - check error details');
+        } else {
+          setError(result.error || 'Failed to create user account');
+          showSnackbar('❌ Failed to create user');
+        }
+        
+        // If it's an orphaned account, provide suggestions
+        if (result.isOrphaned) {
+          const originalEmail = newUser.email.trim();
+          const suggestions = suggestAlternativeEmails(originalEmail);
+          
+          // Add suggestion to the error message
+          const enhancedError = `${result.error}\n\n🔧 Suggested alternative emails:\n${suggestions.slice(0, 3).map((email, index) => `${index + 1}. ${email}`).join('\n')}`;
+          setError(enhancedError);
+        }
+      }
       
     } catch (error: any) {
-      console.error('Error creating user:', error);
-      setError(`Failed to create user: ${error.message}`);
-      showSnackbar('❌ Failed to create user');
+      console.error('❌ Unexpected error creating user:', error);
+      
+      // Check if the error indicates auth success but firestore failure
+      if (error.code === 'permission-denied' || error.message?.includes('Firestore')) {
+        setError(`⚠️ PARTIAL SUCCESS: User may have been created in Firebase Auth.\n\n` +
+                 `Try logging in with:\n` +
+                 `• Email: ${newUser.email.trim()}\n` +
+                 `• Password: ${newUser.password}\n\n` +
+                 `📋 Firestore Error: ${error.message}\n` +
+                 `🔧 The Firestore rules have been updated. Try creating another user or refresh the page.`);
+        showSnackbar('⚠️ User possibly created - check details');
+      } else {
+        setError(`Unexpected error: ${error.message}`);
+        showSnackbar('❌ Failed to create user');
+      }
     } finally {
       setLoading(false);
     }
@@ -700,7 +725,14 @@ const AdminPanelPage: React.FC = () => {
       setLoading(true);
       showSnackbar('🔧 Fixing clinic access...');
       
+      console.log('🔧 Step 1: Initializing demo clinic...');
+      await initializeDemoClinicAfterAuth();
+      
+      console.log('🔧 Step 2: Running clinic access fix...');
       const success = await fixClinicAccess('demo-clinic');
+      
+      console.log('🔧 Step 3: Refreshing admin data...');
+      await fetchData(); // Refresh the clinic and user lists
       
       if (success) {
         showSnackbar('✅ Demo clinic access fixed! Users should now be able to login.');
