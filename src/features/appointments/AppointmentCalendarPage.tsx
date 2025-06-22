@@ -1,5 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useUser } from '../../contexts/UserContext';
+import { getDoctorsByClinic } from '../../api/doctorPatients';
+import { UserData } from '../../api/auth';
+import { createAppointment } from '../../api/appointments';
 import {
   Box,
   Container,
@@ -35,23 +39,74 @@ interface AppointmentModalProps {
   isOpen: boolean;
   onClose: () => void;
   isEdit?: boolean;
+  clinicId?: string;
 }
 
-const AppointmentModal: React.FC<AppointmentModalProps> = ({ isOpen, onClose, isEdit = false }) => {
+const AppointmentModal: React.FC<AppointmentModalProps> = ({ isOpen, onClose, isEdit = false, clinicId }) => {
   const { t } = useTranslation();
+  const [doctors, setDoctors] = useState<UserData[]>([]);
   const [appointmentData, setAppointmentData] = useState({
     patientName: '',
     appointmentDate: '',
     appointmentTime: '',
     appointmentType: '',
+    doctor: '',
     duration: 30,
     notes: ''
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Load doctors when modal opens
+  useEffect(() => {
+    const loadDoctors = async () => {
+      if (!clinicId || !isOpen) return;
+      
+      try {
+        const doctorsData = await getDoctorsByClinic(clinicId);
+        setDoctors(doctorsData);
+      } catch (error) {
+        console.error('Error loading doctors:', error);
+      }
+    };
+    
+    loadDoctors();
+  }, [clinicId, isOpen]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Appointment data:', appointmentData);
-    onClose();
+    
+    try {
+      const appointmentPayload = {
+        patientName: appointmentData.patientName,
+        patientPhone: '', // Could add phone field if needed
+        doctorName: appointmentData.doctor,
+        date: appointmentData.appointmentDate,
+        time: appointmentData.appointmentTime,
+        type: appointmentData.appointmentType,
+        duration: appointmentData.duration,
+        location: '', // Could add location field if needed
+        priority: 'normal' as const,
+        notes: appointmentData.notes
+      };
+
+      await createAppointment(appointmentPayload);
+      console.log('✅ Appointment created successfully');
+      
+      // Reset form
+      setAppointmentData({
+        patientName: '',
+        appointmentDate: '',
+        appointmentTime: '',
+        appointmentType: '',
+        doctor: '',
+        duration: 30,
+        notes: ''
+      });
+      
+      onClose();
+    } catch (error) {
+      console.error('❌ Error creating appointment:', error);
+      // Could add snackbar notification here
+    }
   };
 
   if (!isOpen) return null;
@@ -136,6 +191,23 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ isOpen, onClose, is
             </Grid>
             <Grid item xs={12} md={6}>
               <FormControl fullWidth>
+                <InputLabel>{t('doctor')}</InputLabel>
+                <Select
+                  value={appointmentData.doctor}
+                  label={t('doctor')}
+                  onChange={(e) => setAppointmentData(prev => ({ ...prev, doctor: e.target.value }))}
+                  required
+                >
+                  {doctors.map((doctor) => (
+                    <MenuItem key={doctor.id} value={`${doctor.firstName} ${doctor.lastName}`}>
+                      Dr. {doctor.firstName} {doctor.lastName}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth>
                 <InputLabel>{t('duration')}</InputLabel>
                 <Select
                   value={appointmentData.duration}
@@ -189,6 +261,7 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ isOpen, onClose, is
  
  const AppointmentCalendarPage: React.FC = () => {
   const { t } = useTranslation();
+  const { userProfile } = useUser();
   const [isModalOpen, setModalOpen] = useState(false);
  
   return (
@@ -341,7 +414,8 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ isOpen, onClose, is
         
         <AppointmentModal 
           isOpen={isModalOpen} 
-          onClose={() => setModalOpen(false)} 
+          onClose={() => setModalOpen(false)}
+          clinicId={userProfile?.clinicId}
         />
       </Box>
     </Box>

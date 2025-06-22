@@ -61,6 +61,8 @@ const AppointmentForm: React.FC = () => {
   const { t } = useTranslation();
   const { userProfile } = useUser();
   const [activeStep, setActiveStep] = useState(0);
+
+
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -98,7 +100,10 @@ const AppointmentForm: React.FC = () => {
       if (!userProfile?.clinicId) return;
       
       try {
+        console.log('🔍 AppointmentForm: Loading doctors for clinic:', userProfile.clinicId);
+        
         const doctors = await getDoctorsByClinic(userProfile.clinicId);
+        console.log('🏥 AppointmentForm: Loaded doctors:', doctors);
         setDoctors(doctors);
       } catch (error) {
         console.error('Error loading doctors:', error);
