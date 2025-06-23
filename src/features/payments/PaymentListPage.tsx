@@ -1,6 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  collection,
+  query,
+  where,
+  onSnapshot,
+  getFirestore
+} from 'firebase/firestore';
+import {
   Box,
   Container,
   Grid,
@@ -41,6 +48,7 @@ import {
   CircularProgress,
 } from '@mui/material';
 import { useAuth } from '../../contexts/AuthContext';
+import { useUser } from '../../contexts/UserContext';
 import {
   Search,
   Add,
@@ -113,6 +121,19 @@ import {
 } from '../../utils/paymentUtils';
 import VATAdjustmentModal from './components/VATAdjustmentModal';
 import ExpenseManagementModal from './components/ExpenseManagementModal';
+
+// Doctor interface for Firestore data
+interface Doctor {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: string;
+  clinicId: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -329,6 +350,7 @@ const StatCard: React.FC<StatCardProps> = ({
 const PaymentListPage: React.FC = () => {
   const { t, i18n } = useTranslation();
   const { user, loading: authLoading, initialized } = useAuth();
+  const { userProfile } = useUser();
   const isRTL = i18n.language === 'ar';
   
   // State management
@@ -427,23 +449,7 @@ const PaymentListPage: React.FC = () => {
   const [vatSettings, setVATSettings] = useState<VATSettings>(getVATSettings());
   const [currentVATCalculation, setCurrentVATCalculation] = useState<VATCalculation | null>(null);
   
-  // ✅ Initialize doctors from shared localStorage (same as DoctorScheduling)
-  const [availableDoctors, setAvailableDoctors] = useState(() => {
-    try {
-      const saved = localStorage.getItem('clinic_doctor_schedules');
-      if (saved) {
-        const parsedData = JSON.parse(saved);
-        if (Array.isArray(parsedData) && parsedData.length > 0) {
-          console.log('✅ PaymentListPage: Loaded doctors from localStorage on init:', parsedData.length);
-          return parsedData;
-        }
-      }
-    } catch (error) {
-      console.error('❌ PaymentListPage: Error loading doctors from localStorage:', error);
-    }
-    console.log('ℹ️ PaymentListPage: Using default doctor schedules');
-    return doctorSchedules;
-  });
+  const [availableDoctors, setAvailableDoctors] = useState<Doctor[]>([]);
 
 // Load data from localStorage on component mount - wait for auth
 useEffect(() => {
@@ -514,6 +520,41 @@ useEffect(() => {
   };
 }, [initialized, authLoading, user]);
 
+// ✅ Real-time Firestore listener for doctors
+useEffect(() => {
+  const db = getFirestore();
+  const clinicId = userProfile?.clinicId;
+  
+  if (!clinicId) {
+    console.log('🔄 PaymentListPage: Waiting for clinicId...');
+    return;
+  }
+
+  console.log('🔄 PaymentListPage: Setting up real-time doctor listener for clinic:', clinicId);
+
+      const q = query(
+      collection(db, 'users'),
+      where('clinicId', '==', clinicId),
+      where('role', '==', 'doctor'),
+      where('isActive', '==', true)
+    );
+
+  const unsub = onSnapshot(q, (snap) => {
+    const list = snap.docs.map(d => ({ id: d.id, ...d.data() })) as Doctor[];
+    setAvailableDoctors(list);
+    console.log('✅ PaymentListPage: Real-time doctors updated:', list.length);
+  }, (error) => {
+    console.error('❌ PaymentListPage: Error in doctor listener:', error);
+    // Fallback to empty array on error
+    setAvailableDoctors([]);
+  });
+
+  return () => {
+    console.log('🔄 PaymentListPage: Cleaning up doctor listener');
+    unsub();
+  };
+}, [userProfile?.clinicId]);
+
 // ✅ Initialize bidirectional sync with centralized manager
 useEffect(() => {
   // Set up appointment listener to update local state
@@ -523,12 +564,7 @@ useEffect(() => {
     console.log('🔄 PaymentListPage: Synced appointments from event');
   }, 'PaymentListPage');
 
-  // Set up doctor listener to update local state  
-  const cleanupDoctorSync = doctorSync.listen((event) => {
-    const updatedDoctors = doctorSync.load(doctorSchedules);
-    setAvailableDoctors(updatedDoctors);
-    console.log('🔄 PaymentListPage: Synced doctors from event');
-  }, 'PaymentListPage');
+
 
   // Set up VAT adjustments listener
   const handleVATAdjustmentsUpdate = () => {
@@ -551,7 +587,6 @@ useEffect(() => {
   
   return () => {
     cleanupAppointmentSync();
-    cleanupDoctorSync();
     window.removeEventListener('vatAdjustmentsUpdated', handleVATAdjustmentsUpdate);
   };
 }, []);

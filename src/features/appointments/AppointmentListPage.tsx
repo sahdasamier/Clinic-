@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  collection,
+  query,
+  where,
+  onSnapshot,
+  getFirestore
+} from 'firebase/firestore';
+import {
   Box,
   Container,
   Typography,
@@ -116,6 +123,19 @@ import {
   loadClinicPaymentSettings 
 } from '../../utils/paymentUtils';
 import { enhanceAppointmentWithDoctorId } from '../../utils/doctorMatcher';
+
+// Doctor interface for Firestore data
+interface Doctor {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: string;
+  clinicId: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
 
 // Types
 interface TabPanelProps {
@@ -344,23 +364,7 @@ const AppointmentListPage: React.FC = () => {
     phone: '',
     paymentStatus: 'pending'
   });
-  // ✅ Initialize doctors from shared localStorage (same as DoctorScheduling)
-  const [availableDoctors, setAvailableDoctors] = useState(() => {
-    try {
-      const saved = localStorage.getItem('clinic_doctor_schedules');
-      if (saved) {
-        const parsedData = JSON.parse(saved);
-        if (Array.isArray(parsedData) && parsedData.length > 0) {
-          console.log('✅ AppointmentListPage: Loaded doctors from localStorage on init:', parsedData.length);
-          return parsedData;
-        }
-      }
-    } catch (error) {
-      console.error('❌ AppointmentListPage: Error loading doctors from localStorage:', error);
-    }
-    console.log('ℹ️ AppointmentListPage: Using default doctor schedules');
-    return doctorSchedules;
-  });
+  const [availableDoctors, setAvailableDoctors] = useState<Doctor[]>([]);
   // ✅ Initialize available patients from localStorage FIRST
   const [availablePatients, setAvailablePatients] = useState<any[]>(() => {
     try {
@@ -467,6 +471,41 @@ const AppointmentListPage: React.FC = () => {
     };
   }, [initialized, authLoading, user]);
 
+  // ✅ Real-time Firestore listener for doctors
+  useEffect(() => {
+    const db = getFirestore();
+    const clinicId = userProfile?.clinicId;
+    
+    if (!clinicId) {
+      console.log('🔄 AppointmentListPage: Waiting for clinicId...');
+      return;
+    }
+
+    console.log('🔄 AppointmentListPage: Setting up real-time doctor listener for clinic:', clinicId);
+
+    const q = query(
+      collection(db, 'users'),
+      where('clinicId', '==', clinicId),
+      where('role', '==', 'doctor'),
+      where('isActive', '==', true)
+    );
+
+    const unsub = onSnapshot(q, (snap) => {
+      const list = snap.docs.map(d => ({ id: d.id, ...d.data() })) as Doctor[];
+      setAvailableDoctors(list);
+      console.log('✅ AppointmentListPage: Real-time doctors updated:', list.length);
+    }, (error) => {
+      console.error('❌ AppointmentListPage: Error in doctor listener:', error);
+      // Fallback to empty array on error
+      setAvailableDoctors([]);
+    });
+
+    return () => {
+      console.log('🔄 AppointmentListPage: Cleaning up doctor listener');
+      unsub();
+    };
+  }, [userProfile?.clinicId]);
+
   // ✅ Initialize bidirectional sync with centralized manager
   useEffect(() => {
     // Set up payment listener to update local state when payments change
@@ -479,19 +518,11 @@ const AppointmentListPage: React.FC = () => {
       }));
     }, 'AppointmentListPage');
 
-    // Set up doctor listener to update local state  
-    const cleanupDoctorSync = doctorSync.listen((event) => {
-      const updatedDoctors = doctorSync.load(doctorSchedules);
-      setAvailableDoctors(updatedDoctors);
-      console.log('🔄 AppointmentListPage: Synced doctors from event');
-    }, 'AppointmentListPage');
-
     // Debug current state
     debugStorageState();
     
     return () => {
       cleanupPaymentSync();
-      cleanupDoctorSync();
     };
   }, []);
 
@@ -2866,21 +2897,10 @@ const AppointmentListPage: React.FC = () => {
                      value={newAppointment.doctor}
                      onChange={(e) => setNewAppointment(prev => ({ ...prev, doctor: e.target.value }))}
                    >
-                     {availableDoctors.map((doctor) => (
-                       <MenuItem key={doctor.id} value={doctor.name}>
-                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                           <Avatar sx={{ width: 32, height: 32, backgroundColor: 'primary.main' }}>
-                             {doctor.avatar}
-                           </Avatar>
-                           <Box>
-                             <Typography variant="body2" fontWeight={600}>
-                               {doctor.name}
-                             </Typography>
-                             <Typography variant="caption" color="text.secondary">
-                               {doctor.specialty} • {doctor.workingHours?.start || '09:00'} - {doctor.workingHours?.end || '17:00'}
-                             </Typography>
-                           </Box>
-                         </Box>
+                     <MenuItem value="">Select doctor…</MenuItem>
+                     {availableDoctors.map(d => (
+                       <MenuItem key={d.id} value={d.id}>
+                         {d.firstName} {d.lastName}
                        </MenuItem>
                      ))}
                    </Select>
