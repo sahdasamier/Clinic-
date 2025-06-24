@@ -2219,15 +2219,15 @@ return (
                      onChange={(e) => setNewInvoiceData(prev => ({ ...prev, doctor: e.target.value }))}
                    >
                      {availableDoctors.map((doctor) => (
-                       <MenuItem key={doctor.id} value={doctor.name}>
+                       <MenuItem key={doctor.id} value={`${doctor.firstName} ${doctor.lastName}`}>
                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                            <LocalHospital sx={{ fontSize: 18, color: 'primary.main' }} />
                            <Box>
                              <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                               Dr. {doctor.name}
+                               Dr. {doctor.firstName} {doctor.lastName}
                              </Typography>
                              <Typography variant="caption" color="text.secondary">
-                               {doctor.specialty}
+                               General Practice
                              </Typography>
                            </Box>
                          </Box>

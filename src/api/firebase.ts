@@ -1,5 +1,5 @@
 // Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
+import { initializeApp, getApps, getApp } from "firebase/app";
 import { 
   initializeFirestore,
   persistentLocalCache,
@@ -24,8 +24,14 @@ const firebaseConfig = {
   measurementId: (import.meta as any).env?.VITE_FIREBASE_MEASUREMENT_ID || "G-PKFMPKHVTZ"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
+// Initialise (or reuse) the app
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+
+// ⬇️  ADD THIS LINE — it puts the app on window for dev-tools only
+if (typeof window !== "undefined") {
+  (window as any).firebaseApp = app;
+  console.log("🔥 Firebase initialised in", (import.meta as any).env?.MODE || "unknown");
+}
 
 // Initialize Firestore with persistent cache
 const firestore = initializeFirestore(app, {

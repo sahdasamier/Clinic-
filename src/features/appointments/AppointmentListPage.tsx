@@ -2777,11 +2777,11 @@ const AppointmentListPage: React.FC = () => {
              {availableDoctors.map((doctor) => (
                <MenuItem 
                  key={doctor.id}
-                 onClick={() => handleFilterSelect('doctor', doctor.name)}
-                 selected={activeFilters.doctor === doctor.name}
+                 onClick={() => handleFilterSelect('doctor', `${doctor.firstName} ${doctor.lastName}`)}
+                 selected={activeFilters.doctor === `${doctor.firstName} ${doctor.lastName}`}
                  dense
                >
-                 {doctor.name}
+                 {doctor.firstName} {doctor.lastName}
                </MenuItem>
              ))}
            </Box>
@@ -3128,19 +3128,11 @@ const AppointmentListPage: React.FC = () => {
                  <Grid item xs={12}>
                    <Alert severity="info" sx={{ mt: 1 }}>
                      <Typography variant="body2">
-                       <strong>📅 {t('doctor_schedule')}:</strong> {
-                         availableDoctors.find(d => d.name === newAppointment.doctor)?.workingHours?.start || '09:00'
-                       } - {
-                         availableDoctors.find(d => d.name === newAppointment.doctor)?.workingHours?.end || '17:00'
-                       }
+                       <strong>📅 {t('doctor_schedule')}:</strong> 09:00 - 17:00
                        <br />
-                       <strong>🚫 {t('off_days')}:</strong> {
-                         availableDoctors.find(d => d.name === newAppointment.doctor)?.offDays?.join(', ') || t('none')
-                       }
+                       <strong>🚫 {t('off_days')}:</strong> {t('none')}
                        <br />
-                       <strong>🏥 {t('specialty')}:</strong> {
-                         availableDoctors.find(d => d.name === newAppointment.doctor)?.specialty || t('general_practice')
-                       }
+                       <strong>🏥 {t('specialty')}:</strong> {t('general_practice')}
                      </Typography>
                    </Alert>
                  </Grid>
