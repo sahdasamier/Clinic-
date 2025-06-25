@@ -140,20 +140,9 @@ const SettingsPage: React.FC = () => {
   const [confirmAction, setConfirmAction] = useState<() => void>(() => {});
   const [confirmMessage, setConfirmMessage] = useState('');
 
-  // ✅ STEP 2: Fixed Profile state that loads from localStorage
+  // Profile state with defaults (localStorage removed)
   const [profile, setProfile] = useState(() => {
-    try {
-      const saved = localStorage.getItem('clinicProfile');
-      if (saved) {
-        const parsedData = JSON.parse(saved);
-        console.log('✅ Loaded profile from localStorage:', parsedData);
-        return parsedData;
-      }
-    } catch (error) {
-      console.error('❌ Failed to parse profile data:', error);
-    }
-    
-    console.log('ℹ️ Using default profile values');
+    console.log('ℹ️ Using default profile values (localStorage removed)');
     return {
       name: '',
       email: '',
@@ -368,15 +357,9 @@ const SettingsPage: React.FC = () => {
 
 
 
-  // 🔍 STEP 1: Enhanced Debug - Check What's Actually Saved
+  // Debug logging - localStorage persistence disabled
   useEffect(() => {
-    console.log('🔍 DEBUGGING DATA PERSISTENCE:');
-    console.log('Profile data in localStorage:', localStorage.getItem('clinicProfile'));
-    console.log('Clinic settings in localStorage:', localStorage.getItem('clinicSettings'));
-    console.log('Preferences in localStorage:', localStorage.getItem('userPreferences'));
-    console.log('Services in localStorage:', localStorage.getItem('clinicServices'));
-    console.log('Payment methods in localStorage:', localStorage.getItem('clinicPaymentMethods'));
-    console.log('Appointment settings in localStorage:', localStorage.getItem('clinicAppointmentSettings'));
+    console.log('🔍 SETTINGS DEBUG (localStorage disabled):');
     console.log('Current profile state:', profile);
     console.log('Current clinic settings state:', clinicSettings);
     console.log('Current preferences state:', preferences);
@@ -385,55 +368,8 @@ const SettingsPage: React.FC = () => {
     console.log('Current appointment settings state:', appointmentSettings);
   }, [profile, clinicSettings, preferences, services, paymentMethods, appointmentSettings]);
 
-  // 🎯 Auto-Save Profile Data (Debounced)
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (profile.name && profile.email) { // Only if basic data exists
-        localStorage.setItem('clinicProfile', JSON.stringify(profile));
-        console.log('🔄 Auto-saved profile data');
-      }
-    }, 2000); // 2 seconds after user stops typing
-
-    return () => clearTimeout(timeoutId);
-  }, [profile]);
-
-  // 🎯 Auto-Save Clinic Settings Data (Debounced)
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (clinicSettings.name && clinicSettings.address) { // Only if basic data exists
-        localStorage.setItem('clinicSettings', JSON.stringify(clinicSettings));
-        console.log('🔄 Auto-saved clinic settings data');
-      }
-    }, 2000); // 2 seconds after user stops typing
-
-    return () => clearTimeout(timeoutId);
-  }, [clinicSettings]);
-
-  // 🎯 Auto-Save Preferences Data (Immediate)
-  useEffect(() => {
-    if (preferences.language) { // Only if basic data exists
-      localStorage.setItem('userPreferences', JSON.stringify(preferences));
-      console.log('🔄 Auto-saved preferences data');
-    }
-  }, [preferences]);
-
-  // 🎯 Auto-Save Services Data (Immediate)
-  useEffect(() => {
-    localStorage.setItem('clinicServices', JSON.stringify(services));
-    console.log('🔄 Auto-saved services data');
-  }, [services]);
-
-  // 🎯 Auto-Save Payment Methods Data (Immediate)
-  useEffect(() => {
-    localStorage.setItem('clinicPaymentMethods', JSON.stringify(paymentMethods));
-    console.log('🔄 Auto-saved payment methods data');
-  }, [paymentMethods]);
-
-  // 🎯 Auto-Save Appointment Settings Data (Immediate)
-  useEffect(() => {
-    localStorage.setItem('clinicAppointmentSettings', JSON.stringify(appointmentSettings));
-    console.log('🔄 Auto-saved appointment settings data');
-  }, [appointmentSettings]);
+  // Auto-save removed - localStorage persistence disabled
+  // Configuration changes are now in-memory only for the session
 
   // Validation functions
   const validateEmail = (email: string) => {
@@ -530,35 +466,25 @@ const SettingsPage: React.FC = () => {
     }, 2000);
   };
 
-  // ✅ STEP 4: Enhanced Save Profile Function with Debug Logging (Testing Mode)
+  // Save Profile Function - localStorage removed
   const handleSaveProfile = async () => {
-    console.log('🔄 Save Profile button clicked!');
-    console.log('📋 Profile data to save:', profile);
+    console.log('🔄 Save Profile button clicked! (localStorage removed)');
+    console.log('📋 Profile data (in-memory only):', profile);
     
-    // ✅ FIX: Remove specialization from required fields temporarily for testing
-    const requiredFields = ['name', 'email', 'phone']; // removed 'specialization'
+    const requiredFields = ['name', 'email', 'phone'];
     if (!validateForm(profile, requiredFields)) {
       console.log('❌ Validation failed!');
-      console.log('💡 Missing required fields. Check that name, email, and phone are filled.');
       return;
     }
 
     console.log('✅ Validation passed!');
     setLoading(true);
     try {
-      console.log('💾 Attempting to save profile to localStorage...');
-      
-      // Save to localStorage
-      localStorage.setItem('clinicProfile', JSON.stringify(profile));
-      
-      // Verify it was saved
-      const saved = localStorage.getItem('clinicProfile');
-      console.log('✅ Verification - Profile data in localStorage:', saved);
-      
-      showSnackbar('Profile saved successfully', 'success');
+      console.log('💾 Profile data updated in-memory (no localStorage persistence)');
+      showSnackbar('Profile updated successfully (session only)', 'success');
     } catch (error) {
-      console.error('❌ Save error:', error);
-      showSnackbar('Failed to save profile. Please try again.', 'error');
+      console.error('❌ Profile update error:', error);
+      showSnackbar('Failed to update profile. Please try again.', 'error');
     } finally {
       setLoading(false);
     }
@@ -3764,18 +3690,14 @@ const SettingsPage: React.FC = () => {
                             onClick={() => {
                               setConfirmMessage('Are you sure you want to clear ALL clinic data? This will remove all patients, appointments, payments, and notifications. This action cannot be undone.');
                               setConfirmAction(() => () => {
-                                // Clear all localStorage data
-                                localStorage.removeItem('clinic_patients_data');
-                                localStorage.removeItem('clinic_appointments_data');
-                                localStorage.removeItem('clinic_payments_data');
-                                localStorage.removeItem('clinic_notifications_data');
-                                localStorage.removeItem('clinic_inventory_data');
+                                // Note: localStorage clearing removed - data persistence disabled
+                                // Components now manage their own in-memory state
                                 
                                 // Trigger application-wide data clearing
                                 window.dispatchEvent(new CustomEvent('userDataCleared'));
                                 
                                 // Show success message
-                                showSnackbar('All clinic data cleared successfully! The application will refresh.', 'success');
+                                showSnackbar('Application state reset! Components will refresh to default state.', 'success');
                                 
                                 // Refresh the page after a short delay
                                 setTimeout(() => {

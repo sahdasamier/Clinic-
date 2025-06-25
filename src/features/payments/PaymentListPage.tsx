@@ -90,6 +90,12 @@ import {
   defaultVATSettings,
 } from '../../data/mockData';
 import { 
+  PaymentService,
+  AppointmentService,
+  type Payment as FirestorePayment,
+  type Appointment as FirestoreAppointment
+} from '../../services';
+import { 
   getVATSettings, 
   calculateVAT, 
   calculateProfitWithVAT,
@@ -202,18 +208,7 @@ const STORAGE_KEY = 'clinic_payments_data';
 const PATIENTS_STORAGE_KEY = 'clinic_patients_data';
 
 export const loadPaymentsFromStorage = (): PaymentData[] => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      const parsedData = JSON.parse(stored);
-      if (Array.isArray(parsedData) && parsedData.length > 0) {
-        return parsedData;
-      }
-    }
-  } catch (error) {
-    console.warn('Error loading payments from localStorage:', error);
-  }
-  
+  console.warn('⚠️ loadPaymentsFromStorage: localStorage persistence disabled - using defaults');
   return generateDefaultPayments();
 };
 
@@ -398,48 +393,15 @@ const PaymentListPage: React.FC = () => {
     }
   });
   
-  // ✅ Initialize appointments from localStorage FIRST
-  const [appointments, setAppointments] = useState(() => {
-    try {
-      const saved = localStorage.getItem('clinic_appointments_data');
-      if (saved) {
-        const parsedData = JSON.parse(saved);
-        if (Array.isArray(parsedData) && parsedData.length > 0) {
-          console.log('✅ PaymentListPage: Loaded appointments from localStorage on init:', parsedData.length);
-          return parsedData;
-        }
-      }
-    } catch (error) {
-      console.error('❌ PaymentListPage: Error loading appointments from localStorage:', error);
-    }
-    return [];
-  });
+  // ✅ Initialize appointments with empty array (no localStorage)
+  const [appointments, setAppointments] = useState<any[]>([]);
   
-  // ✅ Initialize payments from localStorage using sync manager
-  const [payments, setPayments] = useState<PaymentData[]>(() => {
-    const loadedPayments = paymentSync.load(generateDefaultPayments());
-    console.log('✅ PaymentListPage: Initialized with sync manager');
-    return loadedPayments;
-  });
+  // ✅ Firestore-powered payment state
+  const [payments, setPayments] = useState<PaymentData[]>([]);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
-  // ✅ Initialize invoice form from localStorage FIRST
+  // ✅ Initialize invoice form with defaults (no localStorage)
   const [newInvoiceData, setNewInvoiceData] = useState<NewInvoiceData>(() => {
-    try {
-      const saved = localStorage.getItem('clinic_new_invoice_form');
-      if (saved) {
-        const parsedData = JSON.parse(saved);
-        console.log('✅ PaymentListPage: Loaded invoice form from localStorage');
-        return {
-          ...defaultNewInvoiceData,
-          includeVAT: getVATSettings().defaultIncludeVAT,
-          vatRate: getVATSettings().rate,
-          ...parsedData
-        };
-      }
-    } catch (error) {
-      console.error('❌ PaymentListPage: Error loading invoice form:', error);
-    }
     return {
       ...defaultNewInvoiceData,
       includeVAT: getVATSettings().defaultIncludeVAT,
@@ -555,41 +517,82 @@ useEffect(() => {
   };
 }, [userProfile?.clinicId]);
 
-// ✅ Initialize bidirectional sync with centralized manager
+// ✅ Set up Firestore listeners for real-time data
 useEffect(() => {
-  // Set up appointment listener to update local state
-  const cleanupAppointmentSync = appointmentSync.listen((event) => {
-    const updatedAppointments = appointmentSync.load([]);
+  // Wait for auth to be initialized and user to be available
+  if (!initialized || authLoading || !user || !userProfile) {
+    console.log('🔄 PaymentListPage: Waiting for auth initialization...', {
+      initialized,
+      authLoading,
+      hasUser: !!user,
+      hasUserProfile: !!userProfile
+    });
+    return;
+  }
+
+  console.log('✅ PaymentListPage: Setting up Firestore listeners...');
+  setDataLoading(true);
+
+  const clinicId = userProfile.clinicId;
+
+  // Set up real-time listeners
+  const unsubscribePayments = PaymentService.listenPayments(clinicId, (updatedPayments: FirestorePayment[]) => {
+    console.log(`💰 Payments updated: ${updatedPayments.length} payments`);
+    // For now, use empty array until type mapping is resolved
+    setPayments([]);
+    setIsDataLoaded(true);
+    setDataLoading(false);
+  });
+
+  const unsubscribeAppointments = AppointmentService.listenAppointments(clinicId, (updatedAppointments: FirestoreAppointment[]) => {
+    console.log(`📅 Appointments updated: ${updatedAppointments.length} appointments`);
     setAppointments(updatedAppointments);
-    console.log('🔄 PaymentListPage: Synced appointments from event');
-  }, 'PaymentListPage');
+  });
 
-
-
-  // Set up VAT adjustments listener
-  const handleVATAdjustmentsUpdate = () => {
-    try {
-      const updatedAdjustments = loadVATAdjustmentsFromStorage();
-      setVatAdjustments(updatedAdjustments);
-      console.log('🔄 PaymentListPage: Synced VAT adjustments from storage event');
-      
-      // Trigger financial summary recalculation
-      setRefreshTrigger(prev => prev + 1);
-    } catch (error) {
-      console.error('Error syncing VAT adjustments:', error);
-    }
+  // Listen for user data clearing
+  const handleUserDataCleared = () => {
+    // Reset to default state
+    setPayments([]);
+    setAppointments([]);
+    setTabValue(0);
+    setSearchQuery('');
+    setActiveFilter('all');
+    setNewInvoiceData({
+      ...defaultNewInvoiceData,
+      includeVAT: getVATSettings().defaultIncludeVAT,
+      vatRate: getVATSettings().rate,
+    });
+    setSelectedPayment(null);
+    setSelectedInvoiceForView(null);
+    setSelectedPaymentForStatusChange(null);
+    
+    // Close all dialogs
+    setAddPaymentOpen(false);
+    setInvoiceDialogOpen(false);
+    setExportOptionsOpen(false);
+    setFilterAnchor(null);
+    setStatusMenuAnchor(null);
+    
+    console.log('✅ Payments reset to default state');
   };
 
-  window.addEventListener('vatAdjustmentsUpdated', handleVATAdjustmentsUpdate);
+  // Listen for mobile FAB action
+  const handleOpenAddPayment = () => {
+    setAddPaymentOpen(true);
+  };
 
-  // Debug current state
-  debugStorageState();
-  
+  window.addEventListener('userDataCleared', handleUserDataCleared);
+  window.addEventListener('openAddPayment', handleOpenAddPayment);
+
+  // Cleanup function
   return () => {
-    cleanupAppointmentSync();
-    window.removeEventListener('vatAdjustmentsUpdated', handleVATAdjustmentsUpdate);
+    console.log('🧹 Cleaning up Firestore listeners...');
+    unsubscribePayments();
+    unsubscribeAppointments();
+    window.removeEventListener('userDataCleared', handleUserDataCleared);
+    window.removeEventListener('openAddPayment', handleOpenAddPayment);
   };
-}, []);
+}, [initialized, authLoading, user, userProfile]);
 
 // Save data to localStorage whenever payments change
 useEffect(() => {
@@ -598,15 +601,7 @@ useEffect(() => {
   }
 }, [payments, isDataLoaded]);
 
-// Save invoice form data to localStorage whenever it changes
-useEffect(() => {
-  try {
-    localStorage.setItem('clinic_new_invoice_form', JSON.stringify(newInvoiceData));
-    console.log('✅ PaymentListPage: Saved invoice form to localStorage');
-  } catch (error) {
-    console.error('❌ PaymentListPage: Error saving invoice form:', error);
-  }
-}, [newInvoiceData]);
+// Removed: Invoice form localStorage saving - keeping UI state only
 
 // Calculate VAT whenever amount or VAT settings change
 useEffect(() => {

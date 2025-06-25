@@ -11,22 +11,7 @@ const loadAppointmentsEnhanced = (): any[] => {
   console.log('🔍 Loading appointments - checking keys:', possibleKeys);
   
   for (const key of possibleKeys) {
-    try {
-      const saved = localStorage.getItem(key);
-      if (saved) {
-        const parsedData = JSON.parse(saved);
-        if (Array.isArray(parsedData) && parsedData.length > 0) {
-          console.log(`✅ Found ${parsedData.length} appointments in localStorage key: ${key}`);
-          appointments = [...appointments, ...parsedData];
-        } else {
-          console.log(`⚠️ Key ${key} exists but has no valid appointments`);
-        }
-      } else {
-        console.log(`❌ Key ${key} not found in localStorage`);
-      }
-    } catch (error) {
-      console.error(`❌ Error loading appointments from key ${key}:`, error);
-    }
+    console.warn(`⚠️ localStorage persistence disabled for key ${key} - skipping`);
   }
   
   // Remove duplicates based on ID

@@ -80,8 +80,8 @@ import {
   defaultTimeSlotFormData,
   doctorSchedules,
   type Doctor,
-  type Appointment,
 } from '../data/mockData';
+import { AppointmentService, type Appointment } from '../services';
 import { doctorSync, debugStorageState } from '../utils/dataSyncManager';
 
 
@@ -481,24 +481,26 @@ const DoctorSchedulingPage: React.FC = () => {
     });
 
     const newAppointment: Appointment = {
-      id: Math.max(...appointments.map(a => a.id || 0)) + 1,
+      id: `temp-${Date.now()}`, // Use string ID for Firestore compatibility
+      clinicId: userProfile?.clinicId || 'default-clinic',
       doctor: doctor.name,
+      doctorId: `doctor-${doctor.id}`,
       date: selectedDate,
       time: timeDisplay,
       timeSlot: formData.time,
       patient: t('available_slot'), // Use a default name for available slots
-      patientAvatar: 'AS',
+      patientId: 'available-slot',
       duration: doctor.consultationDuration || 30,
       type: t('available_slot'),
       status: 'pending',
       location: `${t('room')} ${100 + doctor.id}`,
-      phone: '',
       notes: t('available_time_slot_created'),
       completed: false,
       priority: 'normal',
       paymentStatus: 'pending',
-      createdAt: new Date().toISOString(),
-      isAvailableSlot: true,
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     };
 
     const updatedAppointments = [...appointments, newAppointment];
@@ -749,26 +751,26 @@ const DoctorSchedulingPage: React.FC = () => {
       });
 
       const newAppointment: Appointment = {
-        id: Math.max(...(appointments.length > 0 ? appointments.map(a => a.id || 0) : [0])) + 1,
+        id: `temp-${Date.now()}`, // Use string ID for Firestore compatibility
+        clinicId: userProfile?.clinicId || 'default-clinic',
         doctor: doctor.name,
+        doctorId: `doctor-${doctor.id}`,
+        patientId: timeSlotFormData.type === 'reserved' ? `patient-${Date.now()}` : 'available-slot',
         date: selectedDate,
         time: timeDisplay,
         timeSlot: selectedTimeSlot.time,
         patient: timeSlotFormData.type === 'reserved' ? timeSlotFormData.patientName.trim() : t('available_slot'),
-        patientAvatar: timeSlotFormData.type === 'reserved' 
-          ? timeSlotFormData.patientName.trim().split(' ').map(n => n[0]).join('').toUpperCase() || 'PA'
-          : 'AS',
         duration: doctor.consultationDuration || 30,
         type: timeSlotFormData.type === 'reserved' ? timeSlotFormData.appointmentType : t('available_slot'),
         status: timeSlotFormData.type === 'reserved' ? 'confirmed' : 'pending',
         location: `${t('room')} ${100 + doctor.id}`,
-        phone: timeSlotFormData.patientPhone || '',
         notes: timeSlotFormData.notes || (timeSlotFormData.type === 'available' ? t('available_time_slot') : ''),
         completed: false,
         priority: 'normal',
         paymentStatus: 'pending',
-        createdAt: new Date().toISOString(),
-        isAvailableSlot: timeSlotFormData.type === 'available',
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
       };
       
       const updatedAppointments = [...filteredAppointments, newAppointment];
@@ -802,22 +804,9 @@ const DoctorSchedulingPage: React.FC = () => {
     console.log('🔧 Opening weekly schedule for doctor:', doctor.name, doctor.id);
     setSelectedDoctorForWeekly(doctor);
     
-    // Check if doctor already has custom weekly schedule in localStorage
-    const existingScheduleKey = `weekly_schedule_${doctor.id}`;
-    const existingSchedule = localStorage.getItem(existingScheduleKey);
-    
+    // UPDATED: No localStorage for scheduling - always create default schedule
+    console.warn(`⚠️ Weekly schedule localStorage disabled for Dr. ${doctor.name} - creating default schedule`);
     let initialWeeklyData: any = {};
-    
-    if (existingSchedule) {
-      // Load existing custom schedule
-      try {
-        initialWeeklyData = JSON.parse(existingSchedule);
-        console.log('📅 Loaded existing weekly schedule for Dr.', doctor.name);
-      } catch (error) {
-        console.warn('Error loading existing schedule, creating default');
-        initialWeeklyData = {};
-      }
-    }
     
     // Initialize or fill missing days with default settings
     daysOfWeek.forEach(day => {
@@ -828,8 +817,8 @@ const DoctorSchedulingPage: React.FC = () => {
           notes: ''
         };
         
-        // Only add default time slots if no existing schedule
-        if (!existingSchedule && !doctor.offDays.includes(day)) {
+        // Add default time slots since localStorage is disabled
+        if (!doctor.offDays.includes(day)) {
           const slots = [];
           const startHour = parseInt(doctor.workingHours.start.split(':')[0]);
           const startMinute = parseInt(doctor.workingHours.start.split(':')[1]);
@@ -858,9 +847,8 @@ const DoctorSchedulingPage: React.FC = () => {
   const handleSaveWeeklySchedule = () => {
     if (!selectedDoctorForWeekly) return;
 
-    // Save the weekly schedule to localStorage for persistence
-    const scheduleKey = `weekly_schedule_${selectedDoctorForWeekly.id}`;
-    localStorage.setItem(scheduleKey, JSON.stringify(weeklyScheduleData));
+    // UPDATED: No localStorage persistence for weekly schedules
+    console.warn(`⚠️ Weekly schedule localStorage disabled for Dr. ${selectedDoctorForWeekly.name} - not persisting schedule`);
 
     // Update doctor's off days based on weekly schedule
     const newOffDays = daysOfWeek.filter(day => !weeklyScheduleData[day]?.isWorking);
@@ -900,24 +888,26 @@ const DoctorSchedulingPage: React.FC = () => {
             });
 
             const newAppointment: Appointment = {
-              id: Math.max(...(appointments.length > 0 ? appointments.map(a => a.id || 0) : [0])) + newAppointments.length + 1,
+              id: `temp-${Date.now()}-${index}`, // Use string ID for Firestore compatibility
+              clinicId: userProfile?.clinicId || 'default-clinic',
               doctor: selectedDoctorForWeekly.name,
+              doctorId: `doctor-${selectedDoctorForWeekly.id}`,
+              patientId: 'available-slot',
               date: dateString,
               time: timeDisplay,
               timeSlot: timeSlot,
               patient: t('available_slot'),
-              patientAvatar: 'AS',
               duration: selectedDoctorForWeekly.consultationDuration || 30,
               type: t('available_slot'),
               status: 'pending',
               location: `${t('room')} ${100 + selectedDoctorForWeekly.id}`,
-              phone: '',
               notes: weeklyScheduleData[day].notes || t('weekly_schedule_generated'),
               completed: false,
               priority: 'normal',
               paymentStatus: 'pending',
-              createdAt: new Date().toISOString(),
-              isAvailableSlot: true,
+              isActive: true,
+              createdAt: new Date(),
+              updatedAt: new Date(),
             };
             
             newAppointments.push(newAppointment);
@@ -1158,11 +1148,16 @@ const DoctorSchedulingPage: React.FC = () => {
         if (!existingApt) {
           const recurringAppointment: Appointment = {
             ...apt,
-            id: Math.max(...(appointments.length > 0 ? appointments.map(a => a.id || 0) : [0])) + newRecurringAppointments.length + 1,
+            id: `temp-${Date.now()}-${week}`, // Use string ID for Firestore compatibility
+            clinicId: apt.clinicId || 'default-clinic',
+            doctorId: apt.doctorId || `doctor-${Date.now()}`,
+            patientId: apt.patientId || 'available-slot',
             date: futureDateString,
             status: recurringSettings.autoApprove ? 'confirmed' : 'pending',
             notes: `${apt.notes || ''} (${t('recurring_appointment')} - ${t('week')} ${week + 1})`,
-            createdAt: new Date().toISOString(),
+            isActive: true,
+            createdAt: new Date(),
+            updatedAt: new Date(),
           };
           
           newRecurringAppointments.push(recurringAppointment);

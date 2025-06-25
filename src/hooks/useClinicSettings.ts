@@ -56,48 +56,19 @@ export const useClinicSettings = () => {
   const [clinicSettings, setClinicSettings] = useState<ClinicSettings>(defaultClinicSettings);
   const [loading, setLoading] = useState(true);
 
-  // Load clinic settings from localStorage
+  // Initialize with default settings (no localStorage)
   useEffect(() => {
-    const loadSettings = () => {
-      try {
-        const saved = localStorage.getItem('clinicSettings');
-        if (saved) {
-          const parsedData = JSON.parse(saved);
-          console.log('✅ useClinicSettings: Loaded clinic settings from localStorage:', parsedData);
-          setClinicSettings({ ...defaultClinicSettings, ...parsedData });
-        } else {
-          console.log('ℹ️ useClinicSettings: No saved clinic settings found, using defaults');
-          setClinicSettings(defaultClinicSettings);
-        }
-      } catch (error) {
-        console.error('❌ useClinicSettings: Failed to parse clinic settings:', error);
-        setClinicSettings(defaultClinicSettings);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadSettings();
-
-    // Listen for changes to localStorage
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'clinicSettings') {
-        console.log('🔄 useClinicSettings: Clinic settings changed in localStorage, reloading...');
-        loadSettings();
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    console.log('ℹ️ useClinicSettings: Using default clinic settings (localStorage removed)');
+    setClinicSettings(defaultClinicSettings);
+    setLoading(false);
   }, []);
 
-  // Update clinic settings
+  // Update clinic settings - in-memory only
   const updateClinicSettings = (newSettings: Partial<ClinicSettings>) => {
     try {
       const updatedSettings = { ...clinicSettings, ...newSettings };
       setClinicSettings(updatedSettings);
-      localStorage.setItem('clinicSettings', JSON.stringify(updatedSettings));
-      console.log('✅ useClinicSettings: Clinic settings updated successfully');
+      console.log('✅ useClinicSettings: Clinic settings updated in-memory (no localStorage)');
     } catch (error) {
       console.error('❌ useClinicSettings: Failed to update clinic settings:', error);
     }

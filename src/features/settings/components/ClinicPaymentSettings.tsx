@@ -334,13 +334,8 @@ const ClinicPaymentSettingsComponent: React.FC = () => {
             size="large"
             onClick={() => {
               console.log('🔍 Current settings state:', settings);
-              const stored = localStorage.getItem('clinic_payment_settings');
-              console.log('🔍 Raw localStorage data:', stored);
-              if (stored) {
-                const parsed = JSON.parse(stored);
-                console.log('🔍 Parsed localStorage data:', parsed);
-              }
-              alert('Check console for detailed debug information');
+              console.log('🔍 localStorage persistence disabled - no storage data to check');
+              alert('Check console for current in-memory settings state');
             }}
           >
             Debug Info

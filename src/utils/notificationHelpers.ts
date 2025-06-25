@@ -43,51 +43,30 @@ export const addNewAppointment = (appointmentData: any) => {
   return appointment;
 };
 
-// Helper functions for updating existing items
+// Helper functions for updating existing items - REMOVED localStorage operations
 
 export const markPaymentAsPaid = (paymentId: string | number) => {
   markAsRecentlyUpdated(STORAGE_KEYS.PAYMENTS, paymentId);
   
-  // Update the payment status
-  const payments = JSON.parse(localStorage.getItem(STORAGE_KEYS.PAYMENTS) || '[]');
-  const updatedPayments = payments.map((payment: any) => 
-    payment.id === paymentId 
-      ? { ...payment, status: 'paid', updatedAt: new Date().toISOString() }
-      : payment
-  );
-  localStorage.setItem(STORAGE_KEYS.PAYMENTS, JSON.stringify(updatedPayments));
-  
-  console.log(`Payment ${paymentId} marked as paid`);
+  // Note: Payment status updates should be handled by the calling component's state
+  // No longer automatically updating localStorage - component manages its own state
+  console.log(`Payment ${paymentId} marked as paid - state should be updated by calling component`);
 };
 
 export const updateAppointmentStatus = (appointmentId: string | number, status: string) => {
   markAsRecentlyUpdated(STORAGE_KEYS.APPOINTMENTS, appointmentId);
   
-  // Update the appointment status
-  const appointments = JSON.parse(localStorage.getItem(STORAGE_KEYS.APPOINTMENTS) || '[]');
-  const updatedAppointments = appointments.map((appointment: any) => 
-    appointment.id === appointmentId 
-      ? { ...appointment, status, updatedAt: new Date().toISOString() }
-      : appointment
-  );
-  localStorage.setItem(STORAGE_KEYS.APPOINTMENTS, JSON.stringify(updatedAppointments));
-  
-  console.log(`Appointment ${appointmentId} status updated to ${status}`);
+  // Note: Appointment status updates should be handled by the calling component's state
+  // No longer automatically updating localStorage - component manages its own state
+  console.log(`Appointment ${appointmentId} status updated to ${status} - state should be updated by calling component`);
 };
 
 export const updatePatientStatus = (patientId: string | number, status: string) => {
   markAsRecentlyUpdated(STORAGE_KEYS.PATIENTS, patientId);
   
-  // Update the patient status
-  const patients = JSON.parse(localStorage.getItem(STORAGE_KEYS.PATIENTS) || '[]');
-  const updatedPatients = patients.map((patient: any) => 
-    patient.id === patientId 
-      ? { ...patient, status, updatedAt: new Date().toISOString() }
-      : patient
-  );
-  localStorage.setItem(STORAGE_KEYS.PATIENTS, JSON.stringify(updatedPatients));
-  
-  console.log(`Patient ${patientId} status updated to ${status}`);
+  // Note: Patient status updates should be handled by the calling component's state
+  // No longer automatically updating localStorage - component manages its own state
+  console.log(`Patient ${patientId} status updated to ${status} - state should be updated by calling component`);
 };
 
 // Example usage:

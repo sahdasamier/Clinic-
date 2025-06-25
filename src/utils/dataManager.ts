@@ -1,6 +1,7 @@
 // Data management utilities for user sessions
+// UPDATED: Removed localStorage persistence - data export/import disabled
 
-// Keys for localStorage
+// Keys for localStorage - kept for compatibility but no longer used
 export const STORAGE_KEYS = {
   APPOINTMENTS: 'clinic_appointments',
   PATIENTS: 'clinic_patients', 
@@ -14,56 +15,26 @@ export const STORAGE_KEYS = {
 
 
 
-// Export data for backup
+// Export data for backup - DEPRECATED: No longer reads from localStorage
 export const exportUserData = () => {
-  try {
-    const userData: Record<string, any> = {};
-    Object.entries(STORAGE_KEYS).forEach(([key, storageKey]) => {
-      const data = localStorage.getItem(storageKey);
-      if (data) {
-        userData[key] = JSON.parse(data);
-      }
-    });
-    
-    return {
-      exportedAt: new Date().toISOString(),
-      version: '1.0.0',
-      data: userData
-    };
-  } catch (error) {
-    console.error('❌ Error exporting user data:', error);
-    return null;
-  }
+  console.warn('⚠️ exportUserData is deprecated - no localStorage data to export');
+  return {
+    exportedAt: new Date().toISOString(),
+    version: '1.0.0',
+    data: {},
+    note: 'localStorage persistence removed - no data to export'
+  };
 };
 
-// Import data from backup
+// Import data from backup - DEPRECATED: No longer writes to localStorage
 export const importUserData = (backupData: any): boolean => {
-  try {
-    if (!backupData || !backupData.data) {
-      throw new Error('Invalid backup data');
-    }
-    
-    // Clear existing data first
-    Object.values(STORAGE_KEYS).forEach(key => {
-      localStorage.removeItem(key);
-    });
-    
-    // Import the backup data
-    Object.entries(backupData.data).forEach(([key, value]) => {
-      const storageKey = STORAGE_KEYS[key as keyof typeof STORAGE_KEYS];
-      if (storageKey && value) {
-        localStorage.setItem(storageKey, JSON.stringify(value));
-      }
-    });
-    
-    // Trigger update events
-    window.dispatchEvent(new CustomEvent('userDataCleared'));
-    window.dispatchEvent(new CustomEvent('appointmentsUpdated'));
-    
-    console.log('✅ User data imported successfully');
-    return true;
-  } catch (error) {
-    console.error('❌ Error importing user data:', error);
-    return false;
-  }
+  console.warn('⚠️ importUserData is deprecated - localStorage persistence removed');
+  console.log('Received backup data:', backupData);
+  
+  // Trigger update events to notify components
+  window.dispatchEvent(new CustomEvent('userDataCleared'));
+  window.dispatchEvent(new CustomEvent('appointmentsUpdated'));
+  
+  console.log('✅ Import events dispatched (no data actually imported)');
+  return true;
 }; 

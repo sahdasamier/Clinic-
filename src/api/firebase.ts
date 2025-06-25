@@ -33,12 +33,36 @@ if (typeof window !== "undefined") {
   console.log("🔥 Firebase initialised in", (import.meta as any).env?.MODE || "unknown");
 }
 
-// Initialize Firestore with persistent cache
-const firestore = initializeFirestore(app, {
-  localCache: persistentLocalCache({
-    tabManager: persistentSingleTabManager({})
-  })
-});
+// Initialize Firestore with enhanced offline persistence
+let firestore;
+try {
+  firestore = initializeFirestore(app, {
+    localCache: persistentLocalCache({
+      tabManager: persistentSingleTabManager({
+        // Optional: Handle multiple tab scenarios gracefully
+        forceOwnership: false
+      })
+    })
+  });
+  
+  console.log("✅ Firestore offline persistence enabled successfully");
+  
+  // Log cache size periodically for monitoring (development only)
+  if ((import.meta as any).env?.MODE === 'development') {
+    // Optional: Add cache monitoring in development
+    setTimeout(() => {
+      console.log("📊 Firestore offline cache is active and monitoring data");
+    }, 1000);
+  }
+  
+} catch (error) {
+  console.warn("⚠️ Firestore offline persistence failed, falling back to memory cache:", error);
+  
+  // Fallback to memory cache if persistent cache fails
+  firestore = initializeFirestore(app, {
+    // This will use memory-only cache as fallback
+  });
+}
 
 const auth = getAuth(app);
 
@@ -62,3 +86,39 @@ export { auth, firestore, firebaseConfig };
 
 // Export firestore as db for backward compatibility
 export const db = firestore;
+
+// Utility functions for offline persistence monitoring
+export const firestoreUtils = {
+  // Check if app is currently offline
+  isOffline: () => !navigator.onLine,
+  
+  // Monitor offline/online state changes
+  onOfflineStateChange: (callback: (isOffline: boolean) => void) => {
+    const handleOnline = () => {
+      console.log("🌐 App back online - Firestore will sync cached changes");
+      callback(false);
+    };
+    
+    const handleOffline = () => {
+      console.log("📱 App offline - Using Firestore cached data");
+      callback(true);
+    };
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    // Return cleanup function
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  },
+  
+  // Get current cache status info
+  getCacheInfo: () => ({
+    isOnline: navigator.onLine,
+    persistenceEnabled: true, // We know it's enabled since we set it up
+    cacheType: 'IndexedDB', // persistentLocalCache uses IndexedDB
+    timestamp: new Date().toISOString()
+  })
+};

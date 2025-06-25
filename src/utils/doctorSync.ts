@@ -91,33 +91,18 @@ export const syncFirebaseDoctorsToScheduling = async (clinicId: string): Promise
 };
 
 /**
- * Load scheduling doctors from localStorage for a specific clinic
+ * Load scheduling doctors - UPDATED: No localStorage persistence
  */
 export const loadSchedulingDoctorsFromStorage = (clinicId: string): SchedulingDoctor[] => {
-  try {
-    const key = `clinic_${clinicId}_scheduling_doctors`;
-    const stored = localStorage.getItem(key);
-    if (stored) {
-      return JSON.parse(stored);
-    }
-    return [];
-  } catch (error) {
-    console.error('❌ Error loading scheduling doctors from storage:', error);
-    return [];
-  }
+  console.warn(`⚠️ loadSchedulingDoctorsFromStorage: localStorage persistence disabled for clinic ${clinicId} - returning empty array`);
+  return [];
 };
 
 /**
- * Save scheduling doctors to localStorage for a specific clinic
+ * Save scheduling doctors - UPDATED: No localStorage persistence
  */
 export const saveSchedulingDoctorsToStorage = (clinicId: string, doctors: SchedulingDoctor[]): void => {
-  try {
-    const key = `clinic_${clinicId}_scheduling_doctors`;
-    localStorage.setItem(key, JSON.stringify(doctors));
-    console.log(`💾 Saved ${doctors.length} scheduling doctors for clinic ${clinicId}`);
-  } catch (error) {
-    console.error('❌ Error saving scheduling doctors to storage:', error);
-  }
+  console.warn(`⚠️ saveSchedulingDoctorsToStorage: localStorage persistence disabled for clinic ${clinicId} - ${doctors.length} doctors not saved`);
 };
 
 /**
@@ -142,25 +127,13 @@ export const getFirebaseIdFromSchedulingDoctor = (
 };
 
 /**
- * Auto-sync doctors when page loads (with caching)
+ * Auto-sync doctors - UPDATED: No localStorage caching
  */
 export const autoSyncDoctorsIfNeeded = async (clinicId: string): Promise<SchedulingDoctor[]> => {
   try {
-    // Check last sync time
-    const lastSyncKey = `clinic_${clinicId}_last_doctor_sync`;
-    const lastSync = localStorage.getItem(lastSyncKey);
-    const now = Date.now();
-    const syncInterval = 5 * 60 * 1000; // 5 minutes
-    
-    if (!lastSync || (now - parseInt(lastSync)) > syncInterval) {
-      console.log('🔄 Auto-syncing doctors (cache expired)');
-      const doctors = await syncFirebaseDoctorsToScheduling(clinicId);
-      localStorage.setItem(lastSyncKey, now.toString());
-      return doctors;
-    } else {
-      console.log('✅ Using cached doctors (sync not needed)');
-      return loadSchedulingDoctorsFromStorage(clinicId);
-    }
+    console.warn('⚠️ autoSyncDoctorsIfNeeded: localStorage caching disabled - always syncing fresh data');
+    const doctors = await syncFirebaseDoctorsToScheduling(clinicId);
+    return doctors;
   } catch (error) {
     console.error('❌ Error in auto-sync:', error);
     return loadSchedulingDoctorsFromStorage(clinicId);
@@ -168,15 +141,11 @@ export const autoSyncDoctorsIfNeeded = async (clinicId: string): Promise<Schedul
 };
 
 /**
- * Force sync doctors (manual refresh)
+ * Force sync doctors - UPDATED: No localStorage sync timestamps
  */
 export const forceSyncDoctors = async (clinicId: string): Promise<SchedulingDoctor[]> => {
   console.log('🔄 Force syncing doctors...');
+  console.warn('⚠️ forceSyncDoctors: localStorage sync timestamps disabled');
   const doctors = await syncFirebaseDoctorsToScheduling(clinicId);
-  
-  // Update last sync time
-  const lastSyncKey = `clinic_${clinicId}_last_doctor_sync`;
-  localStorage.setItem(lastSyncKey, Date.now().toString());
-  
   return doctors;
 }; 
