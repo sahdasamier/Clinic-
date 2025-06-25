@@ -99,30 +99,17 @@ import {
 
 
 import { 
-  syncAppointmentChangesToPatients, 
-  setupAppointmentPatientSync,
-  updatePatientAppointmentFields,
-  syncAllPatientsAppointmentFields
-} from '../../utils/appointmentPatientSync';
-import { doctorSchedules } from '../DoctorScheduling';
-import { loadPatientsFromStorage } from '../patients/PatientListPage';
+  AppointmentService,
+  PatientService,
+  PaymentService,
+  ServiceUtils,
+  type Appointment as FirestoreAppointment
+} from '../../services';
 import {
-  getDefaultAppointments,
   appointmentTypesOptions,
   priorityLevels,
   type AppointmentData,
 } from '../../data/mockData';
-import { 
-  appointmentSync, 
-  paymentSync, 
-  doctorSync,
-  debugStorageState 
-} from '../../utils/dataSyncManager';
-import { 
-  createAutoPaymentForAppointment,
-  loadClinicPaymentSettings 
-} from '../../utils/paymentUtils';
-import { enhanceAppointmentWithDoctorId } from '../../utils/doctorMatcher';
 
 // Doctor interface for Firestore data
 interface Doctor {
@@ -144,7 +131,8 @@ interface TabPanelProps {
   value: number;
 }
 
-type Appointment = AppointmentData;
+// ✅ Use Firestore Appointment interface instead of legacy AppointmentData
+type Appointment = FirestoreAppointment;
 
 interface NewAppointment {
   patient: string;
@@ -159,7 +147,7 @@ interface NewAppointment {
   location: string;
   notes: string;
   phone: string;
-  paymentStatus?: 'pending' | 'completed' | 'partial' | 'failed';
+  paymentStatus?: 'pending' | 'paid' | 'partial' | 'overdue';
 }
 
 interface FilterState {
@@ -190,35 +178,14 @@ function TabPanel(props: TabPanelProps) {
   );
 }
 
-// Utility Functions
+// Legacy Functions - Use Firestore services instead
 export const loadAppointmentsFromStorage = (): Appointment[] => {
-  try {
-    const stored = localStorage.getItem(APPOINTMENTS_STORAGE_KEY);
-    if (stored) {
-      const parsedData = JSON.parse(stored);
-      if (Array.isArray(parsedData) && parsedData.length > 0) {
-        // Ensure all appointments have a paymentStatus field for backward compatibility
-        const appointmentsWithPaymentStatus = parsedData.map(appointment => ({
-          ...appointment,
-          paymentStatus: appointment.paymentStatus || 'pending'
-        }));
-        return appointmentsWithPaymentStatus;
-      }
-    }
-  } catch (error) {
-    console.warn('Error loading appointments from localStorage:', error);
-  }
-  return getDefaultAppointments();
+  console.warn('⚠️ loadAppointmentsFromStorage is deprecated - use AppointmentService.listenAppointments instead');
+  return [];
 };
 
 export const saveAppointmentsToStorage = (appointments: Appointment[]) => {
-  try {
-    // ✅ Use centralized sync manager for consistent event dispatching
-    appointmentSync.save(appointments, 'AppointmentListPage');
-    syncAppointmentChangesToPatients();
-  } catch (error) {
-    console.warn('Error saving appointments to localStorage:', error);
-  }
+  console.warn('⚠️ saveAppointmentsToStorage is deprecated - use AppointmentService methods instead');
 };
 
 
@@ -309,28 +276,8 @@ const AppointmentListPage: React.FC = () => {
   const [addAppointmentOpen, setAddAppointmentOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'table' | 'cards' | 'calendar'>('table');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  // ✅ Initialize appointments from localStorage FIRST
-  const [appointmentList, setAppointmentList] = useState<Appointment[]>(() => {
-    try {
-      const saved = localStorage.getItem(APPOINTMENTS_STORAGE_KEY);
-      if (saved) {
-        const parsedData = JSON.parse(saved);
-        if (Array.isArray(parsedData) && parsedData.length > 0) {
-          console.log('✅ AppointmentListPage: Loaded appointments from localStorage on init:', parsedData.length);
-          // Ensure all appointments have a paymentStatus field for backward compatibility
-          const appointmentsWithPaymentStatus = parsedData.map(appointment => ({
-            ...appointment,
-            paymentStatus: appointment.paymentStatus || 'pending'
-          }));
-          return appointmentsWithPaymentStatus;
-        }
-      }
-    } catch (error) {
-      console.error('❌ AppointmentListPage: Error loading from localStorage:', error);
-    }
-    console.log('ℹ️ AppointmentListPage: Using default appointments');
-    return getDefaultAppointments();
-  });
+  // ✅ Firestore-powered appointment state
+  const [appointmentList, setAppointmentList] = useState<FirestoreAppointment[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [doctorStartTime] = useState('15:00');
   const [activeFilters, setActiveFilters] = useState<FilterState>({
@@ -365,52 +312,38 @@ const AppointmentListPage: React.FC = () => {
     paymentStatus: 'pending'
   });
   const [availableDoctors, setAvailableDoctors] = useState<Doctor[]>([]);
-  // ✅ Initialize available patients from localStorage FIRST
-  const [availablePatients, setAvailablePatients] = useState<any[]>(() => {
-    try {
-      const saved = localStorage.getItem('clinic_patients_data');
-      if (saved) {
-        const parsedData = JSON.parse(saved);
-        if (Array.isArray(parsedData) && parsedData.length > 0) {
-          console.log('✅ AppointmentListPage: Loaded patients from localStorage on init:', parsedData.length);
-          return parsedData;
-        }
-      }
-    } catch (error) {
-      console.error('❌ AppointmentListPage: Error loading patients from localStorage:', error);
-    }
-    return [];
-  });
+  // ✅ Initialize available patients with empty array (no localStorage)
+  const [availablePatients, setAvailablePatients] = useState<any[]>([]);
 
-  // Effects - wait for auth initialization
+  // ✅ Set up Firestore listeners for real-time data
   useEffect(() => {
     // Wait for auth to be initialized and user to be available
-    if (!initialized || authLoading || !user) {
+    if (!initialized || authLoading || !user || !userProfile) {
       console.log('🔄 AppointmentListPage: Waiting for auth initialization...', {
         initialized,
         authLoading,
-        hasUser: !!user
+        hasUser: !!user,
+        hasUserProfile: !!userProfile
       });
       return;
     }
 
-    console.log('✅ AppointmentListPage: Auth initialized, loading appointment data...');
+    console.log('✅ AppointmentListPage: Setting up Firestore listeners...');
     setDataLoading(true);
 
-    try {
-      const savedAppointments = loadAppointmentsFromStorage();
-      setAppointmentList(savedAppointments);
-      setupAppointmentPatientSync();
-      
-      const patients = loadPatientsFromStorage();
-      setAvailablePatients(patients);
+    const clinicId = userProfile.clinicId;
 
-      console.log('✅ AppointmentListPage: Appointment data loaded successfully');
-    } catch (error) {
-      console.error('❌ AppointmentListPage: Error loading appointment data:', error);
-    } finally {
+    // Set up real-time listeners
+    const unsubscribeAppointments = AppointmentService.listenAppointments(clinicId, (updatedAppointments) => {
+      console.log(`📅 Appointments updated: ${updatedAppointments.length} appointments`);
+      setAppointmentList(updatedAppointments);
       setDataLoading(false);
-    }
+    });
+
+    const unsubscribePatients = PatientService.listenPatients(clinicId, (updatedPatients) => {
+      console.log(`👥 Patients updated: ${updatedPatients.length} patients`);
+      setAvailablePatients(updatedPatients);
+    });
 
     // Listen for mobile FAB action
     const handleOpenAddAppointment = () => {
@@ -420,7 +353,8 @@ const AppointmentListPage: React.FC = () => {
     // Listen for user data clearing
     const handleUserDataCleared = () => {
       // Reset to default state
-      setAppointmentList(getDefaultAppointments());
+      setAppointmentList([]);
+      setAvailablePatients([]);
       setTabValue(0);
       setSearchQuery('');
       setActiveFilters({
@@ -465,11 +399,15 @@ const AppointmentListPage: React.FC = () => {
     window.addEventListener('userDataCleared', handleUserDataCleared);
     window.addEventListener('openAddAppointment', handleOpenAddAppointment);
     
+    // Cleanup function
     return () => {
+      console.log('🧹 Cleaning up Firestore listeners...');
+      unsubscribeAppointments();
+      unsubscribePatients();
       window.removeEventListener('userDataCleared', handleUserDataCleared);
       window.removeEventListener('openAddAppointment', handleOpenAddAppointment);
     };
-  }, [initialized, authLoading, user]);
+  }, [initialized, authLoading, user, userProfile]);
 
   // ✅ Real-time Firestore listener for doctors
   useEffect(() => {
@@ -506,24 +444,10 @@ const AppointmentListPage: React.FC = () => {
     };
   }, [userProfile?.clinicId]);
 
-  // ✅ Initialize bidirectional sync with centralized manager
+  // ✅ Additional setup - placeholder for future enhancements
   useEffect(() => {
-    // Set up payment listener to update local state when payments change
-    const cleanupPaymentSync = paymentSync.listen((event) => {
-      const updatedPayments = paymentSync.load([]);
-      console.log('🔄 AppointmentListPage: Synced payments from event', updatedPayments.length);
-      // Dispatch custom event for appointment-payment sync
-      window.dispatchEvent(new CustomEvent('appointmentPaymentSync', { 
-        detail: { payments: updatedPayments } 
-      }));
-    }, 'AppointmentListPage');
-
-    // Debug current state
-    debugStorageState();
-    
-    return () => {
-      cleanupPaymentSync();
-    };
+    // Future enhancements can go here
+    console.log('✅ AppointmentListPage: Additional setup complete');
   }, []);
 
   // Event Handlers
@@ -531,29 +455,30 @@ const AppointmentListPage: React.FC = () => {
     setTabValue(newValue);
   };
 
-  const toggleAppointmentCompletion = (appointmentId: number) => {
+  const toggleAppointmentCompletion = async (appointmentId: string) => {
     const appointment = appointmentList.find(apt => apt.id === appointmentId);
     if (!appointment) return;
 
-    const wasCompleted = appointment.completed;
-    const newCompletedStatus = !wasCompleted;
-    
-    const updatedList = appointmentList.map(apt => 
-      apt.id === appointmentId 
-        ? { ...apt, completed: newCompletedStatus, status: newCompletedStatus ? 'completed' : 'confirmed' as any }
-        : apt
-    );
-    
-    // If appointment is being marked as completed (not uncompleted), create auto-payment
-    if (newCompletedStatus && !wasCompleted) {
-      handleAppointmentCompletion(appointment);
+    try {
+      const wasCompleted = appointment.status === 'completed';
+      const newStatus = wasCompleted ? 'confirmed' : 'completed';
+      
+      // ✅ Use Firestore service instead of localStorage
+      await AppointmentService.updateAppointment(appointmentId, {
+        status: newStatus,
+        completed: newStatus === 'completed'
+      });
+      
+      // If appointment is being marked as completed, create auto-payment
+      if (newStatus === 'completed' && !wasCompleted) {
+        await handleAppointmentCompletion(appointment);
+      }
+      
+      // ✅ State updates automatically via real-time listener!
+      console.log('✅ Appointment completion status updated via Firestore');
+    } catch (error) {
+      console.error('❌ Error updating appointment completion:', error);
     }
-    
-    setAppointmentList(updatedList);
-    saveAppointmentsToStorage(updatedList);
-    
-    // Immediately sync this patient's appointment data when completion status changes
-    updatePatientAppointmentFields(appointment.patient);
   };
 
   const calculateEstimatedFinishTime = () => {
@@ -656,9 +581,9 @@ const AppointmentListPage: React.FC = () => {
       type: appointment.type,
       duration: appointment.duration,
       priority: appointment.priority,
-      location: appointment.location,
-      notes: appointment.notes,
-      phone: appointment.phone,
+      location: appointment.location || '',
+      notes: appointment.notes || '',
+      phone: appointment.phone || '',
       paymentStatus: (appointment as any).paymentStatus || 'pending'
     });
     setEditDialogOpen(true);
@@ -687,228 +612,195 @@ const AppointmentListPage: React.FC = () => {
     setTypeMenuAnchor(event.currentTarget as HTMLElement);
   };
 
-  const handleStatusChange = (newStatus: string) => {
+  const handleStatusChange = async (newStatus: string) => {
     if (!statusEditAppointment) return;
 
-    const previousStatus = statusEditAppointment.status;
-    const updatedList = appointmentList.map(apt => 
-      apt.id === statusEditAppointment.id 
-        ? { ...apt, status: newStatus as any, completed: newStatus === 'completed' }
-        : apt
-    );
-    
-    // If appointment is being marked as completed, create auto-payment
-    if (newStatus === 'completed' && previousStatus !== 'completed') {
-      handleAppointmentCompletion(statusEditAppointment);
+    try {
+      const previousStatus = statusEditAppointment.status;
+      
+      // ✅ Use Firestore service instead of localStorage
+      await AppointmentService.updateAppointment(statusEditAppointment.id, {
+        status: newStatus as any,
+        completed: newStatus === 'completed'
+      });
+      
+      // If appointment is being marked as completed, create auto-payment
+      if (newStatus === 'completed' && previousStatus !== 'completed') {
+        await handleAppointmentCompletion(statusEditAppointment);
+      }
+      
+      // ✅ State updates automatically via real-time listener!
+      console.log('✅ Appointment status updated via Firestore');
+      
+      setStatusMenuAnchor(null);
+      setStatusEditAppointment(null);
+    } catch (error) {
+      console.error('❌ Error updating appointment status:', error);
     }
-    
-    setAppointmentList(updatedList);
-    saveAppointmentsToStorage(updatedList);
-    
-    // Immediately sync this patient's appointment data when status changes
-    updatePatientAppointmentFields(statusEditAppointment.patient);
-    
-    setStatusMenuAnchor(null);
-    setStatusEditAppointment(null);
   };
 
-  const handlePaymentStatusChange = (newPaymentStatus: string) => {
+  const handlePaymentStatusChange = async (newPaymentStatus: string) => {
     if (!paymentStatusEditAppointment) return;
 
-    const updatedList = appointmentList.map(apt => 
-      apt.id === paymentStatusEditAppointment.id 
-        ? { ...apt, paymentStatus: newPaymentStatus as any }
-        : apt
-    );
-    
-    setAppointmentList(updatedList);
-    saveAppointmentsToStorage(updatedList);
-    
-    // Update related payment records if they exist
     try {
-      const payments = JSON.parse(localStorage.getItem('payments') || '[]');
-      const updatedPayments = payments.map((payment: any) => 
-        payment.appointmentId === paymentStatusEditAppointment.id?.toString()
-          ? { ...payment, status: newPaymentStatus === 'completed' ? 'paid' : newPaymentStatus }
-          : payment
-      );
-      localStorage.setItem('payments', JSON.stringify(updatedPayments));
-      console.log(`✅ Payment status updated for appointment ${paymentStatusEditAppointment.id}: ${newPaymentStatus}`);
+      // ✅ Use Firestore service instead of localStorage
+      await AppointmentService.updateAppointment(paymentStatusEditAppointment.id, {
+        paymentStatus: newPaymentStatus as any
+      });
+      
+      // ✅ State updates automatically via real-time listener!
+      console.log('✅ Payment status updated via Firestore');
+      
+      setPaymentStatusMenuAnchor(null);
+      setPaymentStatusEditAppointment(null);
     } catch (error) {
-      console.warn('Error updating payment records:', error);
+      console.error('❌ Error updating payment status:', error);
     }
-    
-    // Immediately sync this patient's appointment data when payment status changes
-    updatePatientAppointmentFields(paymentStatusEditAppointment.patient);
-    
-    setPaymentStatusMenuAnchor(null);
-    setPaymentStatusEditAppointment(null);
   };
 
-  const handleTypeChange = (newType: string) => {
+  const handleTypeChange = async (newType: string) => {
     if (!typeEditAppointment) return;
 
-    const updatedList = appointmentList.map(apt => 
-      apt.id === typeEditAppointment.id 
-        ? { ...apt, type: newType }
-        : apt
-    );
-    
-    setAppointmentList(updatedList);
-    saveAppointmentsToStorage(updatedList);
-    
-    // Update related payment records if they exist
     try {
-      const payments = JSON.parse(localStorage.getItem('payments') || '[]');
-      const updatedPayments = payments.map((payment: any) => 
-        payment.appointmentId === typeEditAppointment.id?.toString()
-          ? { ...payment, description: `${newType} appointment with Dr. ${typeEditAppointment.doctor}` }
-          : payment
-      );
-      localStorage.setItem('payments', JSON.stringify(updatedPayments));
-      console.log(`✅ Appointment type updated for appointment ${typeEditAppointment.id}: ${newType}`);
+      // ✅ Use Firestore service instead of localStorage
+      await AppointmentService.updateAppointment(typeEditAppointment.id, {
+        type: newType
+      });
+      
+      // ✅ State updates automatically via real-time listener!
+      console.log('✅ Appointment type updated via Firestore');
+      
+      setTypeMenuAnchor(null);
+      setTypeEditAppointment(null);
     } catch (error) {
-      console.warn('Error updating payment records:', error);
+      console.error('❌ Error updating appointment type:', error);
     }
-    
-    // Immediately sync this patient's appointment data when type changes
-    updatePatientAppointmentFields(typeEditAppointment.patient);
-    
-    setTypeMenuAnchor(null);
-    setTypeEditAppointment(null);
   };
 
   // Handle appointment completion and auto-payment creation
-  const handleAppointmentCompletion = (appointment: Appointment) => {
+  const handleAppointmentCompletion = async (appointment: Appointment) => {
     try {
-      // Always create a PAID payment for completed appointments
-      console.log(`🏥 Creating paid payment for completed appointment: ${appointment.id}`);
+      console.log(`🏥 Creating payment for completed appointment: ${appointment.id}`);
       
-      // Create auto-payment for the completed appointment (marked as paid)
-      const createdPayment = createAutoPaymentForAppointment({
-        appointmentId: appointment.id,
-        patientName: appointment.patient,
-        patientAvatar: appointment.patientAvatar,
-        doctorName: appointment.doctor,
-        appointmentType: appointment.type,
-        appointmentDate: appointment.date,
-        appointmentDuration: appointment.duration,
-        isCompleted: true // This ensures the payment is created as 'paid'
+      // ✅ Create payment using Firestore service
+      const paymentData = {
+        patientId: appointment.patientId || 'legacy-patient',
+        patient: appointment.patient,
+        amount: 100, // Default amount - should be configurable
+        date: ServiceUtils.getToday(),
+        invoiceDate: appointment.date,
+        dueDate: appointment.date,
+        status: 'paid' as const,
+        method: 'cash' as const,
+        category: 'consultation' as const,
+        description: `Payment for ${appointment.type} appointment`,
+        currency: 'USD',
+        isActive: true
+      };
+
+      const paymentId = await PaymentService.createPayment(userProfile!.clinicId, paymentData);
+      
+      // Update appointment payment status to 'paid'
+      await AppointmentService.updateAppointment(appointment.id, {
+        paymentStatus: 'paid'
       });
 
-      if (createdPayment) {
-        // Update appointment payment status to 'completed'
-        const updatedAppointments = appointmentList.map(apt => 
-          apt.id === appointment.id 
-            ? { ...apt, paymentStatus: 'completed' as 'completed' }
-            : apt
-        );
-        setAppointmentList(updatedAppointments);
-        saveAppointmentsToStorage(updatedAppointments);
-
-        console.log(`✅ PAID payment of ${createdPayment.amount} ${createdPayment.currency} created for ${appointment.patient}'s ${appointment.type} appointment`);
-        console.log(`💰 Payment ${createdPayment.invoiceId} is now showing as PAID in Payment Management`);
-        
-        // Dispatch custom event to notify Payment Management about new revenue
-        window.dispatchEvent(new CustomEvent('appointmentCompletedWithPayment', {
-          detail: {
-            appointment,
-            payment: createdPayment,
-            revenue: createdPayment.amount
-          }
-        }));
-      } else {
-        console.warn(`❌ Failed to create payment for completed appointment: ${appointment.id}`);
-      }
+      console.log(`✅ Payment ${paymentId} created and marked as PAID`);
+      
+      // Dispatch custom event to notify Payment Management about new revenue
+      window.dispatchEvent(new CustomEvent('appointmentCompletedWithPayment', {
+        detail: {
+          appointment,
+          payment: { id: paymentId, ...paymentData },
+          revenue: paymentData.amount
+        }
+      }));
     } catch (error) {
-      console.error('Error handling appointment completion:', error);
+      console.error('❌ Error handling appointment completion:', error);
     }
   };
 
   const handleSaveAppointment = async () => {
-    if (!newAppointment.patient || !newAppointment.doctor || !newAppointment.date || !newAppointment.time) {
+    if (!newAppointment.patient || !newAppointment.doctor || !newAppointment.date || !newAppointment.time || !userProfile?.clinicId) {
       alert(t('fill_required_fields'));
       return;
     }
-    
-    let updatedList;
-    
-    const timeSlot = newAppointment.hour && newAppointment.minute 
-      ? `${newAppointment.hour.padStart(2, '0')}:${newAppointment.minute.padStart(2, '0')}`
-      : newAppointment.time;
-    
-    if (selectedAppointment) {
-      const updatedApt = { 
-        ...selectedAppointment, 
-        ...newAppointment,
-        timeSlot: timeSlot,
-        patientAvatar: selectedAppointment.patient === newAppointment.patient 
-          ? selectedAppointment.patientAvatar 
-          : newAppointment.patient.split(' ').map(n => n[0]).join('').toUpperCase()
-      };
-      
-      // 🆕 Enhance updated appointment with doctor Firebase ID
-      const enhancedUpdatedApt = await enhanceAppointmentWithDoctorId(updatedApt, userProfile?.clinicId || '');
-      
-      updatedList = appointmentList.map(apt => 
-        apt.id === selectedAppointment.id ? enhancedUpdatedApt : apt
-      );
-      setEditDialogOpen(false);
-    } else {
-      const newApt: Appointment = {
-        id: appointmentList.length > 0 ? Math.max(...appointmentList.map(a => a.id)) + 1 : 1,
-        patient: newAppointment.patient,
-        patientAvatar: newAppointment.patient.split(' ').map(n => n[0]).join('').toUpperCase(),
-        date: newAppointment.date,
-        time: newAppointment.time,
-        timeSlot: timeSlot,
-        duration: newAppointment.duration,
-        doctor: newAppointment.doctor,
-        type: newAppointment.type,
-        status: 'confirmed',
-        location: newAppointment.location || 'TBD',
-        phone: newAppointment.phone,
-        notes: newAppointment.notes,
-        completed: false,
-        priority: newAppointment.priority,
-        paymentStatus: newAppointment.paymentStatus || 'pending',
-        createdAt: new Date().toISOString(),
-      } as any;
-      
-      // 🆕 Enhance appointment with doctor Firebase ID
-      const enhancedApt = await enhanceAppointmentWithDoctorId(newApt, userProfile?.clinicId || '');
-      
-      updatedList = [...appointmentList, enhancedApt];
-      setAddAppointmentOpen(false);
+
+    try {
+      const timeSlot = newAppointment.hour && newAppointment.minute 
+        ? `${newAppointment.hour.padStart(2, '0')}:${newAppointment.minute.padStart(2, '0')}`
+        : newAppointment.time;
+
+      if (selectedAppointment) {
+        // ✅ UPDATE: Use Firestore service instead of localStorage
+        const updatedData = {
+          patient: newAppointment.patient,
+          doctor: newAppointment.doctor,
+          date: newAppointment.date,
+          time: newAppointment.time,
+          timeSlot: timeSlot,
+          type: (newAppointment.type as 'consultation' | 'follow-up' | 'surgery' | 'emergency') || 'consultation',
+          duration: newAppointment.duration,
+          priority: (newAppointment.priority as 'high' | 'normal' | 'urgent') || 'normal',
+          location: newAppointment.location || 'TBD',
+          notes: newAppointment.notes || '',
+          paymentStatus: (newAppointment.paymentStatus as 'pending' | 'paid' | 'partial' | 'overdue') || 'pending'
+        };
+
+        await AppointmentService.updateAppointment(selectedAppointment.id, updatedData);
+        setEditDialogOpen(false);
+        console.log('✅ Appointment updated via Firestore service');
+      } else {
+        // ✅ CREATE: Use Firestore service instead of localStorage
+        const appointmentData = {
+          patient: newAppointment.patient,
+          patientId: 'legacy-patient', // TODO: Get actual patient ID
+          doctor: newAppointment.doctor,
+          doctorId: userProfile.id || 'default-doctor',
+          date: newAppointment.date,
+          time: newAppointment.time,
+          timeSlot: timeSlot,
+          type: (newAppointment.type as 'consultation' | 'follow-up' | 'surgery' | 'emergency') || 'consultation',
+          duration: newAppointment.duration,
+          priority: (newAppointment.priority as 'high' | 'normal' | 'urgent') || 'normal',
+          location: newAppointment.location || 'TBD',
+          notes: newAppointment.notes || '',
+          status: 'confirmed' as const,
+          paymentStatus: (newAppointment.paymentStatus as 'pending' | 'paid' | 'partial' | 'overdue') || 'pending',
+          isActive: true
+        };
+
+        await AppointmentService.createAppointment(userProfile.clinicId, appointmentData);
+        setAddAppointmentOpen(false);
+        console.log('✅ Appointment created via Firestore service');
+      }
+
+      // ✅ State updates automatically via real-time listener!
+      // No manual setAppointmentList or saveAppointmentsToStorage needed!
+
+      // Reset form
+      setNewAppointment({
+        patient: '',
+        doctor: '',
+        date: selectedDate,
+        time: '',
+        hour: '',
+        minute: '',
+        type: '',
+        duration: 25,
+        priority: 'normal',
+        location: '',
+        notes: '',
+        phone: '',
+        paymentStatus: 'pending'
+      });
+      setSelectedAppointment(null);
+
+      alert('✅ Appointment saved successfully!');
+    } catch (error) {
+      console.error('❌ Error saving appointment:', error);
+      alert('Failed to save appointment. Please try again.');
     }
-    
-    setAppointmentList(updatedList);
-    saveAppointmentsToStorage(updatedList);
-    
-    // Immediately sync this specific patient's appointment data
-    updatePatientAppointmentFields(newAppointment.patient);
-    
-    // If editing an appointment with a different patient name, sync the old patient too
-    if (selectedAppointment && selectedAppointment.patient !== newAppointment.patient) {
-      updatePatientAppointmentFields(selectedAppointment.patient);
-    }
-    
-    setNewAppointment({
-      patient: '',
-      doctor: '',
-      date: selectedDate,
-      time: '',
-      hour: '',
-      minute: '',
-      type: '',
-      duration: 25,
-      priority: 'normal',
-      location: '',
-      notes: '',
-      phone: '',
-      paymentStatus: 'pending'
-    });
-    setSelectedAppointment(null);
   };
 
   const clearAllFilters = () => {
@@ -967,7 +859,7 @@ const AppointmentListPage: React.FC = () => {
         appointment.patient.toLowerCase().includes(searchQuery.toLowerCase()) ||
         appointment.doctor.toLowerCase().includes(searchQuery.toLowerCase()) ||
         appointment.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        appointment.phone.toLowerCase().includes(searchQuery.toLowerCase());
+        appointment.phone?.toLowerCase().includes(searchQuery.toLowerCase());
 
       const matchesStatus = activeFilters.status === '' ||
         appointment.status === activeFilters.status;
@@ -1954,7 +1846,7 @@ const AppointmentListPage: React.FC = () => {
                                          type: appointment.type,
                                          time: appointment.time
                                        });
-                                       const phone = appointment.phone.replace(/\D/g, '');
+                                       const phone = appointment.phone?.replace(/\D/g, '') || '';
                                        window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
                                      }}
                                    >
@@ -2159,7 +2051,7 @@ const AppointmentListPage: React.FC = () => {
                                          type: appointment.type,
                                          time: appointment.time
                                        });
-                                       const phone = appointment.phone.replace(/\D/g, '');
+                                       const phone = appointment.phone?.replace(/\D/g, '') || '';
                                        window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
                                      }}
                                    >
@@ -3323,7 +3215,7 @@ const AppointmentListPage: React.FC = () => {
                          date: selectedAppointment.date,
                          time: selectedAppointment.time
                        });
-                       const phone = selectedAppointment.phone.replace(/\D/g, '');
+                       const phone = selectedAppointment.phone?.replace(/\D/g, '') || '';
                        window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
                      }
                    }}
@@ -3503,8 +3395,8 @@ const AppointmentListPage: React.FC = () => {
            </MenuItem>
            
            <MenuItem 
-             onClick={() => handlePaymentStatusChange('completed')}
-             selected={paymentStatusEditAppointment?.paymentStatus === 'completed'}
+             onClick={() => handlePaymentStatusChange('paid')}
+             selected={paymentStatusEditAppointment?.paymentStatus === 'paid'}
            >
              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                <Chip 
@@ -3533,17 +3425,17 @@ const AppointmentListPage: React.FC = () => {
            </MenuItem>
            
            <MenuItem 
-             onClick={() => handlePaymentStatusChange('failed')}
-             selected={paymentStatusEditAppointment?.paymentStatus === 'failed'}
+             onClick={() => handlePaymentStatusChange('overdue')}
+             selected={paymentStatusEditAppointment?.paymentStatus === 'overdue'}
            >
              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                <Chip 
-                 label="🔴 Failed" 
+                 label="🔴 Overdue" 
                  color="error" 
                  size="small" 
                  variant="outlined" 
                />
-               <Typography variant="body2">{t('payment_failed')}</Typography>
+               <Typography variant="body2">{t('payment_overdue')}</Typography>
              </Box>
            </MenuItem>
          </Menu>

@@ -1,5 +1,6 @@
 // Data Synchronization Manager for Clinic Management System
 // Handles bidirectional sync between appointments, payments, doctors, and patients
+// UPDATED: Removed localStorage persistence - components manage their own state
 
 export interface SyncEventDetail {
   source: string;
@@ -7,7 +8,7 @@ export interface SyncEventDetail {
   data?: any;
 }
 
-// Storage keys
+// Storage keys - kept for compatibility but no longer used for localStorage
 export const SYNC_STORAGE_KEYS = {
   APPOINTMENTS: 'clinic_appointments_data',
   PAYMENTS: 'clinic_payments_data',
@@ -46,7 +47,7 @@ export const dispatchSyncEvent = (
 };
 
 /**
- * Generic function to save data and dispatch update event
+ * Generic function to dispatch update event - NO LONGER SAVES TO localStorage
  */
 export const saveDataWithSync = (
   storageKey: string,
@@ -55,36 +56,23 @@ export const saveDataWithSync = (
   source: string
 ): void => {
   try {
-    localStorage.setItem(storageKey, JSON.stringify(data));
+    // REMOVED: localStorage.setItem(storageKey, JSON.stringify(data));
     dispatchSyncEvent(eventType, source, { count: data.length });
-    console.log(`✅ DataSync: Saved ${data.length} items to ${storageKey}`);
+    console.log(`✅ DataSync: Dispatched event for ${data.length} items (no localStorage)`);
   } catch (error) {
-    console.error(`❌ DataSync: Error saving to ${storageKey}:`, error);
+    console.error(`❌ DataSync: Error dispatching event for ${storageKey}:`, error);
     throw error;
   }
 };
 
 /**
- * Generic function to load data from storage
+ * Generic function to load data from storage - DEPRECATED, returns empty array
  */
 export const loadDataFromStorage = <T>(
   storageKey: string,
   defaultData: T[] = []
 ): T[] => {
-  try {
-    const stored = localStorage.getItem(storageKey);
-    if (stored) {
-      const parsedData = JSON.parse(stored);
-      if (Array.isArray(parsedData)) {
-        console.log(`✅ DataSync: Loaded ${parsedData.length} items from ${storageKey}`);
-        return parsedData;
-      }
-    }
-  } catch (error) {
-    console.error(`❌ DataSync: Error loading from ${storageKey}:`, error);
-  }
-  
-  console.log(`ℹ️ DataSync: Using default data for ${storageKey}`);
+  console.log(`⚠️ DataSync: loadDataFromStorage is deprecated for ${storageKey} - components should manage their own state`);
   return defaultData;
 };
 
@@ -112,7 +100,7 @@ export const setupSyncListener = (
 };
 
 /**
- * Appointment-specific sync utilities
+ * Appointment-specific sync utilities - UPDATED: No localStorage operations
  */
 export const appointmentSync = {
   save: (appointments: any[], source: string) => {
@@ -125,7 +113,8 @@ export const appointmentSync = {
   },
   
   load: (defaultData: any[] = []) => {
-    return loadDataFromStorage(SYNC_STORAGE_KEYS.APPOINTMENTS, defaultData);
+    console.log(`⚠️ appointmentSync.load is deprecated - component should manage its own state`);
+    return defaultData;
   },
   
   listen: (handler: (event: CustomEvent<SyncEventDetail>) => void, componentName: string) => {
@@ -134,7 +123,7 @@ export const appointmentSync = {
 };
 
 /**
- * Payment-specific sync utilities
+ * Payment-specific sync utilities - UPDATED: No localStorage operations
  */
 export const paymentSync = {
   save: (payments: any[], source: string) => {
@@ -147,7 +136,8 @@ export const paymentSync = {
   },
   
   load: (defaultData: any[] = []) => {
-    return loadDataFromStorage(SYNC_STORAGE_KEYS.PAYMENTS, defaultData);
+    console.log(`⚠️ paymentSync.load is deprecated - component should manage its own state`);
+    return defaultData;
   },
   
   listen: (handler: (event: CustomEvent<SyncEventDetail>) => void, componentName: string) => {
@@ -156,7 +146,7 @@ export const paymentSync = {
 };
 
 /**
- * Doctor-specific sync utilities
+ * Doctor-specific sync utilities - UPDATED: No localStorage operations
  */
 export const doctorSync = {
   save: (doctors: any[], source: string) => {
@@ -169,7 +159,8 @@ export const doctorSync = {
   },
   
   load: (defaultData: any[] = []) => {
-    return loadDataFromStorage(SYNC_STORAGE_KEYS.DOCTORS, defaultData);
+    console.log(`⚠️ doctorSync.load is deprecated - component should manage its own state`);
+    return defaultData;
   },
   
   listen: (handler: (event: CustomEvent<SyncEventDetail>) => void, componentName: string) => {
@@ -178,7 +169,7 @@ export const doctorSync = {
 };
 
 /**
- * Patient-specific sync utilities
+ * Patient-specific sync utilities - UPDATED: No localStorage operations
  */
 export const patientSync = {
   save: (patients: any[], source: string) => {
@@ -191,7 +182,8 @@ export const patientSync = {
   },
   
   load: (defaultData: any[] = []) => {
-    return loadDataFromStorage(SYNC_STORAGE_KEYS.PATIENTS, defaultData);
+    console.log(`⚠️ patientSync.load is deprecated - component should manage its own state`);
+    return defaultData;
   },
   
   listen: (handler: (event: CustomEvent<SyncEventDetail>) => void, componentName: string) => {
@@ -235,20 +227,13 @@ export const initializeBidirectionalSync = (componentName: string): (() => void)
 };
 
 /**
- * Debug utility to log current storage state
+ * Debug utility to log current storage state - UPDATED: No longer checks localStorage
  */
 export const debugStorageState = () => {
-  console.group('🔍 DataSync: Current Storage State');
+  console.group('🔍 DataSync: Current Storage State (localStorage operations removed)');
   
   Object.entries(SYNC_STORAGE_KEYS).forEach(([key, storageKey]) => {
-    try {
-      const data = localStorage.getItem(storageKey);
-      const parsed = data ? JSON.parse(data) : null;
-      const count = Array.isArray(parsed) ? parsed.length : 0;
-      console.log(`${key}: ${count} items`);
-    } catch (error) {
-      console.error(`${key}: Error parsing data`);
-    }
+    console.log(`${key}: localStorage operations removed - components manage their own state`);
   });
   
   console.groupEnd();

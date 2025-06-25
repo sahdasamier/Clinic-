@@ -30,22 +30,13 @@ const VATSettingsComponent: React.FC<VATSettingsProps> = ({ onSettingsChange }) 
   const [customRate, setCustomRate] = useState<string>('');
   const [showCustomRate, setShowCustomRate] = useState(false);
 
-  // Load settings from localStorage on component mount
-  useEffect(() => {
-    const savedSettings = localStorage.getItem('clinic_vat_settings');
-    if (savedSettings) {
-      try {
-        const parsed = JSON.parse(savedSettings);
-        setVATSettings(parsed);
-      } catch (error) {
-        console.warn('Error loading VAT settings:', error);
-      }
-    }
-  }, []);
+  // Removed: localStorage loading - using default settings only
+  // useEffect(() => {
+  //   // localStorage operations removed
+  // }, []);
 
-  // Save settings to localStorage whenever they change
+  // Notify parent of settings changes (no localStorage persistence)
   useEffect(() => {
-    localStorage.setItem('clinic_vat_settings', JSON.stringify(vatSettings));
     onSettingsChange?.(vatSettings);
   }, [vatSettings, onSettingsChange]);
 

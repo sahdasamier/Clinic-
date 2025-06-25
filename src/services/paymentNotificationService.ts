@@ -109,23 +109,8 @@ This is an automated notification from your clinic management system.
       console.log('📧 Email notification (simulated):');
       console.log(emailContent);
 
-      // Store in localStorage for demo purposes
-      const emailLog = JSON.parse(localStorage.getItem('clinic_payment_email_log') || '[]');
-      emailLog.unshift({
-        timestamp: new Date().toISOString(),
-        subject: `Payment Received - ${paymentData.paymentId}`,
-        content: emailContent,
-        paymentData,
-        status: 'sent'
-      });
-
-      // Keep only last 10 emails
-      if (emailLog.length > 10) {
-        emailLog.splice(10);
-      }
-
-      localStorage.setItem('clinic_payment_email_log', JSON.stringify(emailLog));
-      console.log('✅ Email notification logged');
+      // Note: Email logging removed - localStorage persistence disabled
+      console.log('✅ Email notification sent (logging disabled)');
     } catch (error) {
       console.error('❌ Failed to send email notification:', error);
     }
@@ -137,29 +122,15 @@ This is an automated notification from your clinic management system.
     paymentId: string;
     method?: string;
   }): void {
-    // Store notification in localStorage for tracking
-    const notificationLog = JSON.parse(localStorage.getItem('clinic_payment_notifications') || '[]');
-    
-    const notification = {
-      id: Date.now(),
-      timestamp: new Date().toISOString(),
+    // Note: Notification logging removed - localStorage persistence disabled
+    console.log('Payment notification:', {
       type: 'payment_completed',
       title: 'Payment Received',
       message: `Payment of ${paymentData.amount} EGP received from ${paymentData.patientName}`,
-      paymentData,
-      read: false
-    };
-
-    notificationLog.unshift(notification);
-
-    // Keep only last 50 notifications
-    if (notificationLog.length > 50) {
-      notificationLog.splice(50);
-    }
-
-    localStorage.setItem('clinic_payment_notifications', JSON.stringify(notificationLog));
+      paymentData
+    });
     
-    // Also show an alert for immediate feedback
+    // Show an alert for immediate feedback
     this.showPaymentAlert(paymentData);
   }
 
@@ -245,14 +216,16 @@ This is an automated notification from your clinic management system.
     }
   }
 
-  // Get notification history
+  // Get notification history - DEPRECATED: No localStorage persistence
   public getNotificationHistory(): any[] {
-    return JSON.parse(localStorage.getItem('clinic_payment_notifications') || '[]');
+    console.warn('⚠️ getNotificationHistory: localStorage persistence disabled - returning empty array');
+    return [];
   }
 
-  // Get email log
+  // Get email log - DEPRECATED: No localStorage persistence
   public getEmailLog(): any[] {
-    return JSON.parse(localStorage.getItem('clinic_payment_email_log') || '[]');
+    console.warn('⚠️ getEmailLog: localStorage persistence disabled - returning empty array');
+    return [];
   }
 
   // Test the notification system

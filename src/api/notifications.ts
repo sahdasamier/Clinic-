@@ -14,19 +14,9 @@ import {
 // Use imported storage keys
 const STORAGE_KEYS = STORAGE_KEYS_DATA;
 
-// Helper functions to load data from localStorage
+// Helper functions to load data - UPDATED: No localStorage, return defaults
 const loadDataFromStorage = (key: string, defaultData: any[] = []): any[] => {
-  try {
-    const stored = localStorage.getItem(key);
-    if (stored) {
-      const parsedData = JSON.parse(stored);
-      if (Array.isArray(parsedData)) {
-        return parsedData;
-      }
-    }
-  } catch (error) {
-    console.warn(`Error loading ${key} from localStorage:`, error);
-  }
+  console.warn(`⚠️ loadDataFromStorage: localStorage persistence disabled for ${key} - using defaults`);
   return defaultData;
 };
 
@@ -401,65 +391,45 @@ const aggregateAllNotifications = (): Notification[] => {
   );
 };
 
-// Save notifications to storage
+// Save notifications to storage - DEPRECATED: No localStorage persistence
 const saveNotificationsToStorage = (notifications: Notification[]) => {
-  try {
-    localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(notifications));
-  } catch (error) {
-    console.warn('Error saving notifications to localStorage:', error);
-  }
+  console.warn('⚠️ saveNotificationsToStorage: localStorage persistence disabled');
 };
 
 // Simulate network delay
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-// Helper function to mark an item as recently updated (for notifications)
+// Helper function to mark an item as recently updated - UPDATED: No localStorage
 export const markAsRecentlyUpdated = (storageKey: string, itemId: string | number) => {
-  try {
-    const data = loadDataFromStorage(storageKey, []);
-    const updatedData = data.map((item: any) => 
-      item.id === itemId ? { ...item, updatedAt: new Date().toISOString() } : item
-    );
-    localStorage.setItem(storageKey, JSON.stringify(updatedData));
-    
-    // Trigger a custom event to notify that data was updated
-    window.dispatchEvent(new CustomEvent('dataUpdated', { 
-      detail: { storageKey, itemId, timestamp: new Date().toISOString() } 
-    }));
-  } catch (error) {
-    console.warn(`Error marking item ${itemId} as recently updated:`, error);
-  }
+  console.warn(`⚠️ markAsRecentlyUpdated: localStorage persistence disabled for ${storageKey}:${itemId}`);
+  
+  // Trigger a custom event to notify that data was updated (event system preserved)
+  window.dispatchEvent(new CustomEvent('dataUpdated', { 
+    detail: { storageKey, itemId, timestamp: new Date().toISOString() } 
+  }));
 };
 
-// Helper function to add a new item with current timestamp
+// Helper function to add a new item - UPDATED: No localStorage persistence
 export const addNewItemToStorage = (storageKey: string, newItem: any) => {
-  try {
-    const data = loadDataFromStorage(storageKey, []);
-    const itemWithTimestamp = {
-      ...newItem,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    
-    // Find the highest ID and increment
-    const maxId = Math.max(0, ...data.map((item: any) => parseInt(item.id) || 0));
-    if (!itemWithTimestamp.id) {
-      itemWithTimestamp.id = maxId + 1;
-    }
-    
-    const updatedData = [...data, itemWithTimestamp];
-    localStorage.setItem(storageKey, JSON.stringify(updatedData));
-    
-    // Trigger a custom event to notify that data was updated
-    window.dispatchEvent(new CustomEvent('dataUpdated', { 
-      detail: { storageKey, itemId: itemWithTimestamp.id, timestamp: new Date().toISOString(), action: 'add' } 
-    }));
-    
-    return itemWithTimestamp;
-  } catch (error) {
-    console.warn('Error adding new item to storage:', error);
-    return newItem;
+  console.warn(`⚠️ addNewItemToStorage: localStorage persistence disabled for ${storageKey}`);
+  
+  const itemWithTimestamp = {
+    ...newItem,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  
+  // Assign ID if not present (for component compatibility)
+  if (!itemWithTimestamp.id) {
+    itemWithTimestamp.id = Date.now(); // Simple ID generation
   }
+  
+  // Trigger a custom event to notify that data was updated (event system preserved)
+  window.dispatchEvent(new CustomEvent('dataUpdated', { 
+    detail: { storageKey, itemId: itemWithTimestamp.id, timestamp: new Date().toISOString(), action: 'add' } 
+  }));
+  
+  return itemWithTimestamp;
 };
 
 // Notifications API
@@ -552,39 +522,24 @@ const defaultSettings: NotificationSettings = {
 };
 
 export const notificationSettingsApi = {
-  // Get settings
+  // Get settings - UPDATED: No localStorage persistence
   get: async (userId: string): Promise<NotificationSettings> => {
     await delay(100);
-    try {
-      const stored = localStorage.getItem(`${STORAGE_KEYS.SETTINGS}_${userId}`);
-      if (stored) {
-        return { ...defaultSettings, ...JSON.parse(stored) };
-      }
-    } catch (error) {
-      console.warn('Error loading notification settings:', error);
-    }
+    console.warn(`⚠️ notificationSettingsApi.get: localStorage persistence disabled for user ${userId}`);
     return { ...defaultSettings };
   },
 
-  // Update settings
+  // Update settings - UPDATED: No localStorage persistence
   update: async (userId: string, settings: NotificationSettings): Promise<NotificationSettings> => {
     await delay(200);
-    try {
-      localStorage.setItem(`${STORAGE_KEYS.SETTINGS}_${userId}`, JSON.stringify(settings));
-    } catch (error) {
-      console.warn('Error saving notification settings:', error);
-    }
+    console.warn(`⚠️ notificationSettingsApi.update: localStorage persistence disabled for user ${userId}`);
     return { ...settings };
   },
 
-  // Reset to defaults
+  // Reset to defaults - UPDATED: No localStorage persistence
   reset: async (userId: string): Promise<NotificationSettings> => {
     await delay(100);
-    try {
-      localStorage.removeItem(`${STORAGE_KEYS.SETTINGS}_${userId}`);
-    } catch (error) {
-      console.warn('Error resetting notification settings:', error);
-    }
+    console.warn(`⚠️ notificationSettingsApi.reset: localStorage persistence disabled for user ${userId}`);
     return { ...defaultSettings };
   },
 }; 

@@ -56,16 +56,8 @@ const VATAdjustmentModal: React.FC<VATAdjustmentModalProps> = ({
 }) => {
   const { t } = useTranslation();
   
-  // Load existing adjustments from localStorage
-  const [adjustments, setAdjustments] = useState<VATAdjustment[]>(() => {
-    try {
-      const saved = localStorage.getItem('clinic_vat_adjustments');
-      return saved ? JSON.parse(saved) : [];
-    } catch (error) {
-      console.error('Error loading VAT adjustments:', error);
-      return [];
-    }
-  });
+  // Initialize with empty adjustments (no localStorage)
+  const [adjustments, setAdjustments] = useState<VATAdjustment[]>([]);
 
   const [newAdjustment, setNewAdjustment] = useState({
     amount: 0,
@@ -119,8 +111,7 @@ const VATAdjustmentModal: React.FC<VATAdjustmentModalProps> = ({
     const updatedAdjustments = [...adjustments, adjustment];
     setAdjustments(updatedAdjustments);
     
-    // Save to localStorage
-    localStorage.setItem('clinic_vat_adjustments', JSON.stringify(updatedAdjustments));
+    // Note: localStorage persistence removed - in-memory only
 
     // Reset form
     setNewAdjustment({
@@ -135,7 +126,7 @@ const VATAdjustmentModal: React.FC<VATAdjustmentModalProps> = ({
   const handleDeleteAdjustment = (id: string) => {
     const updatedAdjustments = adjustments.filter(adj => adj.id !== id);
     setAdjustments(updatedAdjustments);
-    localStorage.setItem('clinic_vat_adjustments', JSON.stringify(updatedAdjustments));
+    // Note: localStorage persistence removed - in-memory only
   };
 
   const handleSave = () => {

@@ -51,6 +51,12 @@ import {
 
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
+import { useUser } from '../../contexts/UserContext';
+import { 
+  PatientService,
+  AppointmentService,
+  PaymentService
+} from '../../services';
 
 // DIRECT IMPORTS from actual pages
 import { 
@@ -204,98 +210,56 @@ const StatCard: React.FC<{
 const DashboardPage: React.FC = () => {
   const { t } = useTranslation();
   const { user, loading: authLoading, initialized } = useAuth();
+  const { userProfile } = useUser();
   const [refreshKey, setRefreshKey] = useState(0);
   const [dataLoading, setDataLoading] = useState(true);
   
-  // ✅ Initialize dashboard data from localStorage FIRST
-  const [appointments, setAppointments] = useState<any[]>(() => {
-    try {
-      const saved = localStorage.getItem('clinic_appointments_data');
-      if (saved) {
-        const parsedData = JSON.parse(saved);
-        if (Array.isArray(parsedData) && parsedData.length > 0) {
-          console.log('✅ DashboardPage: Loaded appointments from localStorage on init:', parsedData.length);
-          return parsedData;
-        }
-      }
-    } catch (error) {
-      console.error('❌ DashboardPage: Error loading appointments from localStorage:', error);
-    }
-    return getDefaultAppointments();
-  });
-
-  const [patients, setPatients] = useState<any[]>(() => {
-    try {
-      const saved = localStorage.getItem('clinic_patients_data');
-      if (saved) {
-        const parsedData = JSON.parse(saved);
-        if (Array.isArray(parsedData) && parsedData.length > 0) {
-          console.log('✅ DashboardPage: Loaded patients from localStorage on init:', parsedData.length);
-          return parsedData;
-        }
-      }
-    } catch (error) {
-      console.error('❌ DashboardPage: Error loading patients from localStorage:', error);
-    }
-    return [];
-  });
-
-  const [payments, setPayments] = useState<any[]>(() => {
-    try {
-      const saved = localStorage.getItem('clinic_payments_data');
-      if (saved) {
-        const parsedData = JSON.parse(saved);
-        if (Array.isArray(parsedData) && parsedData.length > 0) {
-          console.log('✅ DashboardPage: Loaded payments from localStorage on init:', parsedData.length);
-          return parsedData;
-        }
-      }
-    } catch (error) {
-      console.error('❌ DashboardPage: Error loading payments from localStorage:', error);
-    }
-    return [];
-  });
+  // ✅ Firestore-powered dashboard data
+  const [appointments, setAppointments] = useState<any[]>([]);
+  const [patients, setPatients] = useState<any[]>([]);
+  const [payments, setPayments] = useState<any[]>([]);
   const doctors = doctorSchedules;
 
-  // Load all data directly from the pages and setup sync
+  // ✅ Set up Firestore listeners for real-time data
   useEffect(() => {
     // Wait for auth to be initialized and user to be available
-    if (!initialized || authLoading || !user) {
+    if (!initialized || authLoading || !user || !userProfile?.clinicId) {
       console.log('🔄 DashboardPage: Waiting for auth initialization...', {
         initialized,
         authLoading,
-        hasUser: !!user
+        hasUser: !!user,
+        hasUserProfile: !!userProfile
       });
       return;
     }
 
-    console.log('✅ DashboardPage: Auth initialized, loading dashboard data...');
+    console.log('✅ DashboardPage: Setting up Firestore listeners...');
     setDataLoading(true);
 
-    try {
-      const loadedAppointments = loadAppointmentsFromStorage();
-      setAppointments(loadedAppointments.length > 0 ? loadedAppointments : getDefaultAppointments());
-      
-      const loadedPatients = loadPatientsFromStorage();
-      setPatients(loadedPatients);
-      
-      const loadedPayments = loadPaymentsFromStorage();
-      setPayments(loadedPayments);
-      
-      // Setup appointment-patient sync on dashboard load
-      setupAppointmentPatientSync();
+    const clinicId = userProfile.clinicId;
 
-      console.log('✅ DashboardPage: Dashboard data loaded successfully');
-    } catch (error) {
-      console.error('❌ DashboardPage: Error loading dashboard data:', error);
-    } finally {
-      setDataLoading(false);
-    }
+    // Set up real-time listeners
+    const unsubscribeAppointments = AppointmentService.listenAppointments(clinicId, (updatedAppointments) => {
+      console.log(`📅 Dashboard: Appointments updated: ${updatedAppointments.length} appointments`);
+      setAppointments(updatedAppointments);
+    });
+
+    const unsubscribePatients = PatientService.listenPatients(clinicId, (updatedPatients) => {
+      console.log(`👥 Dashboard: Patients updated: ${updatedPatients.length} patients`);
+      setPatients(updatedPatients);
+    });
+
+    const unsubscribePayments = PaymentService.listenPayments(clinicId, (updatedPayments) => {
+      console.log(`💰 Dashboard: Payments updated: ${updatedPayments.length} payments`);
+      setPayments(updatedPayments);
+    });
+
+    setDataLoading(false);
 
     // Listen for user data clearing
     const handleUserDataCleared = () => {
       // Reset dashboard data
-      setAppointments(getDefaultAppointments());
+      setAppointments([]);
       setPatients([]);
       setPayments([]);
       setRefreshKey(prev => prev + 1);
@@ -304,10 +268,15 @@ const DashboardPage: React.FC = () => {
 
     window.addEventListener('userDataCleared', handleUserDataCleared);
     
+    // Cleanup function
     return () => {
+      console.log('🧹 Cleaning up dashboard Firestore listeners...');
+      unsubscribeAppointments();
+      unsubscribePatients();
+      unsubscribePayments();
       window.removeEventListener('userDataCleared', handleUserDataCleared);
     };
-  }, [refreshKey, initialized, authLoading, user]);
+  }, [refreshKey, initialized, authLoading, user, userProfile]);
 
   // Refresh function
   const refreshData = () => {
@@ -316,23 +285,16 @@ const DashboardPage: React.FC = () => {
       return;
     }
 
-    console.log('🔄 DashboardPage: Refreshing dashboard data...');
+    console.log('🔄 DashboardPage: Refreshing dashboard...');
     setDataLoading(true);
     
     try {
       setRefreshKey(prev => prev + 1);
-      const loadedAppointments = loadAppointmentsFromStorage();
-      setAppointments(loadedAppointments.length > 0 ? loadedAppointments : getDefaultAppointments());
+      // Keep in-memory state for UI responsiveness, no localStorage
       
-      const loadedPatients = loadPatientsFromStorage();
-      setPatients(loadedPatients);
-      
-      const loadedPayments = loadPaymentsFromStorage();
-      setPayments(loadedPayments);
-      
-      console.log('✅ DashboardPage: Dashboard data refreshed successfully');
+      console.log('✅ DashboardPage: Dashboard refreshed (localStorage removed)');
     } catch (error) {
-      console.error('❌ DashboardPage: Error refreshing dashboard data:', error);
+      console.error('❌ DashboardPage: Error refreshing dashboard:', error);
     } finally {
       setDataLoading(false);
     }

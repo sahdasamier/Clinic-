@@ -14,106 +14,48 @@ const BUSINESS_EXPENSES_STORAGE_KEY = 'clinic_business_expenses_data';
 const VAT_ADJUSTMENTS_STORAGE_KEY = 'clinic_vat_adjustments';
 const EXPENSE_CATEGORIES_STORAGE_KEY = 'clinic_expense_categories';
 
-// Employee Management
+// Employee Management - UPDATED: No localStorage persistence
 export const loadEmployeesFromStorage = (): Employee[] => {
-  try {
-    const stored = localStorage.getItem(EMPLOYEES_STORAGE_KEY);
-    if (stored) {
-      const employees = JSON.parse(stored);
-      return Array.isArray(employees) ? employees : defaultEmployees;
-    }
-  } catch (error) {
-    console.warn('Error loading employees from storage:', error);
-  }
+  console.warn('⚠️ loadEmployeesFromStorage: localStorage persistence disabled - using defaults');
   return defaultEmployees;
 };
 
 export const saveEmployeesToStorage = (employees: Employee[]) => {
-  try {
-    localStorage.setItem(EMPLOYEES_STORAGE_KEY, JSON.stringify(employees));
-    window.dispatchEvent(new CustomEvent('employeesUpdated', { detail: { employees } }));
-  } catch (error) {
-    console.warn('Error saving employees to storage:', error);
-  }
+  console.warn('⚠️ saveEmployeesToStorage: localStorage persistence disabled');
+  window.dispatchEvent(new CustomEvent('employeesUpdated', { detail: { employees } }));
 };
 
-// Business Expenses Management
+// Business Expenses Management - UPDATED: No localStorage persistence
 export const loadBusinessExpensesFromStorage = (): BusinessExpense[] => {
-  try {
-    const stored = localStorage.getItem(BUSINESS_EXPENSES_STORAGE_KEY);
-    if (stored) {
-      const expenses = JSON.parse(stored);
-      return Array.isArray(expenses) ? expenses : defaultBusinessExpenses;
-    }
-  } catch (error) {
-    console.warn('Error loading business expenses from storage:', error);
-  }
+  console.warn('⚠️ loadBusinessExpensesFromStorage: localStorage persistence disabled - using defaults');
   return defaultBusinessExpenses;
 };
 
 export const saveBusinessExpensesToStorage = (expenses: BusinessExpense[]) => {
-  try {
-    localStorage.setItem(BUSINESS_EXPENSES_STORAGE_KEY, JSON.stringify(expenses));
-    window.dispatchEvent(new CustomEvent('businessExpensesUpdated', { detail: { expenses } }));
-  } catch (error) {
-    console.warn('Error saving business expenses to storage:', error);
-  }
+  console.warn('⚠️ saveBusinessExpensesToStorage: localStorage persistence disabled');
+  window.dispatchEvent(new CustomEvent('businessExpensesUpdated', { detail: { expenses } }));
 };
 
-// VAT Adjustments Management
+// VAT Adjustments Management - UPDATED: No localStorage persistence
 export const loadVATAdjustmentsFromStorage = (): VATAdjustment[] => {
-  try {
-    const stored = localStorage.getItem(VAT_ADJUSTMENTS_STORAGE_KEY);
-    console.log('📋 Loading VAT adjustments from localStorage:', { stored, key: VAT_ADJUSTMENTS_STORAGE_KEY });
-    if (stored) {
-      const adjustments = JSON.parse(stored);
-      console.log('💾 Parsed VAT adjustments:', adjustments);
-      return Array.isArray(adjustments) ? adjustments : [];
-    }
-  } catch (error) {
-    console.warn('Error loading VAT adjustments from storage:', error);
-  }
-  console.log('⚠️ No VAT adjustments found in localStorage');
+  console.warn('⚠️ loadVATAdjustmentsFromStorage: localStorage persistence disabled - returning empty array');
   return [];
 };
 
 export const saveVATAdjustmentsToStorage = (adjustments: VATAdjustment[]) => {
-  try {
-    console.log('💾 Saving VAT adjustments to localStorage:', { adjustments, key: VAT_ADJUSTMENTS_STORAGE_KEY });
-    localStorage.setItem(VAT_ADJUSTMENTS_STORAGE_KEY, JSON.stringify(adjustments));
-    
-    // Verify save worked
-    const verification = localStorage.getItem(VAT_ADJUSTMENTS_STORAGE_KEY);
-    console.log('✅ VAT adjustments save verification:', { saved: verification });
-    
-    window.dispatchEvent(new CustomEvent('vatAdjustmentsUpdated', { detail: { adjustments } }));
-    console.log('📡 Dispatched vatAdjustmentsUpdated event');
-  } catch (error) {
-    console.warn('Error saving VAT adjustments to storage:', error);
-  }
+  console.warn('⚠️ saveVATAdjustmentsToStorage: localStorage persistence disabled');
+  window.dispatchEvent(new CustomEvent('vatAdjustmentsUpdated', { detail: { adjustments } }));
 };
 
-// Expense Categories Management
+// Expense Categories Management - UPDATED: No localStorage persistence
 export const loadExpenseCategoriesFromStorage = (): ExpenseCategory[] => {
-  try {
-    const stored = localStorage.getItem(EXPENSE_CATEGORIES_STORAGE_KEY);
-    if (stored) {
-      const categories = JSON.parse(stored);
-      return Array.isArray(categories) ? categories : defaultExpenseCategories;
-    }
-  } catch (error) {
-    console.warn('Error loading expense categories from storage:', error);
-  }
+  console.warn('⚠️ loadExpenseCategoriesFromStorage: localStorage persistence disabled - using defaults');
   return defaultExpenseCategories;
 };
 
 export const saveExpenseCategoriesToStorage = (categories: ExpenseCategory[]) => {
-  try {
-    localStorage.setItem(EXPENSE_CATEGORIES_STORAGE_KEY, JSON.stringify(categories));
-    window.dispatchEvent(new CustomEvent('expenseCategoriesUpdated', { detail: { categories } }));
-  } catch (error) {
-    console.warn('Error saving expense categories to storage:', error);
-  }
+  console.warn('⚠️ saveExpenseCategoriesToStorage: localStorage persistence disabled');
+  window.dispatchEvent(new CustomEvent('expenseCategoriesUpdated', { detail: { categories } }));
 };
 
 // Calculate monthly salary expenses

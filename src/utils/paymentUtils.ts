@@ -16,68 +16,37 @@ const VAT_SETTINGS_KEY = 'clinic_vat_settings';
 
 
 
-// Load clinic payment settings
+// Load clinic payment settings - UPDATED: No localStorage, using defaults
 export const loadClinicPaymentSettings = (): ClinicPaymentSettings => {
-  try {
-    const stored = localStorage.getItem(CLINIC_SETTINGS_KEY);
-    if (stored) {
-      const settings = JSON.parse(stored);
-      return { ...defaultClinicPaymentSettings, ...settings };
-    }
-  } catch (error) {
-    console.warn('Error loading clinic payment settings:', error);
-  }
+  console.warn('⚠️ loadClinicPaymentSettings: localStorage persistence disabled - using defaults');
   return defaultClinicPaymentSettings;
 };
 
-// Save clinic payment settings
+// Save clinic payment settings - DEPRECATED: No localStorage persistence
 export const saveClinicPaymentSettings = (settings: ClinicPaymentSettings) => {
-  try {
-    localStorage.setItem(CLINIC_SETTINGS_KEY, JSON.stringify(settings));
-  } catch (error) {
-    console.warn('Error saving clinic payment settings:', error);
-  }
+  console.warn('⚠️ saveClinicPaymentSettings: localStorage persistence disabled');
+  console.log('Clinic payment settings received (not persisted):', settings);
 };
 
-// Load VAT settings
+// Load VAT settings - UPDATED: No localStorage, using defaults
 export const loadVATSettings = (): VATSettings => {
-  try {
-    const stored = localStorage.getItem(VAT_SETTINGS_KEY);
-    if (stored) {
-      const settings = JSON.parse(stored);
-      return { ...defaultVATSettings, ...settings };
-    }
-  } catch (error) {
-    console.warn('Error loading VAT settings:', error);
-  }
+  console.warn('⚠️ loadVATSettings: localStorage persistence disabled - using defaults');
   return defaultVATSettings;
 };
 
-// Load payments from storage
+// Load payments from storage - DEPRECATED: Returns empty array
 export const loadPaymentsFromStorage = (): PaymentData[] => {
-  try {
-    const stored = localStorage.getItem(PAYMENTS_STORAGE_KEY);
-    if (stored) {
-      const payments = JSON.parse(stored);
-      return Array.isArray(payments) ? payments : [];
-    }
-  } catch (error) {
-    console.warn('Error loading payments from storage:', error);
-  }
+  console.warn('⚠️ loadPaymentsFromStorage: localStorage persistence disabled - returning empty array');
   return [];
 };
 
-// Save payments to storage
+// Save payments to storage - DEPRECATED: Event dispatch only
 export const savePaymentsToStorage = (payments: PaymentData[]) => {
-  try {
-    localStorage.setItem(PAYMENTS_STORAGE_KEY, JSON.stringify(payments));
-    // Dispatch event for other components to sync
-    window.dispatchEvent(new CustomEvent('paymentsUpdated', { 
-      detail: { payments } 
-    }));
-  } catch (error) {
-    console.warn('Error saving payments to storage:', error);
-  }
+  console.warn('⚠️ savePaymentsToStorage: localStorage persistence disabled');
+  // Dispatch event for other components to sync (no localStorage)
+  window.dispatchEvent(new CustomEvent('paymentsUpdated', { 
+    detail: { payments } 
+  }));
 };
 
 // Generate unique invoice ID

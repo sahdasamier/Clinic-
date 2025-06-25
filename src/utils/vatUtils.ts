@@ -1,25 +1,15 @@
 import { VATSettings, defaultVATSettings } from '../data/mockData';
 
-// Get VAT settings from localStorage or use defaults
+// Get VAT settings - UPDATED: No longer reads from localStorage
 export const getVATSettings = (): VATSettings => {
-  try {
-    const saved = localStorage.getItem('clinic_vat_settings');
-    if (saved) {
-      return JSON.parse(saved);
-    }
-  } catch (error) {
-    console.warn('Error loading VAT settings:', error);
-  }
+  console.warn('⚠️ getVATSettings: localStorage persistence disabled - using defaults');
   return defaultVATSettings;
 };
 
-// Save VAT settings to localStorage
+// Save VAT settings - DEPRECATED: No longer saves to localStorage
 export const saveVATSettings = (settings: VATSettings): void => {
-  try {
-    localStorage.setItem('clinic_vat_settings', JSON.stringify(settings));
-  } catch (error) {
-    console.warn('Error saving VAT settings:', error);
-  }
+  console.warn('⚠️ saveVATSettings: localStorage persistence disabled');
+  console.log('VAT settings received (not persisted):', settings);
 };
 
 export interface VATCalculation {

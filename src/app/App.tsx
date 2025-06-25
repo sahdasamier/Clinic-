@@ -24,11 +24,16 @@ const AppContent: React.FC = () => {
 
   // Check demo clinic status on app start (non-blocking, safe)
   useEffect(() => {
-    // This now just checks status without trying to write anything
-    // Actual initialization will happen after admin authentication
-    ensureDemoClinicExists().catch(error => {
-      console.warn('⚠️ Demo clinic status check failed (this is normal):', error);
-    });
+    // Add a small delay to ensure Firebase is fully initialized
+    const timer = setTimeout(() => {
+      // This now just checks status without trying to write anything
+      // Actual initialization will happen after admin authentication
+      ensureDemoClinicExists().catch(error => {
+        console.warn('⚠️ Demo clinic status check failed (this is normal on first load):', error);
+      });
+    }, 1000);
+
+    return () => clearTimeout(timer);
   }, []);
 
   return <Router />;
