@@ -90,6 +90,7 @@ import {
   type Patient,
   type Appointment
 } from '../../services';
+import { globalDataSync } from '../../utils/globalDataSync';
 import {
   defaultNewPatientData,
   defaultMedicalHistoryData,
@@ -680,6 +681,10 @@ const PatientListPage: React.FC = () => {
       setNewPatientData(defaultNewPatientData);
       
       console.log('✅ New patient created successfully');
+      
+      // ✅ Trigger global sync to notify other pages
+      globalDataSync.triggerPatientSync(patientData);
+      
       alert('Patient added successfully!');
     } catch (error) {
       console.error('❌ Error creating patient:', error);
@@ -829,7 +834,7 @@ const PatientListPage: React.FC = () => {
 
     const updatedPatients = patients.map(patient => 
       patient.id === statusEditPatient.id 
-        ? { ...patient, status: newStatus }
+        ? { ...patient, status: newStatus as Patient['status'] }
         : patient
     );
 
@@ -1126,17 +1131,18 @@ const PatientListPage: React.FC = () => {
       // Search query filter
       const matchesSearch = searchQuery === '' || 
         patient.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        patient.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        patient.condition.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        patient.phone.toLowerCase().includes(searchQuery.toLowerCase());
+        patient.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        patient.condition?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        patient.phone?.toLowerCase().includes(searchQuery.toLowerCase());
 
       // Gender filter
       const matchesGender = activeFilters.gender === '' || 
-        patient.gender.toLowerCase() === activeFilters.gender.toLowerCase();
+        patient.gender?.toLowerCase() === activeFilters.gender.toLowerCase();
 
       // Age range filter
       const matchesAge = activeFilters.ageRange === '' || (() => {
         const age = patient.age;
+        if (age === undefined || age === null) return true;
         switch (activeFilters.ageRange) {
           case '18-30': return age >= 18 && age <= 30;
           case '31-50': return age >= 31 && age <= 50;
@@ -1148,7 +1154,7 @@ const PatientListPage: React.FC = () => {
 
       // Condition filter
       const matchesCondition = activeFilters.condition === '' ||
-        patient.condition.toLowerCase().includes(activeFilters.condition.toLowerCase());
+        patient.condition?.toLowerCase().includes(activeFilters.condition.toLowerCase());
 
       // Status filter
       const matchesStatus = activeFilters.status === '' ||
@@ -7306,38 +7312,4 @@ const PatientListPage: React.FC = () => {
 export default PatientListPage;
 
 // Export the initialPatients for backwards compatibility
-export { initialPatients } from '../../data/mockData'; 
-
-// ✅ FIXED: Add missing variables and functions that were removed during localStorage cleanup
-const [organizedAppointmentData, setOrganizedAppointmentData] = useState<any>(null);
-const [patientsWithAppointments, setPatientsWithAppointments] = useState<any[]>([]);
-
-// Dummy implementation of missing functions  
-const getPatientsOrganizedByAppointmentStatus = () => {
-  return {
-    patientsWithPending: patients.filter((p: any) => p.status === 'new' || p.status === 'follow-up'),
-    patientsWithCompleted: patients.filter((p: any) => p.status === 'old'),
-    patientsWithNoAppointments: patients.filter((p: any) => p.status === 'discharged'),
-    allPatients: patients
-  };
-};
-
-const forceSyncAllPatients = () => {
-  console.log('📊 Force sync all patients - localStorage disabled, using Firestore real-time listeners');
-};
-
-const sendAppointmentDataToPatients = () => {
-  console.log('📊 Send appointment data to patients - localStorage disabled');
-  return patients;
-};
-
-const organizeAppointmentsByCompletion = () => {
-  console.log('📊 Organize appointments by completion - localStorage disabled');
-  return { completed: [], notCompleted: [] };
-};
-
-const syncAllCompletedAppointmentsToMedicalHistory = () => {
-  console.log('📊 Sync completed appointments to medical history - localStorage disabled');
-};
-
-const initialPatients = patients;
+export { initialPatients } from '../../data/mockData';

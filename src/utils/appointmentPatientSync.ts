@@ -1,5 +1,6 @@
 import { loadAppointmentsFromStorage, saveAppointmentsToStorage } from '../features/appointments/AppointmentListPage';
 import { loadPatientsFromStorage, savePatientsToStorage } from '../features/patients/PatientListPage';
+import { Patient } from '../types/models';
 
 /**
  * Enhanced appointment loading with multiple key support and debugging
@@ -39,7 +40,7 @@ export interface OrganizedAppointmentData {
 
 // Interface for patient with appointment data
 export interface PatientWithAppointments {
-  id: number;
+  id: string;
   name: string;
   appointmentData: {
     completed: any[];
@@ -184,10 +185,11 @@ export const sendAppointmentDataToPatients = (): PatientWithAppointments[] => {
     }));
     
           return {
-        id: Math.max(0, ...existingPatients.map(p => p.id)) + index + 1,
+        id: `auto-${Date.now()}-${index}`,
+        clinicId: 'default-clinic', // Required field
         name: patientName,
-        age: null, // Age not provided
-        gender: '',
+        age: undefined, // Age not provided
+        gender: undefined,
         phone: firstAppointment?.phone || '',
         email: '',
         lastVisit: completedAppointments.length > 0 
@@ -197,7 +199,7 @@ export const sendAppointmentDataToPatients = (): PatientWithAppointments[] => {
         todayAppointment, // Today's appointments only
         nextAppointment,  // Future appointments only (after today)
         condition: firstAppointment?.type || '',
-        status: 'new',
+        status: 'new' as const,
         avatar: patientName.split(' ').map((n: string) => n[0]).join('').toUpperCase(),
         address: '',
         bloodType: '',
@@ -210,6 +212,9 @@ export const sendAppointmentDataToPatients = (): PatientWithAppointments[] => {
         visitNotes: [],
         vitalSigns: [],
         documents: [],
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
         _createdFromAppointment: true, // Flag to indicate this was auto-created
       };
   });

@@ -105,6 +105,7 @@ import {
   ServiceUtils,
   type Appointment as FirestoreAppointment
 } from '../../services';
+import { globalDataSync } from '../../utils/globalDataSync';
 import {
   appointmentTypesOptions,
   priorityLevels,
@@ -773,6 +774,9 @@ const AppointmentListPage: React.FC = () => {
         await AppointmentService.createAppointment(userProfile.clinicId, appointmentData);
         setAddAppointmentOpen(false);
         console.log('✅ Appointment created via Firestore service');
+        
+        // ✅ Trigger global sync to notify other pages
+        globalDataSync.triggerAppointmentSync(appointmentData);
       }
 
       // ✅ State updates automatically via real-time listener!

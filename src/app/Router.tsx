@@ -5,6 +5,7 @@ import AdminProtectedRoute from "../components/AdminProtectedRoute";
 import ClinicAccessGuard from "../components/ClinicAccessGuard";
 import PermissionGuard from "../components/PermissionGuard";
 import BlurredPermissionGuard from "../components/BlurredPermissionGuard";
+import EnhancedRouteGuard from "../components/EnhancedRouteGuard";
 import Layout from "../components/Layout";
 import DashboardPage from "../features/dashboard/DashboardPage";
 import LoginPage from "../features/auth/LoginPage";
@@ -35,48 +36,52 @@ const Router: React.FC = () => {
         {/* Admin Routes */}
         <Route path="/admin/login" element={<AdminLoginPage />} />
         <Route path="/admin/dashboard" element={<AdminProtectedRoute><AdminPanelPage /></AdminProtectedRoute>} />
+        <Route path="/admin" element={<AdminProtectedRoute><AdminPanelPage /></AdminProtectedRoute>} />
         
-        {/* Protected Routes - Wrapped with ProtectedRoute, ClinicAccessGuard, Layout, and BlurredPermissionGuard */}
+        {/* Protected Routes - Enhanced with permission-aware routing */}
         <Route path="/" element={
           <ProtectedRoute>
             <ClinicAccessGuard>
               <Layout>
-                <BlurredPermissionGuard feature="dashboard">
+                <EnhancedRouteGuard feature="dashboard" level="read">
                   <DashboardPage />
-                </BlurredPermissionGuard>
+                </EnhancedRouteGuard>
               </Layout>
             </ClinicAccessGuard>
           </ProtectedRoute>
         } />
+        
         <Route path="/dashboard" element={
           <ProtectedRoute>
             <ClinicAccessGuard>
               <Layout>
-                <BlurredPermissionGuard feature="dashboard">
+                <EnhancedRouteGuard feature="dashboard" level="read">
                   <DashboardPage />
-                </BlurredPermissionGuard>
+                </EnhancedRouteGuard>
               </Layout>
             </ClinicAccessGuard>
           </ProtectedRoute>
         } />
+        
         <Route path="/dashboard/receptionist" element={
           <ProtectedRoute>
             <ClinicAccessGuard>
               <Layout>
-                <BlurredPermissionGuard feature="dashboard">
+                <EnhancedRouteGuard feature="dashboard" level="read">
                   <ReceptionistDashboard />
-                </BlurredPermissionGuard>
+                </EnhancedRouteGuard>
               </Layout>
             </ClinicAccessGuard>
           </ProtectedRoute>
         } />
+        
         <Route path="/dashboard/doctor" element={
           <ProtectedRoute>
             <ClinicAccessGuard>
               <Layout>
-                <BlurredPermissionGuard feature="dashboard">
+                <EnhancedRouteGuard feature="dashboard" level="read">
                   <DoctorDashboard />
-                </BlurredPermissionGuard>
+                </EnhancedRouteGuard>
               </Layout>
             </ClinicAccessGuard>
           </ProtectedRoute>
@@ -87,20 +92,21 @@ const Router: React.FC = () => {
           <ProtectedRoute>
             <ClinicAccessGuard>
               <Layout>
-                <BlurredPermissionGuard feature="patients">
+                <EnhancedRouteGuard feature="patients" level="read">
                   <PatientListPage />
-                </BlurredPermissionGuard>
+                </EnhancedRouteGuard>
               </Layout>
             </ClinicAccessGuard>
           </ProtectedRoute>
         } />
+        
         <Route path="/patients/:id" element={
           <ProtectedRoute>
             <ClinicAccessGuard>
               <Layout>
-                <BlurredPermissionGuard feature="patient_details">
+                <EnhancedRouteGuard feature="patient_details" level="read">
                   <PatientDetailPage />
-                </BlurredPermissionGuard>
+                </EnhancedRouteGuard>
               </Layout>
             </ClinicAccessGuard>
           </ProtectedRoute>
@@ -111,55 +117,59 @@ const Router: React.FC = () => {
           <ProtectedRoute>
             <ClinicAccessGuard>
               <Layout>
-                <BlurredPermissionGuard feature="appointments">
+                <EnhancedRouteGuard feature="appointments" level="read">
                   <AppointmentListPage />
-                </BlurredPermissionGuard>
-              </Layout>
-            </ClinicAccessGuard>
-          </ProtectedRoute>
-        } />
-        <Route path="/appointments/calendar" element={
-          <ProtectedRoute>
-            <ClinicAccessGuard>
-              <Layout>
-                <BlurredPermissionGuard feature="appointment_calendar">
-                  <AppointmentCalendarPage />
-                </BlurredPermissionGuard>
+                </EnhancedRouteGuard>
               </Layout>
             </ClinicAccessGuard>
           </ProtectedRoute>
         } />
         
-        {/* Other Feature Routes */}
+        <Route path="/appointments/calendar" element={
+          <ProtectedRoute>
+            <ClinicAccessGuard>
+              <Layout>
+                <EnhancedRouteGuard feature="appointment_calendar" level="read">
+                  <AppointmentCalendarPage />
+                </EnhancedRouteGuard>
+              </Layout>
+            </ClinicAccessGuard>
+          </ProtectedRoute>
+        } />
+        
+        {/* Business Operations Routes */}
         <Route path="/payments" element={
           <ProtectedRoute>
             <ClinicAccessGuard>
               <Layout>
-                <BlurredPermissionGuard feature="payments">
+                <EnhancedRouteGuard feature="payments" level="read">
                   <PaymentListPage />
-                </BlurredPermissionGuard>
+                </EnhancedRouteGuard>
               </Layout>
             </ClinicAccessGuard>
           </ProtectedRoute>
         } />
+        
         <Route path="/inventory" element={
           <ProtectedRoute>
             <ClinicAccessGuard>
               <Layout>
-                <BlurredPermissionGuard feature="inventory">
+                <EnhancedRouteGuard feature="inventory" level="read">
                   <InventoryPage />
-                </BlurredPermissionGuard>
+                </EnhancedRouteGuard>
               </Layout>
             </ClinicAccessGuard>
           </ProtectedRoute>
         } />
+        
+        {/* Advanced Features Routes */}
         <Route path="/notifications" element={
           <ProtectedRoute>
             <ClinicAccessGuard>
               <Layout>
-                <BlurredPermissionGuard feature="notifications">
+                <EnhancedRouteGuard feature="notifications" level="read">
                   <NotificationsPage />
-                </BlurredPermissionGuard>
+                </EnhancedRouteGuard>
               </Layout>
             </ClinicAccessGuard>
           </ProtectedRoute>
@@ -169,20 +179,40 @@ const Router: React.FC = () => {
           <ProtectedRoute>
             <ClinicAccessGuard>
               <Layout>
-                <BlurredPermissionGuard feature="doctor_scheduling">
+                <EnhancedRouteGuard feature="doctor_scheduling" level="read">
                   <AppointmentSchedulingPage />
-                </BlurredPermissionGuard>
+                </EnhancedRouteGuard>
               </Layout>
             </ClinicAccessGuard>
           </ProtectedRoute>
         } />
+        
+        {/* Administrative Routes */}
         <Route path="/settings" element={
           <ProtectedRoute>
             <ClinicAccessGuard>
               <Layout>
-                <BlurredPermissionGuard feature="settings">
+                <EnhancedRouteGuard feature="settings" level="read">
                   <SettingsPage />
-                </BlurredPermissionGuard>
+                </EnhancedRouteGuard>
+              </Layout>
+            </ClinicAccessGuard>
+          </ProtectedRoute>
+        } />
+
+        {/* Catch-all route for 404 or unauthorized access attempts */}
+        <Route path="*" element={
+          <ProtectedRoute>
+            <ClinicAccessGuard>
+              <Layout>
+                <EnhancedRouteGuard 
+                  feature="dashboard" 
+                  level="read" 
+                  redirectTo="/dashboard"
+                  showUnauthorized={false}
+                >
+                  <div>Page not found</div>
+                </EnhancedRouteGuard>
               </Layout>
             </ClinicAccessGuard>
           </ProtectedRoute>

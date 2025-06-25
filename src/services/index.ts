@@ -1,16 +1,17 @@
-// Re-export all services for easy importing
-import { PatientService } from './PatientService';
-import { AppointmentService } from './AppointmentService';  
-import { ScheduleService } from './ScheduleService';
-import { PaymentService } from './PaymentService';
-import { InventoryService } from './InventoryService';
+// Export all services from a central location
+export { AppointmentService } from './AppointmentService';
+export { InventoryService } from './InventoryService';
+export { PatientService } from './PatientService';
+export { ScheduleService } from './ScheduleService';
+export { PaymentService } from './PaymentService';
+export { PaymentNotificationService } from './paymentNotificationService';
 
-// Export all Firestore services
-export { PatientService, type Patient } from './PatientService';
-export { AppointmentService, type Appointment } from './AppointmentService';
-export { ScheduleService, type DoctorSchedule, type TimeSlot } from './ScheduleService';
-export { PaymentService, type Payment } from './PaymentService';
-export { InventoryService, type InventoryItem } from './InventoryService';
+// Re-export types from services that provide them
+export type { Appointment } from './AppointmentService';
+export type { InventoryItem } from './InventoryService';
+export type { Patient } from './PatientService';
+export type { DoctorSchedule, TimeSlot } from './ScheduleService';
+export type { Payment } from './PaymentService';
 
 // Re-export common types and utilities
 export type ServiceCallback<T> = (data: T) => void;

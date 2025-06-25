@@ -4,6 +4,7 @@ import { useAuth } from './AuthContext';
 import { db } from '../api/firebase';
 import { User, Clinic } from '../types/models';
 import { isSuperAdmin } from '../utils/adminConfig';
+import { initializeGlobalDataSync, cleanupGlobalDataSync } from '../utils/globalDataSync';
 
 interface UserContextType {
   userProfile: User | null;
@@ -118,6 +119,23 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       refreshUserData();
     }
   }, [user, authLoading, initialized, refreshUserData]);
+
+  // Initialize global data sync when user profile is loaded
+  useEffect(() => {
+    if (userProfile?.clinicId) {
+      console.log('🔄 UserProvider: Initializing global data sync for clinic:', userProfile.clinicId);
+      initializeGlobalDataSync(userProfile.clinicId);
+    } else if (!user) {
+      // Clean up when user logs out
+      console.log('🧹 UserProvider: Cleaning up global data sync');
+      cleanupGlobalDataSync();
+    }
+    
+    return () => {
+      // Cleanup on component unmount
+      cleanupGlobalDataSync();
+    };
+  }, [userProfile?.clinicId, user]);
 
   const isAdmin = user ? isSuperAdmin(user.email || '') : false;
 

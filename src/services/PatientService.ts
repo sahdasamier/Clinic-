@@ -19,6 +19,8 @@ const patientsCollection = collection(db, COLLECTION_NAME);
 export interface Patient {
   id: string;
   clinicId: string;
+  firstName?: string;
+  lastName?: string;
   name: string;
   email?: string;
   phone?: string;
@@ -73,6 +75,27 @@ export interface Patient {
   isActive: boolean;
   createdAt: any;
   updatedAt: any;
+  // Extended properties for appointment integration
+  appointmentData?: {
+    lastCompletedDate?: any;
+    nextPendingDate?: any;
+    completed?: any[];
+    notCompleted?: any[];
+    totalAppointments?: number;
+  };
+  allCompletedVisits?: Array<{
+    date: any;
+    time: any;
+    type: any;
+    doctor: any;
+    notes: any;
+    appointmentId: any;
+  }>;
+  todayAppointment?: string;
+  // For backward compatibility with different id types
+  _appointmentCount?: number;
+  _completedCount?: number;
+  _pendingCount?: number;
 }
 
 export const PatientService = {

@@ -43,12 +43,84 @@ export interface SuperAdmin {
 
 export interface Patient {
   id: string;
-  firstName: string;
-  lastName: string;
-  dob: string;
   clinicId: string;
-  branchId?: string;
-  // ...
+  firstName?: string;
+  lastName?: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  age?: number;
+  gender?: 'male' | 'female' | 'other';
+  address?: string;
+  bloodType?: string;
+  allergies?: string[];
+  emergencyContact?: string;
+  emergencyContactPhone?: string;
+  insuranceProvider?: string;
+  insuranceNumber?: string;
+  condition?: string;
+  status: 'new' | 'old' | 'follow-up' | 'admitted' | 'transferred' | 'discharged';
+  lastVisit?: string;
+  nextAppointment?: string;
+  medicalHistory?: Array<{
+    date: string;
+    condition: string;
+    treatment: string;
+    doctor: string;
+    notes?: string;
+  }>;
+  medications?: Array<{
+    name: string;
+    dosage: string;
+    frequency: string;
+    dateStarted: string;
+    status: 'Active' | 'Discontinued';
+  }>;
+  visitNotes?: Array<{
+    date: string;
+    doctor: string;
+    notes: string;
+    visitType: string;
+  }>;
+  vitalSigns?: Array<{
+    date: string;
+    height: number;
+    weight: number;
+    bloodPressure: string;
+    temperature: number;
+    heartRate: number;
+  }>;
+  documents?: Array<{
+    name: string;
+    url: string;
+    uploadDate: string;
+    type: string;
+  }>;
+  avatar?: string;
+  isActive: boolean;
+  createdAt: any;
+  updatedAt: any;
+  // Extended properties for appointment integration
+  appointmentData?: {
+    lastCompletedDate?: any;
+    nextPendingDate?: any;
+    completed?: any[];
+    notCompleted?: any[];
+    totalAppointments?: number;
+  };
+  allCompletedVisits?: Array<{
+    date: any;
+    time: any;
+    type: any;
+    doctor: any;
+    notes: any;
+    appointmentId: any;
+  }>;
+  todayAppointment?: string;
+  // For backward compatibility with different id types
+  _appointmentCount?: number;
+  _completedCount?: number;
+  _pendingCount?: number;
 }
 
 export interface Appointment {

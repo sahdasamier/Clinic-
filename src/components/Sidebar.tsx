@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useUser } from '../contexts/UserContext';
 import { useSidebar } from '../contexts/SidebarContext';
 import { useClinicSettings } from '../hooks/useClinicSettings';
+import { getUserPermissions, hasPermission, PermissionKey } from '../types/permissions';
 import {
   Box,
   Drawer,
@@ -23,6 +24,7 @@ import {
   SwipeableDrawer,
   Fade,
   Zoom,
+  Chip,
 } from '@mui/material';
 import {
   Dashboard,
@@ -34,33 +36,126 @@ import {
   Settings,
   LocalHospital,
   Schedule,
+  Report,
 } from '@mui/icons-material';
 
 const drawerWidth = 300;
 const collapsedDrawerWidth = 68;
 const mobileDrawerWidth = 280;
 
-const navLinks = [
-  { to: '/', text: 'dashboard', icon: <Dashboard /> },
-  { to: '/patients', text: 'patients', icon: <People /> },
-  { to: '/appointments', text: 'appointments', icon: <CalendarToday /> },
-  { to: '/inventory', text: 'inventory', icon: <Inventory /> },
-  { to: '/payments', text: 'payments', icon: <Payment /> },
-  { to: '/notifications', text: 'notifications', icon: <Notifications /> },
-  { to: '/doctor-scheduling', text: 'doctor_scheduling', icon: <Schedule /> },
-  { to: '/settings', text: 'settings', icon: <Settings /> },
+// Navigation configuration with permissions mapping
+interface NavLink {
+  to: string;
+  text: string;
+  icon: React.ReactNode;
+  permission: PermissionKey;
+  minLevel?: 'read' | 'write' | 'full';
+  badge?: string;
+  group?: 'core' | 'business' | 'advanced' | 'admin';
+}
+
+const navLinks: NavLink[] = [
+  { 
+    to: '/', 
+    text: 'dashboard', 
+    icon: <Dashboard />, 
+    permission: 'dashboard',
+    minLevel: 'read',
+    group: 'core'
+  },
+  { 
+    to: '/patients', 
+    text: 'patients', 
+    icon: <People />, 
+    permission: 'patients',
+    minLevel: 'read',
+    group: 'core'
+  },
+  { 
+    to: '/appointments', 
+    text: 'appointments', 
+    icon: <CalendarToday />, 
+    permission: 'appointments',
+    minLevel: 'read',
+    group: 'core'
+  },
+  { 
+    to: '/payments', 
+    text: 'payments', 
+    icon: <Payment />, 
+    permission: 'payments',
+    minLevel: 'read',
+    group: 'business'
+  },
+  { 
+    to: '/inventory', 
+    text: 'inventory', 
+    icon: <Inventory />, 
+    permission: 'inventory',
+    minLevel: 'read',
+    group: 'business'
+  },
+  { 
+    to: '/notifications', 
+    text: 'notifications', 
+    icon: <Notifications />, 
+    permission: 'notifications',
+    minLevel: 'read',
+    group: 'advanced'
+  },
+  { 
+    to: '/doctor-scheduling', 
+    text: 'doctor_scheduling', 
+    icon: <Schedule />, 
+    permission: 'doctor_scheduling',
+    minLevel: 'read',
+    group: 'advanced',
+    badge: 'Pro'
+  },
+  { 
+    to: '/settings', 
+    text: 'settings', 
+    icon: <Settings />, 
+    permission: 'settings',
+    minLevel: 'read',
+    group: 'admin'
+  },
 ];
 
 const Sidebar: React.FC = () => {
   const { t } = useTranslation();
   const location = useLocation();
-  const { userClinic } = useUser();
+  const { userProfile, userClinic, isAdmin } = useUser();
   const { isCollapsed, toggleSidebar } = useSidebar();
   const { getClinicDisplayName, getClinicTagline } = useClinicSettings();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const isSmallMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isTablet = useMediaQuery(theme.breakpoints.between('md', 'lg'));
+
+  // Get user permissions
+  const userPermissions = userProfile ? getUserPermissions(userProfile) : null;
+
+  // Filter navigation links based on user permissions
+  const getFilteredNavLinks = (): NavLink[] => {
+    if (isAdmin) {
+      // Super admins see everything
+      return navLinks;
+    }
+    
+    if (!userPermissions) {
+      // No permissions loaded yet, show core items only
+      return navLinks.filter(link => link.group === 'core');
+    }
+
+    // Filter based on actual permissions
+    return navLinks.filter(link => {
+      const hasAccess = hasPermission(userPermissions, link.permission, link.minLevel || 'read');
+      return hasAccess;
+    });
+  };
+
+  const filteredNavLinks = getFilteredNavLinks();
 
   // Determine drawer width based on screen size and collapse state
   const getDrawerWidth = () => {
@@ -170,6 +265,20 @@ const Sidebar: React.FC = () => {
         opacity: 0,
       },
     },
+  };
+
+  // Helper function to get permission level color
+  const getPermissionLevelColor = (link: NavLink): string => {
+    if (isAdmin) return '#10b981'; // Green for admin
+    if (!userPermissions) return '#6b7280'; // Gray for loading
+    
+    const userLevel = userPermissions[link.permission];
+    switch (userLevel) {
+      case 'full': return '#10b981'; // Green
+      case 'write': return '#f59e0b'; // Orange
+      case 'read': return '#3b82f6'; // Blue
+      default: return '#6b7280'; // Gray
+    }
   };
 
   // Drawer content component
@@ -328,6 +437,30 @@ const Sidebar: React.FC = () => {
         </Collapse>
       </Box>
 
+      {/* User Role Badge - Only show when not collapsed */}
+      {userProfile && !isAdmin && !(isCollapsed && !isMobile) && (
+        <Fade in={true} timeout={400}>
+          <Box sx={{ px: { xs: 3, md: 4 }, pb: 2 }}>
+            <Chip
+              label={`${userProfile.role.charAt(0).toUpperCase() + userProfile.role.slice(1)} • ${filteredNavLinks.length} ${filteredNavLinks.length === 1 ? 'Feature' : 'Features'}`}
+              size="small"
+              sx={{
+                background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%)',
+                color: 'rgba(255, 255, 255, 0.8)',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                fontSize: '0.7rem',
+                height: '24px',
+                '& .MuiChip-label': {
+                  px: 1.5,
+                  fontWeight: 500,
+                  letterSpacing: '0.02em',
+                }
+              }}
+            />
+          </Box>
+        </Fade>
+      )}
+
       {/* Navigation Links */}
       <Box sx={{ 
         flex: 1, 
@@ -336,8 +469,10 @@ const Sidebar: React.FC = () => {
         transition: 'padding 0.4s cubic-bezier(0.4, 0, 0.2, 1)' 
       }}>
         <List sx={{ py: 0 }}>
-          {navLinks.map((link, index) => {
+          {filteredNavLinks.map((link, index) => {
             const isActive = location.pathname === link.to;
+            const permissionColor = getPermissionLevelColor(link);
+            
             return (
               <Fade in={true} timeout={300 + index * 100} key={link.to}>
                 <ListItem disablePadding sx={{ mb: (isCollapsed && !isMobile) ? 0.5 : 1.2 }}>
@@ -386,10 +521,10 @@ const Sidebar: React.FC = () => {
                           top: 0,
                           bottom: 0,
                           width: isActive ? '5px' : '0px',
-                          background: 'linear-gradient(180deg, #22d3ee 0%, #06b6d4 100%)',
+                          background: `linear-gradient(180deg, ${permissionColor} 0%, ${permissionColor}aa 100%)`,
                           borderRadius: '0 3px 3px 0',
                           transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                          boxShadow: isActive ? '0 0 10px rgba(34, 211, 238, 0.5)' : 'none',
+                          boxShadow: isActive ? `0 0 10px ${permissionColor}50` : 'none',
                         },
                       }}
                     >
@@ -412,22 +547,56 @@ const Sidebar: React.FC = () => {
                         {link.icon}
                       </ListItemIcon>
                       
-                      {/* Text - Hidden when collapsed on desktop */}
+                      {/* Text and Badge - Hidden when collapsed on desktop */}
                       <Collapse in={!(isCollapsed && !isMobile)} orientation="horizontal" timeout={300}>
-                        <ListItemText
-                          primary={t(link.text)}
-                          sx={{
-                            ml: 1.2,
-                            '& .MuiListItemText-primary': {
-                              fontFamily: "'Inter', sans-serif",
-                              fontWeight: isActive ? 600 : 500,
-                              fontSize: { xs: '0.9rem', md: '0.95rem' },
-                              letterSpacing: '0.01em',
-                              whiteSpace: 'nowrap',
-                              transition: 'all 0.3s ease',
-                            },
-                          }}
-                        />
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', ml: 1.2 }}>
+                          <ListItemText
+                            primary={t(link.text)}
+                            sx={{
+                              '& .MuiListItemText-primary': {
+                                fontFamily: "'Inter', sans-serif",
+                                fontWeight: isActive ? 600 : 500,
+                                fontSize: { xs: '0.9rem', md: '0.95rem' },
+                                letterSpacing: '0.01em',
+                                whiteSpace: 'nowrap',
+                                transition: 'all 0.3s ease',
+                              },
+                            }}
+                          />
+                          {/* Permission Level Indicator & Badge */}
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            {link.badge && (
+                              <Chip
+                                label={link.badge}
+                                size="small"
+                                sx={{
+                                  height: '18px',
+                                  fontSize: '0.6rem',
+                                  background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                                  color: 'white',
+                                  fontWeight: 600,
+                                  '& .MuiChip-label': { px: 0.8 }
+                                }}
+                              />
+                            )}
+                            {!isAdmin && userPermissions && (
+                              <Tooltip 
+                                title={`Permission: ${userPermissions[link.permission]}`}
+                                placement="right"
+                              >
+                                <Box
+                                  sx={{
+                                    width: 8,
+                                    height: 8,
+                                    borderRadius: '50%',
+                                    backgroundColor: permissionColor,
+                                    boxShadow: `0 0 6px ${permissionColor}50`,
+                                  }}
+                                />
+                              </Tooltip>
+                            )}
+                          </Box>
+                        </Box>
                       </Collapse>
                     </ListItemButton>
                   </Tooltip>
@@ -436,6 +605,44 @@ const Sidebar: React.FC = () => {
             );
           })}
         </List>
+
+        {/* Show limited access notice for restricted users */}
+        {!isAdmin && userPermissions && filteredNavLinks.length < navLinks.length && !(isCollapsed && !isMobile) && (
+          <Fade in={true} timeout={600}>
+            <Box 
+              sx={{ 
+                mt: 3,
+                p: 2,
+                borderRadius: '12px',
+                background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(217, 119, 6, 0.05) 100%)',
+                border: '1px solid rgba(245, 158, 11, 0.2)',
+                textAlign: 'center'
+              }}
+            >
+              <Typography 
+                variant="caption" 
+                sx={{ 
+                  color: 'rgba(255, 255, 255, 0.7)',
+                  fontSize: '0.7rem',
+                  display: 'block',
+                  mb: 0.5
+                }}
+              >
+                Limited Access
+              </Typography>
+              <Typography 
+                variant="caption" 
+                sx={{ 
+                  color: 'rgba(255, 255, 255, 0.6)',
+                  fontSize: '0.65rem',
+                  lineHeight: 1.3
+                }}
+              >
+                Contact admin for additional permissions
+              </Typography>
+            </Box>
+          </Fade>
+        )}
       </Box>
 
       {/* Footer - Hidden when collapsed on desktop */}

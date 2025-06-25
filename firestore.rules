@@ -3,67 +3,160 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // 🔒 Users collection - Allow authenticated users to read and write
+    // Helper function to check if user is super admin
+    function isSuperAdmin() {
+      return request.auth != null && request.auth.token.email in [
+        'admin@sahdasclinic.com',
+        'sahdasamier013@gmail.com'
+      ];
+    }
+    
+    // Helper function to check if user has admin custom claim
+    function isAdminViaCustomClaim() {
+      return request.auth != null && 
+             request.auth.token.get('admin', false) == true;
+    }
+    
+    // Helper function to check if user is admin (either email or custom claim)
+    function isAdmin() {
+      return isSuperAdmin() || isAdminViaCustomClaim();
+    }
+    
+    // Helper function to check if update only touches allowed fields
+    function onlyUpdatingAllowedFields() {
+      let allowedFields = ['firstName', 'lastName', 'email'];
+      let changedFields = request.resource.data.diff(resource.data).affectedKeys();
+      return changedFields.hasOnly(allowedFields);
+    }
+    
+    // Helper function to check if sensitive fields are being modified
+    function modifyingSensitiveFields() {
+      let sensitiveFields = ['permissions', 'role', 'clinicId', 'isActive', 'createdBy'];
+      let changedFields = request.resource.data.diff(resource.data).affectedKeys();
+      return changedFields.hasAny(sensitiveFields);
+    }
+    
+    // 🔒 Users collection - SECURE RULES
     match /users/{userId} {
-      // Allow users to read/write their own document
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-      // Allow all authenticated users to read user documents (for admin functions)
+      // Anyone can read user documents (needed for admin functions and user lookups)
       allow read: if request.auth != null;
-      // Allow authenticated users to create user documents (for admin user creation)
-      allow create: if request.auth != null;
+      
+      // Only admins can create user documents
+      allow create: if isAdmin();
+      
+      // Users can update ONLY safe fields (name, email) in their own document
+      allow update: if request.auth != null && 
+                   request.auth.uid == userId && 
+                   onlyUpdatingAllowedFields() && 
+                   !modifyingSensitiveFields();
+      
+      // Admins can update ANY fields in ANY user document
+      allow update: if isAdmin();
+      
+      // Only admins can delete users
+      allow delete: if isAdmin();
     }
     
-    // 🔒 Patients collection - Allow authenticated users
-    match /patients/{patientId} {
-      allow read, write, create: if request.auth != null;
-    }
-    
-    // 🔒 Appointments collection - Allow authenticated users
-    match /appointments/{appointmentId} {
-      allow read, write, create: if request.auth != null;
-    }
-    
-    // 🔒 Doctor-Patient Assignments - Allow authenticated users
-    match /doctor_patient_assignments/{assignmentId} {
-      allow read, write, create: if request.auth != null;
-    }
-    
-    // 🔒 Medical Records - Allow authenticated users
-    match /medicalRecords/{recordId} {
-      allow read, write, create: if request.auth != null;
-    }
-    
-    // 🔒 Inventory collection - Allow authenticated users
-    match /inventory/{inventoryId} {
-      allow read, write, create: if request.auth != null;
-    }
-    
-    // 🔒 Payments collection - Allow authenticated users  
-    match /payments/{paymentId} {
-      allow read, write, create: if request.auth != null;
-    }
-    
-    // 🔒 Clinics collection - Special rules for demo clinic, otherwise require auth
+    // 🔒 Clinics collection - Special handling for demo clinic
     match /clinics/{clinicId} {
       // Allow unauthenticated read access to demo clinic for app initialization
       allow read: if clinicId == 'demo-clinic' || request.auth != null;
-      // Only authenticated users can write/create clinics
-      allow write, create: if request.auth != null;
+      
+      // Demo clinic: Allow any authenticated user to create/update (for initialization)
+      // Other clinics: Only admins can modify
+      allow write, create, update: if (clinicId == 'demo-clinic' && request.auth != null) || isAdmin();
+      
+      // Only admins can delete clinics
+      allow delete: if isAdmin();
     }
     
-    // 🔒 User invitations - Allow authenticated users
+    // 🔒 User invitations - Only admins can manage
     match /user_invitations/{invitationId} {
-      allow read, write, create: if request.auth != null;
+      allow read: if request.auth != null;
+      allow write, create, delete: if isAdmin();
     }
     
-    // 🔒 Invitations - Allow authenticated users
+    // 🔒 Invitations - Only admins can manage
     match /invitations/{invitationId} {
-      allow read, write, create: if request.auth != null;
+      allow read: if request.auth != null;
+      allow write, create, delete: if isAdmin();
     }
     
-    // 🔒 Any other collections - Allow authenticated users
+    // 🔒 Patients collection - Clinic-based access with admin override
+    match /patients/{patientId} {
+      allow read, write: if request.auth != null && 
+                        (isAdmin() || 
+                         resource.data.clinicId == getUserClinicId());
+      allow create: if request.auth != null && 
+                   (isAdmin() || 
+                    request.resource.data.clinicId == getUserClinicId());
+      allow delete: if isAdmin();
+    }
+    
+    // Helper function to get user's clinic ID
+    function getUserClinicId() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.clinicId;
+    }
+    
+    // 🔒 Appointments collection - Clinic-based access
+    match /appointments/{appointmentId} {
+      allow read, write: if request.auth != null && 
+                        (isAdmin() || 
+                         resource.data.clinicId == getUserClinicId());
+      allow create: if request.auth != null && 
+                   (isAdmin() || 
+                    request.resource.data.clinicId == getUserClinicId());
+      allow delete: if isAdmin();
+    }
+    
+    // 🔒 Doctor-Patient Assignments - Clinic-based access
+    match /doctor_patient_assignments/{assignmentId} {
+      allow read, write: if request.auth != null && 
+                        (isAdmin() || 
+                         resource.data.clinicId == getUserClinicId());
+      allow create: if request.auth != null && 
+                   (isAdmin() || 
+                    request.resource.data.clinicId == getUserClinicId());
+      allow delete: if isAdmin();
+    }
+    
+    // 🔒 Medical Records - Clinic-based access
+    match /medicalRecords/{recordId} {
+      allow read, write: if request.auth != null && 
+                        (isAdmin() || 
+                         resource.data.clinicId == getUserClinicId());
+      allow create: if request.auth != null && 
+                   (isAdmin() || 
+                    request.resource.data.clinicId == getUserClinicId());
+      allow delete: if isAdmin();
+    }
+    
+    // 🔒 Inventory collection - Clinic-based access
+    match /inventory/{inventoryId} {
+      allow read, write: if request.auth != null && 
+                        (isAdmin() || 
+                         resource.data.clinicId == getUserClinicId());
+      allow create: if request.auth != null && 
+                   (isAdmin() || 
+                    request.resource.data.clinicId == getUserClinicId());
+      allow delete: if isAdmin();
+    }
+    
+    // 🔒 Payments collection - Clinic-based access
+    match /payments/{paymentId} {
+      allow read, write: if request.auth != null && 
+                        (isAdmin() || 
+                         resource.data.clinicId == getUserClinicId());
+      allow create: if request.auth != null && 
+                   (isAdmin() || 
+                    request.resource.data.clinicId == getUserClinicId());
+      allow delete: if isAdmin();
+    }
+    
+    // 🔒 Default deny for any other collections
     match /{document=**} {
-      allow read, write, create: if request.auth != null;
+      allow read: if request.auth != null;
+      allow write, create, delete: if isAdmin();
     }
   }
 } 

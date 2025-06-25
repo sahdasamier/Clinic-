@@ -8,6 +8,7 @@ import { SidebarProvider } from "../contexts/SidebarContext";
 import { NotificationProvider } from "../contexts/NotificationProvider";
 import { ensureDemoClinicExists } from "../scripts/initFirestore";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
+import { initializeGlobalDataSync, cleanupGlobalDataSync } from "../utils/globalDataSync";
 import Router from "./Router";
 
 const AppContent: React.FC = () => {
