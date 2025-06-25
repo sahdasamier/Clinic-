@@ -1,5 +1,5 @@
-const { initializeApp } = require('firebase/app');
-const { getFirestore, doc, setDoc, serverTimestamp } = require('firebase/firestore');
+import { initializeApp } from 'firebase/app';
+import { getFirestore, doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 
 // Firebase configuration
 const firebaseConfig = {
@@ -41,7 +41,6 @@ async function createDemoClinic() {
     console.log('✅ Demo clinic created successfully!');
     
     // Verify creation
-    const { getDoc } = require('firebase/firestore');
     const clinicDoc = await getDoc(doc(db, 'clinics', 'demo-clinic'));
     if (clinicDoc.exists()) {
       const data = clinicDoc.data();

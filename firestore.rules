@@ -43,9 +43,11 @@ service cloud.firestore {
       allow read, write, create: if request.auth != null;
     }
     
-    // 🔒 Clinics collection - Allow ALL authenticated users to read any clinic
+    // 🔒 Clinics collection - Special rules for demo clinic, otherwise require auth
     match /clinics/{clinicId} {
-      allow read: if request.auth != null;
+      // Allow unauthenticated read access to demo clinic for app initialization
+      allow read: if clinicId == 'demo-clinic' || request.auth != null;
+      // Only authenticated users can write/create clinics
       allow write, create: if request.auth != null;
     }
     
