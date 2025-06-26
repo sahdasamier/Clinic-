@@ -5,6 +5,8 @@ import { getDoctorsByClinic } from '../../api/doctorPatients';
 import { UserData } from '../../api/auth';
 // import { createAppointment } from '../../api/appointments'; // Old API import
 import { AppointmentService, type Appointment } from '../../services/AppointmentService'; // New Service import
+import { PaymentService } from '../../services/PaymentService'; // For creating payment
+import { ClinicConfigService } from '../../services/ClinicConfigService'; // For getting service fees
 import {
   Box,
   Container,
@@ -117,11 +119,58 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ isOpen, onClose, is
         status: 'pending', // Default status for new appointments
         paymentStatus: 'pending', // Default payment status
         notes: appointmentData.notes,
-        // patientId can be added if integrating with patient selection
+        // patientId can be added if integrating with patient selection, currently not in form
+        patientId: undefined, // Explicitly undefined if not available from form
       };
 
-      await AppointmentService.createAppointment(clinicId, servicePayload);
-      console.log('✅ Appointment created successfully via AppointmentService');
+      const newAppointmentId = await AppointmentService.createAppointment(clinicId, servicePayload);
+      console.log('✅ Appointment created successfully via AppointmentService with ID:', newAppointmentId);
+
+      // Now, create the corresponding payment record
+      if (newAppointmentId) {
+        try {
+          const serviceFee = await ClinicConfigService.getServiceFee(clinicId, servicePayload.type);
+          let baseAmount = 0;
+          let currency = 'USD'; // Default, consider fetching from clinic config general settings
+          // let serviceIncludesVAT = false; // VAT logic is handled by PaymentService.createPayment
+
+          if (serviceFee) {
+            baseAmount = serviceFee.cost;
+            currency = serviceFee.currency;
+            // serviceIncludesVAT = serviceFee.includeVAT; // PaymentService will re-check this
+            console.log(`ℹ️ [AppointmentModal] Found service fee for ${servicePayload.type}: ${baseAmount} ${currency}`);
+          } else {
+            console.warn(`⚠️ [AppointmentModal] No service fee found for type "${servicePayload.type}". Payment baseAmount will be 0 or default.`);
+            // A clinic-wide default for "uncategorized" services could be an option in ClinicConfigService
+          }
+
+          const paymentPayload = {
+            patientId: servicePayload.patientId, // This will be undefined if not collected
+            patientName: servicePayload.patientName,
+            appointmentId: newAppointmentId,
+            serviceName: servicePayload.type, // Using appointment type as service name
+            appointmentType: servicePayload.type, // For PaymentService to potentially re-check VAT rules
+            serviceDate: servicePayload.date,
+            baseAmount: baseAmount,
+            amountPaid: 0, // New payments are pending
+            currency: currency,
+            status: 'pending' as const,
+            description: `Payment for ${servicePayload.type} on ${servicePayload.date}`,
+            // method: fetched from clinic config default if possible, else a hardcoded default
+            method: 'cash' as const, // Example default
+            isActive: true,
+          };
+
+          await PaymentService.createPayment(clinicId, paymentPayload);
+          console.log(`✅ Payment record created for appointment ${newAppointmentId}`);
+
+        } catch (paymentError) {
+          console.error(`❌ Error creating payment record for appointment ${newAppointmentId}:`, paymentError);
+          // Notify user that appointment was created, but payment record failed.
+          // This could be a more user-friendly alert/snackbar.
+          alert(`Appointment created, but failed to create payment record. Please check manually. Error: ${paymentError}`);
+        }
+      }
       
       // Reset form
       setAppointmentData({

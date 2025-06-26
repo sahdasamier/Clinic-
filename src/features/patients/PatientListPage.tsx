@@ -207,42 +207,53 @@ const PatientListPage: React.FC = () => {
     const userIsDoctor = userProfile.role === 'doctor';
     setIsDoctor(userIsDoctor);
 
-    // Set up real-time listeners
-    const unsubscribePatients = PatientService.listenPatients(clinicId, (updatedPatients) => {
-      console.log(`📊 Patients updated: ${updatedPatients.length} patients`);
-      
-      if (userIsDoctor) {
-        // Filter patients assigned to this doctor
-        // TODO: Add doctor assignment filtering logic here if needed
-        setPatients(updatedPatients);
-        setDoctorPatients(updatedPatients);
+    let unsubscribePatients = () => {};
+    let unsubscribeAppointments = () => {};
+    let unsubscribeClinicPayments = () => {};
+
+    const fetchData = async () => {
+      if (userIsDoctor && userProfile.id) {
+        console.log(`👨‍⚕️ Doctor view: Fetching patients for doctor ${userProfile.id}`);
+        try {
+          const doctorSpecificPatients = await getPatientsByDoctor(userProfile.id, clinicId);
+          setPatients(doctorSpecificPatients);
+          // Note: getPatientsByDoctor is a one-time fetch.
+          // For real-time updates on assignments, a listener on 'doctor_patient_assignments'
+          // or modifications to PatientService.listenPatients would be needed.
+          // For now, assignment changes via the dialog will trigger a refresh.
+        } catch (error) {
+          console.error("Error fetching doctor's patients:", error);
+          setPatients([]);
+        }
       } else {
-        setPatients(updatedPatients);
+        console.log('🏥 Non-doctor view: Listening to all clinic patients');
+        unsubscribePatients = PatientService.listenPatients(clinicId, (updatedPatients) => {
+          console.log(`📊 All Patients updated: ${updatedPatients.length} patients`);
+          setPatients(updatedPatients);
+        });
       }
-      
       setIsDataLoaded(true);
       setDataLoading(false);
-    });
+    };
 
-    const unsubscribeAppointments = AppointmentService.listenAppointments(clinicId, (updatedAppointments) => {
+    fetchData();
+
+    unsubscribeAppointments = AppointmentService.listenAppointments(clinicId, (updatedAppointments) => {
       console.log(`📅 Appointments updated: ${updatedAppointments.length} appointments`);
       setAppointments(updatedAppointments);
     });
 
-    const unsubscribeClinicPayments = PaymentService.listenPayments(clinicId, (updatedPayments) => {
+    unsubscribeClinicPayments = PaymentService.listenPayments(clinicId, (updatedPayments) => {
       console.log(`💰 PatientListPage received ${updatedPayments.length} clinic payments`);
       setClinicPayments(updatedPayments);
-      // Note: We might not need a separate isDataLoaded for payments if
-      // the main page loading relies on patients and appointments primarily.
-      // Or, adjust isDataLoaded to account for payments as well if necessary.
     });
 
     // Cleanup function
     return () => {
       console.log('🧹 Cleaning up Firestore listeners (Patients, Appointments, ClinicPayments)...');
-      unsubscribePatients();
-      unsubscribeAppointments();
-      unsubscribeClinicPayments(); // Add cleanup for payments listener
+      if (typeof unsubscribePatients === 'function') unsubscribePatients();
+      if (typeof unsubscribeAppointments === 'function') unsubscribeAppointments();
+      if (typeof unsubscribeClinicPayments === 'function') unsubscribeClinicPayments();
     };
   }, [initialized, authLoading, user, userProfile]);
 
@@ -342,7 +353,7 @@ const PatientListPage: React.FC = () => {
   const [assignmentDialogOpen, setAssignmentDialogOpen] = useState(false);
   const [assignmentPatient, setAssignmentPatient] = useState<any>(null);
   const [isDoctor, setIsDoctor] = useState(false);
-  const [doctorPatients, setDoctorPatients] = useState<any[]>([]);
+  // const [doctorPatients, setDoctorPatients] = useState<any[]>([]); // Removed, using 'patients' state directly
   
   // New Patient Form State - UI state only (no localStorage persistence)
   const [newPatientData, setNewPatientData] = useState(defaultNewPatientData);
@@ -1468,18 +1479,26 @@ const PatientListPage: React.FC = () => {
 
   const handleAssignmentChange = async () => {
     // Reload patient data after assignment changes
-    if (isDoctor && userProfile) {
+    if (isDoctor && userProfile?.id && userProfile.clinicId) {
+      setDataLoading(true);
       try {
-        const updatedPatients = await getPatientsByDoctor(userProfile.id, userProfile.clinicId);
-        setDoctorPatients(updatedPatients);
-        setPatients(updatedPatients);
-        console.log('✅ Patient data refreshed after assignment change');
+        console.log(`🔄 Refreshing patients for doctor ${userProfile.id} after assignment change.`);
+        const updatedDoctorPatients = await getPatientsByDoctor(userProfile.id, userProfile.clinicId);
+        setPatients(updatedDoctorPatients);
+        console.log('✅ Doctor\'s patient list refreshed.');
       } catch (error) {
-        console.error('❌ Error refreshing patient data after assignment:', error);
+        console.error('❌ Error refreshing doctor\'s patient data after assignment:', error);
+        setPatients([]); // Clear patients on error or show a message
+      } finally {
+        setDataLoading(false);
       }
-    } else {
-      // For management, use default patients (localStorage removed)
-      setPatients(initialPatients);
+    } else if (!isDoctor && userProfile?.clinicId) {
+      // For non-doctors (e.g., management), the main PatientService.listenPatients listener
+      // should pick up changes if the patient's doctorId field was updated.
+      // A manual refresh could be forced here if necessary, but ideally, the listener handles it.
+      console.log('ℹ️ Assignment changed by non-doctor. Patient list relies on main listener for updates.');
+      // Optionally, could force a re-fetch of all patients if the listener isn't updating as expected:
+      // const allPatients = await PatientService.listenPatients(userProfile.clinicId, setPatients); // This is not ideal structure
     }
   };
 
@@ -5199,12 +5218,13 @@ const PatientListPage: React.FC = () => {
                               {/* UPDATED: Display completed/past appointments from selectedPatient.appointments */}
                               <Box sx={{ mb: 2 }}>
                                 <Typography variant="body2" color="text.secondary">
-                                  Recent & Completed Appointments ({selectedPatient.appointments?.filter(app => app.status === 'completed' || new Date(app.date) < new Date()).length || 0})
+                                  Recent & Past Appointments ({selectedPatient.appointments?.filter(app => new Date(app.date) <= new Date()).length || 0})
                                 </Typography>
-                                <Box sx={{ maxHeight: 150, overflowY: 'auto', mt: 1, p: 1, backgroundColor: '#f8f9fa', borderRadius: 1 }}>
-                                  {selectedPatient.appointments?.filter(app => app.status === 'completed' || new Date(app.date) < new Date()).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((app: any, index: number) => {
-                                    const appDate = new Date(app.date);
-                                    const isPast = appDate < new Date() && app.status !== 'completed';
+                                <Box sx={{ maxHeight: 200, overflowY: 'auto', mt: 1, p: 1, backgroundColor: '#f8f9fa', borderRadius: 1 }}>
+                                  {selectedPatient.appointments?.filter(app => new Date(app.date) <= new Date()).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((app: any, index: number) => {
+                                    const isPastOrToday = new Date(app.date) <= new Date();
+                                    const canCheckoutThisApp = isPastOrToday && app.status !== 'completed' && !app.isPaid;
+
                                     let paymentStatusText = 'Payment: Pending';
                                     let paymentChipColor: "warning" | "success" | "error" = "warning";
 
@@ -5217,63 +5237,111 @@ const PatientListPage: React.FC = () => {
                                     }
 
                                     return (
-                                      <Box key={app.id || index} sx={{
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        alignItems: 'center',
-                                        py: 1,
-                                        px: 1,
-                                        mb: 1,
-                                        backgroundColor: 'white',
-                                        borderRadius: 1,
-                                        border: '1px solid #e0e0e0'
-                                      }}>
-                                        <Box>
-                                          <Typography variant="body2" fontWeight={600}>
-                                            {app.date} at {app.time}
-                                          </Typography>
-                                          <Typography variant="caption" color="text.secondary">
-                                            {app.type || 'Medical Visit'} • {app.doctor || 'Dr. Unknown'}
-                                          </Typography>
-                                          {(app.status === 'completed' || app.checkoutTime) && (
-                                            <Typography variant="caption" color="success.main" sx={{ display: 'block', fontStyle: 'italic' }}>
-                                              Completed {app.checkoutTime ? `at ${app.checkoutTime.toDate().toLocaleTimeString()}` : ''}
+                                      <Card key={app.id || index} sx={{ mb: 1.5, p: 1.5, backgroundColor: 'white', borderRadius: 1, border: '1px solid #e0e0e0' }}>
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                          <Box>
+                                            <Typography variant="body2" fontWeight={600}>
+                                              {app.date} at {app.time}
                                             </Typography>
-                                          )}
-                                          {isPast && (
-                                            <Typography variant="caption" color="info.main" sx={{ display: 'block', fontStyle: 'italic' }}>
-                                              Past Appointment
+                                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                              {app.type || 'Medical Visit'} • {app.doctor || 'Dr. Unknown'}
                                             </Typography>
-                                          )}
+                                            {app.status === 'completed' || app.checkoutTime ? (
+                                              <Typography variant="caption" color="success.main" sx={{ fontStyle: 'italic' }}>
+                                                Completed {app.checkoutTime ? `at ${app.checkoutTime.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}` : ''}
+                                              </Typography>
+                                            ) : new Date(app.date) < new Date() && app.date !== new Date().toISOString().split('T')[0] ? (
+                                              <Typography variant="caption" color="info.main" sx={{ fontStyle: 'italic' }}>
+                                                Past Appointment (Pending)
+                                              </Typography>
+                                            ) : null}
+                                          </Box>
+                                          <Chip
+                                            label={paymentStatusText}
+                                            size="small"
+                                            color={paymentChipColor}
+                                            variant="outlined"
+                                            sx={{ fontSize: '0.65rem', mb: canCheckoutThisApp ? 1 : 0 }}
+                                          />
                                         </Box>
-                                        <Chip
-                                          label={paymentStatusText}
-                                          size="small"
-                                          color={paymentChipColor}
-                                          variant="outlined"
-                                          sx={{ fontSize: '0.65rem' }}
-                                        />
-                                      </Box>
+                                        {canCheckoutThisApp && userProfile?.clinicId && (
+                                          <Button
+                                            variant="contained"
+                                            color="secondary"
+                                            size="small"
+                                            onClick={async () => {
+                                              if (window.confirm(`Proceed to checkout this ${new Date(app.date).toISOString().split('T')[0] === new Date().toISOString().split('T')[0] ? "today's" : "past"} appointment for ${app.type} at ${app.time}?`)) {
+                                                try {
+                                                  await AppointmentService.checkoutAppointment(userProfile.clinicId!, app.id);
+                                                  alert('Appointment checked out successfully and marked as paid!');
+                                                } catch (error) {
+                                                  console.error("Error during checkout:", error);
+                                                  alert(`Checkout failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                                                }
+                                              }
+                                            }}
+                                            sx={{ mt: 1, width: '100%' }}
+                                          >
+                                            Checkout & Mark Paid
+                                          </Button>
+                                        )}
+                                      </Card>
                                     );
                                   })}
-                                  {(!selectedPatient.appointments?.filter(app => app.status === 'completed' || new Date(app.date) < new Date()).length) && (
-                                    <Typography variant="body2" color="textSecondary" textAlign="center" py={2}>No recent or completed appointments.</Typography>
+                                  {(!selectedPatient.appointments?.filter(app => new Date(app.date) <= new Date()).length) && (
+                                    <Typography variant="body2" color="textSecondary" textAlign="center" py={2}>No recent or past appointments.</Typography>
                                   )}
                                 </Box>
                               </Box>
 
-                              {/* UPDATED: Today's Appointment from selectedPatient.appointments */}
+                              {/* Today's Appointment section is now part of "Recent & Past Appointments" if it's today.
+                                  The logic above handles today's appointments within the loop.
+                                  If a separate section for "Today's Appointment" is strictly required even if it's also in the list,
+                                  it would need additional filtering or a different display strategy.
+                                  For simplicity and to avoid redundancy, I've integrated today's into the list above.
+                               */}
+
+                              {/* UPDATED: Next Appointment from selectedPatient.appointments */}
                               <Box sx={{ mb: 2 }}>
                                 <Typography variant="body2" color="text.secondary">Today's Appointment</Typography>
                                 {(() => {
                                   const today = new Date().toISOString().split('T')[0];
                                   const todayApp = selectedPatient.appointments?.find(app => app.date === today);
                                   if (todayApp) {
+                                    const canCheckout = todayApp.status !== 'completed' && !todayApp.isPaid;
                                     return (
-                                      <Typography variant="body1" fontWeight={600} color={todayApp.isPaid ? "success.main" : "error.main"}>
-                                        {todayApp.time} - {todayApp.type} (Payment: {todayApp.isPaid ? `Paid ${todayApp.paymentDetails?.amountPaid || ''} ${todayApp.paymentDetails?.currency || ''}` : todayApp.paymentDetails?.status || 'Pending'})
-                                        {todayApp.checkoutTime && ` - Checked out: ${todayApp.checkoutTime.toDate().toLocaleTimeString()}`}
-                                      </Typography>
+                                      <Box>
+                                        <Typography variant="body1" fontWeight={600} color={todayApp.isPaid ? "success.main" : "error.main"}>
+                                          {todayApp.time} - {todayApp.type} (Payment: {todayApp.isPaid ? `Paid ${todayApp.paymentDetails?.amountPaid || ''} ${todayApp.paymentDetails?.currency || ''}` : todayApp.paymentDetails?.status || 'Pending'})
+                                          {todayApp.checkoutTime && ` - Checked out: ${todayApp.checkoutTime.toDate().toLocaleTimeString()}`}
+                                        </Typography>
+                                        {canCheckout && userProfile?.clinicId && (
+                                          <Button
+                                            variant="contained"
+                                            color="primary"
+                                            size="small"
+                                            onClick={async () => {
+                                              if (window.confirm(`Proceed to checkout appointment for ${todayApp.type} at ${todayApp.time}?`)) {
+                                                try {
+                                                  await AppointmentService.checkoutAppointment(userProfile.clinicId!, todayApp.id);
+                                                  alert('Appointment checked out successfully and marked as paid!');
+                                                  // Optionally, refresh selectedPatient or rely on listeners
+                                                  // To refresh immediately:
+                                                  // const updatedPatientData = await PatientService.getPatientById(selectedPatient.id); // Assuming getPatientById exists
+                                                  // if(updatedPatientData) setSelectedPatient(updatedPatientData);
+                                                  // For now, listeners should handle the update.
+                                                } catch (error) {
+                                                  console.error("Error during checkout:", error);
+                                                  alert(`Checkout failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                                                }
+                                              }
+                                            }}
+                                            sx={{ mt: 1 }}
+                                          >
+                                            Checkout & Mark Paid
+                                          </Button>
+                                        )}
+                                      </Box>
                                     );
                                   }
                                   return <Typography variant="body1" fontWeight={600} color="text.secondary">No appointment today</Typography>;
@@ -5282,17 +5350,27 @@ const PatientListPage: React.FC = () => {
 
                               {/* UPDATED: Next Appointment from selectedPatient.appointments */}
                               <Box>
-                                <Typography variant="body2" color="text.secondary">Next Appointment</Typography
+                                <Typography variant="body2" color="text.secondary">Next Appointment</Typography>
                                 {(() => {
                                   const today = new Date().toISOString().split('T')[0];
                                   const upcomingApp = selectedPatient.appointments
                                     ?.filter(app => app.date > today && (app.status === 'confirmed' || app.status === 'pending'))
                                     .sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0];
                                   if (upcomingApp) {
+                                    // Determine if this upcoming appointment can also be checked out (e.g. prepay)
+                                    // For now, let's assume checkout is mainly for today's or past appointments not yet paid.
+                                    // const canCheckoutUpcoming = upcomingApp.status !== 'completed' && !upcomingApp.isPaid;
                                     return (
-                                      <Typography variant="body1" fontWeight={600} color="primary.main">
-                                        {upcomingApp.date} at {upcomingApp.time} - {upcomingApp.type} (Payment: {upcomingApp.isPaid ? `Paid ${upcomingApp.paymentDetails?.amountPaid || ''} ${upcomingApp.paymentDetails?.currency || ''}` : upcomingApp.paymentDetails?.status || 'Pending'})
-                                      </Typography>
+                                      <Box>
+                                        <Typography variant="body1" fontWeight={600} color="primary.main">
+                                          {upcomingApp.date} at {upcomingApp.time} - {upcomingApp.type} (Payment: {upcomingApp.isPaid ? `Paid ${upcomingApp.paymentDetails?.amountPaid || ''} ${upcomingApp.paymentDetails?.currency || ''}` : upcomingApp.paymentDetails?.status || 'Pending'})
+                                        </Typography>
+                                        {/* Example: Add checkout for upcoming if needed
+                                        {canCheckoutUpcoming && userProfile?.clinicId && (
+                                          <Button size="small" onClick={() => handleCheckout(upcomingApp.id)} sx={{mt:1}}>Checkout Upcoming</Button>
+                                        )}
+                                        */}
+                                      </Box>
                                     );
                                   }
                                   return <Typography variant="body1" fontWeight={600} color="text.secondary">Not scheduled</Typography>;
