@@ -33,6 +33,7 @@ export interface User {
   createdAt: string;
   updatedAt: string;
   createdBy: string; // who created this user
+  password?: string; // WARNING: Storing plain text passwords is a security risk - only for admin viewing
 }
 
 // Super Admin type for admin panel

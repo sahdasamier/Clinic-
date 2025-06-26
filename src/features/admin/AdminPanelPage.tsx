@@ -128,6 +128,7 @@ const AdminPanelPage: React.FC = () => {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [generatedPasswords, setGeneratedPasswords] = useState<{[userId: string]: string}>({});
+  const [passwordVisibility, setPasswordVisibility] = useState<{[userId: string]: boolean}>({});
   
   // Form states
   const [newClinic, setNewClinic] = useState({
@@ -253,6 +254,23 @@ const AdminPanelPage: React.FC = () => {
   const showSnackbar = (message: string) => {
     setSnackbarMessage(message);
     setSnackbarOpen(true);
+  };
+
+  const togglePasswordVisibility = (userId: string) => {
+    setPasswordVisibility(prev => ({
+      ...prev,
+      [userId]: !prev[userId]
+    }));
+  };
+
+  const copyPasswordToClipboard = async (password: string, userEmail: string) => {
+    try {
+      await navigator.clipboard.writeText(password);
+      showSnackbar(`Password copied for ${userEmail}`);
+    } catch (error) {
+      console.error('Failed to copy password:', error);
+      showSnackbar('Failed to copy password');
+    }
   };
 
   // Simple email validation - orphaned accounts handled during creation
@@ -879,6 +897,17 @@ const AdminPanelPage: React.FC = () => {
           </Alert>
         )}
 
+        {/* Security Warning Panel */}
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+            ⚠️ Security Notice - Password Visibility:
+          </Typography>
+          <Typography variant="body2">
+            <strong>WARNING:</strong> User passwords are stored and displayed in plain text for admin convenience. 
+            This is a security risk. Ensure this system is only accessible by authorized administrators and consider implementing password hashing for production use.
+          </Typography>
+        </Alert>
+
         {/* Admin Info Panel */}
         <Alert severity={adminVerification.isAdmin ? "success" : "warning"} sx={{ mb: 3 }}>
           <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
@@ -1122,25 +1151,42 @@ const AdminPanelPage: React.FC = () => {
                       <TableCell>{getClinicName(user.clinicId)}</TableCell>
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          {generatedPasswords[user.email] ? (
+                          {user.password ? (
                             <>
-                              <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.9rem' }}>
-                                {generatedPasswords[user.email]}
+                              <Typography 
+                                variant="body2" 
+                                sx={{ 
+                                  fontFamily: 'monospace', 
+                                  fontSize: '0.9rem',
+                                  minWidth: '120px',
+                                  padding: '4px 8px',
+                                  backgroundColor: 'rgba(0,0,0,0.05)',
+                                  borderRadius: 1,
+                                  border: '1px solid rgba(0,0,0,0.1)'
+                                }}
+                              >
+                                {passwordVisibility[user.id] ? user.password : '•'.repeat(user.password.length)}
                               </Typography>
                               <IconButton
                                 size="small"
-                                onClick={() => {
-                                  navigator.clipboard.writeText(generatedPasswords[user.email]);
-                                  showSnackbar('Password copied to clipboard');
-                                }}
+                                onClick={() => togglePasswordVisibility(user.id)}
+                                title={passwordVisibility[user.id] ? 'Hide password' : 'Show password'}
+                                color="primary"
+                              >
+                                {passwordVisibility[user.id] ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                              </IconButton>
+                              <IconButton
+                                size="small"
+                                onClick={() => copyPasswordToClipboard(user.password!, user.email)}
                                 title="Copy password"
+                                color="secondary"
                               >
                                 <ContentCopy fontSize="small" />
                               </IconButton>
                             </>
                           ) : (
                             <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                              Set by user
+                              Password not stored
                             </Typography>
                           )}
                         </Box>
