@@ -1079,46 +1079,40 @@ const PatientListPage: React.FC = () => {
   };
 
   const getFilteredPatients = () => {
-    let filtered = patients;
+    let filtered = [...patients]; // Create a copy to avoid modifying the original state directly
 
     // Apply organization mode filtering first
     if (patientOrganizationMode === 'reservation' && organizedAppointmentData) {
-      // Filter patients based on appointment reservation status
       const organizedPatients = getPatientsOrganizedByAppointmentStatus();
       const patientsWithReservations = organizedPatients.patientsWithPending.concat(organizedPatients.patientsWithCompleted);
       const patientsWithoutReservations = organizedPatients.patientsWithNoAppointments;
-      
-      // Show patients grouped by reservation status - with reservations first
       filtered = [
-        ...patientsWithReservations.map(p => ({ 
-          ...p, 
+        ...patientsWithReservations.map(p => ({
+          ...p,
           _organizationGroup: 'With Appointments',
           _appointmentCount: p.appointmentData?.totalAppointments || 0
         })),
-        ...patientsWithoutReservations.map(p => ({ 
-          ...p, 
+        ...patientsWithoutReservations.map(p => ({
+          ...p,
           _organizationGroup: 'No Appointments',
           _appointmentCount: 0
         }))
       ];
     } else if (patientOrganizationMode === 'completion' && organizedAppointmentData) {
-      // Filter patients based on appointment completion status
       const organizedPatients = getPatientsOrganizedByAppointmentStatus();
-      
-      // Show patients grouped by completion status - completed first
       filtered = [
-        ...organizedPatients.patientsWithCompleted.map(p => ({ 
-          ...p, 
+        ...organizedPatients.patientsWithCompleted.map(p => ({
+          ...p,
           _organizationGroup: 'With Completed Appointments',
           _completedCount: p.appointmentData?.completed?.length || 0
         })),
-        ...organizedPatients.patientsWithPending.map(p => ({ 
-          ...p, 
+        ...organizedPatients.patientsWithPending.map(p => ({
+          ...p,
           _organizationGroup: 'With Pending Appointments',
           _pendingCount: p.appointmentData?.notCompleted?.length || 0
         })),
-        ...organizedPatients.patientsWithNoAppointments.map(p => ({ 
-          ...p, 
+        ...organizedPatients.patientsWithNoAppointments.map(p => ({
+          ...p,
           _organizationGroup: 'No Appointments',
           _completedCount: 0,
           _pendingCount: 0
@@ -1126,20 +1120,17 @@ const PatientListPage: React.FC = () => {
       ];
     }
 
-    // Now apply filters to the organized list
+    // Apply search and attribute filters
     filtered = filtered.filter(patient => {
-      // Search query filter
-      const matchesSearch = searchQuery === '' || 
+      const matchesSearch = searchQuery === '' ||
         patient.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         patient.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         patient.condition?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         patient.phone?.toLowerCase().includes(searchQuery.toLowerCase());
 
-      // Gender filter
-      const matchesGender = activeFilters.gender === '' || 
+      const matchesGender = activeFilters.gender === '' ||
         patient.gender?.toLowerCase() === activeFilters.gender.toLowerCase();
 
-      // Age range filter
       const matchesAge = activeFilters.ageRange === '' || (() => {
         const age = patient.age;
         if (age === undefined || age === null) return true;
@@ -1152,52 +1143,52 @@ const PatientListPage: React.FC = () => {
         }
       })();
 
-      // Condition filter
       const matchesCondition = activeFilters.condition === '' ||
         patient.condition?.toLowerCase().includes(activeFilters.condition.toLowerCase());
 
-      // Status filter
       const matchesStatus = activeFilters.status === '' ||
         patient.status === activeFilters.status;
 
       return matchesSearch && matchesGender && matchesAge && matchesCondition && matchesStatus;
     });
 
-    // Apply tab-specific filtering (skip for appointment data tab)
-    if (tabValue !== 7) {
+    // Apply tab-specific filtering
+    if (tabValue !== 7) { // Skip for "Appointment Data" tab
       switch (tabValue) {
-        case 1: // New patients
-          filtered = filtered.filter(patient => patient.status === 'new');
-          break;
-        case 2: // Follow-up patients
-          filtered = filtered.filter(patient => patient.status === 'follow-up');
-          break;
-        case 3: // Old patients
-          filtered = filtered.filter(patient => patient.status === 'old');
-          break;
-        case 4: // Under Observation patients
-          filtered = filtered.filter(patient => patient.status === 'admitted');
-          break;
-        case 5: // Transferred patients
-          filtered = filtered.filter(patient => patient.status === 'transferred');
-          break;
-        case 6: // Discharged patients
-          filtered = filtered.filter(patient => patient.status === 'discharged');
-          break;
-        default: // All patients
-          break;
+        case 1: filtered = filtered.filter(patient => patient.status === 'new'); break;
+        case 2: filtered = filtered.filter(patient => patient.status === 'follow-up'); break;
+        case 3: filtered = filtered.filter(patient => patient.status === 'old'); break;
+        case 4: filtered = filtered.filter(patient => patient.status === 'admitted'); break;
+        case 5: filtered = filtered.filter(patient => patient.status === 'transferred'); break;
+        case 6: filtered = filtered.filter(patient => patient.status === 'discharged'); break;
+        default: break; // All patients for tab 0
       }
     }
 
-    // 🎯 PRIORITY SORTING: Sort by appointment completion status
+    // Apply role-based access control (blurring)
+    if (userProfile && userProfile.role === 'doctor') {
+      const loggedInDoctorId = userProfile.id;
+      filtered = filtered.map(patient => ({
+        ...patient,
+        // @ts-ignore
+        shouldBlur: patient.doctorId !== loggedInDoctorId
+      }));
+    } else {
+      // For non-doctors or if userProfile is not available, don't blur
+      filtered = filtered.map(patient => ({ ...patient, shouldBlur: false }));
+    }
+
     const sortedFiltered = sortPatientsByAppointmentPriority(filtered);
     
-    // Debug: Log the sorting applied (simplified to avoid hoisting issues)
     if (sortedFiltered.length > 0) {
       console.log('🎯 Patients sorted by appointment priority:', {
         totalPatients: sortedFiltered.length,
         topPatients: sortedFiltered.slice(0, 5).map(p => ({
           name: p.name,
+          // @ts-ignore
+          shouldBlur: p.shouldBlur,
+          // @ts-ignore
+          doctorId: p.doctorId,
           priority: calculateAppointmentPriority(p.appointmentData || {}, p),
           todayAppointment: p.todayAppointment,
           completedCount: p.appointmentData?.completed?.length || 0,
@@ -1205,7 +1196,6 @@ const PatientListPage: React.FC = () => {
         }))
       });
     }
-
     return sortedFiltered;
   };
 
@@ -2381,9 +2371,11 @@ const PatientListPage: React.FC = () => {
                                       sx={{ 
                                         color: 'primary.main', 
                                         cursor: 'pointer',
-                                        '&:hover': { textDecoration: 'underline' }
+                                        '&:hover': { textDecoration: 'underline' },
+                                        filter: patient.shouldBlur ? 'blur(4px)' : 'none', // Apply blur effect
+                                        pointerEvents: patient.shouldBlur ? 'none' : 'auto' // Prevent interaction with blurred names
                                       }}
-                                      onClick={() => handleOpenPatientProfile(patient)}
+                                      onClick={() => !patient.shouldBlur && handleOpenPatientProfile(patient)}
                                     >
                                       {patient.name}
                                     </Typography>
@@ -3819,9 +3811,11 @@ const PatientListPage: React.FC = () => {
                                       mb: 0.5,
                                       color: 'primary.main',
                                       cursor: 'pointer',
-                                      '&:hover': { textDecoration: 'underline' }
+                                      '&:hover': { textDecoration: 'underline' },
+                                      filter: patient.shouldBlur ? 'blur(4px)' : 'none', // Apply blur effect
+                                      pointerEvents: patient.shouldBlur ? 'none' : 'auto' // Prevent interaction with blurred names
                                     }}
-                                    onClick={() => handleOpenPatientProfile(patient)}
+                                    onClick={() => !patient.shouldBlur && handleOpenPatientProfile(patient)}
                                   >
                                     {patient.name}
                                   </Typography>
