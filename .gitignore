@@ -7,3 +7,7 @@ node_modules
 .env.development.local
 .env.production
 .env.production.local
+
+# Firebase Service Account Keys (NEVER commit these!)
+serviceAccountKey.json
+**/serviceAccountKey*.json

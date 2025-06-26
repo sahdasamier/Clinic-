@@ -2,6 +2,8 @@ import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { signOut, createUserWithEmailAndPassword, updateProfile, getAuth, signInWithEmailAndPassword, deleteUser } from 'firebase/auth';
 import { initializeApp, deleteApp } from 'firebase/app';
+import { createUserWithSecondaryApp, verifyAdminAuthentication, CreateUserData } from '../../api/adminAuth';
+import FirebaseHealthCheck from '../../components/FirebaseHealthCheck';
 import { 
   collection, 
   addDoc, 
@@ -145,14 +147,69 @@ const AdminPanelPage: React.FC = () => {
     createdAt: '',
   });
 
-  // Debug Auth State - Temporary debugging code
+  // Admin verification state
+  const [adminVerification, setAdminVerification] = useState<{
+    isAdmin: boolean;
+    loading: boolean;
+    error: string | null;
+    method: string | null;
+  }>({
+    isAdmin: false,
+    loading: true,
+    error: null,
+    method: null
+  });
+
+  // Verify admin status on component mount and auth changes
   useEffect(() => {
-    console.log('🔍 Debug Auth State:');
-    console.log('User from AuthContext:', user);
-    console.log('Firebase Auth Current User:', auth.currentUser);
-    console.log('User Email:', user?.email || auth.currentUser?.email);
-    console.log('User UID:', user?.uid || auth.currentUser?.uid);
-  }, [user]);
+    const checkAdminStatus = async () => {
+      try {
+        setAdminVerification(prev => ({ ...prev, loading: true }));
+        const result = await verifyAdminAuthentication();
+        
+        // Determine verification method
+        let method = null;
+        if (result.isAdmin) {
+          const user = auth.currentUser;
+          if (user) {
+            try {
+              const idTokenResult = await user.getIdTokenResult();
+              const claims = idTokenResult.claims as any;
+              if (claims.admin === true) {
+                method = 'Custom Claims';
+              } else {
+                method = 'Super Admin Email';
+              }
+            } catch {
+              method = 'Super Admin Email';
+            }
+          }
+        }
+        
+        setAdminVerification({
+          isAdmin: result.isAdmin,
+          loading: false,
+          error: result.error || null,
+          method
+        });
+      } catch (error: any) {
+        setAdminVerification({
+          isAdmin: false,
+          loading: false,
+          error: error.message || 'Failed to verify admin status',
+          method: null
+        });
+      }
+    };
+
+    // Check on mount and auth state changes
+    checkAdminStatus();
+    const unsubscribe = auth.onAuthStateChanged(() => {
+      checkAdminStatus();
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     fetchData();
@@ -372,12 +429,10 @@ const AdminPanelPage: React.FC = () => {
   };
 
   const handleCreateUser = async () => {
-    // Store current admin user
-    const currentUser = auth.currentUser;
-    const currentUserEmail = currentUser?.email;
-    
-    if (!currentUserEmail) {
-      setError('Admin session lost. Please refresh and try again.');
+    // First verify admin authentication and claims
+    const adminCheck = await verifyAdminAuthentication();
+    if (!adminCheck.isAdmin) {
+      setError(adminCheck.error || 'Admin authentication required. Please ensure you have admin privileges.');
       return;
     }
 
@@ -397,86 +452,54 @@ const AdminPanelPage: React.FC = () => {
     
     try {
       setLoading(true);
-      showSnackbar('Creating user account...');
+      showSnackbar('🔐 Creating user account with secure secondary app...');
       
-      console.log('🔄 Creating user with simplified approach...');
-      console.log('🔄 Step 1: Firebase Auth account creation...');
+      console.log('🔐 Creating user with secure secondary Firebase app approach...');
       
-      // Use the existing robust createUserAccount function
-      const result = await createUserAccount({
+      // Prepare user data for the secure creation function
+      const userData: CreateUserData = {
         email: newUser.email.trim(),
         password: newUser.password,
         firstName: newUser.firstName.trim(),
         lastName: newUser.lastName.trim(),
         role: newUser.role,
         clinicId: newUser.clinicId,
-        createdBy: currentUserEmail,
-      });
+      };
+      
+      // Use the secure secondary app method
+      const result = await createUserWithSecondaryApp(userData);
       
       if (result.success) {
-        console.log('✅ User account created successfully in both Auth and Firestore');
+        console.log('✅ User account created securely without affecting admin session');
         
         // Store password for display
         setGeneratedPasswords(prev => ({
           ...prev,
-          [newUser.email.trim()]: newUser.password
+          [userData.email]: newUser.password
         }));
         
         setCreatedUserCredentials({
-          email: newUser.email.trim(),
+          email: userData.email,
           password: newUser.password,
-          name: `${newUser.firstName.trim()} ${newUser.lastName.trim()}`
+          name: `${userData.firstName} ${userData.lastName}`
         });
         
         resetUserForm();
         setUserDialogOpen(false);
         setPasswordSuccessOpen(true);
         fetchUsers();
-        showSnackbar('✅ User account created successfully!');
+        showSnackbar('✅ User account created successfully with secure method!');
         
       } else {
-        console.error('❌ User creation failed:', result.error);
-        
-        // Check if it's a partial success (Auth created but Firestore failed)
-        if (result.error?.includes('auth/email-already-in-use')) {
-          setError(`✅ PARTIAL SUCCESS: User was created in Firebase Auth but may have Firestore issues.\n\n` +
-                   `The user can now log in with:\n` +
-                   `• Email: ${newUser.email.trim()}\n` +
-                   `• Password: ${newUser.password}\n\n` +
-                   `⚠️ Original error: ${result.error}`);
-          showSnackbar('⚠️ User created in Auth - check error details');
-        } else {
-          setError(result.error || 'Failed to create user account');
-          showSnackbar('❌ Failed to create user');
-        }
-        
-        // If it's an orphaned account, provide suggestions
-        if (result.isOrphaned) {
-          const originalEmail = newUser.email.trim();
-          const suggestions = suggestAlternativeEmails(originalEmail);
-          
-          // Add suggestion to the error message
-          const enhancedError = `${result.error}\n\n🔧 Suggested alternative emails:\n${suggestions.slice(0, 3).map((email, index) => `${index + 1}. ${email}`).join('\n')}`;
-          setError(enhancedError);
-        }
+        console.error('❌ Secure user creation failed:', result.error);
+        setError(result.error || 'Failed to create user account');
+        showSnackbar('❌ Failed to create user account');
       }
       
     } catch (error: any) {
-      console.error('❌ Unexpected error creating user:', error);
-      
-      // Check if the error indicates auth success but firestore failure
-      if (error.code === 'permission-denied' || error.message?.includes('Firestore')) {
-        setError(`⚠️ PARTIAL SUCCESS: User may have been created in Firebase Auth.\n\n` +
-                 `Try logging in with:\n` +
-                 `• Email: ${newUser.email.trim()}\n` +
-                 `• Password: ${newUser.password}\n\n` +
-                 `📋 Firestore Error: ${error.message}\n` +
-                 `🔧 The Firestore rules have been updated. Try creating another user or refresh the page.`);
-        showSnackbar('⚠️ User possibly created - check details');
-      } else {
-        setError(`Unexpected error: ${error.message}`);
-        showSnackbar('❌ Failed to create user');
-      }
+      console.error('❌ Unexpected error in secure user creation:', error);
+      setError(`Unexpected error: ${error.message}`);
+      showSnackbar('❌ Failed to create user');
     } finally {
       setLoading(false);
     }
@@ -857,19 +880,41 @@ const AdminPanelPage: React.FC = () => {
         )}
 
         {/* Admin Info Panel */}
-        <Alert severity="info" sx={{ mb: 3 }}>
+        <Alert severity={adminVerification.isAdmin ? "success" : "warning"} sx={{ mb: 3 }}>
           <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
-            🔐 Admin-Only User Management:
+            🔐 Admin Authentication Status:
           </Typography>
-          <Typography variant="body2">
-            • Only administrators can create user accounts (no self-registration)
-            • Generated passwords are visible in the Password column and success dialog
-            • If users can't login after creation, click "Fix Access" button above
-            • Share credentials securely with users via secure channels
-          </Typography>
+          {adminVerification.loading ? (
+            <Typography variant="body2">Verifying admin privileges...</Typography>
+          ) : adminVerification.isAdmin ? (
+            <Box>
+              <Typography variant="body2" sx={{ color: 'success.main', fontWeight: 600 }}>
+                ✅ Admin Verified ({adminVerification.method}) - {auth.currentUser?.email}
+              </Typography>
+              <Typography variant="body2" sx={{ mt: 1 }}>
+                🔐 <strong>Secure User Creation:</strong> Uses secondary Firebase app to prevent admin logout
+              </Typography>
+              <Typography variant="body2">
+                • Admin session remains active during user creation
+                • Generated passwords are visible and stored securely
+                • New users are created without affecting your authentication
+                • Share credentials with users via secure channels only
+              </Typography>
+            </Box>
+          ) : (
+            <Box>
+              <Typography variant="body2" sx={{ color: 'error.main', fontWeight: 600 }}>
+                ❌ Admin Verification Failed: {adminVerification.error}
+              </Typography>
+              <Typography variant="body2" sx={{ mt: 1 }}>
+                Please ensure you have admin custom claims or are using a super admin email.
+              </Typography>
+            </Box>
+          )}
         </Alert>
 
-
+        {/* Firebase Health Check */}
+        <FirebaseHealthCheck />
 
         {/* Stats Cards */}
         <Grid container spacing={3} sx={{ mb: 4 }}>
@@ -1035,7 +1080,18 @@ const AdminPanelPage: React.FC = () => {
                 variant="contained"
                 startIcon={<Add />}
                 onClick={() => setUserDialogOpen(true)}
-                sx={{ backgroundColor: '#7C3AED' }}
+                disabled={!adminVerification.isAdmin || adminVerification.loading}
+                sx={{ 
+                  backgroundColor: adminVerification.isAdmin ? '#7C3AED' : 'grey.400',
+                  '&:hover': {
+                    backgroundColor: adminVerification.isAdmin ? '#6B21E5' : 'grey.500'
+                  }
+                }}
+                title={
+                  !adminVerification.isAdmin 
+                    ? 'Admin verification required to create users' 
+                    : 'Create a new user account'
+                }
               >
                 Add User
               </Button>
