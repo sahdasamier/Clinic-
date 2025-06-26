@@ -4,8 +4,10 @@ import {
   signOut,
   updateProfile,
   fetchSignInMethodsForEmail,
-  User as FirebaseUser
+  User as FirebaseUser,
+  getAuth
 } from 'firebase/auth';
+import { initializeApp, deleteApp } from 'firebase/app'; // Added for secondary app
 import { 
   doc, 
   setDoc, 
@@ -234,6 +236,7 @@ export const acceptInvitation = async (token: string, password: string): Promise
 };
 
 // Create user account directly (for admin use) - ROBUST VERSION
+// Uses a secondary Firebase app to create users so admin session is not disturbed.
 export const createUserAccount = async (userData: {
   email: string;
   password: string;
@@ -243,8 +246,23 @@ export const createUserAccount = async (userData: {
   clinicId: string;
   createdBy?: string;
 }): Promise<{ success: boolean; error?: string; isOrphaned?: boolean }> => {
+  // Ensure firebaseConfig is imported for secondary app initialization
+  // It's typically available from './firebase'
+  const { firebaseConfig } = await import('./firebase');
+  if (!firebaseConfig) {
+    console.error('❌ Firebase config not found for secondary app initialization.');
+    return { success: false, error: 'Firebase config missing for user creation.' };
+  }
+
+  const tempAppName = `newUserCreation-${Date.now()}`;
+  let tempApp; // Declare here to ensure it's in scope for finally block
+
   try {
-    console.log(`🔧 Creating user account for: ${userData.email}`);
+    console.log(`🔧 Creating user account for: ${userData.email} using secondary app`);
+
+    // Initialize secondary Firebase app
+    tempApp = initializeApp(firebaseConfig, tempAppName);
+    const tempAuth = getAuth(tempApp); // Use getAuth from the main 'firebase/auth'
 
     // Normalize email early
     const normalizedEmail = userData.email.trim().toLowerCase();
@@ -253,7 +271,7 @@ export const createUserAccount = async (userData: {
       email: normalizedEmail
     };
 
-    // Basic validation (skip email duplicate check - we'll handle it during actual creation)
+    // Basic validation
     console.log('🔍 Running basic validation...');
     if (!normalizedEmail) {
       return { success: false, error: 'Email address is required' };
@@ -277,26 +295,27 @@ export const createUserAccount = async (userData: {
       return { success: false, error: 'Clinic selection is required' };
     }
     
-    // Attempt direct creation - this is the most reliable way to detect duplicates
-    console.log('📧 Attempting Firebase Auth account creation...');
+    // Attempt creation using the secondary auth instance
+    console.log('📧 Attempting Firebase Auth account creation via secondary app...');
     const userCredential = await createUserWithEmailAndPassword(
-      auth, 
+      tempAuth, // Use secondary auth instance
       normalizedEmail, 
       userData.password
     );
     
-    const user = userCredential.user;
-    console.log('✅ Firebase Auth account created successfully');
+    const user = userCredential.user; // This user object is from the secondary auth instance
+    console.log('✅ Firebase Auth account created successfully via secondary app');
     
-    // Update the user's profile
-    await updateProfile(user, {
+    // Update the user's profile using the secondary auth instance
+    await updateProfile(user, { // Use updateProfile from the main 'firebase/auth'
       displayName: `${userData.firstName.trim()} ${userData.lastName.trim()}`
     });
-    console.log('✅ User profile updated');
+    console.log('✅ User profile updated via secondary app');
     
-    // Store additional user data in Firestore
+    // Store additional user data in Firestore using the main db instance
+    // This assumes 'db' is initialized with the primary app and thus uses the admin's auth context
     const userDoc: UserData = {
-      id: user.uid,
+      id: user.uid, // UID is the same across auth instances for the same user
       email: normalizedEmail,
       firstName: userData.firstName.trim(),
       lastName: userData.lastName.trim(),
@@ -307,14 +326,15 @@ export const createUserAccount = async (userData: {
       updatedAt: serverTimestamp(),
     };
     
+    // The main 'db' instance uses the admin's (primary) auth context
     await setDoc(doc(db, 'users', user.uid), userDoc);
-    console.log('✅ User document created in Firestore');
+    console.log('✅ User document created in Firestore using admin context');
     
     console.log('🎉 User account created successfully');
     return { success: true };
     
   } catch (error: any) {
-    console.error('❌ Error creating user account:', error);
+    console.error('❌ Error creating user account via secondary app:', error);
     console.error('❌ Full error details:', {
       code: error.code,
       message: error.message,
@@ -389,6 +409,20 @@ export const createUserAccount = async (userData: {
     }
     
     return { success: false, error: errorMessage, isOrphaned };
+  } finally {
+    if (tempApp) {
+      try {
+        const tempAuthInstance = getAuth(tempApp); // Get auth instance before deleting app
+        if (tempAuthInstance.currentUser) { // Check if a user is signed in
+          await signOut(tempAuthInstance); // Sign out from secondary app's auth
+          console.log('👋 User signed out from secondary app');
+        }
+        await deleteApp(tempApp); // Delete the secondary app
+        console.log('🧹 Secondary Firebase app deleted');
+      } catch (cleanupError) {
+        console.error('🧹❌ Error during secondary app cleanup:', cleanupError);
+      }
+    }
   }
 };
 
