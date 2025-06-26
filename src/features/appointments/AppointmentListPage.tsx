@@ -734,9 +734,10 @@ const AppointmentListPage: React.FC = () => {
 
       if (selectedAppointment) {
         // ✅ UPDATE: Use Firestore service instead of localStorage
-        const updatedData = {
+        const updatedData: Partial<FirestoreAppointment> = { // Use Partial since not all fields are always updated
           patient: newAppointment.patient,
-          doctor: newAppointment.doctor,
+          doctor: newAppointment.doctor, // This should be doctorId if your model uses that primarily
+          // doctorId: newAppointment.doctor, // Assuming newAppointment.doctor holds the ID
           date: newAppointment.date,
           time: newAppointment.time,
           timeSlot: timeSlot,
@@ -745,12 +746,19 @@ const AppointmentListPage: React.FC = () => {
           priority: (newAppointment.priority as 'high' | 'normal' | 'urgent') || 'normal',
           location: newAppointment.location || 'TBD',
           notes: newAppointment.notes || '',
-          paymentStatus: (newAppointment.paymentStatus as 'pending' | 'paid' | 'partial' | 'overdue') || 'pending'
+          paymentStatus: (newAppointment.paymentStatus as 'pending' | 'paid' | 'partial' | 'overdue') || 'pending',
+          // Add doctorId if it's part of your newAppointment state and Firestore model
+          // doctorId: newAppointment.doctorId,
         };
+
+        // Check if date or time has changed to mark as rescheduled
+        if (selectedAppointment.date !== newAppointment.date || selectedAppointment.time !== newAppointment.time) {
+          updatedData.status = 'rescheduled';
+        }
 
         await AppointmentService.updateAppointment(selectedAppointment.id, updatedData);
         setEditDialogOpen(false);
-        console.log('✅ Appointment updated via Firestore service');
+        console.log('✅ Appointment updated via Firestore service. Status:', updatedData.status || selectedAppointment.status);
       } else {
         // ✅ CREATE: Use Firestore service instead of localStorage
         const appointmentData = {
@@ -858,10 +866,13 @@ const AppointmentListPage: React.FC = () => {
   };
 
   const getFilteredAppointments = () => {
-    let filtered = appointmentList.filter(appointment => {
-      const matchesSearch = searchQuery === '' || 
+    let filtered = [...appointmentList]; // Create a copy
+
+    // Apply search and attribute filters
+    filtered = filtered.filter(appointment => {
+      const matchesSearch = searchQuery === '' ||
         appointment.patient.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        appointment.doctor.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (appointment.doctor && appointment.doctor.toLowerCase().includes(searchQuery.toLowerCase())) ||
         appointment.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
         appointment.phone?.toLowerCase().includes(searchQuery.toLowerCase());
 
@@ -878,12 +889,13 @@ const AppointmentListPage: React.FC = () => {
         (activeFilters.completed === 'completed' && appointment.completed) ||
         (activeFilters.completed === 'pending' && !appointment.completed);
 
-      const matchesDoctor = activeFilters.doctor === '' ||
-        appointment.doctor.toLowerCase().includes(activeFilters.doctor.toLowerCase());
+      const matchesDoctorFilter = activeFilters.doctor === '' || // This is for the filter dropdown
+        (appointment.doctor && appointment.doctor.toLowerCase().includes(activeFilters.doctor.toLowerCase()));
 
-      return matchesSearch && matchesStatus && matchesType && matchesPriority && matchesCompleted && matchesDoctor;
+      return matchesSearch && matchesStatus && matchesType && matchesPriority && matchesCompleted && matchesDoctorFilter;
     });
 
+    // Apply tab-specific filtering
     switch (tabValue) {
       case 1: // Today
         filtered = filtered.filter(apt => apt.date === selectedDate);
@@ -911,6 +923,25 @@ const AppointmentListPage: React.FC = () => {
         break;
       default: // All
         break;
+    }
+
+    // Apply role-based access control (blurring patient names)
+    if (userProfile && userProfile.role === 'doctor') {
+      const loggedInDoctorId = userProfile.id;
+      // Assuming appointment.doctor stores the ID of the doctor assigned to the appointment
+      // If appointment.doctor stores the name, you might need to fetch doctor details
+      // or ensure availableDoctors is populated and use it to find the ID.
+      // For this implementation, we'll assume appointment.doctor is the ID.
+      // If `appointment.doctor` is a name, and `appointment.doctorId` exists, use `appointment.doctorId`.
+      // The provided `FirestoreAppointment` type has `doctorId`.
+      filtered = filtered.map(appointment => ({
+        ...appointment,
+        // @ts-ignore
+        shouldBlurPatientName: appointment.doctorId !== loggedInDoctorId
+      }));
+    } else {
+      // For non-doctors or if userProfile is not available, don't blur
+      filtered = filtered.map(appointment => ({ ...appointment, shouldBlurPatientName: false }));
     }
 
     return filtered;
@@ -1699,12 +1730,21 @@ const AppointmentListPage: React.FC = () => {
                                      fontWeight={600}
                                      sx={{ 
                                        textDecoration: appointment.completed ? 'line-through' : 'none',
-                                       color: appointment.completed ? 'text.secondary' : 'text.primary'
+                                       color: appointment.completed ? 'text.secondary' : 'text.primary',
+                                       filter: (appointment as any).shouldBlurPatientName ? 'blur(4px)' : 'none',
+                                       pointerEvents: (appointment as any).shouldBlurPatientName ? 'none' : 'auto'
                                      }}
                                    >
                                      {appointment.patient}
                                    </Typography>
-                                   <Typography variant="caption" color="text.secondary">
+                                   <Typography
+                                     variant="caption"
+                                     color="text.secondary"
+                                     sx={{
+                                       filter: (appointment as any).shouldBlurPatientName ? 'blur(4px)' : 'none',
+                                       pointerEvents: (appointment as any).shouldBlurPatientName ? 'none' : 'auto'
+                                     }}
+                                   >
                                      {appointment.phone}
                                    </Typography>
                                  </Box>
@@ -1955,7 +1995,15 @@ const AppointmentListPage: React.FC = () => {
                                      {appointment.patientAvatar}
                                    </Avatar>
                                    <Box>
-                                     <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>
+                                     <Typography
+                                       variant="h6"
+                                       sx={{
+                                         fontWeight: 600,
+                                         mb: 0.5,
+                                         filter: (appointment as any).shouldBlurPatientName ? 'blur(4px)' : 'none',
+                                         pointerEvents: (appointment as any).shouldBlurPatientName ? 'none' : 'auto'
+                                       }}
+                                     >
                                        {appointment.patient}
                                      </Typography>
                                      <Typography variant="body2" color="text.secondary">
