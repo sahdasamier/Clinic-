@@ -3,7 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { useUser } from '../../contexts/UserContext';
 import { getDoctorsByClinic } from '../../api/doctorPatients';
 import { UserData } from '../../api/auth';
-import { createAppointment } from '../../api/appointments';
+// import { createAppointment } from '../../api/appointments'; // Old API import
+import { AppointmentService, type Appointment } from '../../services/AppointmentService'; // New Service import
 import {
   Box,
   Container,
@@ -42,15 +43,33 @@ interface AppointmentModalProps {
   clinicId?: string;
 }
 
+// Helper to convert time to HH:MM format if needed (e.g. "09:00 AM" to "09:00")
+// This might be overly simplistic depending on the input format of `appointmentData.appointmentTime`
+const convertToTimeSlot = (timeStr: string): string => {
+  if (!timeStr) return '';
+  // Assuming timeStr is already in HH:MM or can be directly used.
+  // If it includes AM/PM, more complex parsing is needed.
+  // For simplicity, if it's like "HH:MM", it's used directly.
+  // The API's convertTimeToSlot was more robust.
+  const parts = timeStr.match(/(\d{1,2}):(\d{2})/);
+  if (parts) {
+    return `${parts[1].padStart(2, '0')}:${parts[2]}`;
+  }
+  // Fallback or throw error if format is unexpected
+  console.warn(`Unexpected time format for timeSlot conversion: ${timeStr}. Using as is.`);
+  return timeStr;
+};
+
+
 const AppointmentModal: React.FC<AppointmentModalProps> = ({ isOpen, onClose, isEdit = false, clinicId }) => {
   const { t } = useTranslation();
   const [doctors, setDoctors] = useState<UserData[]>([]);
   const [appointmentData, setAppointmentData] = useState({
     patientName: '',
-    appointmentDate: '',
-    appointmentTime: '',
+    appointmentDate: '', // YYYY-MM-DD
+    appointmentTime: '', // HH:MM
     appointmentType: '',
-    doctor: '',
+    doctor: '', // This stores doctor's full name, might need doctorId
     duration: 30,
     notes: ''
   });
@@ -73,23 +92,36 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ isOpen, onClose, is
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!clinicId) {
+      console.error('❌ Clinic ID is missing, cannot create appointment.');
+      // TODO: Show error to user
+      return;
+    }
     
     try {
-      const appointmentPayload = {
+      // Find selected doctor's ID if possible, otherwise service handles doctorName
+      const selectedDoctorObj = doctors.find(d => `${d.firstName} ${d.lastName}` === appointmentData.doctor);
+
+      const servicePayload: Omit<Appointment, 'id' | 'createdAt' | 'updatedAt' | 'clinicId' | 'isActive' | 'completed' | 'reminderSent' | 'followUpRequired'> = {
         patientName: appointmentData.patientName,
-        patientPhone: '', // Could add phone field if needed
+        patientPhone: '', // Placeholder, consider adding a field in the form
         doctorName: appointmentData.doctor,
+        doctorId: selectedDoctorObj?.id, // Add doctorId if available
         date: appointmentData.appointmentDate,
         time: appointmentData.appointmentTime,
+        timeSlot: convertToTimeSlot(appointmentData.appointmentTime), // Ensure HH:MM format
         type: appointmentData.appointmentType,
         duration: appointmentData.duration,
-        location: '', // Could add location field if needed
-        priority: 'normal' as const,
-        notes: appointmentData.notes
+        location: '', // Placeholder, could be a clinic setting or form field
+        priority: 'normal', // Default priority
+        status: 'pending', // Default status for new appointments
+        paymentStatus: 'pending', // Default payment status
+        notes: appointmentData.notes,
+        // patientId can be added if integrating with patient selection
       };
 
-      await createAppointment(appointmentPayload);
-      console.log('✅ Appointment created successfully');
+      await AppointmentService.createAppointment(clinicId, servicePayload);
+      console.log('✅ Appointment created successfully via AppointmentService');
       
       // Reset form
       setAppointmentData({
@@ -104,8 +136,8 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ isOpen, onClose, is
       
       onClose();
     } catch (error) {
-      console.error('❌ Error creating appointment:', error);
-      // Could add snackbar notification here
+      console.error('❌ Error creating appointment via AppointmentService:', error);
+      // TODO: Show error to user via snackbar or alert
     }
   };
 
@@ -148,7 +180,7 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ isOpen, onClose, is
               <TextField
                 fullWidth
                 label={t('appointment_date')}
-                type="date"
+                type="date" // HTML5 date picker expects YYYY-MM-DD
                 value={appointmentData.appointmentDate}
                 onChange={(e) => setAppointmentData(prev => ({ ...prev, appointmentDate: e.target.value }))}
                 required
@@ -162,7 +194,7 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ isOpen, onClose, is
               <TextField
                 fullWidth
                 label={t('appointment_time')}
-                type="time"
+                type="time" // HTML5 time picker expects HH:MM
                 value={appointmentData.appointmentTime}
                 onChange={(e) => setAppointmentData(prev => ({ ...prev, appointmentTime: e.target.value }))}
                 required
@@ -195,7 +227,9 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ isOpen, onClose, is
                 <Select
                   value={appointmentData.doctor}
                   label={t('doctor')}
-                  onChange={(e) => setAppointmentData(prev => ({ ...prev, doctor: e.target.value }))}
+                  onChange={(e) => {
+                    setAppointmentData(prev => ({ ...prev, doctor: e.target.value }));
+                  }}
                   required
                 >
                   {doctors.map((doctor) => (

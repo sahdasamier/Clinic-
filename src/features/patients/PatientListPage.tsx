@@ -85,10 +85,11 @@ import {
 import { 
   PatientService,
   AppointmentService,
-  PaymentService,
+  PaymentService, // Make sure PaymentService is imported
+  type Patient,    // Assuming type Patient is from PatientService or a models file
+  type Appointment, // Assuming type Appointment is from AppointmentService or a models file
+  type Payment as FirestorePayment, // Import FirestorePayment type
   ServiceUtils,
-  type Patient,
-  type Appointment
 } from '../../services';
 import { globalDataSync } from '../../utils/globalDataSync';
 import {
@@ -108,18 +109,17 @@ import {
   type Document,
 } from '../../data/mockData';
 
-// Legacy storage key - no longer used
-export const PATIENTS_STORAGE_KEY = 'clinic_patients_data';
+// Commenting out legacy/deprecated functions and storage keys
+// export const PATIENTS_STORAGE_KEY = 'clinic_patients_data';
 
-// Legacy functions - now use Firestore services instead
-export const loadPatientsFromStorage = (): Patient[] => {
-  console.warn('⚠️ loadPatientsFromStorage is deprecated - use PatientService.listenPatients instead');
-  return [];
-};
+// export const loadPatientsFromStorage = (): Patient[] => {
+//   console.warn('⚠️ loadPatientsFromStorage is deprecated - use PatientService.listenPatients instead');
+//   return [];
+// };
 
-export const savePatientsToStorage = (patients: Patient[]) => {
-  console.warn('⚠️ savePatientsToStorage is deprecated - use PatientService methods instead');
-};
+// export const savePatientsToStorage = (patients: Patient[]) => {
+//   console.warn('⚠️ savePatientsToStorage is deprecated - use PatientService methods instead');
+// };
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -180,6 +180,7 @@ const PatientListPage: React.FC = () => {
   // ✅ Firestore-powered patient state
   const [patients, setPatients] = useState<Patient[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [clinicPayments, setClinicPayments] = useState<FirestorePayment[]>([]); // Added state for clinic payments
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
   const [patientOrganizationMode, setPatientOrganizationMode] = useState<'reservation' | 'completion' | 'all'>('all');
@@ -228,11 +229,20 @@ const PatientListPage: React.FC = () => {
       setAppointments(updatedAppointments);
     });
 
+    const unsubscribeClinicPayments = PaymentService.listenPayments(clinicId, (updatedPayments) => {
+      console.log(`💰 PatientListPage received ${updatedPayments.length} clinic payments`);
+      setClinicPayments(updatedPayments);
+      // Note: We might not need a separate isDataLoaded for payments if
+      // the main page loading relies on patients and appointments primarily.
+      // Or, adjust isDataLoaded to account for payments as well if necessary.
+    });
+
     // Cleanup function
     return () => {
-      console.log('🧹 Cleaning up Firestore listeners...');
+      console.log('🧹 Cleaning up Firestore listeners (Patients, Appointments, ClinicPayments)...');
       unsubscribePatients();
       unsubscribeAppointments();
+      unsubscribeClinicPayments(); // Add cleanup for payments listener
     };
   }, [initialized, authLoading, user, userProfile]);
 
@@ -339,39 +349,41 @@ const PatientListPage: React.FC = () => {
 
   // Removed: localStorage save for new patient form - keeping UI state only
 
-  // ✅ FIXED: Add missing variables and functions that were removed during localStorage cleanup
+  // State for organized appointment data (if specific views require it beyond filtering `patientsWithAugmentedAppointments`)
   const [organizedAppointmentData, setOrganizedAppointmentData] = useState<any>(null);
-  const [patientsWithAppointments, setPatientsWithAppointments] = useState<any[]>([]);
 
-  // Dummy implementation of missing functions  
-  const getPatientsOrganizedByAppointmentStatus = () => {
-    return {
-      patientsWithPending: patients.filter((p: any) => p.status === 'new' || p.status === 'follow-up'),
-      patientsWithCompleted: patients.filter((p: any) => p.status === 'old'),
-      patientsWithNoAppointments: patients.filter((p: any) => p.status === 'discharged'),
-      allPatients: patients
-    };
-  };
 
-  const forceSyncAllPatients = () => {
-    console.log('📊 Force sync all patients - localStorage disabled, using Firestore real-time listeners');
-  };
+  // REMOVED: Dummy implementations of localStorage-era functions.
+  // getPatientsOrganizedByAppointmentStatus, forceSyncAllPatients, sendAppointmentDataToPatients,
+  // organizeAppointmentsByCompletion, syncAllCompletedAppointmentsToMedicalHistory are no longer needed
+  // as Firestore and real-time listeners handle data synchronization and state updates.
 
-  const sendAppointmentDataToPatients = () => {
-    console.log('📊 Send appointment data to patients - localStorage disabled');
-    return patients;
-  };
+  // The `initialPatients` variable was a snapshot and is not needed with real-time updates.
 
-  const organizeAppointmentsByCompletion = () => {
-    console.log('📊 Organize appointments by completion - localStorage disabled');
-    return { completed: [], notCompleted: [] };
-  };
+  // Memoized function to combine patients, their appointments, and payment status for those appointments
+  const patientsWithAugmentedAppointments = React.useMemo(() => {
+    // Ensure all necessary data arrays are populated before processing
+    if (!patients.length && !appointments.length) { // Allow processing if only one set is empty but not all
+        return []; // Or return patients.map(p => ({ ...p, appointments: [] })) if preferred
+    }
 
-  const syncAllCompletedAppointmentsToMedicalHistory = () => {
-    console.log('📊 Sync completed appointments to medical history - localStorage disabled');
-  };
+    return patients.map(patient => {
+      const patientApps = appointments
+        .filter(app => app.patientId === patient.id || app.patient === patient.name) // Link by ID or name (patientName on app)
+        .map(app => {
+          // Find payment. Ensure clinicPayments is populated.
+          const payment = clinicPayments.find(p => p.appointmentId === app.id && p.isActive);
+          return {
+            ...app,
+            isPaid: payment?.status === 'paid',
+            paymentDetails: payment || null,
+            // checkoutTime is already on the Appointment interface from AppointmentService
+          };
+        });
+      return { ...patient, appointments: patientApps };
+    });
+  }, [patients, appointments, clinicPayments]);
 
-  const initialPatients = patients;
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
@@ -786,27 +798,61 @@ const PatientListPage: React.FC = () => {
 
       const newAppointment = await AppointmentService.createAppointment(userProfile.clinicId, newAppointmentData);
       
-      // ✅ NEW: Create payment automatically using Firestore service
-      try {
-        const paymentData = {
-          patientId: appointmentPatient.id,
-          patient: appointmentPatient.name,
-          appointmentId: newAppointment,
-          amount: 100, // Default amount - could be dynamic
-          date: appointmentData.date,
-          invoiceDate: appointmentData.date,
-          dueDate: appointmentData.date,
-          description: `Appointment on ${appointmentData.date} at ${appointmentTime}`,
-          status: 'pending' as const,
-          method: 'cash' as const,
-          currency: 'USD',
-          isActive: true
-        };
-        
-        await PaymentService.createPayment(userProfile.clinicId, paymentData);
-        console.log('✅ Auto-payment created for appointment');
-      } catch (paymentError) {
-        console.error('❌ Error creating auto-payment:', paymentError);
+      // ✅ NEW: Create payment automatically using Firestore service, now with dynamic fees
+      if (userProfile?.clinicId && newAppointment) { // Ensure clinicId and newAppointmentId are available
+        try {
+          // Fetch service fee for the appointment type
+          const serviceFee = await ClinicConfigService.getServiceFee(userProfile.clinicId, newAppointmentData.type);
+
+          let baseAmount = 0; // Default to 0 if no fee found, or handle as error
+          let currency = 'USD'; // Default currency
+          let includeVAT = false;
+          const appointmentDescription = `Appointment (${newAppointmentData.type}) on ${appointmentData.date} at ${appointmentTime}`;
+
+          if (serviceFee) {
+            baseAmount = serviceFee.cost;
+            currency = serviceFee.currency;
+            includeVAT = serviceFee.includeVAT; // This will be used by PaymentService
+            console.log(`ℹ️ Found service fee for ${newAppointmentData.type}: ${baseAmount} ${currency}, Include VAT: ${includeVAT}`);
+          } else {
+            console.warn(`⚠️ No service fee found for type "${newAppointmentData.type}". Defaulting amount to 0 or as per PaymentService logic.`);
+            // Fallback: could use a global default from clinicConfig if desired, or let PaymentService handle missing amount.
+            // For now, PaymentService might need to handle baseAmount = 0 gracefully or have its own default.
+          }
+
+          const paymentData = {
+            patientId: appointmentPatient.id,
+            patientName: appointmentPatient.name, // PaymentService expects patientName
+            appointmentId: newAppointment, // This is the ID string from createAppointment
+            appointmentType: newAppointmentData.type, // Pass type for PaymentService to re-check VAT rules
+            baseAmount: baseAmount, // Pass the base amount
+            // 'amount' will be calculated by PaymentService based on baseAmount and VAT
+            date: appointmentData.date,
+            invoiceDate: appointmentData.date, // Or ServiceUtils.getToday(),
+            dueDate: appointmentData.date, // Or calculate based on clinic settings
+            description: appointmentDescription,
+            status: 'pending' as const,
+            method: 'cash' as const, // TODO: Get default method from clinicConfig.paymentSettings.defaultPaymentMethod
+            currency: currency,
+            // includeVAT field on paymentData is for PaymentService to know if VAT rules were applied from serviceFee
+            // The actual calculation should happen within PaymentService.createPayment
+            // We can pass includeVAT from serviceFee to inform PaymentService's logic.
+            // However, PaymentService.createPayment signature might need adjustment if it's to take includeVAT directly.
+            // For now, assuming PaymentService.createPayment will use its internal logic based on clinic's VAT settings
+            // if an amount is provided. If baseAmount is provided, it should use that.
+            // Let's refine PaymentService.createPayment to accept baseAmount and appointmentType.
+            isActive: true,
+          };
+
+          // Assuming PaymentService.createPayment is refactored to handle baseAmount & appointmentType for VAT calc
+          await PaymentService.createPayment(userProfile.clinicId, paymentData);
+          console.log('✅ Auto-payment record initiated for appointment');
+        } catch (paymentError) {
+          console.error('❌ Error creating auto-payment record:', paymentError);
+          // Optionally, inform the user that appointment was scheduled but payment creation failed.
+        }
+      } else {
+        console.warn('⚠️ Cannot create payment: clinicId or newAppointmentId missing.');
       }
 
       setScheduleAppointmentOpen(false);
@@ -1000,88 +1046,75 @@ const PatientListPage: React.FC = () => {
   };
 
   /**
-   * Get priority badge for a patient based on their appointment status
+   * Get priority badge for a patient based on their appointment status.
+   * patientWithApps is a patient object augmented with an `appointments` array,
+   * where each appointment has `isPaid`, `checkoutTime`, and `paymentDetails`.
    */
-  const getPriorityBadge = (patient: any) => {
-    const appointmentData = patient.appointmentData || { completed: [], notCompleted: [], totalAppointments: 0 };
-    
-    // Get today's date for comparison
-    const today = new Date();
-    const todayString = today.getFullYear() + '-' + 
-      String(today.getMonth() + 1).padStart(2, '0') + '-' + 
-      String(today.getDate()).padStart(2, '0');
-    
-    // Check if patient has today's appointment
-    const hasTodayAppointment = patient.todayAppointment && patient.todayAppointment !== 'No appointment today';
-    
-    if (hasTodayAppointment) {
-      // Check if today's appointment is completed/paid
-      const todayCompletedAppointment = appointmentData.completed?.find((apt: any) => {
-        const appointmentDate = new Date(apt.date);
-        const aptDateString = appointmentDate.getFullYear() + '-' + 
-          String(appointmentDate.getMonth() + 1).padStart(2, '0') + '-' + 
-          String(appointmentDate.getDate()).padStart(2, '0');
-        return aptDateString === todayString;
-      });
-      
-      if (todayCompletedAppointment) {
-        // Get completion time for display using same logic as priority calculation
-        let completionTime = null;
-        
-        // Try to get completion time from different sources
-        if (todayCompletedAppointment.updatedAt) {
-          completionTime = new Date(todayCompletedAppointment.updatedAt);
-        } else if (todayCompletedAppointment.createdAt) {
-          const createdAt = new Date(todayCompletedAppointment.createdAt);
-          const createdDateString = createdAt.getFullYear() + '-' + 
-            String(createdAt.getMonth() + 1).padStart(2, '0') + '-' + 
-            String(createdAt.getDate()).padStart(2, '0');
-          if (createdDateString === todayString) {
-            completionTime = createdAt;
-          }
+  const getPriorityBadge = (patientWithApps: typeof patientsWithAugmentedAppointments[0]) => {
+    const today = new Date().toISOString().split('T')[0];
+    let highestPriorityBadge = null;
+
+    patientWithApps.appointments?.forEach(app => {
+      if (app.date === today && app.isPaid) {
+        let completionTime: Date | null = null;
+        if (app.checkoutTime) {
+          completionTime = app.checkoutTime.toDate();
+        } else if (app.paymentDetails?.paymentDate) {
+          completionTime = new Date(app.paymentDetails.paymentDate);
         }
         
-        // Note: Payment completion time lookup removed - localStorage persistence disabled
-        // Using appointment data only for completion time
+        const timeDisplay = completionTime
+          ? ` (${completionTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})})`
+          : '';
         
-        const timeDisplay = completionTime ? 
-          ` (${completionTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})})` : '';
-        
-        return {
+        // This badge takes precedence
+        highestPriorityBadge = {
           label: `PAID${timeDisplay}`,
-          color: 'error',
+          color: 'error' as 'error', // Type assertion
           icon: '🔴',
-          description: `Today's appointment is PAID/COMPLETED${completionTime ? ` at ${completionTime.toLocaleTimeString()}` : ''} - Ready for Doctor (Highest Priority - Earlier payment = Higher priority)`,
-          style: { fontWeight: 'bold', border: '2px solid' }
+          description: `Today's appointment is PAID/COMPLETED${completionTime ? ` at ${completionTime.toLocaleTimeString()}` : ''}. Highest Priority.`,
+          style: { fontWeight: 'bold', border: '2px solid' },
+          priorityScore: 3 // Higher score for today's paid
         };
+        return; // Found the highest priority, no need to check others for this specific badge type
       }
-      // Note: No badge for unpaid today appointments - let them blend in normally
-    }
-    
-    // Only show badge for patients with completed appointments (high activity)
-    if (appointmentData.completed && appointmentData.completed.length > 0) {
-      const hasRecentCompletion = appointmentData.completed.some((apt: any) => {
-        const daysDiff = Math.floor((new Date().getTime() - new Date(apt.date).getTime()) / (1000 * 60 * 60 * 24));
+    });
+
+    if (highestPriorityBadge) return highestPriorityBadge;
+
+    // Logic for "Active" badge if no "PAID TODAY" badge
+    const completedAppointments = patientWithApps.appointments?.filter(a => a.status === 'completed' || a.isPaid) || [];
+    if (completedAppointments.length > 0) {
+      const hasRecentCompletion = completedAppointments.some(app => {
+        const appDate = new Date(app.date);
+        const daysDiff = Math.floor((new Date().getTime() - appDate.getTime()) / (1000 * 60 * 60 * 24));
         return daysDiff <= 30; // Completed in last 30 days
       });
-      
-      if (hasRecentCompletion || appointmentData.completed.length >= 3) {
-        return {
-          label: 'Active',
-          color: 'success',
-          icon: '🟢',
-          description: `${appointmentData.completed.length} completed appointments`
-        };
+
+      if (hasRecentCompletion || completedAppointments.length >= 3) {
+        if (!highestPriorityBadge || 2 > (highestPriorityBadge.priorityScore || 0)) {
+          highestPriorityBadge = {
+            label: 'Active',
+            color: 'success' as 'success',
+            icon: '🟢',
+            description: `${completedAppointments.length} completed/paid appointments.`,
+            priorityScore: 2
+          };
+        }
       }
     }
-    
-    return null; // Only show badges for important statuses
+    return highestPriorityBadge;
   };
 
   const getFilteredPatients = () => {
-    let filtered = patients;
+    // Use the augmented patient data for filtering and display
+    let filtered = patientsWithAugmentedAppointments;
 
     // Apply organization mode filtering first
+    // Note: The structure of 'filtered' items will be Patient & { appointments: AugmentedAppointment[] }
+    // So, when accessing patient properties like 'patient.name', it's direct.
+    // When accessing appointment properties for display/sorting within this function,
+    // you'll need to iterate through `patient.appointments`.
     if (patientOrganizationMode === 'reservation' && organizedAppointmentData) {
       // Filter patients based on appointment reservation status
       const organizedPatients = getPatientsOrganizedByAppointmentStatus();
@@ -1216,12 +1249,11 @@ const PatientListPage: React.FC = () => {
   const sortPatientsByAppointmentPriority = (patients: any[]) => {
     return patients.sort((a, b) => {
       // Get appointment data for both patients
-      const aAppointmentData = a.appointmentData || { completed: [], notCompleted: [], totalAppointments: 0 };
-      const bAppointmentData = b.appointmentData || { completed: [], notCompleted: [], totalAppointments: 0 };
-      
-      // Calculate priority scores
-      const aPriority = calculateAppointmentPriority(aAppointmentData, a);
-      const bPriority = calculateAppointmentPriority(bAppointmentData, b);
+      // The `a` and `b` are now `PatientWithAugmentedApps`
+      // `calculateAppointmentPriority` will need to be adapted to this structure.
+      // For now, we pass the whole patient object which now contains its augmented appointments.
+      const aPriority = calculateAppointmentPriority(a);
+      const bPriority = calculateAppointmentPriority(b);
       
       // Sort by priority (higher priority first)
       if (aPriority !== bPriority) {
@@ -1237,110 +1269,71 @@ const PatientListPage: React.FC = () => {
   };
 
   /**
-   * Calculate appointment priority score for a patient
+   * Calculate appointment priority score for a patient.
+   * patientWithApps is a patient object augmented with an `appointments` array,
+   * where each appointment has `isPaid` and `paymentDetails`.
    */
-  const calculateAppointmentPriority = (appointmentData: any, patient: any) => {
+  const calculateAppointmentPriority = (patientWithApps: typeof patientsWithAugmentedAppointments[0]) => {
     let priority = 0;
+    const today = new Date().toISOString().split('T')[0];
+
+    // Iterate over the patient's augmented appointments
+    patientWithApps.appointments?.forEach(app => {
+      if (app.date === today) {
+        if (app.isPaid) {
+          priority += 10000; // PAID TODAY - highest
+          // Bonus for earlier payment/checkout
+          const completionTimestamp = app.checkoutTime?.toDate()?.getTime() ||
+                                    (app.paymentDetails?.paymentDate ? new Date(app.paymentDetails.paymentDate).getTime() : 0);
+          if (completionTimestamp) {
+            // Add more points for appointments completed longer ago (smaller difference from now)
+            // Maximize points for recent by subtracting from a large number like Date.now()
+            priority += (Date.now() - completionTimestamp) / (1000 * 60); // Points per minute ago
+          }
+        } else {
+          priority += 5000; // UNPAID TODAY
+        }
+      } else if (app.isPaid) {
+        priority += 1000; // PAID GENERAL (not today)
+      }
+
+      // Consider appointment status for non-paid items
+      if (!app.isPaid) {
+        if (app.status === 'confirmed' || app.status === 'pending') {
+            priority += 500; // Pending/Confirmed appointments
+        }
+        if (app.status === 'completed') { // Completed but not marked as paid
+            priority += 200;
+        }
+      }
+    });
     
+    // Existing logic for patient status (e.g. new, follow-up) can be added here
+    // For example:
+    if (patientWithApps.status === 'follow-up') {
+      priority += 300;
+    }
+    if (patientWithApps.status === 'new') {
+      priority += 100;
+    }
+
+    // Example: Add points based on the count of completed appointments if that's still relevant
+    // This part needs to be carefully reviewed against the old appointmentData structure
+    // const completedAppointmentCount = patientWithApps.appointments?.filter(a => a.status === 'completed').length || 0;
+    // priority += completedAppointmentCount * 10;
+
+
     // Get today's date for comparison
     const today = new Date();
-    const todayString = today.getFullYear() + '-' + 
-      String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+    const todayString = today.getFullYear() + '-' +
+      String(today.getMonth() + 1).padStart(2, '0') + '-' +
       String(today.getDate()).padStart(2, '0');
     
-    // 🔴 HIGHEST PRIORITY: Patients with TODAY'S appointment that is COMPLETED (PAID)
-    const hasTodayAppointment = patient.todayAppointment && patient.todayAppointment !== 'No appointment today';
-    if (hasTodayAppointment) {
-      // Check if today's appointment is completed/paid
-      const todayCompletedAppointment = appointmentData.completed?.find((apt: any) => {
-        const appointmentDate = new Date(apt.date);
-        const aptDateString = appointmentDate.getFullYear() + '-' + 
-          String(appointmentDate.getMonth() + 1).padStart(2, '0') + '-' + 
-          String(appointmentDate.getDate()).padStart(2, '0');
-        return aptDateString === todayString;
-      });
-      
-      if (todayCompletedAppointment) {
-        priority += 10000; // ABSOLUTE HIGHEST PRIORITY BASE for today's paid appointments
-        
-        // 🎯 CRITICAL: Add completion time bonus - earlier completion = higher priority
-        // This ensures patients who paid first are seen first (ready to enter doctor)
-        
-        // Try to get completion time from different sources
-        let completionTime = null;
-        
-        // 1. Check if appointment has updatedAt (when it was marked as completed)
-        if (todayCompletedAppointment.updatedAt) {
-          completionTime = new Date(todayCompletedAppointment.updatedAt);
-        }
-        // 2. Check if appointment has createdAt and it's today (completed on creation)
-        else if (todayCompletedAppointment.createdAt) {
-          const createdAt = new Date(todayCompletedAppointment.createdAt);
-          const createdDateString = createdAt.getFullYear() + '-' + 
-            String(createdAt.getMonth() + 1).padStart(2, '0') + '-' + 
-            String(createdAt.getDate()).padStart(2, '0');
-          if (createdDateString === todayString) {
-            completionTime = createdAt;
-          }
-        }
-        // 3. Payment lookup removed - localStorage persistence disabled
-        // Using appointment data only for completion time
-        
-        if (completionTime) {
-          // Convert to minutes since midnight for easier comparison
-          const completionMinutes = completionTime.getHours() * 60 + completionTime.getMinutes();
-          // Earlier completion gets higher priority (subtract from max minutes in day)
-          const timePriority = 1440 - completionMinutes; // 1440 = 24 hours * 60 minutes
-          priority += timePriority;
-          console.log(`🔴 PAID TODAY (${completionTime.toLocaleTimeString()}): ${patient.name} - Priority: ${priority}`);
-        } else {
-          // If no completion time, still high priority but lower than those with times
-          priority += 500;
-          console.log(`🔴 PAID TODAY (no time): ${patient.name} - Priority: ${priority}`);
-        }
-      } else {
-        priority += 5000; // High priority for today's unpaid appointments (but lower than paid)
-        console.log(`🟡 UNPAID TODAY: ${patient.name} - Priority: ${priority}`);
-      }
-    }
-    
-    // ✅ HIGH PRIORITY: Patients with completed appointments (recent activity)
-    if (appointmentData.completed && appointmentData.completed.length > 0) {
-      priority += 1000; // Base score for having completed appointments
-      priority += appointmentData.completed.length * 10; // Extra points per completed appointment
-      
-      // Extra priority for recent completions
-      const recentCompletions = appointmentData.completed.filter((apt: any) => {
-        const appointmentDate = new Date(apt.date);
-        const daysDiff = Math.floor((new Date().getTime() - appointmentDate.getTime()) / (1000 * 60 * 60 * 24));
-        return daysDiff <= 30; // Completed in last 30 days
-      });
-      priority += recentCompletions.length * 50;
-    }
-    
-    // 🟡 MEDIUM PRIORITY: Patients with pending appointments (need attention)
-    if (appointmentData.notCompleted && appointmentData.notCompleted.length > 0) {
-      priority += 500; // Base score for having pending appointments
-      priority += appointmentData.notCompleted.length * 20; // Extra points per pending appointment
-      
-      // Extra priority for upcoming appointments
-      const upcomingAppointments = appointmentData.notCompleted.filter((apt: any) => {
-        const appointmentDate = new Date(apt.date);
-        const daysDiff = Math.floor((appointmentDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-        return daysDiff >= 0 && daysDiff <= 7; // Upcoming in next 7 days
-      });
-      priority += upcomingAppointments.length * 30;
-    }
-    
-    // 🟠 SPECIAL PRIORITY: Manually set last visits
-    if (patient.lastVisit && !appointmentData.completed?.some((apt: any) => apt.date === patient.lastVisit)) {
-      priority += 800; // High priority for manual last visits
-    }
-    
-    // ⚪ LOW PRIORITY: Patients with no appointments
-    if (appointmentData.totalAppointments === 0) {
-      priority += 100; // Base score for having no appointments
-    }
+    // The old logic based on `patient.todayAppointment` and `appointmentData.completed`
+    // needs to be fully replaced or adapted to use the new `patientWithApps.appointments` structure.
+    // The new logic above based on iterating patientWithApps.appointments already handles
+    // PAID TODAY, UNPAID TODAY, and PAID GENERAL.
+    // Additional logic for appointment statuses like 'confirmed', 'pending' (if not paid) can be added.
     
     return priority;
   };
@@ -1453,10 +1446,9 @@ const PatientListPage: React.FC = () => {
       });
     }
 
-    // Sync appointment data
-    import('../../utils/appointmentPatientSync').then(({ updatePatientAppointmentFields }) => {
-      updatePatientAppointmentFields(editLastVisitPatient.name);
-    });
+    // REMOVED: Old sync logic - import('../../utils/appointmentPatientSync').then(({ updatePatientAppointmentFields }) => {
+    //  updatePatientAppointmentFields(editLastVisitPatient.name);
+    // });
 
     setEditLastVisitOpen(false);
     setEditLastVisitPatient(null);
@@ -2314,7 +2306,7 @@ const PatientListPage: React.FC = () => {
                             <TableCell sx={{ fontWeight: 600 }}>{t('patient')}</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>{t('contact')}</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>{t('last_visit')}</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Today's Appointment</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>{t('today_s_appointment')}</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>{t('next_appointment')}</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>{t('condition')}</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>{t('status')}</TableCell>
@@ -2480,27 +2472,32 @@ const PatientListPage: React.FC = () => {
                               </TableCell>
                               <TableCell>
                                 <Box>
-                                  {patient.todayAppointment ? (
-                                    <Typography variant="body2" color="success.main" fontWeight={600}>
-                                      {patient.todayAppointment}
-                                    </Typography>
-                                  ) : (
-                                    <Typography variant="body2" color="text.secondary">
-                                      No appointment today
-                                    </Typography>
-                                  )}
+                                  {(() => {
+                                    const today = new Date().toISOString().split('T')[0];
+                                    const todayApp = patient.appointments?.find(app => app.date === today && (app.status === 'pending' || app.status === 'confirmed'));
+                                    if (todayApp) {
+                                      return <Typography variant="body2" color={todayApp.isPaid ? "error.main" : "success.main"} fontWeight={600}>
+                                        {todayApp.time} ({todayApp.isPaid ? 'PAID' : 'Pending'})
+                                      </Typography>;
+                                    }
+                                    return <Typography variant="body2" color="text.secondary">No appointment today</Typography>;
+                                  })()}
                                 </Box>
                               </TableCell>
                               <TableCell>
                                 <Box>
-                                <Typography variant="body2" color="primary.main" fontWeight={600}>
-                                    {patient.nextAppointment || 'Not scheduled'}
-                                </Typography>
-                                  {patient.appointmentDetails?.scheduledOn && (
-                                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                                      Scheduled: {new Date(patient.appointmentDetails.scheduledOn).toLocaleDateString()}
-                                    </Typography>
-                                  )}
+                                  {(() => {
+                                    const today = new Date().toISOString().split('T')[0];
+                                    const upcomingApps = patient.appointments
+                                      ?.filter(app => app.date > today && (app.status === 'pending' || app.status === 'confirmed'))
+                                      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime() || a.time.localeCompare(b.time));
+                                    if (upcomingApps && upcomingApps.length > 0) {
+                                      return <Typography variant="body2" color="primary.main" fontWeight={600}>
+                                        {upcomingApps[0].date} {upcomingApps[0].time}
+                                      </Typography>;
+                                    }
+                                    return <Typography variant="body2" color="text.secondary">Not scheduled</Typography>;
+                                  })()}
                                 </Box>
                               </TableCell>
                               <TableCell>
@@ -5199,107 +5196,107 @@ const PatientListPage: React.FC = () => {
                                   ))}
                                 </Box>
                               </Box>
-                              {selectedPatient.allCompletedVisits && selectedPatient.allCompletedVisits.length > 0 ? (
+                              {/* UPDATED: Display completed/past appointments from selectedPatient.appointments */}
                               <Box sx={{ mb: 2 }}>
-                                  <Typography variant="body2" color="text.secondary">
-                                    All Completed Visits ({selectedPatient.allCompletedVisits.length})
-                                  </Typography>
-                                  <Box sx={{ maxHeight: 150, overflowY: 'auto', mt: 1, p: 1, backgroundColor: '#f8f9fa', borderRadius: 1 }}>
-                                    {selectedPatient.allCompletedVisits.map((visit: any, index: number) => {
-                                      // Check if this is a past appointment (auto-completed) or explicitly completed
-                                      const visitDate = new Date(visit.date);
-                                      const today = new Date();
-                                      const isPastVisit = visitDate < today;
-                                      
-                                      return (
-                                        <Box key={index} sx={{ 
-                                          display: 'flex', 
-                                          justifyContent: 'space-between', 
-                                          alignItems: 'center',
-                                          py: 1,
-                                          px: 1,
-                                          mb: index < selectedPatient.allCompletedVisits.length - 1 ? 1 : 0,
-                                          backgroundColor: 'white',
-                                          borderRadius: 1,
-                                          border: '1px solid #e0e0e0'
-                                        }}>
-                                          <Box>
-                                            <Typography variant="body2" fontWeight={600}>
-                                              {visit.date} at {visit.time}
+                                <Typography variant="body2" color="text.secondary">
+                                  Recent & Completed Appointments ({selectedPatient.appointments?.filter(app => app.status === 'completed' || new Date(app.date) < new Date()).length || 0})
+                                </Typography>
+                                <Box sx={{ maxHeight: 150, overflowY: 'auto', mt: 1, p: 1, backgroundColor: '#f8f9fa', borderRadius: 1 }}>
+                                  {selectedPatient.appointments?.filter(app => app.status === 'completed' || new Date(app.date) < new Date()).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((app: any, index: number) => {
+                                    const appDate = new Date(app.date);
+                                    const isPast = appDate < new Date() && app.status !== 'completed';
+                                    let paymentStatusText = 'Payment: Pending';
+                                    let paymentChipColor: "warning" | "success" | "error" = "warning";
+
+                                    if (app.isPaid) {
+                                      paymentStatusText = `Paid: ${app.paymentDetails?.amountPaid || app.paymentDetails?.amount || 'N/A'} ${app.paymentDetails?.currency || ''}`;
+                                      paymentChipColor = "success";
+                                    } else if (app.paymentDetails?.status === 'failed' || app.paymentDetails?.status === 'cancelled') {
+                                      paymentStatusText = `Payment: ${app.paymentDetails.status}`;
+                                      paymentChipColor = "error";
+                                    }
+
+                                    return (
+                                      <Box key={app.id || index} sx={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center',
+                                        py: 1,
+                                        px: 1,
+                                        mb: 1,
+                                        backgroundColor: 'white',
+                                        borderRadius: 1,
+                                        border: '1px solid #e0e0e0'
+                                      }}>
+                                        <Box>
+                                          <Typography variant="body2" fontWeight={600}>
+                                            {app.date} at {app.time}
+                                          </Typography>
+                                          <Typography variant="caption" color="text.secondary">
+                                            {app.type || 'Medical Visit'} • {app.doctor || 'Dr. Unknown'}
+                                          </Typography>
+                                          {(app.status === 'completed' || app.checkoutTime) && (
+                                            <Typography variant="caption" color="success.main" sx={{ display: 'block', fontStyle: 'italic' }}>
+                                              Completed {app.checkoutTime ? `at ${app.checkoutTime.toDate().toLocaleTimeString()}` : ''}
                                             </Typography>
-                                            <Typography variant="caption" color="text.secondary">
-                                              {visit.type || 'Medical Visit'} • {visit.doctor || 'Dr. Unknown'}
+                                          )}
+                                          {isPast && (
+                                            <Typography variant="caption" color="info.main" sx={{ display: 'block', fontStyle: 'italic' }}>
+                                              Past Appointment
                                             </Typography>
-                                            {isPastVisit && (
-                                              <Typography variant="caption" color="success.main" sx={{ display: 'block', fontStyle: 'italic' }}>
-                                                📅 Auto-completed (past date)
-                                              </Typography>
-                                            )}
-                                          </Box>
-                                          <Chip 
-                                            label={isPastVisit ? "Past Visit" : "Completed"} 
-                                            size="small" 
-                                            color="success" 
-                                            variant="outlined"
-                                            sx={{ fontSize: '0.65rem' }}
-                                          />
+                                          )}
                                         </Box>
-                                      );
-                                    })}
-                                  </Box>
-                                  <Typography variant="caption" color="primary.main" sx={{ fontStyle: 'italic', display: 'block', mt: 1 }}>
-                                    💡 All visits also appear in Medical History tab
-                                  </Typography>
+                                        <Chip
+                                          label={paymentStatusText}
+                                          size="small"
+                                          color={paymentChipColor}
+                                          variant="outlined"
+                                          sx={{ fontSize: '0.65rem' }}
+                                        />
+                                      </Box>
+                                    );
+                                  })}
+                                  {(!selectedPatient.appointments?.filter(app => app.status === 'completed' || new Date(app.date) < new Date()).length) && (
+                                    <Typography variant="body2" color="textSecondary" textAlign="center" py={2}>No recent or completed appointments.</Typography>
+                                  )}
                                 </Box>
-                              ) : (
-                                <Box sx={{ mb: 2 }}>
-                                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                                    <Typography variant="body2" color="text.secondary">Last Visits</Typography>
-                                    <Button 
-                                      variant="text" 
-                                      size="small"
-                                      onClick={() => {
-                                        console.log('🔄 Manual sync triggered for Last Visits...');
-                                        forceSyncAllPatients();
-                                        // Reload the patient data after sync
-                                        setTimeout(() => {
-                                          const updatedPatients = loadPatientsFromStorage();
-                                          setPatients(updatedPatients);
-                                          const updatedPatient = updatedPatients.find(p => p.id === selectedPatient.id);
-                                          if (updatedPatient) {
-                                            setSelectedPatient(updatedPatient);
-                                            console.log('✅ Last Visits data synced and updated');
-                                          }
-                                        }, 1000);
-                                      }}
-                                      startIcon={<History />}
-                                      sx={{ color: 'primary.main', fontSize: '0.75rem' }}
-                                    >
-                                      🔄 Sync Now
-                                    </Button>
-                                  </Box>
-                                  <Typography variant="body1" fontWeight={600} color="text.secondary">
-                                    No completed visits yet
-                                  </Typography>
-                                  <Typography variant="caption" color="text.secondary">
-                                    Completed appointments and past appointments will appear here automatically
-                                  </Typography>
-                                  <Typography variant="caption" color="primary.main" sx={{ display: 'block', mt: 1, fontStyle: 'italic' }}>
-                                    💡 Click "Sync Now" if you have past appointments that should appear here
-                                  </Typography>
-                                </Box>
-                              )}
+                              </Box>
+
+                              {/* UPDATED: Today's Appointment from selectedPatient.appointments */}
                               <Box sx={{ mb: 2 }}>
                                 <Typography variant="body2" color="text.secondary">Today's Appointment</Typography>
-                                <Typography variant="body1" fontWeight={600} color="success.main">
-                                  {selectedPatient.todayAppointment || 'No appointment today'}
-                                </Typography>
+                                {(() => {
+                                  const today = new Date().toISOString().split('T')[0];
+                                  const todayApp = selectedPatient.appointments?.find(app => app.date === today);
+                                  if (todayApp) {
+                                    return (
+                                      <Typography variant="body1" fontWeight={600} color={todayApp.isPaid ? "success.main" : "error.main"}>
+                                        {todayApp.time} - {todayApp.type} (Payment: {todayApp.isPaid ? `Paid ${todayApp.paymentDetails?.amountPaid || ''} ${todayApp.paymentDetails?.currency || ''}` : todayApp.paymentDetails?.status || 'Pending'})
+                                        {todayApp.checkoutTime && ` - Checked out: ${todayApp.checkoutTime.toDate().toLocaleTimeString()}`}
+                                      </Typography>
+                                    );
+                                  }
+                                  return <Typography variant="body1" fontWeight={600} color="text.secondary">No appointment today</Typography>;
+                                })()}
                               </Box>
+
+                              {/* UPDATED: Next Appointment from selectedPatient.appointments */}
                               <Box>
-                                <Typography variant="body2" color="text.secondary">Next Appointment</Typography>
-                                <Typography variant="body1" fontWeight={600} color="primary.main">
-                                  {selectedPatient.nextAppointment || 'Not scheduled'}
-                                </Typography>
+                                <Typography variant="body2" color="text.secondary">Next Appointment</Typography
+                                {(() => {
+                                  const today = new Date().toISOString().split('T')[0];
+                                  const upcomingApp = selectedPatient.appointments
+                                    ?.filter(app => app.date > today && (app.status === 'confirmed' || app.status === 'pending'))
+                                    .sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0];
+                                  if (upcomingApp) {
+                                    return (
+                                      <Typography variant="body1" fontWeight={600} color="primary.main">
+                                        {upcomingApp.date} at {upcomingApp.time} - {upcomingApp.type} (Payment: {upcomingApp.isPaid ? `Paid ${upcomingApp.paymentDetails?.amountPaid || ''} ${upcomingApp.paymentDetails?.currency || ''}` : upcomingApp.paymentDetails?.status || 'Pending'})
+                                      </Typography>
+                                    );
+                                  }
+                                  return <Typography variant="body1" fontWeight={600} color="text.secondary">Not scheduled</Typography>;
+                                })()}
                               </Box>
                             </CardContent>
                           </Card>
@@ -5396,26 +5393,7 @@ const PatientListPage: React.FC = () => {
                           >
                             Add Medical History
                           </Button>
-                          <Button 
-                            variant="text" 
-                            size="small"
-                            onClick={() => {
-                              // Sync completed appointments to medical history
-                              syncAllCompletedAppointmentsToMedicalHistory();
-                              // Refresh patient data
-                              const updatedPatients = loadPatientsFromStorage();
-                              setPatients(updatedPatients);
-                              const currentPatient = updatedPatients.find(p => p.id === selectedPatient.id);
-                              if (currentPatient) {
-                                setSelectedPatient(currentPatient);
-                              }
-                              console.log('📋 Synced completed appointments to medical history');
-                            }}
-                            startIcon={<History />}
-                            sx={{ color: 'success.main' }}
-                          >
-                            📋 Sync Visits
-                          </Button>
+                          {/* REMOVED "Sync Visits" button as its functionality was based on deprecated localStorage logic */}
                         </Box>
                       </Box>
                       
@@ -5432,65 +5410,85 @@ const PatientListPage: React.FC = () => {
                                 }}
                               >
                                 <CardContent>
-                                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', mb: 2 }}>
+                                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', mb: 1 }}>
                                     <Box>
                                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                                      {history.condition}
-                                    </Typography>
+                                        <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                                          {history.condition}
+                                        </Typography>
                                         {history._autoGeneratedFromAppointment && (
                                           <Chip
-                                            label="Auto-Generated"
+                                            label="From Visit"
                                             size="small"
                                             color="success"
                                             variant="outlined"
-                                            sx={{ 
-                                              fontSize: '0.65rem', 
-                                              height: 20,
-                                              backgroundColor: '#e8f5e8',
-                                              borderColor: '#4caf50'
-                                            }}
+                                            sx={{ fontSize: '0.65rem', height: 20, backgroundColor: '#e8f5e8', borderColor: '#4caf50' }}
                                           />
                                         )}
                                       </Box>
+                                      <Typography variant="caption" color="text.secondary">
+                                        {history.date} {history._autoGeneratedFromAppointment && history.time ? `at ${history.time}` : ''}
+                                      </Typography>
                                       {history._autoGeneratedFromAppointment && (
-                                        <Typography variant="caption" color="success.main" sx={{ fontStyle: 'italic' }}>
-                                          {history._isPastVisit ? 
-                                            '📅 Auto-generated from past appointment' : 
-                                            '📋 Auto-generated from completed appointment'
-                                          }
+                                        <Typography variant="caption" color="success.main" sx={{ fontStyle: 'italic', display: 'block' }}>
+                                          {history._isPastVisit ? 'Past appointment' : 'Completed appointment'}
                                         </Typography>
                                       )}
                                     </Box>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                      <Typography variant="body2" color="text.secondary">
-                                        {history.date}
-                                      </Typography>
                                       {!history._autoGeneratedFromAppointment && (
-                                      <IconButton 
-                                        size="small" 
-                                        color="primary"
-                                        onClick={() => {
-                                          // Edit medical history functionality can be added here
-                                          console.log('Edit medical history:', history);
-                                        }}
-                                      >
-                                        <Edit fontSize="small" />
-                                      </IconButton>
+                                        <IconButton
+                                          size="small"
+                                          color="primary"
+                                          onClick={() => console.log('Edit medical history:', history)}
+                                        >
+                                          <Edit fontSize="small" />
+                                        </IconButton>
                                       )}
                                     </Box>
                                   </Box>
+
                                   <Typography variant="body2" sx={{ mb: 1 }}>
-                                    <strong>Treatment:</strong> {history.treatment}
+                                    <strong>Doctor:</strong> {history.doctor || (history._autoGeneratedFromAppointment ? 'Clinic Doctor' : 'N/A')}
                                   </Typography>
-                                  <Typography variant="body2" sx={{ mb: 1 }}>
-                                    <strong>Doctor:</strong> {history.doctor}
-                                  </Typography>
+
+                                  {history.treatment && !history._autoGeneratedFromAppointment && ( // Only show treatment for manual entries or if explicitly set for auto
+                                    <Typography variant="body2" sx={{ mb: 1 }}>
+                                      <strong>Treatment:</strong> {history.treatment}
+                                    </Typography>
+                                  )}
+
                                   {history.notes && (
-                                    <Typography variant="body2" color="text.secondary">
+                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                                       <strong>Notes:</strong> {history.notes}
                                     </Typography>
                                   )}
+
+                                  {/* Display Payment Status if linked to an appointment */}
+                                  {history._autoGeneratedFromAppointment && history.appointmentId && selectedPatient.appointments && (() => {
+                                    const linkedAppointment = selectedPatient.appointments.find(app => app.id === history.appointmentId);
+                                    if (linkedAppointment) {
+                                      let paymentStatusText = 'Payment: Pending';
+                                      let paymentChipColor: "warning" | "success" | "error" = "warning";
+                                      if (linkedAppointment.isPaid) {
+                                        paymentStatusText = `Paid: ${linkedAppointment.paymentDetails?.amountPaid || linkedAppointment.paymentDetails?.amount || 'N/A'} ${linkedAppointment.paymentDetails?.currency || ''}`;
+                                        paymentChipColor = "success";
+                                      } else if (linkedAppointment.paymentDetails?.status === 'failed' || linkedAppointment.paymentDetails?.status === 'cancelled') {
+                                        paymentStatusText = `Payment: ${linkedAppointment.paymentDetails.status}`;
+                                        paymentChipColor = "error";
+                                      }
+                                      return (
+                                        <Chip
+                                          label={paymentStatusText}
+                                          size="small"
+                                          color={paymentChipColor}
+                                          variant="outlined"
+                                          sx={{ fontSize: '0.7rem', mt: 1 }}
+                                        />
+                                      );
+                                    }
+                                    return null;
+                                  })()}
                                 </CardContent>
                               </Card>
                             ))

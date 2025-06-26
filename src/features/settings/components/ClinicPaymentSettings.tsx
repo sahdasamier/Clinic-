@@ -34,97 +34,107 @@ import {
   Delete as DeleteIcon,
   Save as SaveIcon,
   Cancel as CancelIcon,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  CloudUpload as CloudUploadIcon,
+  CloudOff as CloudOffIcon,
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
+import { useUser } from '../../../contexts/UserContext'; // To get clinicId
 import {
-  loadClinicPaymentSettings,
-  saveClinicPaymentSettings,
-  loadVATSettings
-} from '../../../utils/paymentUtils';
+  ClinicConfig,
+  updatePaymentSettings,
+  listenToClinicConfig,
+  ensureClinicConfigExists,
+  // updateVatSettings, // If VAT settings are also managed here
+} from '../../../services/ClinicConfigService'; // Firestore service
 import {
   AppointmentTypeSettings,
   ClinicPaymentSettings,
-  paymentMethods,
-  paymentCategories
-} from '../../../data/mockData';
+  // paymentMethods, // May come from settings or remain static
+  paymentCategories, // May come from settings or remain static
+  defaultClinicPaymentSettings, // Fallback
+  VATSettings, // For type, though VAT settings might be managed elsewhere or via ClinicConfigService
+  defaultVATSettings,
+} from '../../../data/mockData'; // For interfaces and defaults
+
 
 const ClinicPaymentSettingsComponent: React.FC = () => {
   const { t } = useTranslation();
-  
+  const { userProfile } = useUser();
+  const clinicId = userProfile?.clinicId;
+
   // State management
-  const [settings, setSettings] = useState<ClinicPaymentSettings>(() => {
-    console.log('🔄 Loading clinic payment settings...');
-    const loadedSettings = loadClinicPaymentSettings();
-    console.log('✅ Loaded settings:', loadedSettings);
-    return loadedSettings;
-  });
+  const [clinicConfig, setClinicConfig] = useState<ClinicConfig | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedAppointmentType, setSelectedAppointmentType] = useState<AppointmentTypeSettings | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [isDirty, setIsDirty] = useState(false);
   
   // Form state for appointment type editing
   const [appointmentTypeForm, setAppointmentTypeForm] = useState<AppointmentTypeSettings>({
     type: '',
     cost: 0,
-    currency: 'EGP',
+    currency: 'EGP', // Default, should ideally come from clinic settings
     description: '',
     category: 'consultation',
-    includeVAT: true
+    includeVAT: true, // Default, should ideally come from clinic settings
   });
 
-  // Load VAT settings for display
-  const [vatSettings] = useState(() => loadVATSettings());
+  // Derived settings for easier access
+  const paymentSettings = clinicConfig?.paymentSettings || defaultClinicPaymentSettings;
+  const vatSettings = clinicConfig?.vatSettings || defaultVATSettings;
 
-  // Auto-save when settings change (with debounce)
+
+  // Load and listen to clinic configuration from Firestore
   useEffect(() => {
-    if (isDirty) {
-      const timeoutId = setTimeout(() => {
-        console.log('🔄 Auto-saving settings...');
-        saveClinicPaymentSettings(settings);
-        console.log('✅ Settings auto-saved:', settings);
-        setIsDirty(false);
-        
-        // Verify save by reloading
-        const verification = loadClinicPaymentSettings();
-        console.log('🔍 Verification - Settings in localStorage:', verification);
-      }, 2000); // 2 seconds after user stops changing settings
-
-      return () => clearTimeout(timeoutId);
+    if (!clinicId) {
+      setIsLoading(false);
+      setError("Clinic ID not found. Cannot load settings.");
+      return () => {}; // Return a no-op cleanup
     }
-  }, [settings, isDirty]);
 
-  // Handle settings change
-  const handleSettingsChange = (field: keyof ClinicPaymentSettings, value: any) => {
-    setSettings(prev => ({ ...prev, [field]: value }));
-    setIsDirty(true);
-  };
+    setIsLoading(true);
+    let unsubscribe: (() => void) | undefined;
+
+    const initializeAndListen = async () => {
+      try {
+        await ensureClinicConfigExists(clinicId);
+        unsubscribe = listenToClinicConfig(clinicId, (config) => {
+          if (config) {
+            setClinicConfig(config);
+            setError(null);
+          } else {
+            setError("Failed to load clinic configuration.");
+            // Fallback to prevent total crash, component will show error.
+            setClinicConfig(prev => prev || { id: clinicId, paymentSettings: defaultClinicPaymentSettings, vatSettings: defaultVATSettings });
+          }
+          setIsLoading(false);
+        });
+      } catch (err) {
+        console.error("Error ensuring/listening to clinic config:", err);
+        setError("Error initializing clinic settings.");
+        setIsLoading(false);
+      }
+    };
+
+    initializeAndListen();
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, [clinicId]);
+
 
   // Handle appointment type form change
   const handleAppointmentTypeFormChange = (field: keyof AppointmentTypeSettings, value: any) => {
     setAppointmentTypeForm(prev => ({ ...prev, [field]: value }));
   };
 
-  // Save settings
-  const handleSaveSettings = () => {
-    try {
-      console.log('🔄 Manual save button clicked, saving settings...');
-      saveClinicPaymentSettings(settings);
-      setIsDirty(false);
-      console.log('✅ Clinic payment settings saved successfully');
-      
-      // Verify save by reloading from localStorage
-      const verification = loadClinicPaymentSettings();
-      console.log('🔍 Verification after manual save:', verification);
-      
-      // Show success feedback
-      alert('✅ Payment settings saved successfully!');
-    } catch (error) {
-      console.error('❌ Error saving clinic payment settings:', error);
-      alert('❌ Failed to save settings. Please try again.');
-    }
-  };
 
   // Open edit dialog for appointment type
   const handleEditAppointmentType = (appointmentType: AppointmentTypeSettings | null = null) => {
@@ -136,10 +146,10 @@ const ClinicPaymentSettingsComponent: React.FC = () => {
       setAppointmentTypeForm({
         type: '',
         cost: 0,
-        currency: 'EGP',
+        currency: paymentSettings.appointmentTypes[0]?.currency || 'EGP', // Use currency from existing or default
         description: '',
         category: 'consultation',
-        includeVAT: true
+        includeVAT: paymentSettings.includeVATByDefault,
       });
       setSelectedAppointmentType(null);
       setIsEditing(false);
@@ -147,57 +157,107 @@ const ClinicPaymentSettingsComponent: React.FC = () => {
     setEditDialogOpen(true);
   };
 
-  // Save appointment type
-  const handleSaveAppointmentType = () => {
+  // Save appointment type (add or update)
+  const handleSaveAppointmentType = async () => {
+    if (!clinicId || !clinicConfig) {
+      alert("Clinic configuration not loaded. Cannot save.");
+      return;
+    }
     if (!appointmentTypeForm.type.trim() || appointmentTypeForm.cost <= 0) {
-      alert('Please fill in all required fields');
+      alert('Please fill in appointment type name and a valid cost.');
       return;
     }
 
+    setIsSaving(true);
     let updatedAppointmentTypes: AppointmentTypeSettings[];
+    const currentPaymentSettings = clinicConfig.paymentSettings;
 
     if (isEditing && selectedAppointmentType) {
       // Update existing
-      updatedAppointmentTypes = settings.appointmentTypes.map(type =>
+      updatedAppointmentTypes = currentPaymentSettings.appointmentTypes.map(type =>
         type.type === selectedAppointmentType.type ? appointmentTypeForm : type
       );
     } else {
       // Add new
-      const existingType = settings.appointmentTypes.find(
+      const existingType = currentPaymentSettings.appointmentTypes.find(
         type => type.type.toLowerCase() === appointmentTypeForm.type.toLowerCase()
       );
-      
       if (existingType) {
-        alert('Appointment type already exists');
+        alert('Appointment type with this name already exists.');
+        setIsSaving(false);
         return;
       }
-      
-      updatedAppointmentTypes = [...settings.appointmentTypes, appointmentTypeForm];
+      updatedAppointmentTypes = [...currentPaymentSettings.appointmentTypes, appointmentTypeForm];
     }
 
-    setSettings(prev => ({ ...prev, appointmentTypes: updatedAppointmentTypes }));
-    setIsDirty(true);
-    setEditDialogOpen(false);
+    const newPaymentSettings: ClinicPaymentSettings = {
+      ...currentPaymentSettings,
+      appointmentTypes: updatedAppointmentTypes,
+    };
+
+    try {
+      await updatePaymentSettings(clinicId, newPaymentSettings);
+      // No need to call setClinicConfig here, listener will update it
+      setEditDialogOpen(false);
+      alert('Appointment type saved successfully!');
+    } catch (e) {
+      console.error("Error saving appointment type:", e);
+      alert('Failed to save appointment type. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // Delete appointment type
-  const handleDeleteAppointmentType = (appointmentType: AppointmentTypeSettings) => {
-    if (window.confirm(`Are you sure you want to delete "${appointmentType.type}"?`)) {
-      const updatedAppointmentTypes = settings.appointmentTypes.filter(
-        type => type.type !== appointmentType.type
+  const handleDeleteAppointmentType = async (appointmentTypeToDelete: AppointmentTypeSettings) => {
+    if (!clinicId || !clinicConfig) {
+      alert("Clinic configuration not loaded. Cannot delete.");
+      return;
+    }
+    if (window.confirm(`Are you sure you want to delete "${appointmentTypeToDelete.type}"?`)) {
+      setIsSaving(true);
+      const currentPaymentSettings = clinicConfig.paymentSettings;
+      const updatedAppointmentTypes = currentPaymentSettings.appointmentTypes.filter(
+        type => type.type !== appointmentTypeToDelete.type
       );
-      setSettings(prev => ({ ...prev, appointmentTypes: updatedAppointmentTypes }));
-      setIsDirty(true);
+      const newPaymentSettings: ClinicPaymentSettings = {
+        ...currentPaymentSettings,
+        appointmentTypes: updatedAppointmentTypes,
+      };
+      try {
+        await updatePaymentSettings(clinicId, newPaymentSettings);
+        // Listener will update state
+        alert('Appointment type deleted successfully!');
+      } catch (e) {
+        console.error("Error deleting appointment type:", e);
+        alert('Failed to delete appointment type. Please try again.');
+      } finally {
+        setIsSaving(false);
+      }
     }
   };
 
   // Calculate amount with VAT for display
-  const calculateDisplayAmount = (baseAmount: number, includeVAT: boolean) => {
-    if (!includeVAT || !vatSettings.enabled) {
+  const calculateDisplayAmount = (baseAmount: number, includeVATSetting: boolean) => {
+    if (!includeVATSetting || !vatSettings.enabled) {
       return baseAmount;
     }
     return baseAmount + (baseAmount * vatSettings.rate / 100);
   };
+
+
+  if (isLoading) {
+    return <Typography sx={{p:3}}>Loading clinic settings...</Typography>;
+  }
+
+  if (error) {
+    return <Alert severity="error" sx={{m:3}}>{error}</Alert>;
+  }
+
+  if (!clinicConfig) {
+     return <Alert severity="warning" sx={{m:3}}>Clinic settings not yet available. Please try again shortly.</Alert>;
+  }
+
 
   return (
     <Box sx={{ p: 3 }}>
@@ -207,26 +267,34 @@ const ClinicPaymentSettingsComponent: React.FC = () => {
         <Typography variant="h5" sx={{ fontWeight: 600 }}>
           {t('clinic_payment_settings')}
         </Typography>
-        {isDirty && (
+        {isSaving && (
           <Chip 
-            label={t('unsaved_changes')} 
-            color="warning" 
+            label={t('saving...')}
+            color="info"
             size="small" 
+            icon={<CloudUploadIcon />}
             sx={{ ml: 2 }}
           />
         )}
+         {!isSaving && clinicId && ( // Simple indicator of connection status
+          <Tooltip title="Settings are synced with the cloud">
+            <CloudUploadIcon color="success" sx={{ ml: 2 }} />
+          </Tooltip>
+        )}
+        {!clinicId && (
+           <Tooltip title="Clinic ID missing, settings cannot be saved to cloud">
+            <CloudOffIcon color="error" sx={{ ml: 2 }} />
+          </Tooltip>
+        )}
       </Box>
 
-      {/* Debug Info for Testing */}
+      {/* Debug Info for Testing - Can be removed later */}
       <Alert severity="info" sx={{ mb: 3 }}>
         <Typography variant="caption">
-          <strong>Debug Info:</strong> Settings loaded: {settings.appointmentTypes.length} appointment types, 
-          Auto-payment: {settings.autoCreatePaymentOnCompletion ? 'Enabled' : 'Disabled'}, 
-          Default method: {settings.defaultPaymentMethod}
+          <strong>Debug Info:</strong> Loaded from Firestore. {paymentSettings.appointmentTypes.length} appointment types.
+          VAT Enabled: {vatSettings.enabled ? `Yes (${vatSettings.rate}%)` : 'No'}.
         </Typography>
       </Alert>
-
-      
 
       {/* Appointment Types Settings */}
       <Card>
@@ -239,6 +307,7 @@ const ClinicPaymentSettingsComponent: React.FC = () => {
               variant="contained"
               startIcon={<AddIcon />}
               onClick={() => handleEditAppointmentType()}
+              disabled={isSaving || !clinicId}
             >
               {t('Add Appointment type')}
             </Button>
