@@ -1,51 +1,48 @@
 import { 
   PaymentData, 
   defaultClinicPaymentSettings, 
-  // ClinicPaymentSettings, // No longer needed here, managed by ClinicConfigService
+  ClinicPaymentSettings,
   AppointmentTypeSettings,
   defaultVATSettings,
-  // VATSettings // No longer needed here, managed by ClinicConfigService
-} from '../data/mockData'; // Keep PaymentData and AppointmentTypeSettings for function signatures if they remain
+  VATSettings
+} from '../data/mockData';
 import { PaymentNotificationService } from '../services/paymentNotificationService';
-
-// Import ClinicConfigService for fee and VAT settings
-import { ClinicConfigService } from '../services/ClinicConfigService';
 
 
 // Storage keys - These are now effectively dead code if everything moves to Firestore
-// const PAYMENTS_STORAGE_KEY = 'clinic_payments_data'; // Kept if any function below still uses it temporarily
-// const CLINIC_SETTINGS_KEY = 'clinic_payment_settings'; // Dead
-// const VAT_SETTINGS_KEY = 'clinic_vat_settings'; // Dead
+// const PAYMENTS_STORAGE_KEY = 'clinic_payments_data';
+// const CLINIC_SETTINGS_KEY = 'clinic_payment_settings';
+// const VAT_SETTINGS_KEY = 'clinic_vat_settings';
 
 
-// DEPRECATED: All settings are now managed by ClinicConfigService.ts
-// export const loadClinicPaymentSettings = (): ClinicPaymentSettings => {
-//   console.error('🔴 DEPRECATED: loadClinicPaymentSettings called. Use ClinicConfigService.');
-//   return defaultClinicPaymentSettings;
-// };
-// export const saveClinicPaymentSettings = (settings: ClinicPaymentSettings) => {
-//   console.error('🔴 DEPRECATED: saveClinicPaymentSettings called. Use ClinicConfigService.');
-// };
-// export const loadVATSettings = (): VATSettings => {
-//   console.error('🔴 DEPRECATED: loadVATSettings called. Use ClinicConfigService.');
-//   return defaultVATSettings;
-// };
+// DEPRECATED: All settings are now managed by ClinicConfigService.ts. These functions should no longer be used.
+export const loadClinicPaymentSettings = (): ClinicPaymentSettings => {
+  console.error('🔴 DEPRECATED: loadClinicPaymentSettings (paymentUtils.ts) called. Use ClinicConfigService.');
+  return defaultClinicPaymentSettings; // Fallback to defaults
+};
+export const saveClinicPaymentSettings = (settings: ClinicPaymentSettings) => {
+  console.error('🔴 DEPRECATED: saveClinicPaymentSettings (paymentUtils.ts) called. Use ClinicConfigService.');
+};
+export const loadVATSettings = (): VATSettings => {
+  console.error('🔴 DEPRECATED: loadVATSettings (paymentUtils.ts) called. Use ClinicConfigService.');
+  return defaultVATSettings; // Fallback to defaults
+};
 
 // DEPRECATED: Payment data should be managed by PaymentService.ts using Firestore.
 export const loadPaymentsFromStorage = (): PaymentData[] => {
-  console.error('🔴 DEPRECATED: loadPaymentsFromStorage called. Use PaymentService for Firestore operations.');
+  console.error('🔴 DEPRECATED: loadPaymentsFromStorage (paymentUtils.ts) called. Use PaymentService for Firestore operations.');
   return [];
 };
 export const savePaymentsToStorage = (payments: PaymentData[]) => {
-  console.error('🔴 DEPRECATED: savePaymentsToStorage called. Use PaymentService for Firestore operations.');
-  // Dispatch event for other components to sync (no localStorage)
-  // This event mechanism might still be useful for immediate UI updates if not fully reactive yet.
+  console.error('🔴 DEPRECATED: savePaymentsToStorage (paymentUtils.ts) called. Use PaymentService for Firestore operations. Event dispatch for UI sync might still be used if app is not fully reactive.');
+  // This event dispatch might still be useful for some legacy UI parts if not fully reactive yet.
+  // However, it's best to rely on Firestore listeners for data synchronization.
   window.dispatchEvent(new CustomEvent('paymentsUpdated', { 
     detail: { payments } 
   }));
 };
 
-// Generate unique invoice ID - This can remain a general utility
+// --- UTILITIES TO KEEP ---
 export const generateInvoiceId = (): string => {
   const timestamp = Date.now();
   const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
@@ -62,11 +59,9 @@ export const calculateTotalWithVAT = (baseAmount: number, vatRate: number): numb
   return baseAmount + calculateVATAmount(baseAmount, vatRate);
 };
 
-// Get appointment type settings - DEPRECATED: Use ClinicConfigService.getServiceFee
+// Get appointment type settings
 export const getAppointmentTypeSettings = (appointmentType: string): AppointmentTypeSettings | null => {
-  console.warn("⚠️ getAppointmentTypeSettings is deprecated. Use ClinicConfigService.getServiceFee(clinicId, type).");
-  // Fallback to old mechanism if absolutely necessary, but should be removed
-  const clinicSettings = loadClinicPaymentSettings(); // This itself uses defaults now
+  const clinicSettings = loadClinicPaymentSettings();
   return clinicSettings.appointmentTypes.find(
     type => type.type.toLowerCase() === appointmentType.toLowerCase()
   ) || null;
@@ -74,7 +69,6 @@ export const getAppointmentTypeSettings = (appointmentType: string): Appointment
 
 // Create auto-payment for completed appointment
 export interface CreateAutoPaymentParams {
-  clinicId: string; // Added clinicId to fetch correct settings
   appointmentId: number;
   patientName: string;
   patientAvatar: string;
@@ -86,55 +80,47 @@ export interface CreateAutoPaymentParams {
   isCompleted?: boolean; // Whether appointment is already completed
 }
 
-// Import ClinicConfigService
-import { getClinicConfig, getServiceFee as getServiceFeeFromConfig } from '../services/ClinicConfigService';
-
-export const createAutoPaymentForAppointment = async (params: CreateAutoPaymentParams): Promise<PaymentData | null> => {
-  if (!params.clinicId) {
-    console.error("clinicId is required to create auto-payment with correct fees.");
-    return null;
-  }
+export const createAutoPaymentForAppointment = (params: CreateAutoPaymentParams): PaymentData | null => {
   try {
-    const clinicConfig = await getClinicConfig(params.clinicId);
-    const activePaymentSettings = clinicConfig?.paymentSettings || defaultClinicPaymentSettings;
-    const activeVatSettings = clinicConfig?.vatSettings || defaultVATSettings;
+    const clinicSettings = loadClinicPaymentSettings();
     
     // For completed appointments, always create payment (override settings)
-    if (!params.isCompleted && !activePaymentSettings.autoCreatePaymentOnCompletion) {
+    if (!params.isCompleted && !clinicSettings.autoCreatePaymentOnCompletion) {
       console.log('Auto-payment creation is disabled in clinic settings');
       return null;
     }
 
-    // Get appointment type settings from Firestore via ClinicConfigService
-    const typeSettings = await getServiceFeeFromConfig(params.clinicId, params.appointmentType);
-
+    // Get appointment type settings
+    const typeSettings = getAppointmentTypeSettings(params.appointmentType);
     if (!typeSettings && !params.customAmount) {
-      console.warn(`No cost settings found for appointment type: ${params.appointmentType} in clinic ${params.clinicId}.`);
+      console.warn(`No cost settings found for appointment type: ${params.appointmentType}`);
+      // For completed appointments, use default amount if no settings found
       if (params.isCompleted) {
-        console.log('Using default amount for completed appointment as no specific fee is set.');
+        console.log('Using default amount for completed appointment');
       } else {
-        return null; // Don't create payment if not completed and no fee is found
+        return null;
       }
     }
 
     // Calculate amounts
-    const baseAmount = params.customAmount || typeSettings?.cost || (params.isCompleted ? 200 : 0); // Default to 200 (e.g. EGP) for completed if no fee
-    const includeVAT = typeSettings?.includeVAT !== false && activeVatSettings.enabled; // typeSettings.includeVAT overrides global if false
+    const baseAmount = params.customAmount || typeSettings?.cost || (params.isCompleted ? 200 : 0); // Default to 200 EGP for completed appointments
+    const vatSettings = loadVATSettings();
+    const includeVAT = typeSettings?.includeVAT !== false && vatSettings.enabled;
     
     let vatAmount = 0;
     let totalAmount = baseAmount;
     
     if (includeVAT) {
-      vatAmount = calculateVATAmount(baseAmount, activeVatSettings.rate);
-      totalAmount = calculateTotalWithVAT(baseAmount, activeVatSettings.rate);
+      vatAmount = calculateVATAmount(baseAmount, vatSettings.rate);
+      totalAmount = calculateTotalWithVAT(baseAmount, vatSettings.rate);
     }
 
     // Calculate due date
     const dueDate = new Date();
-    dueDate.setDate(dueDate.getDate() + activePaymentSettings.defaultPaymentDueDays);
+    dueDate.setDate(dueDate.getDate() + clinicSettings.defaultPaymentDueDays);
 
-    // Load existing payments to get next ID - THIS PART NEEDS REPLACEMENT WITH FIRESTORE PaymentService
-    const existingPayments = loadPaymentsFromStorage(); // DEPRECATED
+    // Load existing payments to get next ID
+    const existingPayments = loadPaymentsFromStorage();
     const nextId = existingPayments.length > 0 ? Math.max(...existingPayments.map(p => p.id)) + 1 : 1;
 
     // Create payment record - if appointment is completed, mark as paid

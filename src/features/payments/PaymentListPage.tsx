@@ -121,7 +121,7 @@ import InvoiceGenerator from './InvoiceGenerator';
 // } from '../../utils/dataSyncManager'; // Review if dataSyncManager is still needed with direct service listeners
 import { 
   testPaymentNotificationSystem, // Review utility
-  processAllAppointmentsForPayments, // This will need to use PaymentService.createPayment
+  // processAllAppointmentsForPayments, // REMOVED - Was commented out, functionality deprecated
   // loadPaymentsFromStorage as loadPaymentsFromPaymentUtils, // To be removed
   // updatePaymentStatus, // To be replaced by PaymentService.updatePayment
   // updatePaymentAmount // To be replaced by PaymentService.updatePayment
@@ -470,16 +470,12 @@ const PaymentListPage: React.FC = () => {
     }
   }, [newInvoiceData.baseAmount, newInvoiceData.vatRateApplied, newInvoiceData.includeVAT]);
 
-  // Process appointments to create payments (review logic)
-  useEffect(() => {
-    if (appointments.length > 0 && userProfile?.clinicId && payments.length > 0) { // Ensure payments are loaded to avoid duplicates
-      // This utility needs to be refactored to use PaymentService.createPayment
-      // and to check if a payment for an appointment already exists.
-      // For now, commenting out direct modification to avoid issues.
-      // processAllAppointmentsForPayments(appointments, userProfile.clinicId, payments);
-      console.log("Review: processAllAppointmentsForPayments needs refactoring with PaymentService.");
-    }
-  }, [appointments, userProfile?.clinicId, payments]);
+  // REMOVED: useEffect that called the deprecated processAllAppointmentsForPayments
+  // useEffect(() => {
+  //   if (appointments.length > 0 && userProfile?.clinicId && payments.length > 0) {
+  //     console.log("Review: processAllAppointmentsForPayments needs refactoring with PaymentService.");
+  //   }
+  // }, [appointments, userProfile?.clinicId, payments]);
 
 
   // Financial Summary Calculation (remains largely the same, but uses FirestorePayment type)
