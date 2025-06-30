@@ -161,6 +161,23 @@ export const PatientService = {
     });
   },
 
+  // Get a single patient by ID
+  async getPatientById(patientId: string): Promise<Patient | null> {
+    try {
+      const patientDocRef = doc(patientsCollection, patientId);
+      const patientSnap = await getDoc(patientDocRef); // Use getDoc for a single document
+      if (patientSnap.exists()) {
+        return { id: patientSnap.id, ...patientSnap.data() } as Patient;
+      } else {
+        console.warn(`Patient with ID ${patientId} not found.`);
+        return null;
+      }
+    } catch (error) {
+      console.error('Error fetching patient by ID:', error);
+      return null;
+    }
+  },
+
   // Get patients by status
   listenPatientsByStatus(clinicId: string, status: Patient['status'], callback: (patients: Patient[]) => void): () => void {
     const q = query(

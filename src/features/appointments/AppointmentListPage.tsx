@@ -60,6 +60,7 @@ import {
 } from '@mui/material';
 import { useAuth } from '../../contexts/AuthContext';
 import { useUser } from '../../contexts/UserContext';
+import { useNavigate } from 'react-router-dom'; // Import useNavigate
 import {
   CalendarToday,
   Schedule,
@@ -269,6 +270,7 @@ const AppointmentListPage: React.FC = () => {
   const { t } = useTranslation();
   const { user, loading: authLoading, initialized } = useAuth();
   const { userProfile } = useUser();
+  const navigate = useNavigate(); // Initialize useNavigate
   
   // State Management
   const [tabValue, setTabValue] = useState(0);
@@ -923,25 +925,6 @@ const AppointmentListPage: React.FC = () => {
         break;
       default: // All
         break;
-    }
-
-    // Apply role-based access control (blurring patient names)
-    if (userProfile && userProfile.role === 'doctor') {
-      const loggedInDoctorId = userProfile.id;
-      // Assuming appointment.doctor stores the ID of the doctor assigned to the appointment
-      // If appointment.doctor stores the name, you might need to fetch doctor details
-      // or ensure availableDoctors is populated and use it to find the ID.
-      // For this implementation, we'll assume appointment.doctor is the ID.
-      // If `appointment.doctor` is a name, and `appointment.doctorId` exists, use `appointment.doctorId`.
-      // The provided `FirestoreAppointment` type has `doctorId`.
-      filtered = filtered.map(appointment => ({
-        ...appointment,
-        // @ts-ignore
-        shouldBlurPatientName: appointment.doctorId !== loggedInDoctorId
-      }));
-    } else {
-      // For non-doctors or if userProfile is not available, don't blur
-      filtered = filtered.map(appointment => ({ ...appointment, shouldBlurPatientName: false }));
     }
 
     return filtered;
@@ -1730,9 +1713,16 @@ const AppointmentListPage: React.FC = () => {
                                      fontWeight={600}
                                      sx={{ 
                                        textDecoration: appointment.completed ? 'line-through' : 'none',
-                                       color: appointment.completed ? 'text.secondary' : 'text.primary',
-                                       filter: (appointment as any).shouldBlurPatientName ? 'blur(4px)' : 'none',
-                                       pointerEvents: (appointment as any).shouldBlurPatientName ? 'none' : 'auto'
+                                       color: 'primary.main', // Make patient name look like a link
+                                       cursor: appointment.patientId && appointment.patientId !== 'legacy-patient' ? 'pointer' : 'default',
+                                       '&:hover': {
+                                         textDecoration: appointment.patientId && appointment.patientId !== 'legacy-patient' ? 'underline' : 'none',
+                                       }
+                                     }}
+                                     onClick={() => {
+                                       if (appointment.patientId && appointment.patientId !== 'legacy-patient') {
+                                         navigate(`/patients/${appointment.patientId}`);
+                                       }
                                      }}
                                    >
                                      {appointment.patient}
@@ -1740,10 +1730,6 @@ const AppointmentListPage: React.FC = () => {
                                    <Typography
                                      variant="caption"
                                      color="text.secondary"
-                                     sx={{
-                                       filter: (appointment as any).shouldBlurPatientName ? 'blur(4px)' : 'none',
-                                       pointerEvents: (appointment as any).shouldBlurPatientName ? 'none' : 'auto'
-                                     }}
                                    >
                                      {appointment.phone}
                                    </Typography>
@@ -2000,8 +1986,16 @@ const AppointmentListPage: React.FC = () => {
                                        sx={{
                                          fontWeight: 600,
                                          mb: 0.5,
-                                         filter: (appointment as any).shouldBlurPatientName ? 'blur(4px)' : 'none',
-                                         pointerEvents: (appointment as any).shouldBlurPatientName ? 'none' : 'auto'
+                                         color: 'primary.main', // Make patient name look like a link
+                                         cursor: appointment.patientId && appointment.patientId !== 'legacy-patient' ? 'pointer' : 'default',
+                                         '&:hover': {
+                                           textDecoration: appointment.patientId && appointment.patientId !== 'legacy-patient' ? 'underline' : 'none',
+                                         }
+                                       }}
+                                       onClick={() => {
+                                         if (appointment.patientId && appointment.patientId !== 'legacy-patient') {
+                                           navigate(`/patients/${appointment.patientId}`);
+                                         }
                                        }}
                                      >
                                        {appointment.patient}
