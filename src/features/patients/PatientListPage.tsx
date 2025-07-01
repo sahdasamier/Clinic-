@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Box,
@@ -91,6 +91,8 @@ import {
   type Appointment
 } from '../../services';
 import { globalDataSync } from '../../utils/globalDataSync';
+import ManualSyncUtility from '../../utils/manualSync';
+import FirebaseFriendlySync, { FirebaseDataBridge } from '../../utils/firebaseFriendlySync';
 import {
   defaultNewPatientData,
   defaultMedicalHistoryData,
@@ -148,7 +150,7 @@ function TabPanel(props: TabPanelProps) {
 
 const PatientListPage: React.FC = () => {
   const { t } = useTranslation();
-  const { user, loading: authLoading, initialized } = useAuth();
+  const { user, loading, initialized } = useAuth();
   const { userProfile } = useUser();
 
   // Helper function to translate patient status and conditions
@@ -177,64 +179,106 @@ const PatientListPage: React.FC = () => {
   const [editingMedication, setEditingMedication] = useState<any>(null);
   const [editNoteOpen, setEditNoteOpen] = useState(false);
   const [editingNote, setEditingNote] = useState<any>(null);
-  // ✅ Firestore-powered patient state
+  // ✅ Firebase real-time data states
   const [patients, setPatients] = useState<Patient[]>([]);
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [appointments, setAppointments] = useState<any[]>([]);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
-  const [dataLoading, setDataLoading] = useState(true);
   const [patientOrganizationMode, setPatientOrganizationMode] = useState<'reservation' | 'completion' | 'all'>('all');
 
-  // ✅ Set up Firestore listeners for real-time data
+  // ✅ NEW: Direct Firebase connection test with fallback
   React.useEffect(() => {
-    // Wait for auth to be initialized and user to be available
-    if (!initialized || authLoading || !user || !userProfile) {
-      console.log('🔄 PatientListPage: Waiting for auth and user profile initialization...', {
-        initialized,
-        authLoading,
-        hasUser: !!user,
-        hasUserProfile: !!userProfile
-      });
-      return;
-    }
+    if (!initialized || loading || !user || !userProfile) return;
 
-    console.log('✅ PatientListPage: Setting up Firestore listeners...');
-    setDataLoading(true);
-
-    const clinicId = userProfile.clinicId;
+    console.log('🔄 DIRECT TEST: Fetching Firebase data directly...');
     
-    // 🆕 Check if current user is a doctor
-    const userIsDoctor = userProfile.role === 'doctor';
-    setIsDoctor(userIsDoctor);
+    const testFirebaseConnection = async () => {
+      try {
+        const clinicId = userProfile.clinicId || 'demo-clinic';
+        
+        // Direct fetch from Firebase services
+        console.log('📋 Fetching appointments directly...');
+        const directAppointments = await AppointmentService.getAllAppointments(clinicId);
+        console.log(`📋 Direct fetch: Found ${directAppointments.length} appointments`);
+        
+        console.log('👥 Fetching patients directly...');
+        const directPatients = await PatientService.searchPatients(clinicId, '');
+        console.log(`👥 Direct fetch: Found ${directPatients.length} patients`);
+        
+        // Update states directly
+        if (directAppointments.length > 0) {
+          setAppointments(directAppointments);
+          console.log('✅ Appointments state updated');
+        }
+        
+        if (directPatients.length > 0) {
+          setPatients(directPatients);
+          console.log('✅ Patients state updated');
+        }
+        
+        setIsDataLoaded(true);
+        
+        // Show immediate results
+        console.log(`🎯 DIRECT TEST RESULTS: ${directAppointments.length} appointments, ${directPatients.length} patients`);
+        
+        // If we have appointments but no patients, trigger sync
+        if (directAppointments.length > 0 && directPatients.length === 0) {
+          console.log('🔄 DIRECT TEST: Sync needed - triggering immediate sync...');
+          setTimeout(() => {
+            syncAppointmentsToPatients();
+          }, 2000);
+        }
+        
+      } catch (error) {
+        console.error('❌ DIRECT TEST: Firebase connection failed:', error);
+        
+        // Show error to user
+        setTimeout(() => {
+          alert(`❌ Firebase Connection Test Failed:\n\n${error}\n\nPlease check:\n1. Internet connection\n2. Firebase configuration\n3. Browser console for details`);
+        }, 1000);
+      }
+    };
+    
+    // Run direct test
+    testFirebaseConnection();
+  }, [initialized, loading, user, userProfile]);
 
-    // Set up real-time listeners
-    const unsubscribePatients = PatientService.listenPatients(clinicId, (updatedPatients) => {
-      console.log(`📊 Patients updated: ${updatedPatients.length} patients`);
+  // ✅ Firebase Data Bridge (keep as backup)
+  React.useEffect(() => {
+    if (!initialized || loading || !user || !userProfile) return;
+
+    console.log('💚 Setting up Firebase Data Bridge as backup...');
+
+    // Subscribe to real-time data changes
+    const unsubscribe = FirebaseDataBridge.subscribe((data) => {
+      console.log('💚 Data Bridge Update:', {
+        appointments: data.appointments?.length || 0,
+        patients: data.patients?.length || 0
+      });
+
+      if (data.appointments && data.appointments.length > 0) {
+        setAppointments(data.appointments);
+        console.log('💚 Data Bridge: Appointments updated');
+      }
       
-      if (userIsDoctor) {
-        // Filter patients assigned to this doctor
-        // TODO: Add doctor assignment filtering logic here if needed
-        setPatients(updatedPatients);
-        setDoctorPatients(updatedPatients);
-      } else {
-        setPatients(updatedPatients);
+      if (data.patients && data.patients.length > 0) {
+        setPatients(data.patients);
+        console.log('💚 Data Bridge: Patients updated');
       }
       
       setIsDataLoaded(true);
-      setDataLoading(false);
     });
 
-    const unsubscribeAppointments = AppointmentService.listenAppointments(clinicId, (updatedAppointments) => {
-      console.log(`📅 Appointments updated: ${updatedAppointments.length} appointments`);
-      setAppointments(updatedAppointments);
-    });
+    // Force refresh data for this page
+    setTimeout(() => {
+      FirebaseDataBridge.refreshAll(userProfile.clinicId || 'demo-clinic');
+    }, 3000);
 
-    // Cleanup function
+    // Cleanup on unmount
     return () => {
-      console.log('🧹 Cleaning up Firestore listeners...');
-      unsubscribePatients();
-      unsubscribeAppointments();
+      console.log('💚 Cleaning up Firebase Data Bridge...');
+      unsubscribe();
     };
-  }, [initialized, authLoading, user, userProfile]);
+  }, [initialized, loading, user, userProfile]);
 
   // ✅ Listen for global events and cleanup
   React.useEffect(() => {
@@ -334,6 +378,10 @@ const PatientListPage: React.FC = () => {
   const [isDoctor, setIsDoctor] = useState(false);
   const [doctorPatients, setDoctorPatients] = useState<any[]>([]);
   
+  // ✅ Sync state for appointment-patient synchronization
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'completed' | 'error'>('idle');
+  const [syncResults, setSyncResults] = useState<any>(null);
+  
   // New Patient Form State - UI state only (no localStorage persistence)
   const [newPatientData, setNewPatientData] = useState(defaultNewPatientData);
 
@@ -353,25 +401,69 @@ const PatientListPage: React.FC = () => {
     };
   };
 
-  const forceSyncAllPatients = () => {
-    console.log('📊 Force sync all patients - localStorage disabled, using Firestore real-time listeners');
-  };
-
-  const sendAppointmentDataToPatients = () => {
-    console.log('📊 Send appointment data to patients - localStorage disabled');
-    return patients;
-  };
-
-  const organizeAppointmentsByCompletion = () => {
-    console.log('📊 Organize appointments by completion - localStorage disabled');
-    return { completed: [], notCompleted: [] };
-  };
-
-  const syncAllCompletedAppointmentsToMedicalHistory = () => {
-    console.log('📊 Sync completed appointments to medical history - localStorage disabled');
-  };
+  // ✅ OLD DUMMY FUNCTIONS REMOVED - Now using Firebase-friendly sync
 
   const initialPatients = patients;
+
+  // ✅ Firebase-friendly sync function
+  const syncAppointmentsToPatients = async () => {
+    const clinicId = userProfile?.clinicId || 'demo-clinic';
+    console.log('💚 Using Firebase-friendly sync for clinic:', clinicId);
+
+    setSyncStatus('syncing');
+    setSyncResults(null);
+
+    try {
+      console.log('💚 Starting Firebase-friendly sync...');
+      
+      // Use Firebase-friendly sync to minimize quota usage
+      const results = await FirebaseFriendlySync.manualSync(clinicId);
+      
+      if (!results) {
+        setSyncStatus('completed');
+        alert('💚 Sync completed - no sync needed or no appointments found.');
+        return;
+      }
+      
+      setSyncResults(results);
+      setSyncStatus('completed');
+      
+      console.log('✅ Firebase-friendly sync completed:', results);
+      
+      // Show success message
+      if (results.patientsCreated > 0) {
+        alert(`💚 Firebase-Friendly Sync Complete!\n\n✅ Created ${results.patientsCreated} patients\n✅ Minimal Firebase usage\n✅ Free tier optimized\n\nYour patient list is now ready!`);
+      } else {
+        alert('💚 Sync completed - all patients already exist.');
+      }
+      
+    } catch (error) {
+      console.error('❌ Firebase-friendly sync failed:', error);
+      setSyncStatus('error');
+      alert(`❌ Sync failed: ${error}\n\nThis might be due to Firebase quota limits. Try again later.`);
+    }
+  };
+
+  // ✅ FIREBASE-FRIENDLY AUTO-SYNC: Only run once when needed
+  React.useEffect(() => {
+    if (!initialized || loading || !user || !userProfile) return;
+    
+    // Only run sync once when we clearly have the issue and page is loaded
+    if (isDataLoaded && appointments.length > 0 && patients.length === 0 && syncStatus === 'idle') {
+      console.log(`💚 FIREBASE-FRIENDLY: Detected ${appointments.length} appointments but ${patients.length} patients. Running one-time sync...`);
+      
+      // Only run once with a delay to let Firebase-friendly service handle it
+      setTimeout(() => {
+        // Check if the Firebase-friendly service hasn't already handled it
+        if (patients.length === 0) {
+          console.log('💚 Manual trigger needed for Firebase-friendly sync');
+          syncAppointmentsToPatients();
+        } else {
+          console.log('💚 Firebase-friendly service already handled the sync');
+        }
+      }, 8000); // Wait for auto-service to try first
+    }
+  }, [initialized, loading, user, userProfile, isDataLoaded, appointments.length, patients.length, syncStatus]);
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
@@ -1492,7 +1584,7 @@ const PatientListPage: React.FC = () => {
   };
 
   // Show loading spinner while data is loading
-  if (dataLoading) {
+  if (!isDataLoaded) {
     return (
       <Container maxWidth="xl" sx={{ mt: 4, mb: 4, flex: 1, overflow: 'auto' }}>
         <Box
@@ -1621,40 +1713,109 @@ const PatientListPage: React.FC = () => {
                 </Button>
                 <Button
                   variant="contained"
-                  startIcon={<Schedule />}
-                  onClick={() => {
-                    // Force sync appointments to patients
-                    const syncedPatients = sendAppointmentDataToPatients();
-                    setPatients(syncedPatients);
-                    
-                    // Refresh organized data
-                    const organizedData = organizeAppointmentsByCompletion();
-                    const organizedPatients = getPatientsOrganizedByAppointmentStatus();
-                    setOrganizedAppointmentData(organizedData);
-                    setPatientsWithAppointments(organizedPatients.allPatients);
-                    
-                    console.log('🔄 Manual sync completed!');
-                  }}
+                  startIcon={syncStatus === 'syncing' ? <CircularProgress size={16} sx={{ color: 'white' }} /> : <Schedule />}
+                  onClick={syncAppointmentsToPatients}
+                  disabled={syncStatus === 'syncing'}
                   size="medium"
                   sx={{ 
                     borderRadius: 3,
-                    backgroundColor: 'rgba(33, 150, 243, 0.2)',
+                    backgroundColor: syncStatus === 'completed' ? 'rgba(76, 175, 80, 0.2)' : 
+                                    syncStatus === 'error' ? 'rgba(244, 67, 54, 0.2)' :
+                                    'rgba(33, 150, 243, 0.2)',
                     color: 'white',
-                    border: '1px solid rgba(33, 150, 243, 0.3)',
+                    border: syncStatus === 'completed' ? '1px solid rgba(76, 175, 80, 0.3)' :
+                           syncStatus === 'error' ? '1px solid rgba(244, 67, 54, 0.3)' :
+                           '1px solid rgba(33, 150, 243, 0.3)',
                     fontWeight: 600,
                     px: { xs: 2, sm: 3 },
                     py: { xs: 1, sm: 1.5 },
                     backdropFilter: 'blur(10px)',
                     fontSize: { xs: '0.8rem', sm: '0.875rem' },
                     '&:hover': {
-                      backgroundColor: 'rgba(33, 150, 243, 0.3)',
+                      backgroundColor: syncStatus === 'completed' ? 'rgba(76, 175, 80, 0.3)' :
+                                      syncStatus === 'error' ? 'rgba(244, 67, 54, 0.3)' :
+                                      'rgba(33, 150, 243, 0.3)',
                       transform: 'translateY(-2px)',
-                      boxShadow: '0 8px 25px rgba(33, 150, 243, 0.25)',
+                      boxShadow: syncStatus === 'completed' ? '0 8px 25px rgba(76, 175, 80, 0.25)' :
+                                 syncStatus === 'error' ? '0 8px 25px rgba(244, 67, 54, 0.25)' :
+                                 '0 8px 25px rgba(33, 150, 243, 0.25)',
+                    },
+                    '&:disabled': {
+                      backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                      color: 'rgba(255, 255, 255, 0.7)',
                     },
                     transition: 'all 0.3s ease'
                   }}
                 >
-                  {t('sync_appointments')}
+                  {syncStatus === 'syncing' ? t('syncing') : 
+                   syncStatus === 'completed' ? t('sync_complete') :
+                   syncStatus === 'error' ? t('sync_failed') :
+                   t('sync_appointments')}
+                </Button>
+                <Button
+                  variant="outlined"
+                  startIcon={<MedicalServices />}
+                  onClick={async () => {
+                    const clinicId = userProfile?.clinicId || 'demo-clinic';
+                    try {
+                      const debugInfo = await ManualSyncUtility.debugClinicData(clinicId);
+                      alert(`🔍 Debug Info for clinic: ${clinicId}\n\n📋 Appointments: ${debugInfo.appointments}\n👥 Patients: ${debugInfo.patients}\n🔗 Unlinked appointments: ${debugInfo.appointmentsWithoutPatientId}\n\nCheck console for detailed data.`);
+                    } catch (error) {
+                      alert(`❌ Debug failed: ${error}`);
+                    }
+                  }}
+                  size="medium"
+                  sx={{ 
+                    borderRadius: 3,
+                    backgroundColor: 'rgba(156, 39, 176, 0.1)',
+                    color: 'white',
+                    border: '1px solid rgba(156, 39, 176, 0.3)',
+                    fontWeight: 600,
+                    px: { xs: 2, sm: 3 },
+                    py: { xs: 1, sm: 1.5 },
+                    backdropFilter: 'blur(10px)',
+                    fontSize: { xs: '0.8rem', sm: '0.875rem' },
+                    '&:hover': {
+                      backgroundColor: 'rgba(156, 39, 176, 0.2)',
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 8px 25px rgba(156, 39, 176, 0.25)',
+                    },
+                    transition: 'all 0.3s ease'
+                  }}
+                >
+                  Debug Data
+                </Button>
+                <Button
+                  variant="outlined"
+                  startIcon={<Assignment />}
+                  onClick={() => {
+                    try {
+                      const usage = FirebaseFriendlySync.getUsageEstimation();
+                      alert(`💚 Firebase Free Tier Usage:\n\n📊 Daily reads: ${usage.dailyReads}\n📈 Quota used: ${usage.percentOfQuota}%\n${usage.isWithinLimits ? '✅ Within limits' : '❌ Exceeding limits'}\n\nFree tier limit: 50,000 reads/day\nOur usage: ~${usage.dailyReads} reads/day`);
+                    } catch (error) {
+                      alert(`❌ Usage check failed: ${error}`);
+                    }
+                  }}
+                  size="medium"
+                  sx={{ 
+                    borderRadius: 3,
+                    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                    color: 'white',
+                    border: '1px solid rgba(76, 175, 80, 0.3)',
+                    fontWeight: 600,
+                    px: { xs: 2, sm: 3 },
+                    py: { xs: 1, sm: 1.5 },
+                    backdropFilter: 'blur(10px)',
+                    fontSize: { xs: '0.8rem', sm: '0.875rem' },
+                    '&:hover': {
+                      backgroundColor: 'rgba(76, 175, 80, 0.2)',
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 8px 25px rgba(76, 175, 80, 0.25)',
+                    },
+                    transition: 'all 0.3s ease'
+                  }}
+                >
+                  FB Usage
                 </Button>
                 <Button
                   variant="contained"
@@ -1717,7 +1878,22 @@ const PatientListPage: React.FC = () => {
 
 
 
-          {/* Enhanced Main Content */}
+                      {/* Sync Status Alert */}
+            {syncResults && syncStatus === 'completed' && (
+              <Alert 
+                severity="success" 
+                sx={{ 
+                  mb: 2,
+                  borderRadius: 3,
+                  '& .MuiAlert-message': { fontWeight: 600 }
+                }}
+                onClose={() => setSyncResults(null)}
+              >
+                🎉 Sync completed! Created {syncResults.patientsCreated} new patients, linked {syncResults.patientsLinked} existing patients from {syncResults.totalAppointments} appointments.
+              </Alert>
+            )}
+
+            {/* Enhanced Main Content */}
           <Card sx={{ 
             borderRadius: 4,
             boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
@@ -5258,19 +5434,10 @@ const PatientListPage: React.FC = () => {
                                     <Button 
                                       variant="text" 
                                       size="small"
-                                      onClick={() => {
-                                        console.log('🔄 Manual sync triggered for Last Visits...');
-                                        forceSyncAllPatients();
-                                        // Reload the patient data after sync
-                                        setTimeout(() => {
-                                          const updatedPatients = loadPatientsFromStorage();
-                                          setPatients(updatedPatients);
-                                          const updatedPatient = updatedPatients.find(p => p.id === selectedPatient.id);
-                                          if (updatedPatient) {
-                                            setSelectedPatient(updatedPatient);
-                                            console.log('✅ Last Visits data synced and updated');
-                                          }
-                                        }, 1000);
+                                      onClick={async () => {
+                                        console.log('💚 Firebase-friendly sync triggered for Last Visits...');
+                                        await syncAppointmentsToPatients();
+                                        console.log('✅ Firebase-friendly sync completed for Last Visits');
                                       }}
                                       startIcon={<History />}
                                       sx={{ color: 'primary.main', fontSize: '0.75rem' }}
@@ -5281,7 +5448,7 @@ const PatientListPage: React.FC = () => {
                                   <Typography variant="body1" fontWeight={600} color="text.secondary">
                                     No completed visits yet
                                   </Typography>
-                                  <Typography variant="caption" color="text.secondary">
+                                  <Typography variant="body2" color="text.secondary">
                                     Completed appointments and past appointments will appear here automatically
                                   </Typography>
                                   <Typography variant="caption" color="primary.main" sx={{ display: 'block', mt: 1, fontStyle: 'italic' }}>
@@ -5399,17 +5566,11 @@ const PatientListPage: React.FC = () => {
                           <Button 
                             variant="text" 
                             size="small"
-                            onClick={() => {
-                              // Sync completed appointments to medical history
-                              syncAllCompletedAppointmentsToMedicalHistory();
-                              // Refresh patient data
-                              const updatedPatients = loadPatientsFromStorage();
-                              setPatients(updatedPatients);
-                              const currentPatient = updatedPatients.find(p => p.id === selectedPatient.id);
-                              if (currentPatient) {
-                                setSelectedPatient(currentPatient);
-                              }
-                              console.log('📋 Synced completed appointments to medical history');
+                            onClick={async () => {
+                              // Use Firebase-friendly sync instead
+                              console.log('💚 Firebase-friendly sync for medical history...');
+                              await syncAppointmentsToPatients();
+                              console.log('✅ Firebase-friendly sync completed for medical history');
                             }}
                             startIcon={<History />}
                             sx={{ color: 'success.main' }}

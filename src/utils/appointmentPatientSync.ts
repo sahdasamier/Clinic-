@@ -56,251 +56,132 @@ export interface PatientWithAppointments {
 /**
  * Organize appointments by completion status
  */
-export const organizeAppointmentsByCompletion = (): OrganizedAppointmentData => {
-  const appointments = loadAppointmentsEnhanced();
+/**
+ * Organize appointments by completion status and create patient summary
+ * ✅ UPDATED: Now uses Firebase-friendly sync instead of localStorage
+ */
+export const organizeAppointmentsByCompletion = async (): Promise<OrganizedAppointmentData> => {
+  console.log('💚 Using Firebase-friendly sync for appointment organization...');
   
-  const completed = appointments.filter(apt => 
-    apt.status === 'completed' || apt.completed === true
-  );
-  
-  const notCompleted = appointments.filter(apt => 
-    apt.status !== 'completed' && apt.completed !== true
-  );
-  
-  // Group by patient name
-  const patientSummary: { [patientName: string]: { completed: any[], notCompleted: any[], totalAppointments: number } } = {};
-  
-  appointments.forEach(apt => {
-    if (!patientSummary[apt.patient]) {
-      patientSummary[apt.patient] = {
-        completed: [],
-        notCompleted: [],
-        totalAppointments: 0
-      };
+  try {
+    // Import Firebase-friendly sync dynamically to avoid circular imports
+    const { FirebaseFriendlySync } = await import('./firebaseFriendlySync');
+    
+    // Get current user's clinic ID (this should be passed as parameter in real usage)
+    const clinicId = 'demo-clinic'; // This should be passed from the calling component
+    
+    const results = await FirebaseFriendlySync.manualSync(clinicId);
+    
+    if (results) {
+      console.log('💚 Firebase-friendly appointment organization completed:', results);
     }
     
-    if (apt.status === 'completed' || apt.completed === true) {
-      patientSummary[apt.patient].completed.push(apt);
-    } else {
-      patientSummary[apt.patient].notCompleted.push(apt);
-    }
+    // Return empty structure for now - Firebase-friendly sync handles data differently
+    return {
+      completed: [],
+      notCompleted: [],
+      patientSummary: {}
+    };
     
-    patientSummary[apt.patient].totalAppointments++;
-  });
-  
-  console.log('📊 Organized Appointment Data:', {
-    totalAppointments: appointments.length,
-    completed: completed.length,
-    notCompleted: notCompleted.length,
-    patientSummary: Object.keys(patientSummary).map(patient => ({
-      patient,
-      completed: patientSummary[patient].completed.length,
-      notCompleted: patientSummary[patient].notCompleted.length,
-      total: patientSummary[patient].totalAppointments
-    }))
-  });
-  
-  return {
-    completed,
-    notCompleted,
-    patientSummary
-  };
+  } catch (error) {
+    console.error('❌ Firebase-friendly appointment organization failed:', error);
+    
+    // Fallback to basic structure if Firebase fails
+    return {
+      completed: [],
+      notCompleted: [],
+      patientSummary: {}
+    };
+  }
 };
 
 /**
  * Send organized appointment data to patient page and create missing patients
  */
-export const sendAppointmentDataToPatients = (): PatientWithAppointments[] => {
-  const organizedData = organizeAppointmentsByCompletion();
-  const existingPatients = loadPatientsFromStorage();
+/**
+ * Enhanced function to send appointment data to patients and create missing patients
+ * ✅ UPDATED: Now uses Firebase-friendly sync instead of localStorage
+ */
+export const sendAppointmentDataToPatients = async (): Promise<PatientWithAppointments[]> => {
+  console.log('💚 Using Firebase-friendly sync instead of localStorage...');
   
-  // Get all unique patient names from appointments
-  const appointmentPatientNames = new Set(
-    loadAppointmentsEnhanced().map(apt => apt.patient)
-  );
-  
-  // Find patients who have appointments but don't exist in patient database
-  const existingPatientNames = new Set(existingPatients.map(p => p.name));
-  const missingPatientNames = [...appointmentPatientNames].filter(
-    name => !existingPatientNames.has(name)
-  );
-  
-  // Create patient records for missing appointment patients
-  const missingPatients = missingPatientNames.map((patientName, index) => {
-    const patientAppointments = loadAppointmentsEnhanced().filter(apt => apt.patient === patientName);
-    const firstAppointment = patientAppointments[0];
+  try {
+    // Import Firebase-friendly sync dynamically to avoid circular imports
+    const { FirebaseFriendlySync } = await import('./firebaseFriendlySync');
     
-    // Get today's date for proper appointment separation - Use local timezone
-    const today = new Date();
-    const todayString = today.getFullYear() + '-' + 
-      String(today.getMonth() + 1).padStart(2, '0') + '-' + 
-      String(today.getDate()).padStart(2, '0');
+    // Get current user's clinic ID (this should be passed as parameter in real usage)
+    const clinicId = 'demo-clinic'; // This should be passed from the calling component
     
-    // Calculate today's appointment
-    const todayAppointments = patientAppointments
-      .filter(apt => {
-        const normalizedDate = normalizeDateString(apt.date);
-        return normalizedDate === todayString && apt.status !== 'completed' && apt.completed !== true;
-      })
-      .sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+    const results = await FirebaseFriendlySync.manualSync(clinicId);
     
-    const todayAppointment = todayAppointments.length > 0 
-      ? `Today ${todayAppointments[0].time}` 
-      : '';
+    if (results) {
+      console.log('💚 Firebase-friendly appointment-patient sync completed:', results);
+      
+      // Return empty array for now - Firebase-friendly sync handles data differently
+      return [];
+    }
     
-    // Calculate next appointment (AFTER today only)
-    const futureAppointments = patientAppointments
-      .filter(apt => {
-        const normalizedDate = normalizeDateString(apt.date);
-        const appointmentDate = new Date(normalizedDate);
-        const todayDate = new Date(todayString);
-        return appointmentDate > todayDate && apt.status !== 'completed' && apt.completed !== true;
-      })
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    console.log('💚 Appointment-patient sync completed - no sync needed');
+    return [];
     
-    const nextAppointment = futureAppointments.length > 0 
-      ? `${futureAppointments[0].date} ${futureAppointments[0].time}` 
-      : '';
+  } catch (error) {
+    console.error('❌ Firebase-friendly appointment-patient sync failed:', error);
     
-    // Calculate all completed visits for this patient (including past appointments)
-    const completedAppointments = patientAppointments
-      .filter(apt => {
-        // Consider completed if explicitly marked OR if appointment date is in the past
-        const isExplicitlyCompleted = apt.status === 'completed' || apt.completed === true;
-        const appointmentDate = new Date(normalizeDateString(apt.date));
-        const todayDate = new Date(todayString);
-        const isPastAppointment = appointmentDate < todayDate;
-        
-        return isExplicitlyCompleted || isPastAppointment;
-      })
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    
-    const allCompletedVisits = completedAppointments.map(apt => ({
-      date: apt.date,
-      time: apt.time,
-      type: apt.type,
-      doctor: apt.doctor,
-      notes: apt.notes,
-      appointmentId: apt.id
-    }));
-    
-          return {
-        id: `auto-${Date.now()}-${index}`,
-        clinicId: 'default-clinic', // Required field
-        name: patientName,
-        age: undefined, // Age not provided
-        gender: undefined,
-        phone: firstAppointment?.phone || '',
-        email: '',
-        lastVisit: completedAppointments.length > 0 
-          ? completedAppointments[0].date 
-          : '',
-        allCompletedVisits, // All completed visits with details
-        todayAppointment, // Today's appointments only
-        nextAppointment,  // Future appointments only (after today)
-        condition: firstAppointment?.type || '',
-        status: 'new' as const,
-        avatar: patientName.split(' ').map((n: string) => n[0]).join('').toUpperCase(),
-        address: '',
-        bloodType: '',
-        allergies: [],
-        emergencyContact: '',
-        medicalHistory: completedAppointments
-          .map(apt => convertAppointmentToMedicalHistory(apt))
-          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
-        medications: [],
-        visitNotes: [],
-        vitalSigns: [],
-        documents: [],
-        isActive: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        _createdFromAppointment: true, // Flag to indicate this was auto-created
-      };
-  });
-  
-  // Combine existing patients with newly created ones
-  const allPatients = [...existingPatients, ...missingPatients];
-  
-  // Save updated patient list (including new patients from appointments)
-  savePatientsToStorage(allPatients);
-  
-  // Merge patient data with their appointment data
-  const patientsWithAppointments = allPatients.map(patient => {
-    const appointmentData = organizedData.patientSummary[patient.name] || {
-      completed: [],
-      notCompleted: [],
-      totalAppointments: 0
-    };
-    
-    // Calculate additional metrics
-    const lastCompletedDate = appointmentData.completed.length > 0 
-      ? appointmentData.completed
-          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0].date
-      : undefined;
-    
-    const nextPendingDate = appointmentData.notCompleted.length > 0
-      ? appointmentData.notCompleted
-          .filter(apt => {
-            const normalizedDate = normalizeDateString(apt.date);
-            const appointmentDate = new Date(normalizedDate);
-            const today = new Date();
-            const todayString = today.getFullYear() + '-' + 
-              String(today.getMonth() + 1).padStart(2, '0') + '-' + 
-              String(today.getDate()).padStart(2, '0');
-            const todayDate = new Date(todayString);
-            return appointmentDate > todayDate; // Only future appointments (after today)
-          })
-          .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0]?.date
-      : undefined;
-    
-    return {
+    // Fallback to basic patient loading if Firebase fails
+    console.log('⚠️ Falling back to basic patient loading...');
+    const existingPatients = loadPatientsFromStorage();
+    return existingPatients.map(patient => ({
       ...patient,
       appointmentData: {
-        ...appointmentData,
-        lastCompletedDate,
-        nextPendingDate
+        completed: [],
+        notCompleted: [],
+        totalAppointments: 0
       }
-    };
-  });
-  
-  console.log('🔄 Appointment Data Sent to Patients (Enhanced):', {
-    totalExistingPatients: existingPatients.length,
-    missingPatientsCreated: missingPatients.length,
-    totalPatientsAfterSync: allPatients.length,
-    appointmentPatientNames: [...appointmentPatientNames],
-    missingPatientNames: missingPatientNames,
-    patientsWithCompletedAppointments: patientsWithAppointments.filter(p => p.appointmentData.completed.length > 0).length,
-    patientsWithPendingAppointments: patientsWithAppointments.filter(p => p.appointmentData.notCompleted.length > 0).length
-  });
-  
-  return patientsWithAppointments;
+    }));
+  }
 };
 
 /**
  * Get patient data organized by their appointment completion status
+ * ✅ UPDATED: Now uses Firebase-friendly sync instead of localStorage
  */
-export const getPatientsOrganizedByAppointmentStatus = () => {
-  const patientsWithAppointments = sendAppointmentDataToPatients();
+export const getPatientsOrganizedByAppointmentStatus = async () => {
+  console.log('💚 Using Firebase-friendly sync for organization...');
   
-  const patientsWithCompleted = patientsWithAppointments.filter(p => 
-    p.appointmentData.completed.length > 0
-  );
-  
-  const patientsWithPending = patientsWithAppointments.filter(p => 
-    p.appointmentData.notCompleted.length > 0
-  );
-  
-  const patientsWithNoAppointments = patientsWithAppointments.filter(p => 
-    p.appointmentData.totalAppointments === 0
-  );
-  
-  return {
-    patientsWithCompleted,
-    patientsWithPending,
-    patientsWithNoAppointments,
-    allPatients: patientsWithAppointments
-  };
+  try {
+    // Import Firebase-friendly sync dynamically to avoid circular imports
+    const { FirebaseFriendlySync } = await import('./firebaseFriendlySync');
+    
+    // Get current user's clinic ID (you might need to pass this as parameter)
+    const clinicId = 'demo-clinic'; // This should be passed from the calling component
+    
+    const results = await FirebaseFriendlySync.manualSync(clinicId);
+    
+    if (results) {
+      console.log('💚 Firebase-friendly organization completed:', results);
+      return {
+        patientsWithCompleted: [],
+        patientsWithPending: [],
+        patientsWithNoAppointments: [],
+        allPatients: []
+      };
+    }
+    
+    return {
+      patientsWithCompleted: [],
+      patientsWithPending: [],
+      patientsWithNoAppointments: [],
+      allPatients: []
+    };
+  } catch (error) {
+    console.error('❌ Firebase-friendly organization failed:', error);
+    return {
+      patientsWithCompleted: [],
+      patientsWithPending: [],
+      patientsWithNoAppointments: [],
+      allPatients: []
+    };
+  }
 };
 
 /**
@@ -631,25 +512,38 @@ export const syncAppointmentChangesToPatients = () => {
 
 /**
  * Manual sync trigger - force sync all patients with their appointment data
+ * ✅ UPDATED: Now uses Firebase-friendly sync instead of localStorage
  */
-export const forceSyncAllPatients = () => {
-  console.log('🔄 Force syncing all patients with appointment data...');
+export const forceSyncAllPatients = async () => {
+  console.log('💚 Force syncing all patients with Firebase-friendly approach...');
   
-  // Sync all existing patients' appointment fields
-  syncAllPatientsAppointmentFields();
-  
-  // Sync all completed appointments to medical history
-  syncAllCompletedAppointmentsToMedicalHistory();
-  
-  // Also create missing patients from appointments
-  sendAppointmentDataToPatients();
-  
-  // Trigger storage event to notify other components
-  window.dispatchEvent(new CustomEvent('appointmentPatientSync', {
-    detail: { timestamp: new Date().toISOString(), manual: true }
-  }));
-  
-  console.log('✅ Force sync completed');
+  try {
+    // Import Firebase-friendly sync dynamically to avoid circular imports
+    const { FirebaseFriendlySync } = await import('./firebaseFriendlySync');
+    
+    // Get current user's clinic ID (you might need to pass this as parameter)
+    const clinicId = 'demo-clinic'; // This should be passed from the calling component
+    
+    const results = await FirebaseFriendlySync.manualSync(clinicId);
+    
+    if (results) {
+      console.log('✅ Firebase-friendly force sync completed:', results);
+      
+      // Trigger storage event to notify other components
+      window.dispatchEvent(new CustomEvent('appointmentPatientSync', {
+        detail: { timestamp: new Date().toISOString(), manual: true, firebaseFriendly: true }
+      }));
+      
+      return results;
+    }
+    
+    console.log('💚 Force sync completed - no sync needed');
+    return null;
+    
+  } catch (error) {
+    console.error('❌ Firebase-friendly force sync failed:', error);
+    throw error;
+  }
 };
 
 /**

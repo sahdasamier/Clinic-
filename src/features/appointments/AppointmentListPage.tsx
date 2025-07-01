@@ -111,6 +111,7 @@ import {
   priorityLevels,
   type AppointmentData,
 } from '../../data/mockData';
+import FirebaseFriendlySync, { FirebaseDataBridge } from '../../utils/firebaseFriendlySync';
 
 // Doctor interface for Firestore data
 interface Doctor {
@@ -277,8 +278,9 @@ const AppointmentListPage: React.FC = () => {
   const [addAppointmentOpen, setAddAppointmentOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'table' | 'cards' | 'calendar'>('table');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  // ✅ Firestore-powered appointment state
+  // ✅ Firebase real-time data states
   const [appointmentList, setAppointmentList] = useState<FirestoreAppointment[]>([]);
+  const [availablePatients, setAvailablePatients] = useState<any[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [doctorStartTime] = useState('15:00');
   const [activeFilters, setActiveFilters] = useState<FilterState>({
@@ -313,39 +315,67 @@ const AppointmentListPage: React.FC = () => {
     paymentStatus: 'pending'
   });
   const [availableDoctors, setAvailableDoctors] = useState<Doctor[]>([]);
-  // ✅ Initialize available patients with empty array (no localStorage)
-  const [availablePatients, setAvailablePatients] = useState<any[]>([]);
 
-  // ✅ Set up Firestore listeners for real-time data
+  // ✅ NEW: Real-time Firebase data bridge (like localStorage events)
   useEffect(() => {
-    // Wait for auth to be initialized and user to be available
-    if (!initialized || authLoading || !user || !userProfile) {
-      console.log('🔄 AppointmentListPage: Waiting for auth initialization...', {
-        initialized,
-        authLoading,
-        hasUser: !!user,
-        hasUserProfile: !!userProfile
+    if (!initialized || authLoading || !user || !userProfile) return;
+
+    console.log('💚 AppointmentListPage: Setting up Firebase data bridge...');
+
+    // Subscribe to real-time data changes
+    const unsubscribe = FirebaseDataBridge.subscribe((data) => {
+      console.log('💚 AppointmentListPage: Received real-time data update:', {
+        appointments: data.appointments?.length || 0,
+        patients: data.patients?.length || 0
       });
-      return;
-    }
 
-    console.log('✅ AppointmentListPage: Setting up Firestore listeners...');
-    setDataLoading(true);
-
-    const clinicId = userProfile.clinicId;
-
-    // Set up real-time listeners
-    const unsubscribeAppointments = AppointmentService.listenAppointments(clinicId, (updatedAppointments) => {
-      console.log(`📅 Appointments updated: ${updatedAppointments.length} appointments`);
-      setAppointmentList(updatedAppointments);
+      if (data.appointments) {
+        setAppointmentList(data.appointments);
+      }
+      
+      if (data.patients) {
+        setAvailablePatients(data.patients);
+      }
+      
       setDataLoading(false);
     });
 
-    const unsubscribePatients = PatientService.listenPatients(clinicId, (updatedPatients) => {
-      console.log(`👥 Patients updated: ${updatedPatients.length} patients`);
-      setAvailablePatients(updatedPatients);
-    });
+    // Force refresh data for this page
+    FirebaseDataBridge.refreshAll(userProfile.clinicId || 'demo-clinic');
 
+    // Cleanup on unmount
+    return () => {
+      console.log('💚 AppointmentListPage: Cleaning up Firebase data bridge...');
+      unsubscribe();
+    };
+  }, [initialized, authLoading, user, userProfile]);
+
+  // ✅ Listen for browser Firebase events (backup method)
+  useEffect(() => {
+    const handleFirebaseUpdate = (event: CustomEvent) => {
+      console.log('💚 AppointmentListPage: Browser Firebase event received');
+      const data = event.detail;
+      
+      if (data.appointments) {
+        setAppointmentList(data.appointments);
+      }
+      
+      if (data.patients) {
+        setAvailablePatients(data.patients);
+      }
+      
+      setDataLoading(false);
+    };
+
+    window.addEventListener('firebaseDataUpdate', handleFirebaseUpdate as EventListener);
+    
+    return () => {
+      window.removeEventListener('firebaseDataUpdate', handleFirebaseUpdate as EventListener);
+    };
+  }, []);
+
+  // ✅ Listen for global events and cleanup
+  useEffect(() => {
     // Listen for mobile FAB action
     const handleOpenAddAppointment = () => {
       setAddAppointmentOpen(true);
@@ -400,15 +430,11 @@ const AppointmentListPage: React.FC = () => {
     window.addEventListener('userDataCleared', handleUserDataCleared);
     window.addEventListener('openAddAppointment', handleOpenAddAppointment);
     
-    // Cleanup function
     return () => {
-      console.log('🧹 Cleaning up Firestore listeners...');
-      unsubscribeAppointments();
-      unsubscribePatients();
       window.removeEventListener('userDataCleared', handleUserDataCleared);
       window.removeEventListener('openAddAppointment', handleOpenAddAppointment);
     };
-  }, [initialized, authLoading, user, userProfile]);
+  }, []);
 
   // ✅ Real-time Firestore listener for doctors
   useEffect(() => {
