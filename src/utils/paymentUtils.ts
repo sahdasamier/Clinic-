@@ -14,7 +14,23 @@ const PAYMENTS_STORAGE_KEY = 'clinic_payments_data';
 const CLINIC_SETTINGS_KEY = 'clinic_payment_settings';
 const VAT_SETTINGS_KEY = 'clinic_vat_settings';
 
+// ✅ NEW: In-memory payment storage to replace localStorage
+let inMemoryPayments: PaymentData[] = [];
 
+// Initialize in-memory payments with defaults if empty
+const initializeInMemoryPayments = () => {
+  if (inMemoryPayments.length === 0) {
+    // Import and use generateDefaultPayments if available
+    try {
+      const { generateDefaultPayments } = require('../data/mockData');
+      inMemoryPayments = generateDefaultPayments();
+      console.log('✅ Initialized in-memory payments with defaults:', inMemoryPayments.length);
+    } catch (error) {
+      console.log('⚠️ Could not load default payments, starting with empty array');
+      inMemoryPayments = [];
+    }
+  }
+};
 
 // Load clinic payment settings - UPDATED: No localStorage, using defaults
 export const loadClinicPaymentSettings = (): ClinicPaymentSettings => {
@@ -34,19 +50,67 @@ export const loadVATSettings = (): VATSettings => {
   return defaultVATSettings;
 };
 
-// Load payments from storage - DEPRECATED: Returns empty array
+// ✅ UPDATED: Load payments from in-memory storage
 export const loadPaymentsFromStorage = (): PaymentData[] => {
-  console.warn('⚠️ loadPaymentsFromStorage: localStorage persistence disabled - returning empty array');
-  return [];
+  initializeInMemoryPayments();
+  console.log(`✅ loadPaymentsFromStorage: Returning ${inMemoryPayments.length} in-memory payments`);
+  return [...inMemoryPayments]; // Return a copy to prevent direct mutation
 };
 
-// Save payments to storage - DEPRECATED: Event dispatch only
+// ✅ UPDATED: Save payments to in-memory storage
 export const savePaymentsToStorage = (payments: PaymentData[]) => {
-  console.warn('⚠️ savePaymentsToStorage: localStorage persistence disabled');
-  // Dispatch event for other components to sync (no localStorage)
+  inMemoryPayments = [...payments]; // Store a copy
+  console.log(`✅ savePaymentsToStorage: Saved ${payments.length} payments to in-memory storage`);
+  
+  // Dispatch event for other components to sync
   window.dispatchEvent(new CustomEvent('paymentsUpdated', { 
-    detail: { payments } 
+    detail: { payments: [...payments] } 
   }));
+};
+
+// ✅ NEW: Reset in-memory payments to defaults
+export const resetPaymentsToDefaults = (): PaymentData[] => {
+  try {
+    const { generateDefaultPayments } = require('../data/mockData');
+    inMemoryPayments = generateDefaultPayments();
+    console.log('✅ Reset in-memory payments to defaults:', inMemoryPayments.length);
+  } catch (error) {
+    console.log('⚠️ Could not load default payments, resetting to empty array');
+    inMemoryPayments = [];
+  }
+  
+  // Dispatch event for components to sync
+  window.dispatchEvent(new CustomEvent('paymentsUpdated', { 
+    detail: { payments: [...inMemoryPayments] } 
+  }));
+  
+  return [...inMemoryPayments];
+};
+
+// ✅ NEW: Clear all in-memory payments
+export const clearAllPayments = (): void => {
+  inMemoryPayments = [];
+  console.log('✅ Cleared all in-memory payments');
+  
+  // Dispatch event for components to sync
+  window.dispatchEvent(new CustomEvent('paymentsUpdated', { 
+    detail: { payments: [] } 
+  }));
+};
+
+// ✅ NEW: Get current in-memory payments count for debugging
+export const getInMemoryPaymentsDebugInfo = () => {
+  return {
+    count: inMemoryPayments.length,
+    payments: [...inMemoryPayments],
+    summary: inMemoryPayments.map(p => ({
+      id: p.id,
+      patient: p.patient,
+      amount: `${p.amount} ${p.currency}`,
+      status: p.status,
+      invoiceId: p.invoiceId
+    }))
+  };
 };
 
 // Generate unique invoice ID
@@ -251,15 +315,37 @@ export const updatePaymentStatus = async (paymentId: number, newStatus: string, 
     const oldPayment = payments[paymentIndex];
     const oldStatus = oldPayment.status;
     
+    // ✅ Calculate proper paid amount when marking as paid
+    let actualPaidAmount = paidAmount;
+    if (newStatus === 'paid' && !paidAmount) {
+      // If marking as paid without specific amount, use full amount
+      actualPaidAmount = oldPayment.amount;
+    } else if (newStatus === 'pending' || newStatus === 'overdue') {
+      // If marking as pending/overdue, reset paid amount to 0
+      actualPaidAmount = 0;
+    }
+    
     // Update payment
     const updatedPayment = {
       ...oldPayment,
       status: newStatus as any,
-      paidAmount: paidAmount ?? oldPayment.paidAmount
+      paidAmount: actualPaidAmount ?? oldPayment.paidAmount
     };
     
     payments[paymentIndex] = updatedPayment;
     savePaymentsToStorage(payments);
+    
+    // ✅ NEW: Trigger revenue calculation update
+    console.log(`💰 Payment status changed: ${oldStatus} → ${newStatus}, triggering revenue update`);
+    window.dispatchEvent(new CustomEvent('paymentStatusUpdated', {
+      detail: {
+        paymentId: paymentId,
+        oldStatus: oldStatus,
+        newStatus: newStatus,
+        payment: updatedPayment,
+        revenueImpact: newStatus === 'paid' ? updatedPayment.amount : (oldStatus === 'paid' ? -updatedPayment.amount : 0)
+      }
+    }));
     
     // Send notification if payment was just marked as paid
     if (oldStatus !== 'paid' && newStatus === 'paid') {
@@ -274,9 +360,21 @@ export const updatePaymentStatus = async (paymentId: number, newStatus: string, 
       console.log(`✅ Payment ${updatedPayment.invoiceId} marked as paid - notification sent`);
     }
     
-    // Update appointment payment status if linked
+    // ✅ NEW: Update appointment payment status if linked (with cross-page sync)
     if (updatedPayment.appointmentId) {
       updateAppointmentPaymentStatusInPayments(parseInt(updatedPayment.appointmentId), newStatus);
+      
+      // Trigger appointment payment status sync event
+      window.dispatchEvent(new CustomEvent('appointmentPaymentStatusSynced', {
+        detail: {
+          appointmentId: updatedPayment.appointmentId,
+          patient: updatedPayment.patient,
+          oldStatus: oldStatus,
+          newStatus: newStatus,
+          paymentId: updatedPayment.invoiceId,
+          amount: updatedPayment.amount
+        }
+      }));
     }
     
     return true;
@@ -518,4 +616,143 @@ export const updatePaymentAmount = (paymentId: number, newAmount: number, newPai
     console.error('Error updating payment amount:', error);
     return false;
   }
-}; 
+};
+
+// ✅ NEW: Calculate real-time revenue and profit
+export const calculateCurrentRevenue = (): { 
+  totalRevenue: number, 
+  paidRevenue: number, 
+  pendingRevenue: number,
+  overallProfit: number 
+} => {
+  const payments = loadPaymentsFromStorage();
+  
+  const totalRevenue = payments.reduce((sum, p) => sum + p.amount, 0);
+  const paidRevenue = payments.filter(p => p.status === 'paid').reduce((sum, p) => sum + p.amount, 0);
+  const pendingRevenue = payments.filter(p => p.status === 'pending').reduce((sum, p) => sum + p.amount, 0);
+  
+  // Calculate profit (for now, assuming 70% profit margin)
+  const overallProfit = paidRevenue * 0.7;
+  
+  return {
+    totalRevenue,
+    paidRevenue,
+    pendingRevenue,
+    overallProfit
+  };
+};
+
+// ✅ NEW: Get payment statistics
+export const getPaymentStatistics = () => {
+  const payments = loadPaymentsFromStorage();
+  const revenue = calculateCurrentRevenue();
+  
+  return {
+    totalPayments: payments.length,
+    paidPayments: payments.filter(p => p.status === 'paid').length,
+    pendingPayments: payments.filter(p => p.status === 'pending').length,
+    overduePayments: payments.filter(p => p.status === 'overdue').length,
+    ...revenue
+  };
+};
+
+// ✅ NEW: Add global debug commands for payment storage
+if (typeof window !== 'undefined') {
+  // Add debug functions to window for easy access
+  (window as any).paymentStorageDebug = () => {
+    const info = getInMemoryPaymentsDebugInfo();
+    console.log('💰 IN-MEMORY PAYMENT STORAGE DEBUG:', info);
+    console.table(info.summary);
+    alert(`💰 Payment Storage Debug:\n\nTotal Payments: ${info.count}\n\nCheck console for detailed table view.`);
+    return info;
+  };
+
+  (window as any).resetPayments = () => {
+    const reset = resetPaymentsToDefaults();
+    console.log('🔄 Payments reset to defaults:', reset.length);
+    alert(`✅ Payments Reset!\n\nReset to ${reset.length} default payments.\nRefresh the payment page to see changes.`);
+    return reset;
+  };
+
+  (window as any).clearPayments = () => {
+    clearAllPayments();
+    console.log('🗑️ All payments cleared');
+    alert('🗑️ All payments cleared!\n\nRefresh the payment page to see changes.');
+  };
+
+  (window as any).addTestPayment = () => {
+    const testPayment: PaymentData = {
+      id: Date.now(),
+      invoiceId: `TEST-${Date.now()}`,
+      patient: 'Test Patient',
+      patientAvatar: 'TP',
+      doctor: 'Dr. Test',
+      amount: 150,
+      currency: 'EGP',
+      date: new Date().toISOString().split('T')[0],
+      dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      status: 'pending',
+      method: 'Cash',
+      description: 'Test payment for debugging',
+      category: 'consultation',
+      insurance: 'No',
+      insuranceAmount: 0,
+      paidAmount: 0,
+      includeVAT: false,
+      vatRate: 0,
+      vatAmount: 0,
+      totalAmountWithVAT: 150,
+      baseAmount: 150
+    };
+    
+    const current = loadPaymentsFromStorage();
+    const updated = [...current, testPayment];
+    savePaymentsToStorage(updated);
+    
+    console.log('➕ Test payment added:', testPayment);
+    alert('➕ Test payment added!\n\nRefresh the payment page to see changes.');
+    return testPayment;
+  };
+
+  // ✅ NEW: Revenue calculation debug commands
+  (window as any).calculateRevenue = () => {
+    const stats = getPaymentStatistics();
+    console.log('💰 PAYMENT STATISTICS:', stats);
+    console.table([
+      { Metric: 'Total Revenue', Value: `${stats.totalRevenue} EGP` },
+      { Metric: 'Paid Revenue', Value: `${stats.paidRevenue} EGP` },
+      { Metric: 'Pending Revenue', Value: `${stats.pendingRevenue} EGP` },
+      { Metric: 'Profit (70%)', Value: `${stats.overallProfit} EGP` },
+      { Metric: 'Total Payments', Value: stats.totalPayments },
+      { Metric: 'Paid Payments', Value: stats.paidPayments },
+      { Metric: 'Pending Payments', Value: stats.pendingPayments },
+      { Metric: 'Overdue Payments', Value: stats.overduePayments }
+    ]);
+    alert(`💰 Revenue Statistics:\n\nTotal Revenue: ${stats.totalRevenue} EGP\nPaid Revenue: ${stats.paidRevenue} EGP\nPending Revenue: ${stats.pendingRevenue} EGP\nProfit: ${stats.overallProfit} EGP\n\nTotal Payments: ${stats.totalPayments}\nPaid: ${stats.paidPayments}\nPending: ${stats.pendingPayments}\nOverdue: ${stats.overduePayments}`);
+    return stats;
+  };
+
+  (window as any).triggerRevenueUpdate = () => {
+    const stats = getPaymentStatistics();
+    window.dispatchEvent(new CustomEvent('revenueCalculationRequested', {
+      detail: stats
+    }));
+    console.log('💰 Revenue calculation update triggered with stats:', stats);
+    alert('💰 Revenue calculation update triggered!\n\nCheck console for details.');
+    return stats;
+  };
+
+  // Add console command info
+  console.log(`
+  💰 PAYMENT STORAGE DEBUG COMMANDS AVAILABLE:
+  
+  • paymentStorageDebug() - Show current payment storage state
+  • resetPayments() - Reset payments to default state
+  • clearPayments() - Clear all payments
+  • addTestPayment() - Add a test payment for debugging
+  • calculateRevenue() - Calculate and display current revenue/profit
+  • triggerRevenueUpdate() - Trigger revenue calculation update event
+  
+  💡 Type any of these commands in the console to manage payment storage!
+  `);
+} 

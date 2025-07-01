@@ -37,6 +37,8 @@ import {
   Settings as SettingsIcon
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '../../../contexts/AuthContext';
+import { useUser } from '../../../contexts/UserContext';
 import {
   loadClinicPaymentSettings,
   saveClinicPaymentSettings,
@@ -48,9 +50,13 @@ import {
   paymentMethods,
   paymentCategories
 } from '../../../data/mockData';
+import { PaymentService, AppointmentService } from '../../../services';
+import FirebaseFriendlySync, { FirebaseDataBridge } from '../../../utils/firebaseFriendlySync';
 
 const ClinicPaymentSettingsComponent: React.FC = () => {
   const { t } = useTranslation();
+  const { user, loading: authLoading, initialized } = useAuth();
+  const { userProfile } = useUser();
   
   // State management
   const [settings, setSettings] = useState<ClinicPaymentSettings>(() => {
@@ -76,6 +82,59 @@ const ClinicPaymentSettingsComponent: React.FC = () => {
 
   // Load VAT settings for display
   const [vatSettings] = useState(() => loadVATSettings());
+
+  // ✅ NEW: Direct Firebase connection test for settings page
+  React.useEffect(() => {
+    if (!initialized || authLoading || !user || !userProfile) return;
+
+    console.log('🔄 SETTINGS: Testing Firebase connection for payment settings...');
+    
+    const testFirebaseConnection = async () => {
+      try {
+        const clinicId = userProfile.clinicId || 'demo-clinic';
+        
+        // Test Firebase services
+        console.log('💰 Testing PaymentService connection...');
+        const testPayments = await PaymentService.getPayments(clinicId);
+        console.log(`💰 Settings page - Firebase payments: ${testPayments.length}`);
+        
+        console.log('📅 Testing AppointmentService connection...');
+        const testAppointments = await AppointmentService.getAllAppointments(clinicId);
+        console.log(`📅 Settings page - Firebase appointments: ${testAppointments.length}`);
+        
+        console.log(`🎯 SETTINGS FIREBASE TEST: ${testPayments.length} payments, ${testAppointments.length} appointments connected`);
+        
+      } catch (error) {
+        console.error('❌ SETTINGS: Firebase connection failed:', error);
+      }
+    };
+    
+    testFirebaseConnection();
+  }, [initialized, authLoading, user, userProfile]);
+
+  // ✅ Firebase Data Bridge (for real-time data awareness)
+  React.useEffect(() => {
+    if (!initialized || authLoading || !user || !userProfile) return;
+
+    console.log('💚 Settings: Setting up Firebase Data Bridge...');
+
+    // Subscribe to real-time data changes
+    const unsubscribe = FirebaseDataBridge.subscribe((data) => {
+      console.log('💚 Settings Data Bridge Update:', {
+        appointments: data.appointments?.length || 0,
+        patients: data.patients?.length || 0
+      });
+      
+      // Settings page can be aware of data changes for better UX
+      console.log('💚 Settings: Data updated in other pages');
+    });
+
+    // Cleanup on unmount
+    return () => {
+      console.log('💚 Cleaning up Settings Firebase Data Bridge...');
+      unsubscribe();
+    };
+  }, [initialized, authLoading, user, userProfile]);
 
   // Auto-save when settings change (with debounce)
   useEffect(() => {
@@ -444,4 +503,62 @@ const ClinicPaymentSettingsComponent: React.FC = () => {
   );
 };
 
-export default ClinicPaymentSettingsComponent; 
+export default ClinicPaymentSettingsComponent;
+
+// ✅ NEW: Add debug functionality to window object for Settings page
+if (typeof window !== 'undefined') {
+  // Debug and force refresh function for settings
+  (window as any).debugSettingsAndForceRefresh = async () => {
+    console.log('🔍 SETTINGS DEBUG: Starting comprehensive settings data test...');
+    
+    try {
+      // Test Firebase services directly
+      console.log('🔄 Testing PaymentService from settings...');
+      const testPayments = await PaymentService.getPayments('demo-clinic');
+      console.log(`💰 Settings - PaymentService test: ${testPayments.length} payments found`);
+      
+      console.log('🔄 Testing AppointmentService from settings...');
+      const testAppointments = await AppointmentService.getAllAppointments('demo-clinic');
+      console.log(`📅 Settings - AppointmentService test: ${testAppointments.length} appointments found`);
+      
+      // Test Firebase Data Bridge
+      console.log('🔄 Testing Firebase Data Bridge from Settings...');
+      FirebaseDataBridge.refreshAll('demo-clinic');
+      
+      // Test payment settings
+      console.log('🔄 Testing payment settings persistence...');
+      const currentSettings = loadClinicPaymentSettings();
+      console.log('💰 Current settings:', currentSettings);
+      
+      // Show results
+      const totalData = testPayments.length + testAppointments.length;
+      console.log(`🎯 SETTINGS DEBUG COMPLETE: ${totalData} total records, ${currentSettings.appointmentTypes.length} appointment types`);
+      
+      alert(`✅ Settings Debug Results:\n\n💰 Payments: ${testPayments.length}\n📅 Appointments: ${testAppointments.length}\n⚙️ Appointment Types: ${currentSettings.appointmentTypes.length}\n\n🎯 Total: ${totalData} records\n\nCheck console for detailed logs.`);
+      
+    } catch (error) {
+      console.error('❌ SETTINGS DEBUG ERROR:', error);
+      alert(`❌ Settings Debug Failed:\n\n${error}\n\nCheck console for details.`);
+    }
+  };
+
+  // Add all other global debug commands for settings
+  (window as any).settingsTest = (window as any).debugSettingsAndForceRefresh;
+  (window as any).settingsSync = () => FirebaseDataBridge.refreshAll('demo-clinic');
+  (window as any).settingsRefresh = () => {
+    console.log('🔄 Refreshing settings data via Firebase Data Bridge...');
+    FirebaseDataBridge.refreshAll('demo-clinic');
+  };
+  
+  // Add console command info
+  console.log(`
+  🎯 SETTINGS PAGE DEBUG COMMANDS AVAILABLE:
+  
+  • settingsTest() - Complete settings data test
+  • debugSettingsAndForceRefresh() - Same as above
+  • settingsSync() - Sync data via Firebase Data Bridge  
+  • settingsRefresh() - Force refresh all data
+  
+  💡 Type any of these commands in the console to test settings page data flow!
+  `);
+} 

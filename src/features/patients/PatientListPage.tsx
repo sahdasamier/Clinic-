@@ -273,10 +273,65 @@ const PatientListPage: React.FC = () => {
       FirebaseDataBridge.refreshAll(userProfile.clinicId || 'demo-clinic');
     }, 3000);
 
+    // ✅ NEW: Listen for appointment payment status changes from appointment page
+    const handleAppointmentPaymentStatusChange = (event: CustomEvent) => {
+      console.log('💚 Patient page: Appointment payment status changed:', event.detail);
+      
+      // Force refresh to get updated appointment data
+      FirebaseDataBridge.refreshAll(userProfile.clinicId || 'demo-clinic');
+      
+      // Show notification about the change
+      const { patient, oldStatus, newStatus } = event.detail;
+      console.log(`💰 Patient page: ${patient}'s appointment payment status changed from ${oldStatus} to ${newStatus}`);
+    };
+
+    // ✅ NEW: Listen for appointment completion events
+    const handleAppointmentCompletion = (event: CustomEvent) => {
+      console.log('💚 Patient page: Appointment completed with payment:', event.detail);
+      
+      // Force refresh to get updated appointment and payment data
+      FirebaseDataBridge.refreshAll(userProfile.clinicId || 'demo-clinic');
+      
+      const { appointment, payment, revenue } = event.detail;
+      console.log(`💰 Patient page: ${appointment.patient} completed appointment, revenue: ${revenue}`);
+    };
+
+    // ✅ NEW: Listen for payment status changes from payment page
+    const handlePaymentStatusChange = (event: CustomEvent) => {
+      console.log('💚 Patient page: Payment status changed:', event.detail);
+      
+      // Force refresh to get updated data
+      FirebaseDataBridge.refreshAll(userProfile.clinicId || 'demo-clinic');
+      
+      const { patient, oldStatus, newStatus, invoiceId } = event.detail;
+      console.log(`💰 Patient page synced: ${patient}'s payment ${invoiceId} status ${oldStatus} → ${newStatus}`);
+    };
+
+    // ✅ NEW: Listen for appointment payment status sync events
+    const handleAppointmentPaymentStatusSync = (event: CustomEvent) => {
+      console.log('💚 Patient page: Payment status synced:', event.detail);
+      
+      // Force refresh to get updated patient data
+      FirebaseDataBridge.refreshAll(userProfile.clinicId || 'demo-clinic');
+      
+      const { appointmentId, patient, paymentId, newStatus } = event.detail;
+      console.log(`💰 Patient page synced: Patient ${patient} payment ${paymentId} status → ${newStatus}`);
+    };
+
+    // Add event listeners
+    window.addEventListener('appointmentPaymentStatusChanged', handleAppointmentPaymentStatusChange as EventListener);
+    window.addEventListener('appointmentCompletedWithPayment', handleAppointmentCompletion as EventListener);
+    window.addEventListener('paymentStatusChanged', handlePaymentStatusChange as EventListener);
+    window.addEventListener('appointmentPaymentStatusSynced', handleAppointmentPaymentStatusSync as EventListener);
+
     // Cleanup on unmount
     return () => {
       console.log('💚 Cleaning up Firebase Data Bridge...');
       unsubscribe();
+      window.removeEventListener('appointmentPaymentStatusChanged', handleAppointmentPaymentStatusChange as EventListener);
+      window.removeEventListener('appointmentCompletedWithPayment', handleAppointmentCompletion as EventListener);
+      window.removeEventListener('paymentStatusChanged', handlePaymentStatusChange as EventListener);
+      window.removeEventListener('appointmentPaymentStatusSynced', handleAppointmentPaymentStatusSync as EventListener);
     };
   }, [initialized, loading, user, userProfile]);
 

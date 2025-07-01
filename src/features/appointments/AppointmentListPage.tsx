@@ -343,10 +343,38 @@ const AppointmentListPage: React.FC = () => {
     // Force refresh data for this page
     FirebaseDataBridge.refreshAll(userProfile.clinicId || 'demo-clinic');
 
+    // ✅ NEW: Listen for payment status changes from payment page
+    const handlePaymentStatusChange = (event: CustomEvent) => {
+      console.log('💚 Appointment page: Payment status changed:', event.detail);
+      
+      // Force refresh to get updated appointment data (in case payment affects appointment status)
+      FirebaseDataBridge.refreshAll(userProfile.clinicId || 'demo-clinic');
+      
+      const { patient, oldStatus, newStatus, invoiceId } = event.detail;
+      console.log(`💰 Appointment page synced: ${patient}'s payment ${invoiceId} status ${oldStatus} → ${newStatus}`);
+    };
+
+    // ✅ NEW: Listen for appointment payment status sync events
+    const handleAppointmentPaymentStatusSync = (event: CustomEvent) => {
+      console.log('💚 Appointment page: Payment status synced from payment page:', event.detail);
+      
+      // Force refresh to get updated appointment data
+      FirebaseDataBridge.refreshAll(userProfile.clinicId || 'demo-clinic');
+      
+      const { appointmentId, patient, paymentId, newStatus } = event.detail;
+      console.log(`💰 Appointment page synced: Appointment ${appointmentId} payment ${paymentId} status → ${newStatus}`);
+    };
+
+    // Add event listeners
+    window.addEventListener('paymentStatusChanged', handlePaymentStatusChange as EventListener);
+    window.addEventListener('appointmentPaymentStatusSynced', handleAppointmentPaymentStatusSync as EventListener);
+
     // Cleanup on unmount
     return () => {
       console.log('💚 AppointmentListPage: Cleaning up Firebase data bridge...');
       unsubscribe();
+      window.removeEventListener('paymentStatusChanged', handlePaymentStatusChange as EventListener);
+      window.removeEventListener('appointmentPaymentStatusSynced', handleAppointmentPaymentStatusSync as EventListener);
     };
   }, [initialized, authLoading, user, userProfile]);
 
@@ -656,6 +684,10 @@ const AppointmentListPage: React.FC = () => {
         await handleAppointmentCompletion(statusEditAppointment);
       }
       
+      // ✅ NEW: Trigger Firebase Data Bridge refresh to sync across all pages
+      console.log('✅ Triggering Firebase Data Bridge refresh after status change');
+      FirebaseDataBridge.refreshAll(userProfile?.clinicId || 'demo-clinic');
+      
       // ✅ State updates automatically via real-time listener!
       console.log('✅ Appointment status updated via Firestore');
       
@@ -675,8 +707,23 @@ const AppointmentListPage: React.FC = () => {
         paymentStatus: newPaymentStatus as any
       });
       
+      // ✅ NEW: Trigger Firebase Data Bridge refresh to sync across all pages
+      console.log('✅ Triggering Firebase Data Bridge refresh after payment status change');
+      FirebaseDataBridge.refreshAll(userProfile?.clinicId || 'demo-clinic');
+      
+      // ✅ Dispatch custom event for immediate cross-page sync
+      window.dispatchEvent(new CustomEvent('appointmentPaymentStatusChanged', {
+        detail: {
+          appointmentId: paymentStatusEditAppointment.id,
+          patient: paymentStatusEditAppointment.patient,
+          oldStatus: paymentStatusEditAppointment.paymentStatus,
+          newStatus: newPaymentStatus,
+          appointment: paymentStatusEditAppointment
+        }
+      }));
+      
       // ✅ State updates automatically via real-time listener!
-      console.log('✅ Payment status updated via Firestore');
+      console.log('✅ Payment status updated via Firestore and synced across pages');
       
       setPaymentStatusMenuAnchor(null);
       setPaymentStatusEditAppointment(null);
@@ -693,6 +740,10 @@ const AppointmentListPage: React.FC = () => {
       await AppointmentService.updateAppointment(typeEditAppointment.id, {
         type: newType
       });
+      
+      // ✅ NEW: Trigger Firebase Data Bridge refresh to sync across all pages  
+      console.log('✅ Triggering Firebase Data Bridge refresh after type change');
+      FirebaseDataBridge.refreshAll(userProfile?.clinicId || 'demo-clinic');
       
       // ✅ State updates automatically via real-time listener!
       console.log('✅ Appointment type updated via Firestore');
@@ -733,6 +784,10 @@ const AppointmentListPage: React.FC = () => {
       });
 
       console.log(`✅ Payment ${paymentId} created and marked as PAID`);
+      
+      // ✅ NEW: Trigger Firebase Data Bridge refresh to sync across all pages
+      console.log('✅ Triggering Firebase Data Bridge refresh after appointment completion');
+      FirebaseDataBridge.refreshAll(userProfile?.clinicId || 'demo-clinic');
       
       // Dispatch custom event to notify Payment Management about new revenue
       window.dispatchEvent(new CustomEvent('appointmentCompletedWithPayment', {

@@ -57,6 +57,7 @@ import {
   AppointmentService,
   PaymentService
 } from '../../services';
+import FirebaseFriendlySync, { FirebaseDataBridge } from '../../utils/firebaseFriendlySync';
 
 // DIRECT IMPORTS from actual pages
 import { 
@@ -220,7 +221,111 @@ const DashboardPage: React.FC = () => {
   const [payments, setPayments] = useState<any[]>([]);
   const doctors = doctorSchedules;
 
-  // ✅ Set up Firestore listeners for real-time data
+  // ✅ NEW: Direct Firebase connection test for dashboard
+  React.useEffect(() => {
+    if (!initialized || authLoading || !user || !userProfile) return;
+
+    console.log('🔄 DASHBOARD: Testing Firebase connection for dashboard...');
+    
+    const testFirebaseConnection = async () => {
+      try {
+        const clinicId = userProfile.clinicId || 'demo-clinic';
+        
+        // Direct fetch from Firebase services
+        console.log('💰 Dashboard - Testing PaymentService...');
+        const directPayments = await PaymentService.getPayments(clinicId);
+        console.log(`💰 Dashboard direct fetch: ${directPayments.length} payments`);
+        
+        console.log('📋 Dashboard - Testing AppointmentService...');
+        const directAppointments = await AppointmentService.getAllAppointments(clinicId);
+        console.log(`📋 Dashboard direct fetch: ${directAppointments.length} appointments`);
+        
+        console.log('👥 Dashboard - Testing PatientService...');
+        const directPatients = await PatientService.searchPatients(clinicId, '');
+        console.log(`👥 Dashboard direct fetch: ${directPatients.length} patients`);
+        
+        // Update states directly
+        if (directPayments.length > 0) {
+          setPayments(directPayments);
+          console.log('✅ Dashboard payments state updated');
+        }
+        
+        if (directAppointments.length > 0) {
+          setAppointments(directAppointments);
+          console.log('✅ Dashboard appointments state updated');
+        }
+        
+        if (directPatients.length > 0) {
+          setPatients(directPatients);
+          console.log('✅ Dashboard patients state updated');
+        }
+        
+        setDataLoading(false);
+        
+        // Show immediate results
+        const totalData = directPayments.length + directAppointments.length + directPatients.length;
+        console.log(`🎯 DASHBOARD DIRECT TEST RESULTS: ${totalData} total records (${directPayments.length} payments, ${directAppointments.length} appointments, ${directPatients.length} patients)`);
+        
+      } catch (error) {
+        console.error('❌ DASHBOARD DIRECT TEST: Firebase connection failed:', error);
+        setDataLoading(false);
+        
+        // Show error to user
+        setTimeout(() => {
+          alert(`❌ Dashboard Firebase Connection Test Failed:\n\n${error}\n\nUsing default data. Please check:\n1. Internet connection\n2. Firebase configuration\n3. Browser console for details`);
+        }, 1000);
+      }
+    };
+    
+    // Run direct test
+    testFirebaseConnection();
+  }, [initialized, authLoading, user, userProfile]);
+
+  // ✅ Firebase Data Bridge (keep as backup for real-time updates)
+  React.useEffect(() => {
+    if (!initialized || authLoading || !user || !userProfile) return;
+
+    console.log('💚 Setting up Dashboard Firebase Data Bridge...');
+
+    // Subscribe to real-time data changes
+    const unsubscribe = FirebaseDataBridge.subscribe((data) => {
+      console.log('💚 Dashboard Data Bridge Update:', {
+        appointments: data.appointments?.length || 0,
+        patients: data.patients?.length || 0,
+        payments: data.payments?.length || 0
+      });
+
+      if (data.appointments && data.appointments.length > 0) {
+        setAppointments(data.appointments);
+        console.log('💚 Dashboard Data Bridge: Appointments updated');
+      }
+      
+      if (data.patients && data.patients.length > 0) {
+        setPatients(data.patients);
+        console.log('💚 Dashboard Data Bridge: Patients updated');
+      }
+
+      if (data.payments && data.payments.length > 0) {
+        setPayments(data.payments);
+        console.log('💚 Dashboard Data Bridge: Payments updated');
+      }
+      
+      setDataLoading(false);
+    });
+
+    // Force refresh data for dashboard
+    setTimeout(() => {
+      FirebaseDataBridge.refreshAll(userProfile.clinicId || 'demo-clinic');
+    }, 3000);
+
+    // Cleanup on unmount
+    return () => {
+      console.log('💚 Cleaning up Dashboard Firebase Data Bridge...');
+      unsubscribe();
+    };
+  }, [initialized, authLoading, user, userProfile]);
+
+  // ✅ Set up Firestore listeners for real-time data (keep as additional layer)
   useEffect(() => {
     // Wait for auth to be initialized and user to be available
     if (!initialized || authLoading || !user || !userProfile?.clinicId) {
@@ -234,7 +339,6 @@ const DashboardPage: React.FC = () => {
     }
 
     console.log('✅ DashboardPage: Setting up Firestore listeners...');
-    setDataLoading(true);
 
     const clinicId = userProfile.clinicId;
 
@@ -253,8 +357,6 @@ const DashboardPage: React.FC = () => {
       console.log(`💰 Dashboard: Payments updated: ${updatedPayments.length} payments`);
       setPayments(updatedPayments);
     });
-
-    setDataLoading(false);
 
     // Listen for user data clearing
     const handleUserDataCleared = () => {
@@ -959,4 +1061,61 @@ const DashboardPage: React.FC = () => {
   );
 };
 
-export default DashboardPage; 
+export default DashboardPage;
+
+// ✅ NEW: Add debug functionality to window object for Dashboard page
+if (typeof window !== 'undefined') {
+  // Debug and force refresh function for dashboard
+  (window as any).debugDashboardAndForceRefresh = async () => {
+    console.log('🔍 DASHBOARD DEBUG: Starting comprehensive dashboard data test...');
+    
+    try {
+      // Test Firebase services directly
+      console.log('🔄 Testing PaymentService from dashboard...');
+      const testPayments = await PaymentService.getPayments('demo-clinic');
+      console.log(`💰 Dashboard - PaymentService test: ${testPayments.length} payments found`);
+      
+      console.log('🔄 Testing AppointmentService from dashboard...');
+      const testAppointments = await AppointmentService.getAllAppointments('demo-clinic');
+      console.log(`📅 Dashboard - AppointmentService test: ${testAppointments.length} appointments found`);
+      
+      console.log('🔄 Testing PatientService from dashboard...');
+      const testPatients = await PatientService.searchPatients('demo-clinic', '');
+      console.log(`👥 Dashboard - PatientService test: ${testPatients.length} patients found`);
+      
+      // Test Firebase Data Bridge
+      console.log('🔄 Testing Firebase Data Bridge from Dashboard...');
+      FirebaseDataBridge.refreshAll('demo-clinic');
+      
+      // Show results
+      const totalData = testPayments.length + testAppointments.length + testPatients.length;
+      console.log(`🎯 DASHBOARD DEBUG COMPLETE: ${totalData} total records`);
+      
+      alert(`✅ Dashboard Debug Results:\n\n💰 Payments: ${testPayments.length}\n📅 Appointments: ${testAppointments.length}\n👥 Patients: ${testPatients.length}\n\n🎯 Total: ${totalData} records\n\nCheck console for detailed logs.`);
+      
+    } catch (error) {
+      console.error('❌ DASHBOARD DEBUG ERROR:', error);
+      alert(`❌ Dashboard Debug Failed:\n\n${error}\n\nCheck console for details.`);
+    }
+  };
+
+  // Add all other global debug commands for dashboard
+  (window as any).dashboardTest = (window as any).debugDashboardAndForceRefresh;
+  (window as any).dashboardSync = () => FirebaseDataBridge.refreshAll('demo-clinic');
+  (window as any).dashboardRefresh = () => {
+    console.log('🔄 Refreshing dashboard data via Firebase Data Bridge...');
+    FirebaseDataBridge.refreshAll('demo-clinic');
+  };
+  
+  // Add console command info
+  console.log(`
+  🎯 DASHBOARD PAGE DEBUG COMMANDS AVAILABLE:
+  
+  • dashboardTest() - Complete dashboard data test
+  • debugDashboardAndForceRefresh() - Same as above
+  • dashboardSync() - Sync data via Firebase Data Bridge  
+  • dashboardRefresh() - Force refresh all dashboard data
+  
+  💡 Type any of these commands in the console to test dashboard data flow!
+  `);
+} 
