@@ -76,6 +76,7 @@ import {
   LocalHospital,
   Percent,
   Business,
+  Refresh,
 } from '@mui/icons-material';
 
 import {
@@ -376,6 +377,13 @@ const PaymentListPage: React.FC = () => {
   const [vatAdjustmentModalOpen, setVatAdjustmentModalOpen] = useState(false);
   const [expenseManagementModalOpen, setExpenseManagementModalOpen] = useState(false);
   
+  // ✅ NEW: Force re-render mechanism
+  const [forceRenderKey, setForceRenderKey] = useState(0);
+  const forceRerender = () => {
+    setForceRenderKey(prev => prev + 1);
+    console.log(`🔄 UI: Forced re-render triggered, key: ${forceRenderKey + 1}`);
+  };
+  
   // Payment amount editing state
   const [editPaymentModalOpen, setEditPaymentModalOpen] = useState(false);
   const [selectedPaymentForEdit, setSelectedPaymentForEdit] = useState<PaymentData | null>(null);
@@ -569,12 +577,39 @@ const PaymentListPage: React.FC = () => {
       console.log(`💰 Payment page: Synced appointment ${appointmentId} payment ${paymentId} status to ${newStatus}`);
     };
 
+    // ✅ NEW: Listen for direct payment updates from in-memory storage
+    const handlePaymentsUpdated = (event: CustomEvent) => {
+      console.log('💚 Payment page: Direct payments updated event received:', event.detail);
+      
+      const { payments: updatedPayments, updatedPaymentId, oldStatus, newStatus } = event.detail;
+      
+      if (updatedPayments && Array.isArray(updatedPayments)) {
+        console.log(`🔄 Payment page: Updating UI with ${updatedPayments.length} payments`);
+        
+        // ✅ FORCE: Multiple re-render mechanisms
+        setPayments([...updatedPayments]); // Force new array reference for React re-render
+        forceRerender(); // Force component re-render with key change
+        
+        if (updatedPaymentId) {
+          console.log(`✅ Payment page: Payment ${updatedPaymentId} status updated: ${oldStatus} → ${newStatus}`);
+          
+          // ✅ ADDITIONAL: Show immediate visual feedback
+          setSnackbar({
+            open: true,
+            message: `💰 Payment ${updatedPaymentId} status: ${oldStatus} → ${newStatus}`,
+            severity: 'success'
+          });
+        }
+      }
+    };
+
     // Add event listeners
     window.addEventListener('appointmentPaymentStatusChanged', handleAppointmentPaymentStatusChange as EventListener);
     window.addEventListener('appointmentCompletedWithPayment', handleAppointmentCompletion as EventListener);
     window.addEventListener('revenueCalculationRequested', handleRevenueCalculationRequest as EventListener);
     window.addEventListener('paymentStatusUpdated', handlePaymentStatusUpdate as EventListener);
     window.addEventListener('appointmentPaymentStatusSynced', handleAppointmentPaymentStatusSync as EventListener);
+    window.addEventListener('paymentsUpdated', handlePaymentsUpdated as EventListener);
 
     // Cleanup on unmount
     return () => {
@@ -585,6 +620,7 @@ const PaymentListPage: React.FC = () => {
       window.removeEventListener('revenueCalculationRequested', handleRevenueCalculationRequest as EventListener);
       window.removeEventListener('paymentStatusUpdated', handlePaymentStatusUpdate as EventListener);
       window.removeEventListener('appointmentPaymentStatusSynced', handleAppointmentPaymentStatusSync as EventListener);
+      window.removeEventListener('paymentsUpdated', handlePaymentsUpdated as EventListener);
     };
   }, [initialized, authLoading, user, userProfile]);
 
@@ -1092,15 +1128,25 @@ const PaymentListPage: React.FC = () => {
 
   const handleUpdatePaymentStatus = async (paymentId: number, newStatus: string, paidAmount?: number) => {
     try {
+      console.log(`🔄 Updating payment ${paymentId} status to: ${newStatus}`);
+      
       // Use the notification-enabled payment status update
       const success = await updatePaymentStatus(paymentId, newStatus, paidAmount);
       
       if (success) {
-        // Reload payments from storage to get the updated data
+        console.log(`✅ Payment status update successful for payment ${paymentId}`);
+        
+        // ✅ IMMEDIATE: Force reload payments from storage
         const updatedPayments = loadPaymentsFromPaymentUtils();
+        console.log(`🔄 Reloaded ${updatedPayments.length} payments from storage`);
+        
+        // ✅ IMMEDIATE: Update React state
         setPayments(updatedPayments);
+        console.log(`✅ React state updated with ${updatedPayments.length} payments`);
         
         const payment = updatedPayments.find(p => p.id === paymentId);
+        console.log(`🔍 Updated payment found:`, payment?.status);
+        
         const statusText = t(`payment.status.${newStatus}`);
         
         // ✅ NEW: Trigger Firebase Data Bridge refresh to sync across all pages
@@ -1121,6 +1167,17 @@ const PaymentListPage: React.FC = () => {
         }));
         
         console.log(`✅ Payment page: Payment ${payment?.invoiceId} status changed to ${newStatus}, synced across pages`);
+        
+        // ✅ FORCE: Trigger component re-render with a small delay
+        setTimeout(() => {
+          const finalPayments = loadPaymentsFromPaymentUtils();
+          setPayments(finalPayments);
+          forceRerender(); // Force UI re-render
+          console.log(`🔄 Final verification: ${finalPayments.length} payments loaded`);
+        }, 100);
+        
+        // ✅ IMMEDIATE: Force re-render right away
+        forceRerender();
         
         setSnackbar({
           open: true,
@@ -1302,7 +1359,23 @@ const PaymentListPage: React.FC = () => {
 
   const handleChangeStatus = async (newStatus: string) => {
     if (selectedPaymentForStatusChange) {
+      console.log(`🎯 STATUS MENU: Changing ${selectedPaymentForStatusChange.invoiceId} status from ${selectedPaymentForStatusChange.status} → ${newStatus}`);
+      
       await handleUpdatePaymentStatus(selectedPaymentForStatusChange.id, newStatus);
+      
+      // ✅ FORCE: Immediate UI refresh
+      setTimeout(() => {
+        const refreshedPayments = loadPaymentsFromPaymentUtils();
+        setPayments(refreshedPayments);
+        forceRerender(); // Force UI re-render
+        console.log(`🔄 STATUS MENU: UI refreshed with ${refreshedPayments.length} payments`);
+        
+        const updatedPayment = refreshedPayments.find(p => p.id === selectedPaymentForStatusChange.id);
+        console.log(`✅ STATUS MENU: Payment ${selectedPaymentForStatusChange.invoiceId} new status: ${updatedPayment?.status}`);
+      }, 50);
+      
+      // ✅ IMMEDIATE: Force re-render right away
+      forceRerender();
       
       // ✅ Additional event for status menu changes
       console.log(`✅ Payment status menu change: ${selectedPaymentForStatusChange.invoiceId} → ${newStatus}`);
@@ -1522,7 +1595,7 @@ ${formatDate(new Date().toISOString())}
   }
 
   return (
-    <Container maxWidth="xl" sx={{ mt: 4, mb: 4, flex: 1, overflow: 'auto', direction: isRTL ? 'rtl' : 'ltr' }}>
+    <Container key={`payment-list-${forceRenderKey}`} maxWidth="xl" sx={{ mt: 4, mb: 4, flex: 1, overflow: 'auto', direction: isRTL ? 'rtl' : 'ltr' }}>
           {/* Header Section */}
           <Box sx={{ 
             mb: 4, 
@@ -1626,43 +1699,87 @@ ${formatDate(new Date().toISOString())}
                   </Box>
                 </Button>
                 
-                <Button
-                  variant="outlined"
-                  size="large"
-                  startIcon={<Download />}
-                  onClick={() => setExportOptionsOpen(true)}
-                  sx={{ 
-                    borderRadius: 3,
-                    px: { xs: 3, md: 4 },
-                    py: { xs: 1.5, md: 1.5 },
-                    minHeight: 48,
-                    backgroundColor: 'rgba(255,255,255,0.1)',
-                    backdropFilter: 'blur(10px)',
-                    border: '1px solid rgba(255,255,255,0.3)',
-                    color: 'white',
-                    fontWeight: 600,
-                    textTransform: 'none',
-                    fontSize: { xs: '0.9rem', md: '1rem' },
-                    flex: { xs: 1, sm: 'none' },
-                    minWidth: { xs: 'auto', sm: 120 },
-                    whiteSpace: 'nowrap',
-                    textOverflow: 'ellipsis',
-                    overflow: 'hidden',
-                    '&:hover': {
-                      backgroundColor: 'rgba(255,255,255,0.2)',
-                      transform: 'translateY(-2px)',
-                      boxShadow: '0 8px 25px rgba(0,0,0,0.2)',
-                    },
-                    transition: 'all 0.3s ease'
-                  }}
-                >
-                  <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
-                    {t('payment.actions.exportAll')}
-                  </Box>
-                  <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
-                    Export All
-                  </Box>
-                </Button>
+                                  <Button
+                    variant="outlined"
+                    size="large"
+                    startIcon={<Download />}
+                    onClick={() => setExportOptionsOpen(true)}
+                    sx={{ 
+                      borderRadius: 3,
+                      px: { xs: 3, md: 4 },
+                      py: { xs: 1.5, md: 1.5 },
+                      minHeight: 48,
+                      backgroundColor: 'rgba(255,255,255,0.1)',
+                      backdropFilter: 'blur(10px)',
+                      border: '1px solid rgba(255,255,255,0.3)',
+                      color: 'white',
+                      fontWeight: 600,
+                      textTransform: 'none',
+                      fontSize: { xs: '0.9rem', md: '1rem' },
+                      flex: { xs: 1, sm: 'none' },
+                      minWidth: { xs: 'auto', sm: 120 },
+                      whiteSpace: 'nowrap',
+                      textOverflow: 'ellipsis',
+                      overflow: 'hidden',
+                      '&:hover': {
+                        backgroundColor: 'rgba(255,255,255,0.2)',
+                        transform: 'translateY(-2px)',
+                        boxShadow: '0 8px 25px rgba(0,0,0,0.2)',
+                      },
+                      transition: 'all 0.3s ease'
+                    }}
+                  >
+                    <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                      {t('payment.actions.exportAll')}
+                    </Box>
+                    <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
+                      Export All
+                    </Box>
+                  </Button>
+                  
+                  {/* ✅ NEW: Manual Refresh Button for Testing */}
+                  <Button
+                    variant="outlined"
+                    size="large"
+                    startIcon={<Refresh />}
+                    onClick={() => {
+                      console.log('🔄 MANUAL REFRESH: Forcing payment data refresh...');
+                      const refreshedPayments = loadPaymentsFromPaymentUtils();
+                      setPayments(refreshedPayments);
+                      console.log(`✅ MANUAL REFRESH: Loaded ${refreshedPayments.length} payments`);
+                      setSnackbar({
+                        open: true,
+                        message: `🔄 Payment data refreshed! ${refreshedPayments.length} payments loaded.`,
+                        severity: 'info'
+                      });
+                    }}
+                    sx={{ 
+                      borderRadius: 3,
+                      px: { xs: 3, md: 4 },
+                      py: { xs: 1.5, md: 1.5 },
+                      minHeight: 48,
+                      backgroundColor: 'rgba(255,255,255,0.1)',
+                      backdropFilter: 'blur(10px)',
+                      border: '1px solid rgba(255,255,255,0.3)',
+                      color: 'white',
+                      fontWeight: 600,
+                      textTransform: 'none',
+                      fontSize: { xs: '0.9rem', md: '1rem' },
+                      flex: { xs: 1, sm: 'none' },
+                      minWidth: { xs: 'auto', sm: 100 },
+                      whiteSpace: 'nowrap',
+                      textOverflow: 'ellipsis',
+                      overflow: 'hidden',
+                      '&:hover': {
+                        backgroundColor: 'rgba(255,255,255,0.2)',
+                        transform: 'translateY(-2px)',
+                        boxShadow: '0 8px 25px rgba(0,0,0,0.2)',
+                      },
+                      transition: 'all 0.3s ease'
+                    }}
+                  >
+                    🔄 Refresh
+                  </Button>
               </Box>
             </Box>
           </Box>

@@ -304,25 +304,32 @@ export const getAppointmentPaymentSummary = (appointmentId: number) => {
 // Update payment status with notifications
 export const updatePaymentStatus = async (paymentId: number, newStatus: string, paidAmount?: number): Promise<boolean> => {
   try {
+    console.log(`🔧 updatePaymentStatus: Starting update for payment ${paymentId} to status ${newStatus}`);
+    
     const payments = loadPaymentsFromStorage();
+    console.log(`🔧 updatePaymentStatus: Loaded ${payments.length} payments from storage`);
+    
     const paymentIndex = payments.findIndex(p => p.id === paymentId);
     
     if (paymentIndex === -1) {
-      console.error('Payment not found:', paymentId);
+      console.error(`❌ updatePaymentStatus: Payment ${paymentId} not found in ${payments.length} payments`);
       return false;
     }
     
     const oldPayment = payments[paymentIndex];
     const oldStatus = oldPayment.status;
+    console.log(`🔧 updatePaymentStatus: Found payment ${oldPayment.invoiceId} with current status: ${oldStatus}`);
     
     // ✅ Calculate proper paid amount when marking as paid
     let actualPaidAmount = paidAmount;
     if (newStatus === 'paid' && !paidAmount) {
       // If marking as paid without specific amount, use full amount
       actualPaidAmount = oldPayment.amount;
+      console.log(`🔧 updatePaymentStatus: Setting paid amount to full amount: ${actualPaidAmount}`);
     } else if (newStatus === 'pending' || newStatus === 'overdue') {
       // If marking as pending/overdue, reset paid amount to 0
       actualPaidAmount = 0;
+      console.log(`🔧 updatePaymentStatus: Resetting paid amount to 0 for ${newStatus} status`);
     }
     
     // Update payment
@@ -332,8 +339,27 @@ export const updatePaymentStatus = async (paymentId: number, newStatus: string, 
       paidAmount: actualPaidAmount ?? oldPayment.paidAmount
     };
     
+    console.log(`🔧 updatePaymentStatus: Updated payment object:`, {
+      id: updatedPayment.id,
+      invoiceId: updatedPayment.invoiceId,
+      oldStatus: oldStatus,
+      newStatus: updatedPayment.status,
+      amount: updatedPayment.amount,
+      paidAmount: updatedPayment.paidAmount
+    });
+    
+    // ✅ CRITICAL: Update the array and save immediately
     payments[paymentIndex] = updatedPayment;
+    console.log(`🔧 updatePaymentStatus: Updated payment in array at index ${paymentIndex}`);
+    
+    // ✅ CRITICAL: Force save to in-memory storage
     savePaymentsToStorage(payments);
+    console.log(`🔧 updatePaymentStatus: Saved ${payments.length} payments to storage`);
+    
+    // ✅ VERIFICATION: Load back from storage to verify the update
+    const verificationPayments = loadPaymentsFromStorage();
+    const verificationPayment = verificationPayments.find(p => p.id === paymentId);
+    console.log(`🔧 updatePaymentStatus: Verification - payment status in storage: ${verificationPayment?.status}`);
     
     // ✅ NEW: Trigger revenue calculation update
     console.log(`💰 Payment status changed: ${oldStatus} → ${newStatus}, triggering revenue update`);
@@ -346,6 +372,17 @@ export const updatePaymentStatus = async (paymentId: number, newStatus: string, 
         revenueImpact: newStatus === 'paid' ? updatedPayment.amount : (oldStatus === 'paid' ? -updatedPayment.amount : 0)
       }
     }));
+    
+    // ✅ CRITICAL: Force a paymentsUpdated event for immediate UI refresh
+    window.dispatchEvent(new CustomEvent('paymentsUpdated', { 
+      detail: { 
+        payments: [...payments],
+        updatedPaymentId: paymentId,
+        oldStatus: oldStatus,
+        newStatus: newStatus
+      } 
+    }));
+    console.log(`🔧 updatePaymentStatus: Dispatched paymentsUpdated event for UI refresh`);
     
     // Send notification if payment was just marked as paid
     if (oldStatus !== 'paid' && newStatus === 'paid') {
@@ -377,9 +414,10 @@ export const updatePaymentStatus = async (paymentId: number, newStatus: string, 
       }));
     }
     
+    console.log(`✅ updatePaymentStatus: Successfully updated payment ${paymentId} from ${oldStatus} to ${newStatus}`);
     return true;
   } catch (error) {
-    console.error('Error updating payment status:', error);
+    console.error('❌ updatePaymentStatus: Error updating payment status:', error);
     return false;
   }
 };
@@ -732,6 +770,39 @@ if (typeof window !== 'undefined') {
     return stats;
   };
 
+  // ✅ NEW: Test payment status update function
+  (window as any).testPaymentStatusUpdate = async (paymentId?: number, newStatus?: string) => {
+    const payments = loadPaymentsFromStorage();
+    
+    if (!paymentId) {
+      // Use first payment if no ID provided
+      if (payments.length > 0) {
+        paymentId = payments[0].id;
+      } else {
+        alert('❌ No payments found to test with!');
+        return;
+      }
+    }
+    
+    if (!newStatus) {
+      newStatus = 'paid'; // Default to paid
+    }
+    
+    console.log(`🧪 TEST: Updating payment ${paymentId} to status ${newStatus}`);
+    
+    const result = await updatePaymentStatus(paymentId, newStatus);
+    
+    if (result) {
+      console.log(`✅ TEST: Payment status update successful`);
+      alert(`✅ Test successful!\n\nPayment ${paymentId} updated to ${newStatus}\n\nCheck the UI to see if it updated!`);
+    } else {
+      console.log(`❌ TEST: Payment status update failed`);
+      alert(`❌ Test failed!\n\nPayment ${paymentId} could not be updated to ${newStatus}`);
+    }
+    
+    return result;
+  };
+
   (window as any).triggerRevenueUpdate = () => {
     const stats = getPaymentStatistics();
     window.dispatchEvent(new CustomEvent('revenueCalculationRequested', {
@@ -752,7 +823,13 @@ if (typeof window !== 'undefined') {
   • addTestPayment() - Add a test payment for debugging
   • calculateRevenue() - Calculate and display current revenue/profit
   • triggerRevenueUpdate() - Trigger revenue calculation update event
+  • testPaymentStatusUpdate(paymentId?, newStatus?) - Test payment status update
   
   💡 Type any of these commands in the console to manage payment storage!
+  
+  🧪 TESTING EXAMPLES:
+  • testPaymentStatusUpdate() - Update first payment to "paid"
+  • testPaymentStatusUpdate(1, 'paid') - Update payment ID 1 to "paid"  
+  • testPaymentStatusUpdate(1, 'pending') - Update payment ID 1 to "pending"
   `);
 } 
