@@ -585,27 +585,317 @@ const DashboardPage: React.FC = () => {
       specialtyStats
     });
 
-    // Doctor performance - Fixed matching logic
-    const doctorPerformance = doctors.map(doctor => {
-      const doctorAppointments = appointments.filter(apt => 
-        apt.doctor === doctor.name || // Exact match: 'Dr. Sarah Ahmed' === 'Dr. Sarah Ahmed'
-        apt.doctor?.includes(doctor.name.replace('Dr. ', '')) // Partial match for backwards compatibility
-      );
-      const completed = doctorAppointments.filter(apt => apt.status === 'completed' || apt.completed).length;
+    // Doctor performance - Enhanced matching logic with comprehensive debugging
+    console.log('🔧 DOCTOR PERFORMANCE DEBUG - Starting Analysis:', {
+      totalDoctors: doctors.length,
+      totalAppointments: appointments.length,
+      sampleDoctor: doctors[0] ? {
+        name: doctors[0].name,
+        specialty: doctors[0].specialty,
+        id: doctors[0].id
+      } : 'No doctors',
+      sampleAppointment: appointments[0] ? {
+        patient: appointments[0].patient,
+        doctor: appointments[0].doctor,
+        doctorName: appointments[0].doctorName,
+        type: appointments[0].type,
+        status: appointments[0].status,
+        completed: appointments[0].completed,
+        fullAppointmentObject: appointments[0]
+      } : 'No appointments',
+      allAppointments: appointments.map(apt => ({
+        id: apt.id,
+        patient: apt.patient,
+        doctor: apt.doctor,
+        doctorName: apt.doctorName,
+        doctorId: apt.doctorId,
+        type: apt.type,
+        status: apt.status,
+        completed: apt.completed,
+        date: apt.date
+      })),
+      appointmentDoctorFields: appointments.length > 0 ? Object.keys(appointments[0]).filter(key => key.toLowerCase().includes('doctor')) : [],
+      uniqueAppointmentDoctors: [...new Set(appointments.map(apt => apt.doctor || apt.doctorName).filter(Boolean))],
+      doctorNames: doctors.map(d => d.name),
+      exactMatches: doctors.map(doctor => {
+        const matches = appointments.filter(apt => 
+          apt.doctor === doctor.name || 
+          apt.doctorName === doctor.name ||
+          (apt.doctor && apt.doctor.toLowerCase() === doctor.name.toLowerCase())
+        );
+        return { doctorName: doctor.name, matches: matches.length, matchedApts: matches };
+      }),
+      detailedAppointmentAnalysis: appointments.map(apt => ({
+        id: apt.id,
+        allFields: Object.keys(apt),
+        doctorField: apt.doctor,
+        doctorNameField: apt.doctorName,
+        doctorIdField: apt.doctorId,
+        patientField: apt.patient,
+        patientNameField: apt.patientName,
+        typeField: apt.type,
+        statusField: apt.status
+      })),
+      detailedDoctorAnalysis: doctors.map(doc => ({
+        id: doc.id,
+        name: doc.name,
+        specialty: doc.specialty,
+        allFields: Object.keys(doc)
+      }))
+    });
+
+        const doctorPerformance = doctors.map(doctor => {
+      // COMPREHENSIVE MATCHING SYSTEM - Handle all possible data variations
+      const doctorAppointments = appointments.filter(apt => {
+        // Get all possible doctor field variations from appointment
+        const doctorFields = [
+          apt.doctor,
+          apt.doctorName, 
+          apt.doctorId,
+          apt.assignedDoctor,
+          apt.physician,
+          apt.medic
+        ].filter(Boolean);
+        
+        if (doctorFields.length === 0) {
+          console.log(`⚠️ Appointment has NO doctor field:`, {
+            appointmentId: apt.id || 'unknown',
+            allFields: Object.keys(apt),
+            appointmentData: apt
+          });
+          return false;
+        }
+        
+        // Get all possible doctor name variations to match against
+        const doctorVariations = [
+          doctor.name,                                          // "Dr. Sahda Ahmed"
+          doctor.name?.replace(/^Dr\.?\s*/i, '').trim(),       // "Sahda Ahmed"  
+          doctor.id?.toString(),                               // doctor ID as string
+          doctor.specialty                                     // "General Practice"
+        ].filter(Boolean).filter(v => typeof v === 'string') as string[];
+        
+        console.log(`🔍 Matching appointment with doctor fields [${doctorFields.join(', ')}] against doctor variations [${doctorVariations.join(', ')}]`);
+        
+        // Try all combinations of appointment doctor fields vs doctor variations
+        for (const aptDoctorField of doctorFields) {
+          for (const doctorVariation of doctorVariations) {
+            // Strategy 1: Exact match
+            if (aptDoctorField === doctorVariation) {
+              console.log(`✅ EXACT MATCH: "${aptDoctorField}" === "${doctorVariation}"`);
+              return true;
+            }
+            
+            // Strategy 2: Case-insensitive match
+            if (aptDoctorField.toLowerCase() === doctorVariation.toLowerCase()) {
+              console.log(`✅ CASE INSENSITIVE MATCH: "${aptDoctorField}" ~= "${doctorVariation}"`);
+              return true;
+            }
+            
+            // Strategy 3: Remove common prefixes/suffixes and match
+            const cleanAptDoctor = aptDoctorField
+              .replace(/^(Dr\.?|Doctor|Prof\.?|Mr\.?|Ms\.?|Mrs\.?)\s*/i, '')
+              .replace(/\s*(MD|PhD|M\.D\.|Ph\.D\.)$/i, '')
+              .trim();
+            const cleanDoctorVar = doctorVariation
+              .replace(/^(Dr\.?|Doctor|Prof\.?|Mr\.?|Ms\.?|Mrs\.?)\s*/i, '')
+              .replace(/\s*(MD|PhD|M\.D\.|Ph\.D\.)$/i, '')
+              .trim();
+              
+            if (cleanAptDoctor.toLowerCase() === cleanDoctorVar.toLowerCase()) {
+              console.log(`✅ CLEAN NAME MATCH: "${cleanAptDoctor}" ~= "${cleanDoctorVar}"`);
+              return true;
+            }
+            
+            // Strategy 4: Partial name matching (contains)
+            if (cleanAptDoctor.toLowerCase().includes(cleanDoctorVar.toLowerCase()) ||
+                cleanDoctorVar.toLowerCase().includes(cleanAptDoctor.toLowerCase())) {
+              console.log(`✅ PARTIAL MATCH: "${cleanAptDoctor}" contains "${cleanDoctorVar}"`);
+              return true;
+            }
+            
+            // Strategy 5: Word-by-word matching
+            const aptWords = cleanAptDoctor.toLowerCase().split(/\s+/);
+            const docWords = cleanDoctorVar.toLowerCase().split(/\s+/);
+            
+            // Check if significant words match (ignore common short words)
+            const significantAptWords = aptWords.filter((word: string) => word.length > 2);
+            const significantDocWords = docWords.filter((word: string) => word.length > 2);
+            
+            const matchingWords = significantAptWords.filter((aptWord: string) => 
+              significantDocWords.some((docWord: string) => 
+                aptWord === docWord || aptWord.includes(docWord) || docWord.includes(aptWord)
+              )
+            );
+            
+            if (matchingWords.length >= Math.min(significantAptWords.length, significantDocWords.length)) {
+              console.log(`✅ WORD MATCH: Found ${matchingWords.length} matching words: [${matchingWords.join(', ')}]`);
+              return true;
+            }
+          }
+        }
+        
+        console.log(`❌ NO MATCH found for appointment doctor fields [${doctorFields.join(', ')}] vs doctor "${doctor.name}"`);
+        return false;
+      });
+
+      // Enhanced status checking for completed appointments
+      const completed = doctorAppointments.filter(apt => {
+        return apt.status === 'completed' || 
+               apt.completed === true || 
+               apt.status === 'done' ||
+               apt.status === 'finished' ||
+               apt.status === 'closed' ||
+               apt.status === 'resolved' ||
+               (apt.status === 'confirmed' && apt.completed === true);
+      }).length;
+
+      const pending = doctorAppointments.filter(apt => {
+        return apt.status === 'pending' || 
+               apt.status === 'confirmed' || 
+               apt.status === 'scheduled' ||
+               apt.status === 'booked' ||
+               (!apt.completed && apt.status !== 'completed' && apt.status !== 'cancelled' && apt.status !== 'no-show');
+      }).length;
+
+      const cancelled = doctorAppointments.filter(apt => {
+        return apt.status === 'cancelled' || 
+               apt.status === 'no-show' ||
+               apt.status === 'declined' ||
+               apt.status === 'rejected';
+      }).length;
+
       const total = doctorAppointments.length;
       const efficiency = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+      // Detailed debug logging for each doctor
+      if (total > 0 || doctor.name.includes('Dr')) {
+        console.log(`🔍 Doctor Performance - ${doctor.name}:`, {
+          doctorInfo: {
+            name: doctor.name,
+            specialty: doctor.specialty,
+            id: doctor.id
+          },
+          matchedAppointments: total,
+          breakdown: {
+            completed,
+            pending,
+            cancelled,
+            other: total - completed - pending - cancelled
+          },
+          efficiency: `${efficiency}%`,
+          matchedAppointmentDetails: doctorAppointments.map(apt => ({
+            patient: apt.patient || apt.patientName,
+            doctor: apt.doctor || apt.doctorName,
+            type: apt.type,
+            status: apt.status,
+            completed: apt.completed,
+            date: apt.date,
+            id: apt.id
+          }))
+        });
+      }
 
       return {
         id: doctor.id,
         name: doctor.name,
-        avatar: doctor.avatar,
+        avatar: doctor.avatar || doctor.name.split(' ').map(n => n[0]).join('').slice(0, 2),
         specialty: doctor.specialty,
         appointments: total,
         completed,
+        pending,
+        cancelled,
         efficiency,
         workingHours: doctor.workingHours || { start: '09:00', end: '17:00' },
         offDays: doctor.offDays || [],
       };
+    });
+
+    // FALLBACK: Create "Unknown Doctor" entry for unmatched appointments
+    const totalMatchedAppointments = doctorPerformance.reduce((sum, d) => sum + d.appointments, 0);
+    const unmatchedAppointments = appointments.filter(apt => {
+      // Check if this appointment was matched to any doctor
+      return !doctors.some(doctor => {
+        const doctorFields = [apt.doctor, apt.doctorName, apt.doctorId].filter(Boolean);
+        const doctorVariations = [
+          doctor.name,
+          doctor.name?.replace(/^Dr\.?\s*/i, '').trim(),
+          doctor.id?.toString(),
+          doctor.specialty
+        ].filter(Boolean).filter(v => typeof v === 'string') as string[];
+        
+        return doctorFields.some(field => 
+          doctorVariations.some(variation => 
+            field.toLowerCase().includes(variation.toLowerCase()) ||
+            variation.toLowerCase().includes(field.toLowerCase())
+          )
+        );
+      });
+    });
+
+    // Add unmatched appointments as "Unknown Doctor" if any exist
+    if (unmatchedAppointments.length > 0) {
+      const unknownCompleted = unmatchedAppointments.filter(apt => 
+        apt.status === 'completed' || apt.completed === true
+      ).length;
+      const unknownPending = unmatchedAppointments.filter(apt => 
+        apt.status === 'pending' || apt.status === 'confirmed'
+      ).length;
+      
+      doctorPerformance.push({
+        id: -1, // Use -1 for unknown doctor ID
+        name: '🔍 Unmatched Appointments',
+        avatar: '❓',
+        specialty: 'Unknown',
+        appointments: unmatchedAppointments.length,
+        completed: unknownCompleted,
+        pending: unknownPending,
+        cancelled: unmatchedAppointments.length - unknownCompleted - unknownPending,
+        efficiency: unmatchedAppointments.length > 0 ? Math.round((unknownCompleted / unmatchedAppointments.length) * 100) : 0,
+        workingHours: { start: '00:00', end: '23:59' },
+        offDays: [],
+      });
+      
+      console.log('🚨 UNMATCHED APPOINTMENTS FOUND:', {
+        count: unmatchedAppointments.length,
+        appointments: unmatchedAppointments.map(apt => ({
+          id: apt.id,
+          patient: apt.patient || apt.patientName,
+          doctor: apt.doctor || apt.doctorName,
+          doctorId: apt.doctorId,
+          status: apt.status,
+          type: apt.type
+        }))
+      });
+    }
+
+    // Comprehensive debug summary for doctor performance
+    console.log('📊 DOCTOR PERFORMANCE SUMMARY:', {
+      totalDoctors: doctors.length,
+      totalAppointments: appointments.length,
+      doctorsWithAppointments: doctorPerformance.filter(d => d.appointments > 0).length,
+      totalMatchedAppointments,
+      unmatchedAppointmentsCount: unmatchedAppointments.length,
+      performanceData: doctorPerformance.map(d => ({
+        name: d.name,
+        specialty: d.specialty,
+        appointments: d.appointments,
+        completed: d.completed,
+        pending: d.pending,
+        efficiency: `${d.efficiency}%`
+      })),
+      dataIntegrity: {
+        appointmentDoctorNames: [...new Set(appointments.map(apt => apt.doctor || apt.doctorName).filter(Boolean))],
+        doctorNames: doctors.map(d => d.name),
+        unmatchedDoctorNames: unmatchedAppointments.map(apt => apt.doctor || apt.doctorName).filter(Boolean),
+        appointmentSample: appointments.slice(0, 3).map(apt => ({
+          id: apt.id,
+          patient: apt.patient || apt.patientName,
+          doctor: apt.doctor || apt.doctorName,
+          status: apt.status,
+          completed: apt.completed,
+          type: apt.type
+        }))
+      }
     });
 
     return {
@@ -1104,6 +1394,7 @@ const DashboardPage: React.FC = () => {
                           <TableCell sx={{ fontWeight: 700 }}>{t('specialty')}</TableCell>
                           <TableCell sx={{ fontWeight: 700 }}>{t('total_appointments')}</TableCell>
                           <TableCell sx={{ fontWeight: 700 }}>{t('completed')}</TableCell>
+                          <TableCell sx={{ fontWeight: 700 }}>{t('pending')}</TableCell>
                           <TableCell sx={{ fontWeight: 700 }}>{t('efficiency_rate')}</TableCell>
                           <TableCell sx={{ fontWeight: 700 }}>{t('performance')}</TableCell>
                         </TableRow>
@@ -1153,6 +1444,11 @@ const DashboardPage: React.FC = () => {
                             <TableCell>
                               <Typography variant="body2" fontWeight={600} color="success.main">
                                 {doctor.completed}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2" fontWeight={600} color="warning.main">
+                                {doctor.pending || 0}
                               </Typography>
                             </TableCell>
                             <TableCell>
