@@ -991,53 +991,7 @@ const DashboardPage: React.FC = () => {
               </Card>
             </Grid>
 
-            <Grid item xs={12} md={4}>
-              <Card sx={{ height: '100%', p: 3 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                  <MedicalServices sx={{ fontSize: 28, color: colorPalette.success, mr: 2 }} />
-                  <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                    {t('department_status')}
-                  </Typography>
-                </Box>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
-                  {t('doctor_specialties_description')}
-                </Typography>
-                {specialtyData.length > 0 && specialtyData.some(s => s.value > 0) ? (
-                  specialtyData.filter(s => s.value > 0).map((specialty, index) => (
-                    <Box key={index} sx={{ mb: 2 }}>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                        <Typography variant="body2" fontWeight={600}>{t(specialty.name)}</Typography>
-                        <Typography variant="body2" fontWeight={600} color="primary.main">
-                          {specialty.value} {t('appointments')}
-                        </Typography>
-                      </Box>
-                      <LinearProgress 
-                        variant="determinate" 
-                        value={(specialty.value / Math.max(...specialtyData.filter(s => s.value > 0).map(s => s.value))) * 100} 
-                        sx={{ 
-                          height: 8, 
-                          borderRadius: 4, 
-                          backgroundColor: '#f0f0f0',
-                          '& .MuiLinearProgress-bar': {
-                            backgroundColor: specialty.color,
-                            borderRadius: 4,
-                          }
-                        }}
-                      />
-                    </Box>
-                  ))
-                ) : (
-                  <Alert severity="warning" sx={{ mt: 1 }}>
-                    <Typography variant="body2">
-                      {t('no_appointments_found')}
-                    </Typography>
-                    <Typography variant="caption" sx={{ display: 'block', mt: 1, opacity: 0.8 }}>
-                      {t('check_appointment_doctors')}
-                    </Typography>
-                  </Alert>
-                )}
-              </Card>
-            </Grid>
+
           </Grid>
 
           {/* Charts Section */}
