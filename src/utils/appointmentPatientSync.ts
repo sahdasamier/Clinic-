@@ -1,6 +1,7 @@
 import { loadAppointmentsFromStorage, saveAppointmentsToStorage } from '../features/appointments/AppointmentListPage';
 import { loadPatientsFromStorage, savePatientsToStorage } from '../features/patients/PatientListPage';
 import { Patient } from '../types/models';
+import { FirebaseFriendlySync } from './firebaseFriendlySync';
 
 /**
  * Enhanced appointment loading with multiple key support and debugging
@@ -64,8 +65,7 @@ export const organizeAppointmentsByCompletion = async (): Promise<OrganizedAppoi
   console.log('💚 Using Firebase-friendly sync for appointment organization...');
   
   try {
-    // Import Firebase-friendly sync dynamically to avoid circular imports
-    const { FirebaseFriendlySync } = await import('./firebaseFriendlySync');
+    // Use static import instead of dynamic
     
     // Get current user's clinic ID (this should be passed as parameter in real usage)
     const clinicId = 'demo-clinic'; // This should be passed from the calling component
@@ -106,8 +106,7 @@ export const sendAppointmentDataToPatients = async (): Promise<PatientWithAppoin
   console.log('💚 Using Firebase-friendly sync instead of localStorage...');
   
   try {
-    // Import Firebase-friendly sync dynamically to avoid circular imports
-    const { FirebaseFriendlySync } = await import('./firebaseFriendlySync');
+    // Use static import instead of dynamic
     
     // Get current user's clinic ID (this should be passed as parameter in real usage)
     const clinicId = 'demo-clinic'; // This should be passed from the calling component
@@ -149,8 +148,7 @@ export const getPatientsOrganizedByAppointmentStatus = async () => {
   console.log('💚 Using Firebase-friendly sync for organization...');
   
   try {
-    // Import Firebase-friendly sync dynamically to avoid circular imports
-    const { FirebaseFriendlySync } = await import('./firebaseFriendlySync');
+    // Use static import instead of dynamic
     
     // Get current user's clinic ID (you might need to pass this as parameter)
     const clinicId = 'demo-clinic'; // This should be passed from the calling component
@@ -518,8 +516,7 @@ export const forceSyncAllPatients = async () => {
   console.log('💚 Force syncing all patients with Firebase-friendly approach...');
   
   try {
-    // Import Firebase-friendly sync dynamically to avoid circular imports
-    const { FirebaseFriendlySync } = await import('./firebaseFriendlySync');
+    // Use static import instead of dynamic
     
     // Get current user's clinic ID (you might need to pass this as parameter)
     const clinicId = 'demo-clinic'; // This should be passed from the calling component

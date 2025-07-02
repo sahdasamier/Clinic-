@@ -154,6 +154,8 @@ export interface Patient {
   bloodType: string;
   allergies: string[];
   emergencyContact: string;
+  doctorId?: string;
+  doctorName?: string;
   medicalHistory: MedicalHistory[];
   medications: Medication[];
   visitNotes: VisitNote[];
@@ -175,7 +177,10 @@ export const defaultNewPatientData = {
   emergencyContact: '',
   bloodType: '',
   condition: '',
-  status: 'new'
+  status: 'new',
+  doctor: '',
+  doctorId: '',
+  doctorName: ''
 };
 
 // Default medical history form data

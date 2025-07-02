@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Box,
@@ -44,6 +44,13 @@ import {
   Alert,
   CircularProgress,
 } from '@mui/material';
+import {
+  collection,
+  query,
+  where,
+  onSnapshot,
+  getFirestore
+} from 'firebase/firestore';
 import { useAuth } from '../../contexts/AuthContext';
 import { useUser } from '../../contexts/UserContext';
 import DoctorPatientAssignment from '../../components/DoctorPatientAssignment';
@@ -93,6 +100,7 @@ import {
 import { globalDataSync } from '../../utils/globalDataSync';
 
 import FirebaseFriendlySync, { FirebaseDataBridge } from '../../utils/firebaseFriendlySync';
+import { updatePatientAppointmentFields } from '../../utils/appointmentPatientSync';
 import {
   defaultNewPatientData,
   defaultMedicalHistoryData,
@@ -184,6 +192,335 @@ const PatientListPage: React.FC = () => {
   const [appointments, setAppointments] = useState<any[]>([]);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [patientOrganizationMode, setPatientOrganizationMode] = useState<'reservation' | 'completion' | 'all'>('all');
+  
+  // ✅ Doctor name resolution (like dashboard)
+  const [availableDoctors, setAvailableDoctors] = useState<any[]>([]);
+
+  // ✅ Helper function to check if a string is a Firebase ID
+  const isFirebaseId = (str: string): boolean => {
+    return !!(str && str.length >= 20 && /^[a-zA-Z0-9]+$/.test(str));
+  };
+
+  // ✅ Doctor name resolution function (exact copy from appointment page)
+  const getPatientDoctorName = (patient: any): string => {
+    console.log('🔍 PATIENT DOCTOR RESOLUTION:', {
+      patientName: patient.name,
+      doctorField: patient.doctor,
+      doctorNameField: patient.doctorName,
+      doctorIdField: patient.doctorId,
+      availableDoctorsCount: availableDoctors.length,
+      allPatientFields: Object.keys(patient), // Debug: see all available fields
+      patientData: patient // Debug: see full patient object
+    });
+
+    // ✅ PRIORITY 1: Check if doctor field contains a valid Firebase ID first (like appointments)
+    if (patient.doctor && isFirebaseId(patient.doctor)) {
+      const doctor = availableDoctors.find(d => d.id === patient.doctor);
+      if (doctor) {
+        const resolvedName = `${doctor.firstName} ${doctor.lastName}`;
+        console.log('✅ PATIENT PRIORITY 1 SUCCESS: Resolved doctor field Firebase ID to name:', {
+          id: patient.doctor,
+          resolvedName: resolvedName
+        });
+        return resolvedName;
+      } else {
+        console.log('❌ PATIENT PRIORITY 1 FAILED: doctor field Firebase ID not found:', patient.doctor);
+      }
+    }
+
+    // ✅ PRIORITY 2: Check if doctor field has a readable name (not an ID)
+    if (patient.doctor && patient.doctor.length < 50 && !isFirebaseId(patient.doctor)) {
+      console.log('✅ PATIENT PRIORITY 2 SUCCESS: Using doctor field as name:', patient.doctor);
+      return patient.doctor;
+    }
+
+    // ✅ PRIORITY 3: Check doctorName field (direct name)
+    if (patient.doctorName && patient.doctorName.trim()) {
+      console.log('✅ PATIENT PRIORITY 3 SUCCESS: Found doctorName field:', patient.doctorName);
+      return patient.doctorName;
+    }
+    
+    // ✅ PRIORITY 4: Check doctorId field for Firebase ID resolution (only as fallback)
+    if (patient.doctorId && isFirebaseId(patient.doctorId)) {
+      const doctor = availableDoctors.find(d => d.id === patient.doctorId);
+      if (doctor) {
+        const resolvedName = `${doctor.firstName} ${doctor.lastName}`;
+        console.log('✅ PATIENT PRIORITY 4 SUCCESS: Resolved doctorId field Firebase ID to name:', {
+          id: patient.doctorId,
+          resolvedName: resolvedName
+        });
+        return resolvedName;
+      } else {
+        console.log('❌ PATIENT PRIORITY 4 FAILED: doctorId field Firebase ID not found:', patient.doctorId);
+      }
+    }
+
+    // ✅ PRIORITY 5: Use doctorId as name if it's not a Firebase ID
+    if (patient.doctorId && !isFirebaseId(patient.doctorId)) {
+      console.log('✅ PATIENT PRIORITY 5 SUCCESS: Using doctorId field as name:', patient.doctorId);
+      return patient.doctorId;
+    }
+    
+    // ✅ FALLBACK: Use whatever is in doctor field
+    if (patient.doctor) {
+      console.log('✅ PATIENT FALLBACK: Using doctor field as final attempt:', patient.doctor);
+      return patient.doctor;
+    }
+
+    console.log('❌ PATIENT ALL PRIORITIES FAILED: No doctor information found');
+    return 'Not Assigned';
+  };
+
+  // ✅ Real-time Firestore listener for doctors (same as dashboard)
+  useEffect(() => {
+    const db = getFirestore();
+    const clinicId = userProfile?.clinicId;
+    
+    if (!clinicId) {
+      console.log('🔄 PatientList: Waiting for clinicId...');
+      return;
+    }
+
+    console.log('🔄 PatientList: Setting up real-time doctor listener for clinic:', clinicId);
+
+    const q = query(
+      collection(db, 'users'),
+      where('clinicId', '==', clinicId),
+      where('role', '==', 'doctor'),
+      where('isActive', '==', true)
+    );
+
+    const unsub = onSnapshot(q, (snap) => {
+      const list = snap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
+      setAvailableDoctors(list);
+      console.log('✅ PatientList: Real-time doctors updated:', {
+        count: list.length,
+        doctors: list.map(d => ({
+          id: d.id,
+          firstName: d.firstName || 'Unknown',
+          lastName: d.lastName || 'Doctor',
+          fullName: `${d.firstName || 'Unknown'} ${d.lastName || 'Doctor'}`,
+          email: d.email || 'No email'
+        }))
+      });
+    }, (error) => {
+      console.error('❌ PatientList: Error in doctor listener:', error);
+      setAvailableDoctors([]);
+    });
+
+    return () => {
+      console.log('🔄 PatientList: Cleaning up doctor listener');
+      unsub();
+    };
+  }, [userProfile?.clinicId]);
+
+  // ✅ Enhanced Debug and Fix Functions
+  useEffect(() => {
+    // Step 1: Check function availability
+    (window as any).checkPatientDoctorFunctions = () => {
+      console.log('🔍 STEP 1: Function availability check:', {
+        debugFunction: typeof (window as any).debugPatientDoctorResolution,
+        quickFixFunction: typeof (window as any).quickFixPatientDoctors,
+        manualFixFunction: typeof (window as any).manualFixPatientDoctors
+      });
+    };
+
+    // Step 2: Enhanced debug function with full patient data
+    (window as any).debugPatientDoctorResolution = () => {
+      console.log('🔍 STEP 2: PATIENT DOCTOR RESOLUTION DEBUG:', {
+        totalPatients: patients.length,
+        availableDoctors: availableDoctors.length,
+        clinicId: userProfile?.clinicId,
+        userRole: userProfile?.role,
+        doctorList: availableDoctors.map(d => ({
+          id: d.id,
+          firstName: d.firstName,
+          lastName: d.lastName,
+          fullName: `${d.firstName || 'Unknown'} ${d.lastName || 'Doctor'}`,
+          email: d.email
+        })),
+        patientFullData: patients.map(patient => ({
+          id: patient.id,
+          name: patient.name,
+          allFields: Object.keys(patient),
+          doctorRelatedFields: {
+            doctor: patient.doctor,
+            doctorId: patient.doctorId, 
+            doctorName: patient.doctorName
+          },
+          fullPatientObject: patient,
+          resolvedName: getPatientDoctorName(patient)
+        }))
+      });
+      
+      const stats = {
+        patientsWithDoctors: patients.filter(p => getPatientDoctorName(p) !== 'Not Assigned').length,
+        patientsWithoutDoctors: patients.filter(p => getPatientDoctorName(p) === 'Not Assigned').length,
+        totalPatients: patients.length,
+        canRunQuickFix: !!(userProfile?.clinicId && availableDoctors.length > 0)
+      };
+      
+      console.log('📊 PATIENT-DOCTOR STATISTICS:', stats);
+      return stats;
+    };
+
+    // Step 3: Enhanced quick fix function with better error handling
+    (window as any).quickFixPatientDoctors = async () => {
+      console.log('🔧 STEP 3: Quick fix starting...');
+      
+      if (!userProfile?.clinicId) {
+        console.error('❌ No clinic ID available. UserProfile:', userProfile);
+        return { error: 'No clinic ID' };
+      }
+      
+      if (availableDoctors.length === 0) {
+        console.error('❌ No doctors available. Available doctors:', availableDoctors);
+        return { error: 'No doctors available' };
+      }
+
+      if (patients.length === 0) {
+        console.error('❌ No patients available. Patients:', patients);
+        return { error: 'No patients available' };
+      }
+
+      console.log('🔧 Pre-fix analysis:', {
+        clinicId: userProfile.clinicId,
+        doctorCount: availableDoctors.length,
+        patientCount: patients.length,
+        firstDoctor: availableDoctors[0]
+      });
+
+      let fixedCount = 0;
+      const errors = [];
+
+      for (const patient of patients) {
+        // Only fix patients that have no doctor information
+        if (!patient.doctor && !patient.doctorName && !patient.doctorId) {
+          try {
+            // Assign to first available doctor as default
+            const defaultDoctor = availableDoctors[0];
+            console.log(`🔄 Fixing patient ${patient.name} (ID: ${patient.id})...`);
+            
+            const updateData = {
+              doctor: defaultDoctor.id,
+              doctorName: `${defaultDoctor.firstName} ${defaultDoctor.lastName}`,
+              doctorId: defaultDoctor.id
+            };
+            
+            console.log('Update data:', updateData);
+            
+            await PatientService.updatePatient(patient.id, updateData);
+            fixedCount++;
+            console.log(`✅ Fixed patient ${patient.name} -> ${defaultDoctor.firstName} ${defaultDoctor.lastName}`);
+          } catch (error) {
+            console.error(`❌ Failed to fix patient ${patient.name}:`, error);
+            errors.push({ patient: patient.name, error: error instanceof Error ? error.message : String(error) });
+          }
+        } else {
+          console.log(`⏭️ Skipping patient ${patient.name} - already has doctor info:`, {
+            doctor: patient.doctor,
+            doctorName: patient.doctorName,
+            doctorId: patient.doctorId
+          });
+        }
+      }
+
+      const result = {
+        fixedCount,
+        totalPatients: patients.length,
+        errors,
+        success: fixedCount > 0 && errors.length === 0
+      };
+
+      console.log(`🎯 Quick fix completed:`, result);
+      
+      // Force refresh data after 2 seconds
+      setTimeout(() => {
+        console.log('🔄 Refreshing page data...');
+        window.location.reload();
+      }, 2000);
+      
+      return result;
+    };
+
+    // Step 4: Manual fix function for specific patients
+    (window as any).manualFixPatientDoctors = async (patientNames: string[] = [], doctorId: string | null = null) => {
+      console.log('🔧 STEP 4: Manual fix starting...', { patientNames, doctorId });
+      
+      const targetDoctor = doctorId ? 
+        availableDoctors.find(d => d.id === doctorId) : 
+        availableDoctors[0];
+        
+      if (!targetDoctor) {
+        console.error('❌ No target doctor found');
+        return { error: 'No target doctor' };
+      }
+
+      const targetPatients = patientNames.length > 0 ? 
+        patients.filter(p => patientNames.includes(p.name)) : 
+        patients.filter(p => !p.doctor && !p.doctorName && !p.doctorId);
+
+      console.log('Manual fix targets:', {
+        doctor: targetDoctor,
+        patients: targetPatients.map(p => ({ id: p.id, name: p.name }))
+      });
+
+      let fixedCount = 0;
+      for (const patient of targetPatients) {
+        try {
+          await PatientService.updatePatient(patient.id, {
+            doctor: targetDoctor.id,
+            doctorName: `${targetDoctor.firstName} ${targetDoctor.lastName}`,
+            doctorId: targetDoctor.id
+          });
+          fixedCount++;
+          console.log(`✅ Manually fixed ${patient.name} -> ${targetDoctor.firstName} ${targetDoctor.lastName}`);
+        } catch (error) {
+          console.error(`❌ Failed to manually fix ${patient.name}:`, error);
+        }
+      }
+
+      return { fixedCount, targetPatients: targetPatients.length };
+    };
+
+    // Step 5: Data structure checker
+    (window as any).checkPatientDataStructure = () => {
+      console.log('🔍 STEP 5: Patient data structure check:', {
+        samplePatient: patients[0] || 'No patients',
+        patientKeys: patients[0] ? Object.keys(patients[0]) : [],
+        doctorKeys: availableDoctors[0] ? Object.keys(availableDoctors[0]) : [],
+        globalPatients: (window as any).patients || 'Not available',
+        globalDoctors: (window as any).availableDoctors || 'Not available'
+      });
+    };
+
+    // Auto-expose data for debugging
+    (window as any).patients = patients;
+    (window as any).availableDoctors = availableDoctors;
+    (window as any).userProfile = userProfile;
+
+    // Auto-run basic checks
+    if (patients.length > 0 && availableDoctors.length > 0) {
+      console.log('🔧 Auto-running patient doctor resolution debug...');
+      setTimeout(() => {
+        console.log('='.repeat(50));
+        console.log('🚀 AUTOMATIC PATIENT-DOCTOR DEBUG SESSION');
+        console.log('='.repeat(50));
+        (window as any).checkPatientDoctorFunctions();
+        (window as any).debugPatientDoctorResolution();
+        (window as any).checkPatientDataStructure();
+        console.log('='.repeat(50));
+        console.log('💡 Available functions:');
+        console.log('1. debugPatientDoctorResolution() - Full debug info');
+        console.log('2. quickFixPatientDoctors() - Auto-assign doctors');
+        console.log('3. manualFixPatientDoctors([patientNames], doctorId) - Manual assign');
+        console.log('4. checkPatientDataStructure() - Check data structure');
+        console.log('='.repeat(50));
+      }, 1000);
+    }
+
+    console.log('🔧 Enhanced patient doctor debug tools loaded');
+  }, [patients, availableDoctors, getPatientDoctorName, userProfile]);
 
   // ✅ NEW: Direct Firebase connection test with fallback
   React.useEffect(() => {
@@ -814,6 +1151,9 @@ const PatientListPage: React.FC = () => {
         condition: newPatientData.condition || 'Initial consultation',
         status: (newPatientData.status as 'new' | 'old' | 'follow-up') || 'new',
         emergencyContact: newPatientData.emergencyContact || 'Not provided',
+        doctor: newPatientData.doctor || '',
+        doctorId: newPatientData.doctorId || '',
+        doctorName: newPatientData.doctorName || '',
         isActive: true,
         allergies: [],
         medications: [],
@@ -1601,9 +1941,7 @@ const PatientListPage: React.FC = () => {
     }
 
     // Sync appointment data
-    import('../../utils/appointmentPatientSync').then(({ updatePatientAppointmentFields }) => {
-      updatePatientAppointmentFields(editLastVisitPatient.name);
-    });
+    updatePatientAppointmentFields(editLastVisitPatient.name);
 
     setEditLastVisitOpen(false);
     setEditLastVisitPatient(null);
@@ -2480,6 +2818,7 @@ const PatientListPage: React.FC = () => {
                           <TableRow>
                             <TableCell sx={{ fontWeight: 600 }}>{t('patient')}</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>{t('contact')}</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>{t('doctor')}</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>{t('last_visit')}</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>Today's Appointment</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>{t('next_appointment')}</TableCell>
@@ -2491,7 +2830,7 @@ const PatientListPage: React.FC = () => {
                         <TableBody>
                           {filteredPatients.length === 0 && getActiveFilterCount() > 0 ? (
                             <TableRow>
-                              <TableCell colSpan={8} sx={{ textAlign: 'center', py: 6 }}>
+                              <TableCell colSpan={9} sx={{ textAlign: 'center', py: 6 }}>
                                 <Box>
                                   <FilterList sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
                                   <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
@@ -2512,7 +2851,7 @@ const PatientListPage: React.FC = () => {
                             </TableRow>
                           ) : filteredPatients.length === 0 ? (
                             <TableRow>
-                              <TableCell colSpan={8} sx={{ textAlign: 'center', py: 6 }}>
+                              <TableCell colSpan={9} sx={{ textAlign: 'center', py: 6 }}>
                                 <Box>
                                   <People sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
                                   <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
@@ -2615,6 +2954,11 @@ const PatientListPage: React.FC = () => {
                                     {patient.email}
                                   </Typography>
                                 </Box>
+                              </TableCell>
+                              <TableCell>
+                                <Typography variant="body2" color="primary.main" fontWeight={600}>
+                                  {getPatientDoctorName(patient)}
+                                </Typography>
                               </TableCell>
                               <TableCell>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -2761,6 +3105,7 @@ const PatientListPage: React.FC = () => {
                           <TableRow>
                             <TableCell sx={{ fontWeight: 600 }}>{t('patient')}</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>{t('contact')}</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>{t('doctor')}</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>{t('last_visit')}</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>{t('next_appointment')}</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>{t('condition')}</TableCell>
@@ -2771,7 +3116,7 @@ const PatientListPage: React.FC = () => {
                         <TableBody>
                           {filteredPatients.length === 0 ? (
                             <TableRow>
-                              <TableCell colSpan={7} sx={{ textAlign: 'center', py: 6 }}>
+                              <TableCell colSpan={8} sx={{ textAlign: 'center', py: 6 }}>
                                 <Box>
                                   <People sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
                                   <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
@@ -2916,6 +3261,7 @@ const PatientListPage: React.FC = () => {
                           <TableRow>
                             <TableCell sx={{ fontWeight: 600 }}>{t('patient')}</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>{t('contact')}</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>{t('doctor')}</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>{t('last_visit')}</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>{t('next_appointment')}</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>{t('condition')}</TableCell>
@@ -3071,6 +3417,7 @@ const PatientListPage: React.FC = () => {
                         <TableRow>
                           <TableCell sx={{ fontWeight: 600 }}>{t('patient')}</TableCell>
                           <TableCell sx={{ fontWeight: 600 }}>{t('contact')}</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>{t('doctor')}</TableCell>
                           <TableCell sx={{ fontWeight: 600 }}>{t('last_visit')}</TableCell>
                           <TableCell sx={{ fontWeight: 600 }}>{t('next_appointment')}</TableCell>
                           <TableCell sx={{ fontWeight: 600 }}>{t('condition')}</TableCell>
@@ -3247,6 +3594,7 @@ const PatientListPage: React.FC = () => {
                           <TableRow>
                             <TableCell sx={{ fontWeight: 600 }}>{t('patient')}</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>{t('contact')}</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>{t('doctor')}</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>{t('last_visit')}</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>{t('next_appointment')}</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>{t('condition')}</TableCell>
@@ -4024,6 +4372,9 @@ const PatientListPage: React.FC = () => {
                                   </Typography>
                                   <WhatsApp sx={{ fontSize: 14, color: '#25D366' }} />
                                 </Box>
+                                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                  Doctor: {getPatientDoctorName(patient)}
+                                </Typography>
                                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                                   Condition: {translatePatientData(patient.condition)}
                                 </Typography>
@@ -6088,18 +6439,7 @@ const PatientListPage: React.FC = () => {
             onClose={() => {
               setAddPatientOpen(false);
               // Reset form when closing
-              setNewPatientData({
-                name: '',
-                phone: '',
-                email: '',
-                age: '',
-                gender: '',
-                address: '',
-                emergencyContact: '',
-                bloodType: '',
-                condition: '',
-                status: 'new'
-              });
+              setNewPatientData(defaultNewPatientData);
             }}
             maxWidth="lg"
             fullWidth
@@ -6217,6 +6557,43 @@ const PatientListPage: React.FC = () => {
                     onChange={(e) => setNewPatientData({ ...newPatientData, emergencyContact: e.target.value })}
                     placeholder="Name and phone number"
                   />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth>
+                    <InputLabel>Assigned Doctor</InputLabel>
+                    <Select
+                      value={newPatientData.doctorId || ''}
+                      onChange={(e) => {
+                        const selectedDoctorId = e.target.value as string;
+                        const selectedDoctor = availableDoctors.find(d => d.id === selectedDoctorId);
+                        if (selectedDoctor) {
+                          setNewPatientData({ 
+                            ...newPatientData, 
+                            doctorId: selectedDoctorId,
+                            doctorName: `${selectedDoctor.firstName} ${selectedDoctor.lastName}`,
+                            doctor: selectedDoctorId // Firebase ID
+                          });
+                        } else {
+                          setNewPatientData({ 
+                            ...newPatientData, 
+                            doctorId: '',
+                            doctorName: '',
+                            doctor: ''
+                          });
+                        }
+                      }}
+                      label="Assigned Doctor"
+                    >
+                      <MenuItem value="">
+                        <em>No doctor assigned</em>
+                      </MenuItem>
+                      {availableDoctors.map((doctor) => (
+                        <MenuItem key={doctor.id} value={doctor.id}>
+                          {`${doctor.firstName || 'Dr.'} ${doctor.lastName || 'Unknown'}`}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
                 </Grid>
                 <Grid item xs={12} md={6}>
                   <TextField 
@@ -6348,6 +6725,43 @@ const PatientListPage: React.FC = () => {
                   />
                 </Grid>
                 
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth>
+                    <InputLabel>Assigned Doctor</InputLabel>
+                    <Select
+                      value={editingPatient?.doctorId || editingPatient?.doctor || ''}
+                      onChange={(e) => {
+                        const selectedDoctorId = e.target.value as string;
+                        const selectedDoctor = availableDoctors.find(d => d.id === selectedDoctorId);
+                        if (selectedDoctor) {
+                          setEditingPatient({ 
+                            ...editingPatient, 
+                            doctorId: selectedDoctorId,
+                            doctorName: `${selectedDoctor.firstName} ${selectedDoctor.lastName}`,
+                            doctor: selectedDoctorId // Firebase ID
+                          });
+                        } else {
+                          setEditingPatient({ 
+                            ...editingPatient, 
+                            doctorId: '',
+                            doctorName: '',
+                            doctor: ''
+                          });
+                        }
+                      }}
+                      label="Assigned Doctor"
+                    >
+                      <MenuItem value="">
+                        <em>No doctor assigned</em>
+                      </MenuItem>
+                      {availableDoctors.map((doctor) => (
+                        <MenuItem key={doctor.id} value={doctor.id}>
+                          {`${doctor.firstName || 'Dr.'} ${doctor.lastName || 'Unknown'}`}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
 
                 <Grid item xs={12} md={6}>
                   <TextField 

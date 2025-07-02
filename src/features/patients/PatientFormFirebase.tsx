@@ -73,6 +73,7 @@ const PatientFormFirebase: React.FC<PatientFormFirebaseProps> = ({
       lastName: '',
       email: '',
       phone: '',
+      doctorName: '',
       medicalHistory: ''
     },
     validationRules: {
@@ -80,6 +81,7 @@ const PatientFormFirebase: React.FC<PatientFormFirebaseProps> = ({
       lastName: commonValidationRules.name,
       email: commonValidationRules.email,
       phone: commonValidationRules.phone,
+      doctorName: { maxLength: 100 },
       medicalHistory: { maxLength: 2000 }
     },
     enableRealTimeSync: false
@@ -324,6 +326,26 @@ const PatientFormFirebase: React.FC<PatientFormFirebaseProps> = ({
                     ),
                   }}
                   helperText={errors.phone || 'Enter phone number with country code'}
+                />
+              </Grid>
+
+              {/* Doctor */}
+              <Grid item xs={12} md={6}>
+                <TextField
+                  {...getTextFieldValidationProps(errors.doctorName, isValid)}
+                  fullWidth
+                  label="Assigned Doctor"
+                  value={patientData.doctorName || ''}
+                  onChange={(e) => updateField('doctorName', e.target.value)}
+                  placeholder="Dr. John Smith"
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Person sx={{ color: 'primary.main' }} />
+                      </InputAdornment>
+                    ),
+                  }}
+                  helperText={errors.doctorName || 'Enter the assigned doctor name'}
                 />
               </Grid>
 

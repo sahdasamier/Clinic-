@@ -37,6 +37,10 @@ export interface Patient {
   status: 'new' | 'old' | 'follow-up' | 'admitted' | 'transferred' | 'discharged';
   lastVisit?: string;
   nextAppointment?: string;
+  // Doctor assignment fields
+  doctor?: string;
+  doctorId?: string;
+  doctorName?: string;
   medicalHistory?: Array<{
     date: string;
     condition: string;

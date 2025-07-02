@@ -14,6 +14,8 @@ export interface Patient {
   bloodType: string;
   allergies: string[];
   emergencyContact: string;
+  doctorId?: string;
+  doctorName?: string;
   medicalHistory: MedicalHistoryRecord[];
   medications: Medication[];
   visitNotes: VisitNote[];
@@ -79,6 +81,7 @@ export interface NewPatientData {
   bloodType: string;
   condition: string;
   status: string;
+  doctorName?: string;
 }
 
 export interface AppointmentData {
