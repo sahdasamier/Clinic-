@@ -91,7 +91,7 @@ import {
   type Appointment
 } from '../../services';
 import { globalDataSync } from '../../utils/globalDataSync';
-import ManualSyncUtility from '../../utils/manualSync';
+
 import FirebaseFriendlySync, { FirebaseDataBridge } from '../../utils/firebaseFriendlySync';
 import {
   defaultNewPatientData,
@@ -1807,71 +1807,7 @@ const PatientListPage: React.FC = () => {
                    syncStatus === 'error' ? t('sync_failed') :
                    t('sync_appointments')}
                 </Button>
-                <Button
-                  variant="outlined"
-                  startIcon={<MedicalServices />}
-                  onClick={async () => {
-                    const clinicId = userProfile?.clinicId || 'demo-clinic';
-                    try {
-                      const debugInfo = await ManualSyncUtility.debugClinicData(clinicId);
-                      alert(`🔍 Debug Info for clinic: ${clinicId}\n\n📋 Appointments: ${debugInfo.appointments}\n👥 Patients: ${debugInfo.patients}\n🔗 Unlinked appointments: ${debugInfo.appointmentsWithoutPatientId}\n\nCheck console for detailed data.`);
-                    } catch (error) {
-                      alert(`❌ Debug failed: ${error}`);
-                    }
-                  }}
-                  size="medium"
-                  sx={{ 
-                    borderRadius: 3,
-                    backgroundColor: 'rgba(156, 39, 176, 0.1)',
-                    color: 'white',
-                    border: '1px solid rgba(156, 39, 176, 0.3)',
-                    fontWeight: 600,
-                    px: { xs: 2, sm: 3 },
-                    py: { xs: 1, sm: 1.5 },
-                    backdropFilter: 'blur(10px)',
-                    fontSize: { xs: '0.8rem', sm: '0.875rem' },
-                    '&:hover': {
-                      backgroundColor: 'rgba(156, 39, 176, 0.2)',
-                      transform: 'translateY(-2px)',
-                      boxShadow: '0 8px 25px rgba(156, 39, 176, 0.25)',
-                    },
-                    transition: 'all 0.3s ease'
-                  }}
-                >
-                  Debug Data
-                </Button>
-                <Button
-                  variant="outlined"
-                  startIcon={<Assignment />}
-                  onClick={() => {
-                    try {
-                      const usage = FirebaseFriendlySync.getUsageEstimation();
-                      alert(`💚 Firebase Free Tier Usage:\n\n📊 Daily reads: ${usage.dailyReads}\n📈 Quota used: ${usage.percentOfQuota}%\n${usage.isWithinLimits ? '✅ Within limits' : '❌ Exceeding limits'}\n\nFree tier limit: 50,000 reads/day\nOur usage: ~${usage.dailyReads} reads/day`);
-                    } catch (error) {
-                      alert(`❌ Usage check failed: ${error}`);
-                    }
-                  }}
-                  size="medium"
-                  sx={{ 
-                    borderRadius: 3,
-                    backgroundColor: 'rgba(76, 175, 80, 0.1)',
-                    color: 'white',
-                    border: '1px solid rgba(76, 175, 80, 0.3)',
-                    fontWeight: 600,
-                    px: { xs: 2, sm: 3 },
-                    py: { xs: 1, sm: 1.5 },
-                    backdropFilter: 'blur(10px)',
-                    fontSize: { xs: '0.8rem', sm: '0.875rem' },
-                    '&:hover': {
-                      backgroundColor: 'rgba(76, 175, 80, 0.2)',
-                      transform: 'translateY(-2px)',
-                      boxShadow: '0 8px 25px rgba(76, 175, 80, 0.25)',
-                    },
-                    transition: 'all 0.3s ease'
-                  }}
-                >
-                  FB Usage
-                </Button>
+
                 <Button
                   variant="contained"
                   startIcon={<PersonAdd />}
@@ -5486,19 +5422,7 @@ const PatientListPage: React.FC = () => {
                                 <Box sx={{ mb: 2 }}>
                                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                                     <Typography variant="body2" color="text.secondary">Last Visits</Typography>
-                                    <Button 
-                                      variant="text" 
-                                      size="small"
-                                      onClick={async () => {
-                                        console.log('💚 Firebase-friendly sync triggered for Last Visits...');
-                                        await syncAppointmentsToPatients();
-                                        console.log('✅ Firebase-friendly sync completed for Last Visits');
-                                      }}
-                                      startIcon={<History />}
-                                      sx={{ color: 'primary.main', fontSize: '0.75rem' }}
-                                    >
-                                      🔄 Sync Now
-                                    </Button>
+
                                   </Box>
                                   <Typography variant="body1" fontWeight={600} color="text.secondary">
                                     No completed visits yet
@@ -5507,7 +5431,7 @@ const PatientListPage: React.FC = () => {
                                     Completed appointments and past appointments will appear here automatically
                                   </Typography>
                                   <Typography variant="caption" color="primary.main" sx={{ display: 'block', mt: 1, fontStyle: 'italic' }}>
-                                    💡 Click "Sync Now" if you have past appointments that should appear here
+                                    💡 Completed appointments will appear here automatically
                                   </Typography>
                                 </Box>
                               )}
@@ -5618,20 +5542,7 @@ const PatientListPage: React.FC = () => {
                           >
                             Add Medical History
                           </Button>
-                          <Button 
-                            variant="text" 
-                            size="small"
-                            onClick={async () => {
-                              // Use Firebase-friendly sync instead
-                              console.log('💚 Firebase-friendly sync for medical history...');
-                              await syncAppointmentsToPatients();
-                              console.log('✅ Firebase-friendly sync completed for medical history');
-                            }}
-                            startIcon={<History />}
-                            sx={{ color: 'success.main' }}
-                          >
-                            📋 Sync Visits
-                          </Button>
+
                         </Box>
                       </Box>
                       
@@ -5720,7 +5631,7 @@ const PatientListPage: React.FC = () => {
                                 No medical history found. Completed appointments will automatically appear here.
                               </Typography>
                               <Typography variant="body2" color="success.main">
-                                📋 Click "Sync Visits" to sync completed appointments, or "Add Medical History" to add manual entries.
+                                📋 Completed appointments will automatically appear as medical history, or use "Add Medical History" to add manual entries.
                               </Typography>
                             </Card>
                           )}

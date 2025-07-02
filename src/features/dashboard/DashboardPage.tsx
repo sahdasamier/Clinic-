@@ -899,10 +899,7 @@ const DashboardPage: React.FC = () => {
     const uniquePatients = new Set(appointments.map(apt => apt.patient)).size;
     const newPatients = patients.filter(patient => patient.status === 'new').length;
     
-    // Time statistics
-    const avgConsultationTime = appointments.length > 0 
-      ? Math.round(appointments.reduce((sum, apt) => sum + (apt.duration || 30), 0) / appointments.length)
-      : 30;
+    // Time statistics (removed avgConsultationTime for efficiency metrics removal)
 
     // Weekly data for charts
     const last7Days = [];
@@ -1026,17 +1023,15 @@ const DashboardPage: React.FC = () => {
       ).length;
       
       const totalAppointments = doctorAppointments.length;
-      const efficiency = totalAppointments > 0 ? Math.round((completedAppointments / totalAppointments) * 100) : 0;
 
-      console.log(`📊 ${doctor.name}: ${totalAppointments} total, ${completedAppointments} completed, ${pendingAppointments} pending, ${efficiency}% efficiency`);
+      console.log(`📊 ${doctor.name}: ${totalAppointments} total, ${completedAppointments} completed, ${pendingAppointments} pending`);
 
              return {
          name: doctor.name,
          specialty: doctor.specialty,
          appointments: totalAppointments,
          completed: completedAppointments,
-         pending: pendingAppointments,
-         efficiency: efficiency
+         pending: pendingAppointments
        };
     });
 
@@ -1081,8 +1076,7 @@ const DashboardPage: React.FC = () => {
              specialty: 'Unknown',
              appointments: 1,
              completed: apt.status === 'completed' || apt.completed ? 1 : 0,
-             pending: apt.status !== 'completed' && !apt.completed ? 1 : 0,
-             efficiency: apt.status === 'completed' || apt.completed ? 100 : 0
+             pending: apt.status !== 'completed' && !apt.completed ? 1 : 0
            });
         }
       });
@@ -1099,8 +1093,7 @@ const DashboardPage: React.FC = () => {
         specialty: d.specialty,
         appointments: d.appointments,
         completed: d.completed,
-        pending: d.pending,
-        efficiency: d.efficiency + '%'
+        pending: d.pending
       }))
     });
 
@@ -1136,9 +1129,7 @@ const DashboardPage: React.FC = () => {
       uniquePatients,
       newPatients,
       
-      // Time metrics
-      avgConsultationTime,
-      clinicUtilization: Math.round((appointments.length / (doctors.length * 8)) * 100),
+      // Time metrics (removed avgConsultationTime and clinicUtilization for efficiency metrics removal)
       
       // Chart data
       weeklyData: last7Days,
@@ -1288,7 +1279,6 @@ const DashboardPage: React.FC = () => {
           totalAppointments: matchedAppointments.length,
           completed: completed,
           pending: pending,
-          efficiency: matchedAppointments.length > 0 ? Math.round((completed / matchedAppointments.length) * 100) : 0,
           matchedAppointmentDetails: matchedAppointments.map(apt => ({
             patient: apt.patient,
             resolvedDoctorName: getAppointmentDoctorName(apt),
@@ -2259,42 +2249,7 @@ The dashboard should now display proper revenue data!`);
               </Card>
             </Grid>
 
-            <Grid item xs={12} md={4}>
-              <Card sx={{ height: '100%', p: 3 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                  <Timeline sx={{ fontSize: 28, color: colorPalette.info, mr: 2 }} />
-                  <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                    {t('efficiency_metrics')}
-                  </Typography>
-                </Box>
-                <Box sx={{ mb: 3 }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                    <Typography variant="body2">{t('average_consultation')}</Typography>
-                    <Typography variant="body2" fontWeight={600}>
-                      {stats.avgConsultationTime} {t('min')}
-                    </Typography>
-                  </Box>
-                  <LinearProgress 
-                    variant="determinate" 
-                    value={(stats.avgConsultationTime / 60) * 100} 
-                    sx={{ height: 8, borderRadius: 4, backgroundColor: '#e0e0e0' }}
-                  />
-                </Box>
-                <Box sx={{ mb: 2 }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                    <Typography variant="body2">{t('clinic_utilization')}</Typography>
-                    <Typography variant="body2" fontWeight={600}>
-                      {stats.clinicUtilization}%
-                    </Typography>
-                  </Box>
-                  <LinearProgress 
-                    variant="determinate" 
-                    value={stats.clinicUtilization} 
-                    sx={{ height: 8, borderRadius: 4, backgroundColor: '#e0e0e0' }}
-                  />
-                </Box>
-              </Card>
-            </Grid>
+
 
 
           </Grid>
@@ -2410,8 +2365,6 @@ The dashboard should now display proper revenue data!`);
                           <TableCell sx={{ fontWeight: 700 }}>{t('total_appointments')}</TableCell>
                           <TableCell sx={{ fontWeight: 700 }}>{t('completed')}</TableCell>
                           <TableCell sx={{ fontWeight: 700 }}>{t('pending')}</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>{t('efficiency_rate')}</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>{t('performance')}</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
@@ -2462,40 +2415,6 @@ The dashboard should now display proper revenue data!`);
                               <Typography variant="body2" fontWeight={600} color="warning.main">
                                 {doctor.pending || 0}
                               </Typography>
-                            </TableCell>
-                                                          <TableCell>
-                                <Typography variant="body2" fontWeight={600}>
-                                 {doctor.efficiency}%
-                                </Typography>
-                              </TableCell>
-                            <TableCell>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <LinearProgress
-                                  variant="determinate"
-                                  value={doctor.efficiency}
-                                  sx={{
-                                    width: 80,
-                                    height: 8,
-                                    borderRadius: 4,
-                                    backgroundColor: '#e0e0e0',
-                                    '& .MuiLinearProgress-bar': {
-                                      backgroundColor: doctor.efficiency >= 80 ? colorPalette.success :
-                                                     doctor.efficiency >= 60 ? colorPalette.warning :
-                                                     colorPalette.error,
-                                    }
-                                  }}
-                                />
-                                <Chip 
-                                  label={doctor.efficiency >= 80 ? t('excellent') : 
-                                        doctor.efficiency >= 60 ? t('good') : 
-                                        doctor.appointments === 0 ? t('no_data') : t('needs_attention')} 
-                                  size="small"
-                                  color={doctor.efficiency >= 80 ? 'success' : 
-                                        doctor.efficiency >= 60 ? 'warning' : 
-                                        doctor.appointments === 0 ? 'default' : 'error'}
-                                  variant="outlined"
-                                />
-                              </Box>
                             </TableCell>
                           </TableRow>
                         ))}

@@ -416,29 +416,7 @@ const PatientFormFirebase: React.FC<PatientFormFirebaseProps> = ({
                     )}
                   </Box>
 
-                  <Box sx={{ display: 'flex', gap: 1 }}>
-                    {/* Clear Cache Button */}
-                    <Tooltip title="Clear all local data">
-                      <IconButton
-                        size="small"
-                        onClick={clearLocalStorage}
-                        disabled={isSaving}
-                      >
-                        <CloudOff fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
 
-                    {/* Manual Sync Button */}
-                    <Tooltip title="Sync with cloud">
-                      <IconButton
-                        size="small"
-                        onClick={syncWithFirebase}
-                        disabled={!isOnline || isSaving}
-                      >
-                        <Refresh fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  </Box>
                 </Box>
               </Grid>
             </Grid>
