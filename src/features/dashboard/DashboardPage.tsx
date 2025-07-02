@@ -64,11 +64,17 @@ import {
   loadAppointmentsFromStorage
 } from '../appointments/AppointmentListPage';
 import { loadPatientsFromStorage } from '../patients/PatientListPage';
-import { doctorSchedules } from '../DoctorScheduling';
 import { loadPaymentsFromStorage } from '../../utils/paymentUtils';
 import { firebaseDataManager } from '../../utils/firebaseDataManager';
 import { initializeFirebaseDataManager } from '../../utils/firebaseDataManagerInit';
 import { getDefaultAppointments } from '../../data/mockData';
+import { 
+  autoSyncDoctorsIfNeeded, 
+  forceSyncDoctors, 
+  SchedulingDoctor,
+  loadSchedulingDoctorsFromStorage,
+  saveSchedulingDoctorsToStorage
+} from '../../utils/doctorSync';
 import { 
   organizeAppointmentsByCompletion,
   getPatientsOrganizedByAppointmentStatus,
@@ -221,7 +227,8 @@ const DashboardPage: React.FC = () => {
   const [appointments, setAppointments] = useState<any[]>([]);
   const [patients, setPatients] = useState<any[]>([]);
   const [payments, setPayments] = useState<any[]>([]);
-  const doctors = doctorSchedules;
+  const [doctors, setDoctors] = useState<SchedulingDoctor[]>([]);
+  const [loadingDoctors, setLoadingDoctors] = useState(true);
 
   // ✅ NEW: Direct Firebase connection test for dashboard
   React.useEffect(() => {
@@ -282,6 +289,55 @@ const DashboardPage: React.FC = () => {
     // Run direct test
     testFirebaseConnection();
   }, [initialized, authLoading, user, userProfile]);
+
+  // ✅ Firebase Doctor Sync for Real-time Doctor Scheduling
+  React.useEffect(() => {
+    if (!initialized || authLoading || !user || !userProfile?.clinicId) {
+      console.log('⏳ Dashboard Doctor Sync: Waiting for clinic ID...');
+      return;
+    }
+
+    const syncDoctors = async () => {
+      setLoadingDoctors(true);
+      try {
+        console.log(`🔄 Dashboard: Auto-syncing doctors for clinic: ${userProfile.clinicId}`);
+        const syncedDoctors = await autoSyncDoctorsIfNeeded(userProfile.clinicId);
+        setDoctors(syncedDoctors);
+        console.log(`✅ Dashboard: Synced ${syncedDoctors.length} doctors from Firebase`);
+        
+        // Debug working doctors calculation
+        const today = new Date();
+        const daysOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+        const currentDay = daysOfWeek[today.getDay()];
+        const workingDoctors = syncedDoctors.filter(doctor => 
+          !doctor.offDays.includes(currentDay)
+        );
+        
+        console.log('👨‍⚕️ Working Doctors Today Debug:', {
+          currentDay,
+          totalDoctors: syncedDoctors.length,
+          workingToday: workingDoctors.length,
+          allDoctors: syncedDoctors.map(d => ({ 
+            name: d.name, 
+            specialty: d.specialty, 
+            offDays: d.offDays,
+            workingToday: !d.offDays.includes(currentDay)
+          }))
+        });
+
+      } catch (error) {
+        console.error('❌ Dashboard: Error syncing doctors:', error);
+        // Fallback to localStorage
+        const fallbackDoctors = loadSchedulingDoctorsFromStorage(userProfile.clinicId);
+        setDoctors(fallbackDoctors);
+        console.log(`⚠️ Dashboard: Using fallback doctors: ${fallbackDoctors.length}`);
+      } finally {
+        setLoadingDoctors(false);
+      }
+    };
+
+    syncDoctors();
+  }, [initialized, authLoading, user, userProfile?.clinicId]);
 
   // ✅ Firebase Data Bridge (keep as backup for real-time updates)
   React.useEffect(() => {
@@ -366,11 +422,38 @@ const DashboardPage: React.FC = () => {
       setAppointments([]);
       setPatients([]);
       setPayments([]);
+      setDoctors([]);
       setRefreshKey(prev => prev + 1);
       console.log('✅ Dashboard reset to default state');
     };
 
+    // Listen for doctor scheduling updates from DoctorScheduling page
+    const handleDoctorScheduleUpdated = (event: any) => {
+      console.log('👨‍⚕️ Dashboard: Doctor schedule updated, refreshing doctors...');
+      if (userProfile?.clinicId) {
+        const updatedDoctors = loadSchedulingDoctorsFromStorage(userProfile.clinicId);
+        setDoctors(updatedDoctors);
+        console.log(`✅ Dashboard: Updated to ${updatedDoctors.length} doctors`);
+      }
+    };
+
+    // Listen for manual doctor sync from DoctorScheduling page
+    const handleDoctorManualSync = async (event: any) => {
+      if (!userProfile?.clinicId) return;
+      
+      console.log('🔄 Dashboard: Manual doctor sync triggered...');
+      try {
+        const syncedDoctors = await forceSyncDoctors(userProfile.clinicId);
+        setDoctors(syncedDoctors);
+        console.log(`✅ Dashboard: Manual sync completed - ${syncedDoctors.length} doctors`);
+      } catch (error) {
+        console.error('❌ Dashboard: Manual doctor sync failed:', error);
+      }
+    };
+
     window.addEventListener('userDataCleared', handleUserDataCleared);
+    window.addEventListener('doctorScheduleUpdated', handleDoctorScheduleUpdated);
+    window.addEventListener('doctorManualSync', handleDoctorManualSync);
     
     // Cleanup function
     return () => {
@@ -379,6 +462,8 @@ const DashboardPage: React.FC = () => {
       unsubscribePatients();
       unsubscribePayments();
       window.removeEventListener('userDataCleared', handleUserDataCleared);
+      window.removeEventListener('doctorScheduleUpdated', handleDoctorScheduleUpdated);
+      window.removeEventListener('doctorManualSync', handleDoctorManualSync);
     };
   }, [refreshKey, initialized, authLoading, user, userProfile]);
 
@@ -572,6 +657,76 @@ const DashboardPage: React.FC = () => {
     };
   }, [appointments, patients, doctors, refreshKey]);
 
+  // Debug function for testing doctor sync (browser console)
+  React.useEffect(() => {
+    // Add global debug functions
+    (window as any).debugDashboardDoctorSync = {
+      getCurrentDoctors: () => {
+        console.log('📊 Current Dashboard Doctors:', {
+          total: doctors.length,
+          doctors: doctors.map(d => ({
+            id: d.id,
+            name: d.name,
+            specialty: d.specialty,
+            workingHours: d.workingHours,
+            offDays: d.offDays
+          }))
+        });
+        return doctors;
+      },
+      testWorkingDoctorsToday: () => {
+        const today = new Date();
+        const daysOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+        const currentDay = daysOfWeek[today.getDay()];
+        const workingDoctors = doctors.filter(doctor => !doctor.offDays.includes(currentDay));
+        
+        console.log('👨‍⚕️ Working Doctors Today Test:', {
+          currentDay,
+          totalDoctors: doctors.length,
+          workingToday: workingDoctors.length,
+          workingDoctorsList: workingDoctors.map(d => ({
+            name: d.name,
+            specialty: d.specialty
+          })),
+          offTodayList: doctors.filter(doctor => doctor.offDays.includes(currentDay)).map(d => ({
+            name: d.name,
+            specialty: d.specialty,
+            offDays: d.offDays
+          }))
+        });
+        return { workingDoctors: workingDoctors.length, totalDoctors: doctors.length };
+      },
+      manualDoctorSync: async () => {
+        if (!userProfile?.clinicId) {
+          console.log('❌ No clinic ID available');
+          return;
+        }
+        
+        console.log('🔄 Manual doctor sync from dashboard...');
+        try {
+          const syncedDoctors = await forceSyncDoctors(userProfile.clinicId);
+          setDoctors(syncedDoctors);
+          console.log(`✅ Manual sync completed: ${syncedDoctors.length} doctors`);
+          return syncedDoctors;
+        } catch (error) {
+          console.error('❌ Manual sync failed:', error);
+          return null;
+        }
+      },
+      triggerDashboardRefresh: () => {
+        console.log('🔄 Triggering dashboard refresh...');
+        setRefreshKey(prev => prev + 1);
+        console.log('✅ Dashboard refresh triggered');
+      }
+    };
+
+    console.log('🔧 Dashboard doctor sync debug functions available:');
+    console.log('- debugDashboardDoctorSync.getCurrentDoctors()');
+    console.log('- debugDashboardDoctorSync.testWorkingDoctorsToday()');
+    console.log('- debugDashboardDoctorSync.manualDoctorSync()');
+    console.log('- debugDashboardDoctorSync.triggerDashboardRefresh()');
+  }, [doctors, userProfile, forceSyncDoctors, setRefreshKey]);
+
   // Prepare specialty data for charts
   const specialtyData = Object.entries(stats.specialtyStats).map(([specialty, count], index) => ({
     name: specialty,
@@ -580,7 +735,7 @@ const DashboardPage: React.FC = () => {
   }));
 
   // Show loading spinner while data is loading
-  if (dataLoading) {
+  if (dataLoading || loadingDoctors) {
     return (
       <Container maxWidth="xl" sx={{ mt: { xs: 2, md: 4 }, mb: { xs: 2, md: 4 }, flex: 1, overflow: 'auto' }}>
         <Box
@@ -595,11 +750,16 @@ const DashboardPage: React.FC = () => {
         >
           <CircularProgress size={60} />
           <Typography variant="h6" color="textSecondary">
-            Loading dashboard data...
+            {loadingDoctors ? 'Syncing doctor schedules...' : 'Loading dashboard data...'}
           </Typography>
           <Typography variant="body2" color="textSecondary">
-            Please wait while we load your clinic data
+            {loadingDoctors ? 'Please wait while we sync your doctor scheduling data' : 'Please wait while we load your clinic data'}
           </Typography>
+          {loadingDoctors && (
+            <Typography variant="caption" color="textSecondary" sx={{ mt: 1 }}>
+              🏥 Connecting to Firebase for real-time doctor data
+            </Typography>
+          )}
         </Box>
       </Container>
     );
@@ -642,6 +802,31 @@ const DashboardPage: React.FC = () => {
                   </Typography>
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Tooltip title="Sync Doctor Schedules">
+                    <IconButton 
+                      onClick={async () => {
+                        if (!userProfile?.clinicId) return;
+                        setLoadingDoctors(true);
+                        try {
+                          const syncedDoctors = await forceSyncDoctors(userProfile.clinicId);
+                          setDoctors(syncedDoctors);
+                          console.log(`✅ Dashboard: Manual doctor sync - ${syncedDoctors.length} doctors`);
+                        } catch (error) {
+                          console.error('❌ Dashboard: Manual doctor sync failed:', error);
+                        } finally {
+                          setLoadingDoctors(false);
+                        }
+                      }}
+                      disabled={loadingDoctors}
+                      sx={{ 
+                        color: 'white',
+                        backgroundColor: 'rgba(255,255,255,0.2)',
+                        '&:hover': { backgroundColor: 'rgba(255,255,255,0.3)' }
+                      }}
+                    >
+                      {loadingDoctors ? <CircularProgress size={20} sx={{ color: 'white' }} /> : <LocalHospital />}
+                    </IconButton>
+                  </Tooltip>
                   <Tooltip title={t('refresh_data')}>
                     <IconButton 
                       onClick={refreshData}

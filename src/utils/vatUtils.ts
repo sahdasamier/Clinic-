@@ -1,15 +1,38 @@
 import { VATSettings, defaultVATSettings } from '../data/mockData';
 
-// Get VAT settings - UPDATED: No longer reads from localStorage
+// Get VAT settings - FIXED: Re-enabled localStorage persistence
 export const getVATSettings = (): VATSettings => {
-  console.warn('⚠️ getVATSettings: localStorage persistence disabled - using defaults');
+  try {
+    const stored = localStorage.getItem('clinic_vat_settings');
+    if (stored) {
+      const settings = JSON.parse(stored);
+      console.log('✅ getVATSettings: Loaded from localStorage');
+      return settings;
+    }
+  } catch (error) {
+    console.error('❌ getVATSettings: localStorage error:', error);
+  }
+  
+  console.log('📝 getVATSettings: Using default VAT settings');
   return defaultVATSettings;
 };
 
-// Save VAT settings - DEPRECATED: No longer saves to localStorage
+// Save VAT settings - FIXED: Re-enabled localStorage persistence
 export const saveVATSettings = (settings: VATSettings): void => {
-  console.warn('⚠️ saveVATSettings: localStorage persistence disabled');
-  console.log('VAT settings received (not persisted):', settings);
+  try {
+    localStorage.setItem('clinic_vat_settings', JSON.stringify(settings));
+    console.log('✅ saveVATSettings: Saved to localStorage');
+    
+    // Trigger event for cross-page communication
+    window.dispatchEvent(new CustomEvent('vatSettingsUpdated', { detail: { settings } }));
+    console.log('📢 VAT settings update event dispatched');
+  } catch (error) {
+    console.error('❌ saveVATSettings: localStorage error:', error);
+    
+    // Even if localStorage fails, still dispatch the event
+    window.dispatchEvent(new CustomEvent('vatSettingsUpdated', { detail: { settings } }));
+    console.log('📢 VAT settings update event dispatched (localStorage failed)');
+  }
 };
 
 export interface VATCalculation {

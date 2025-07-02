@@ -721,19 +721,72 @@ const PaymentListPage: React.FC = () => {
       });
     };
     
+    // Listen for VAT adjustments updates
+    const handleVATAdjustmentsUpdated = (event: CustomEvent) => {
+      const { adjustments } = event.detail;
+      console.log('📢 PaymentListPage: VAT adjustments updated event received:', adjustments.length);
+      
+      // Update VAT adjustments state
+      setVatAdjustments(adjustments);
+      
+      // Trigger financial summary recalculation
+      setRefreshTrigger(prev => {
+        const newTrigger = prev + 1;
+        console.log('🔄 VAT adjustments triggered financial summary recalculation:', newTrigger);
+        return newTrigger;
+      });
+    };
+
+    // Listen for employee updates from expense management
+    const handleEmployeesUpdated = (event: CustomEvent) => {
+      const { employees } = event.detail;
+      console.log('📢 PaymentListPage: Employees updated event received:', employees.length);
+      
+      // Add a small delay to ensure localStorage has been written
+      setTimeout(() => {
+        // Trigger financial summary recalculation to include new salary expenses
+        setRefreshTrigger(prev => {
+          const newTrigger = prev + 1;
+          console.log('🔄 Employee updates triggered financial summary recalculation:', newTrigger);
+          return newTrigger;
+        });
+      }, 100);
+    };
+
+    // Listen for business expense updates from expense management
+    const handleBusinessExpensesUpdated = (event: CustomEvent) => {
+      const { expenses } = event.detail;
+      console.log('📢 PaymentListPage: Business expenses updated event received:', expenses.length);
+      
+      // Add a small delay to ensure localStorage has been written
+      setTimeout(() => {
+        // Trigger financial summary recalculation to include new business expenses
+        setRefreshTrigger(prev => {
+          const newTrigger = prev + 1;
+          console.log('🔄 Business expense updates triggered financial summary recalculation:', newTrigger);
+          return newTrigger;
+        });
+      }, 100);
+    };
+
     // Add browser event listeners
     window.addEventListener('paymentCreated', handlePaymentCreated as EventListener);
     window.addEventListener('paymentUpdated', handlePaymentUpdated as EventListener);
     window.addEventListener('appointmentPaymentSynced', handleAppointmentPaymentSynced as EventListener);
+    window.addEventListener('vatAdjustmentsUpdated', handleVATAdjustmentsUpdated as EventListener);
+    window.addEventListener('employeesUpdated', handleEmployeesUpdated as EventListener);
+    window.addEventListener('businessExpensesUpdated', handleBusinessExpensesUpdated as EventListener);
     
     // Handle user data clearing
     const handleUserDataCleared = () => {
       // Reset to default state
       setPayments([]);
       setAppointments([]);
+      setVatAdjustments([]); // Reset VAT adjustments
       setTabValue(0);
       setSearchQuery('');
       setActiveFilter('all');
+      setRefreshTrigger(0); // Reset refresh trigger
       setNewInvoiceData({
         ...defaultNewInvoiceData,
         includeVAT: getVATSettings().defaultIncludeVAT,
@@ -767,6 +820,9 @@ const PaymentListPage: React.FC = () => {
       window.removeEventListener('paymentCreated', handlePaymentCreated as EventListener);
       window.removeEventListener('paymentUpdated', handlePaymentUpdated as EventListener);
       window.removeEventListener('appointmentPaymentSynced', handleAppointmentPaymentSynced as EventListener);
+      window.removeEventListener('vatAdjustmentsUpdated', handleVATAdjustmentsUpdated as EventListener);
+      window.removeEventListener('employeesUpdated', handleEmployeesUpdated as EventListener);
+      window.removeEventListener('businessExpensesUpdated', handleBusinessExpensesUpdated as EventListener);
       window.removeEventListener('userDataCleared', handleUserDataCleared);
       window.removeEventListener('openAddPayment', handleOpenAddPayment);
       console.log('🧹 Cleaned up payment listeners');
@@ -991,6 +1047,65 @@ const PaymentListPage: React.FC = () => {
   const totalExpenses = financialSummary.totalExpenses; // All expenses (salaries + business)
   const finalVATCollected = financialSummary.finalVATCollected; // Final VAT after all adjustments
   const pendingAmount = payments.filter(p => p.status === 'pending').reduce((sum, p) => sum + p.amount, 0);
+
+  // Debug function for testing expense management integration (browser console)
+  React.useEffect(() => {
+    // Add global debug functions for expense management
+    (window as any).debugExpenseManagement = {
+      getCurrentFinancialSummary: () => {
+        console.log('📊 Current Financial Summary:', {
+          totalRevenue: financialSummary.totalRevenue,
+          totalSalaryExpenses: financialSummary.totalSalaryExpenses,
+          totalBusinessExpenses: financialSummary.totalBusinessExpenses,
+          totalExpenses: financialSummary.totalExpenses,
+          netProfit: financialSummary.netProfit,
+          finalVATCollected: financialSummary.finalVATCollected
+        });
+        return financialSummary;
+      },
+      testExpenseIntegration: () => {
+        console.log('🧪 Testing expense management integration...');
+        
+        // Check localStorage data
+        const employees = JSON.parse(localStorage.getItem('clinic_employees_data') || '[]');
+        const businessExpenses = JSON.parse(localStorage.getItem('clinic_business_expenses_data') || '[]');
+        const vatAdjustments = JSON.parse(localStorage.getItem('clinic_vat_adjustments') || '[]');
+        
+        console.log('💾 Current localStorage data:', {
+          employees: employees.length,
+          businessExpenses: businessExpenses.length,
+          vatAdjustments: vatAdjustments.length,
+          employeeDetails: employees.map((e: any) => ({ name: e.name, salary: e.salary, frequency: e.paymentFrequency })),
+          businessExpenseDetails: businessExpenses.map((e: any) => ({ category: e.category, amount: e.amount, isRecurring: e.isRecurring })),
+          vatAdjustmentDetails: vatAdjustments.map((v: any) => ({ type: v.type, amount: v.amount, reason: v.reason }))
+        });
+        
+                 // Test financial summary calculation
+         const testSummary = calculateFinancialSummary(baseRevenue, automaticVATFromPayments);
+         console.log('🧮 Test financial summary calculation:', testSummary);
+        
+        return { employees, businessExpenses, vatAdjustments };
+      },
+      forceExpenseRefresh: () => {
+        console.log('🔄 Forcing expense management refresh...');
+        setRefreshTrigger(prev => {
+          const newTrigger = prev + 1;
+          console.log(`✅ Expense refresh triggered: ${newTrigger}`);
+          return newTrigger;
+        });
+      },
+      openExpenseModal: () => {
+        console.log('📂 Opening expense management modal...');
+        setExpenseManagementModalOpen(true);
+      }
+    };
+
+    console.log('🔧 Expense management debug functions available:');
+    console.log('- debugExpenseManagement.getCurrentFinancialSummary()');
+    console.log('- debugExpenseManagement.testExpenseIntegration()');
+    console.log('- debugExpenseManagement.forceExpenseRefresh()');
+    console.log('- debugExpenseManagement.openExpenseModal()');
+  }, [financialSummary, baseRevenue, automaticVATFromPayments, setRefreshTrigger]);
 
   // Event handlers
   const handleCreatePayment = async () => {

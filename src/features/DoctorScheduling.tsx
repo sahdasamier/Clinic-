@@ -248,6 +248,12 @@ const DoctorSchedulingPage: React.FC = () => {
         message: `✅ Synced ${syncedDoctors.length} doctors from Firebase`,
         severity: 'success'
       });
+      
+      // Notify dashboard about manual sync
+      window.dispatchEvent(new CustomEvent('doctorManualSync', {
+        detail: { doctors: syncedDoctors, clinicId: userProfile.clinicId }
+      }));
+      console.log('📢 Notified dashboard about manual doctor sync');
     } catch (error) {
       console.error('❌ Error in manual sync:', error);
       setSnackbar({
@@ -266,6 +272,12 @@ const DoctorSchedulingPage: React.FC = () => {
        try {
          saveSchedulingDoctorsToStorage(userProfile.clinicId, doctors);
          console.log(`💾 Saved ${doctors.length} doctors for clinic ${userProfile.clinicId}`);
+         
+         // Notify dashboard about doctor schedule update
+         window.dispatchEvent(new CustomEvent('doctorScheduleUpdated', {
+           detail: { doctors, clinicId: userProfile.clinicId }
+         }));
+         console.log('📢 Notified dashboard about doctor schedule update');
        } catch (error) {
          console.error('❌ DoctorScheduling: Error saving doctors:', error);
        }
