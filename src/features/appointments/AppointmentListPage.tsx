@@ -582,10 +582,80 @@ const AppointmentListPage: React.FC = () => {
     const unsub = onSnapshot(q, (snap) => {
       const list = snap.docs.map(d => ({ id: d.id, ...d.data() })) as Doctor[];
       setAvailableDoctors(list);
-      console.log('✅ AppointmentListPage: Real-time doctors updated:', list.length);
+      console.log('✅ AppointmentListPage: Real-time doctors updated:', JSON.stringify({
+        count: list.length,
+        doctors: list.map(d => ({
+          id: d.id,
+          firstName: d.firstName,
+          lastName: d.lastName,
+          fullName: `${d.firstName} ${d.lastName}`,
+          email: d.email
+        }))
+      }, null, 2));
+      
+             // Add global debug function for testing doctor resolution
+       (window as any).debugDoctorIdMismatch = () => {
+         console.log('🚨 DOCTOR ID MISMATCH ANALYSIS:');
+         console.log('👩‍⚕️ Available Doctors:', JSON.stringify(list.map(d => ({
+           id: d.id,
+           name: `${d.firstName} ${d.lastName}`
+         })), null, 2));
+         
+         console.log('📋 Appointment Doctor Data:', JSON.stringify(appointmentList.map(apt => ({
+           appointmentId: apt.id,
+           patient: apt.patient,
+           doctorField: apt.doctor,
+           doctorIdField: (apt as any).doctorId,
+           isFirebaseId: apt.doctor ? isFirebaseId(apt.doctor) : false,
+           isDoctorIdFirebaseId: (apt as any).doctorId ? isFirebaseId((apt as any).doctorId) : false
+         })), null, 2));
+         
+         console.log('🔍 ID Match Analysis:');
+         appointmentList.forEach(apt => {
+           const doctorId = (apt as any).doctorId || apt.doctor;
+           const matchingDoctor = list.find(d => d.id === doctorId);
+           console.log(`Appointment ${apt.id}:`, JSON.stringify({
+             searchingForId: doctorId,
+             foundMatch: !!matchingDoctor,
+             matchingDoctor: matchingDoctor ? {
+               id: matchingDoctor.id,
+               name: `${matchingDoctor.firstName} ${matchingDoctor.lastName}`
+             } : null
+           }, null, 2));
+         });
+       };
+
+       (window as any).debugDoctorResolution = (appointmentId?: string) => {
+        console.log('🔍 DEBUGGING DOCTOR RESOLUTION:', {
+          availableDoctors: list.map(d => ({
+            id: d.id,
+            name: `${d.firstName} ${d.lastName}`
+          })),
+          sampleAppointment: appointmentList[0] ? {
+            id: appointmentList[0].id,
+            doctorField: appointmentList[0].doctor,
+            doctorIdField: (appointmentList[0] as any).doctorId,
+            resolvedName: getDoctorName(appointmentList[0])
+          } : 'No appointments',
+          appointmentToTest: appointmentId ? appointmentList.find(a => a.id === appointmentId) : null
+        });
+        
+        if (appointmentId) {
+          const apt = appointmentList.find(a => a.id === appointmentId);
+          if (apt) {
+            console.log('🎯 SPECIFIC APPOINTMENT RESOLUTION:', {
+              appointmentId,
+              doctorField: apt.doctor,
+              doctorIdField: (apt as any).doctorId,
+              resolvedName: getDoctorName(apt),
+              matchingDoctor: list.find(d => d.id === (apt as any).doctorId || d.id === apt.doctor)
+            });
+          }
+        }
+      };
+      
     }, (error) => {
       console.error('❌ AppointmentListPage: Error in doctor listener:', error);
-      // Fallback to empty array on error
       setAvailableDoctors([]);
     });
 
@@ -593,7 +663,7 @@ const AppointmentListPage: React.FC = () => {
       console.log('🔄 AppointmentListPage: Cleaning up doctor listener');
       unsub();
     };
-  }, [userProfile?.clinicId]);
+  }, [userProfile?.clinicId, appointmentList]);
 
   // ✅ Additional setup - placeholder for future enhancements
   useEffect(() => {
@@ -969,10 +1039,26 @@ const AppointmentListPage: React.FC = () => {
         : newAppointment.time;
 
       if (selectedAppointment) {
-        // ✅ UPDATE: Use Firestore service instead of localStorage
+        // ✅ UPDATE: Use Firestore service with proper doctor handling
+        console.log('🔍 APPOINTMENT UPDATE DEBUG:', {
+          selectedDoctorName: newAppointment.doctor,
+          originalAppointment: {
+            id: selectedAppointment.id,
+            doctor: selectedAppointment.doctor,
+            doctorId: (selectedAppointment as any).doctorId
+          }
+        });
+
+        // Find the correct doctor ID from the selected name
+        const selectedDoctor = availableDoctors.find(d => 
+          `${d.firstName} ${d.lastName}` === newAppointment.doctor ||
+          `Dr. ${d.firstName} ${d.lastName}` === newAppointment.doctor
+        );
+
         const updatedData = {
           patient: newAppointment.patient,
-          doctor: newAppointment.doctor,
+          doctor: newAppointment.doctor, // Store the NAME
+          doctorId: selectedDoctor?.id || (selectedAppointment as any).doctorId, // Keep existing ID if doctor not found
           date: newAppointment.date,
           time: newAppointment.time,
           timeSlot: timeSlot,
@@ -988,13 +1074,37 @@ const AppointmentListPage: React.FC = () => {
         setEditDialogOpen(false);
         console.log('✅ Appointment updated via Firebase Data Manager');
       } else {
-        // ✅ CREATE: Use Firebase Data Manager
+        // ✅ CREATE: Use Firebase Data Manager with proper doctor handling
+        console.log('🔍 APPOINTMENT CREATION DEBUG:', {
+          selectedDoctorName: newAppointment.doctor,
+          userProfileId: userProfile.id,
+          availableDoctors: availableDoctors.map(d => ({
+            id: d.id,
+            name: `${d.firstName} ${d.lastName}`
+          }))
+        });
+
+        // Find the correct doctor ID from the selected name
+        const selectedDoctor = availableDoctors.find(d => 
+          `${d.firstName} ${d.lastName}` === newAppointment.doctor ||
+          `Dr. ${d.firstName} ${d.lastName}` === newAppointment.doctor
+        );
+
+        console.log('🎯 SELECTED DOCTOR MATCH:', {
+          searchingFor: newAppointment.doctor,
+          foundDoctor: selectedDoctor ? {
+            id: selectedDoctor.id,
+            firstName: selectedDoctor.firstName,
+            lastName: selectedDoctor.lastName
+          } : 'NOT FOUND'
+        });
+
         const appointmentData = {
           clinicId: userProfile.clinicId,
           patient: newAppointment.patient,
           patientId: 'legacy-patient', // TODO: Get actual patient ID
-          doctor: newAppointment.doctor,
-          doctorId: userProfile.id || 'default-doctor',
+          doctor: newAppointment.doctor, // Store the NAME, not ID
+          doctorId: selectedDoctor?.id || 'unknown-doctor', // Store actual doctor ID for lookup
           date: newAppointment.date,
           time: newAppointment.time,
           timeSlot: timeSlot,
@@ -1188,6 +1298,100 @@ const AppointmentListPage: React.FC = () => {
     );
   }
 
+  // ✅ Helper function to get doctor name from appointment
+  const getDoctorName = (appointment: any): string => {
+    console.log('🔍 Resolving doctor name for appointment:', JSON.stringify({
+      appointmentId: appointment.id,
+      doctorField: appointment.doctor,
+      doctorIdField: appointment.doctorId,
+      availableDoctorsCount: availableDoctors.length,
+      availableDoctorIds: availableDoctors.map(d => d.id),
+      firstAvailableDoctor: availableDoctors[0] ? {
+        id: availableDoctors[0].id,
+        firstName: availableDoctors[0].firstName,
+        lastName: availableDoctors[0].lastName
+      } : null
+    }, null, 2));
+
+    // ✅ PRIORITY 1: Check if doctorField contains a valid Firebase ID first
+    if (appointment.doctor && isFirebaseId(appointment.doctor)) {
+      const doctor = availableDoctors.find(d => d.id === appointment.doctor);
+      if (doctor) {
+        const resolvedName = `${doctor.firstName} ${doctor.lastName}`;
+        console.log('✅ PRIORITY 1 SUCCESS: Resolved doctorField Firebase ID to name:', JSON.stringify({
+          id: appointment.doctor,
+          resolvedName: resolvedName
+        }, null, 2));
+        return resolvedName;
+      } else {
+        console.log('❌ PRIORITY 1 FAILED: doctorField Firebase ID not found:', appointment.doctor);
+      }
+    }
+
+    // ✅ PRIORITY 2: Check if doctorField has a readable name (not an ID)
+    if (appointment.doctor && appointment.doctor.length < 50 && !isFirebaseId(appointment.doctor)) {
+      console.log('✅ PRIORITY 2 SUCCESS: Using doctorField as name:', appointment.doctor);
+      return appointment.doctor;
+    }
+    
+    // ✅ PRIORITY 3: Check doctorId field for Firebase ID resolution (only as fallback)
+    if (appointment.doctorId && isFirebaseId(appointment.doctorId)) {
+      const doctor = availableDoctors.find(d => d.id === appointment.doctorId);
+      if (doctor) {
+        const resolvedName = `${doctor.firstName} ${doctor.lastName}`;
+        console.log('✅ PRIORITY 3 SUCCESS: Resolved doctorId field Firebase ID to name:', JSON.stringify({
+          id: appointment.doctorId,
+          resolvedName: resolvedName
+        }, null, 2));
+        return resolvedName;
+      } else {
+        console.log('❌ PRIORITY 3 FAILED: doctorId field Firebase ID not found:', JSON.stringify({
+          searchingForId: appointment.doctorId,
+          availableDoctorIds: availableDoctors.map(d => d.id),
+          allAvailableDoctors: availableDoctors.map(d => ({
+            id: d.id,
+            firstName: d.firstName,
+            lastName: d.lastName
+          }))
+        }, null, 2));
+      }
+    }
+
+    // ✅ PRIORITY 4: Use doctorId as name if it's not a Firebase ID
+    if (appointment.doctorId && !isFirebaseId(appointment.doctorId)) {
+      console.log('✅ PRIORITY 4 SUCCESS: Using doctorId field as name:', appointment.doctorId);
+      return appointment.doctorId;
+    }
+    
+    // ✅ FALLBACK: Use whatever is in doctor field
+    if (appointment.doctor) {
+      console.log('✅ FALLBACK: Using doctor field as final attempt:', appointment.doctor);
+      return appointment.doctor;
+    }
+    
+    console.log('❌ ALL PRIORITIES FAILED: No doctor information found in appointment');
+    return 'Not Assigned';
+  };
+
+  // ✅ Helper function to detect Firebase IDs
+  const isFirebaseId = (value: string): boolean => {
+    if (!value || typeof value !== 'string') return false;
+    // Firebase IDs are typically 20+ characters, alphanumeric with no spaces
+    return value.length >= 20 && /^[a-zA-Z0-9]+$/.test(value);
+  };
+
+  // ✅ Helper function to get doctor ID from name  
+  const getDoctorIdByName = (doctorName: string): string => {
+    if (!doctorName) return '';
+    
+    const doctor = availableDoctors.find(d => 
+      `${d.firstName} ${d.lastName}` === doctorName ||
+      `Dr. ${d.firstName} ${d.lastName}` === doctorName
+    );
+    
+    return doctor?.id || doctorName; // Fallback to name if not found
+  };
+
   return (
         <Container maxWidth="xl" sx={{ mt: 4, mb: 4, flex: 1, overflow: 'auto' }}>
           {/* Enhanced Header Section */}
@@ -1250,7 +1454,7 @@ const AppointmentListPage: React.FC = () => {
                       fontSize: { xs: '0.9rem', sm: '1.1rem', md: '1.25rem' }
                     }}
                   >
-                    🩺 {t('comprehensive_appointment_scheduling')}
+                    �� {t('comprehensive_appointment_scheduling')}
                   </Typography>
                 </Box>
               </Box>
@@ -1827,6 +2031,7 @@ const AppointmentListPage: React.FC = () => {
                        <TableRow>
                          <TableCell sx={{ fontWeight: 600 }}>✓</TableCell>
                          <TableCell sx={{ fontWeight: 600 }}>{t('patient')}</TableCell>
+                         <TableCell sx={{ fontWeight: 600 }}>{t('doctor')}</TableCell>
                          <TableCell sx={{ fontWeight: 600 }}>{t('appointment_date')}</TableCell>
                          <TableCell sx={{ fontWeight: 600 }}>{t('time_duration')}</TableCell>
                          <TableCell sx={{ fontWeight: 600 }}>{t('type')}</TableCell>
@@ -1840,7 +2045,7 @@ const AppointmentListPage: React.FC = () => {
                      <TableBody>
                                                 {filteredAppointments.length === 0 && getActiveFilterCount() > 0 ? (
                          <TableRow>
-                           <TableCell colSpan={10} sx={{ textAlign: 'center', py: 6 }}>
+                           <TableCell colSpan={11} sx={{ textAlign: 'center', py: 6 }}>
                              <Box>
                                <FilterList sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
                                <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
@@ -1861,7 +2066,7 @@ const AppointmentListPage: React.FC = () => {
                          </TableRow>
                        ) : filteredAppointments.length === 0 ? (
                          <TableRow>
-                           <TableCell colSpan={10} sx={{ textAlign: 'center', py: 6 }}>
+                           <TableCell colSpan={11} sx={{ textAlign: 'center', py: 6 }}>
                              <Box>
                                <CalendarToday sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
                                <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
@@ -1944,6 +2149,33 @@ const AppointmentListPage: React.FC = () => {
                                    <Typography variant="caption" color="text.secondary">
                                      {appointment.phone}
                                    </Typography>
+                                 </Box>
+                               </Box>
+                             </TableCell>
+                             <TableCell>
+                               <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                 <Avatar
+                                   sx={{
+                                     width: 32,
+                                     height: 32,
+                                     mr: 1.5,
+                                     backgroundColor: 'success.main',
+                                     fontSize: '0.75rem',
+                                   }}
+                                 >
+                                   👨‍⚕️
+                                 </Avatar>
+                                 <Box>
+                                                                        <Typography 
+                                       variant="body2" 
+                                       fontWeight={600}
+                                       color="success.main"
+                                     >
+                                       {getDoctorName(appointment)}
+                                     </Typography>
+                                     <Typography variant="caption" color="text.secondary">
+                                       {getDoctorName(appointment) !== 'Not Assigned' ? 'Assigned' : 'Unassigned'}
+                                     </Typography>
                                  </Box>
                                </Box>
                              </TableCell>
@@ -2247,7 +2479,7 @@ const AppointmentListPage: React.FC = () => {
                                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                                      <People sx={{ fontSize: 16, mr: 1, color: 'text.secondary' }} />
                                      <Typography variant="body2" color="text.secondary">
-                                       {appointment.doctor}
+                                       {getDoctorName(appointment)}
                                      </Typography>
                                    </Box>
                                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
@@ -3032,8 +3264,8 @@ const AppointmentListPage: React.FC = () => {
                    >
                      <MenuItem value="">Select doctor…</MenuItem>
                      {availableDoctors.map(d => (
-                       <MenuItem key={d.id} value={d.id}>
-                         {d.firstName} {d.lastName}
+                       <MenuItem key={d.id} value={`${d.firstName} ${d.lastName}`}>
+                         Dr. {d.firstName} {d.lastName}
                        </MenuItem>
                      ))}
                    </Select>
@@ -3281,23 +3513,23 @@ const AppointmentListPage: React.FC = () => {
                      apt.id !== selectedAppointment?.id
                    ) ? (
                      <Alert severity="warning">
-                       <Typography variant="body2">
-                         ⚠️ <strong>{t('time_conflict')}:</strong> {t('doctor_has_appointment_at_time', {
-                           doctor: newAppointment.doctor,
-                           time: newAppointment.time,
-                           date: newAppointment.date
-                         })}
-                       </Typography>
+                                                <Typography variant="body2">
+                           ⚠️ <strong>{t('time_conflict')}:</strong> {t('doctor_has_appointment_at_time', {
+                             doctor: newAppointment.doctor,
+                             time: newAppointment.time,
+                             date: newAppointment.date
+                           })}
+                         </Typography>
                      </Alert>
                    ) : (
                      <Alert severity="success">
-                       <Typography variant="body2">
-                         ✅ <strong>{t('time_available')}:</strong> {t('doctor_is_free_at_time', {
-                           doctor: newAppointment.doctor,
-                           time: newAppointment.time,
-                           date: newAppointment.date
-                         })}
-                       </Typography>
+                                                <Typography variant="body2">
+                           ✅ <strong>{t('time_available')}:</strong> {t('doctor_is_free_at_time', {
+                             doctor: newAppointment.doctor,
+                             time: newAppointment.time,
+                             date: newAppointment.date
+                           })}
+                         </Typography>
                      </Alert>
                    )}
                  </Grid>

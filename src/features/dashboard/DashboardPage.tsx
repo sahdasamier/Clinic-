@@ -1,5 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
+  collection,
+  query,
+  where,
+  onSnapshot,
+  getFirestore
+} from 'firebase/firestore';
+import {
   Box,
   Container,
   Grid,
@@ -229,6 +236,9 @@ const DashboardPage: React.FC = () => {
   const [payments, setPayments] = useState<any[]>([]);
   const [doctors, setDoctors] = useState<SchedulingDoctor[]>([]);
   const [loadingDoctors, setLoadingDoctors] = useState(true);
+  
+  // ✅ Load real doctors from Firebase for accurate matching
+  const [availableDoctors, setAvailableDoctors] = useState<any[]>([]);
 
   // ✅ NEW: Direct Firebase connection test for dashboard
   React.useEffect(() => {
@@ -467,6 +477,130 @@ const DashboardPage: React.FC = () => {
     };
   }, [refreshKey, initialized, authLoading, user, userProfile]);
 
+  // ✅ Real-time Firestore listener for doctors (moved from useMemo)
+  useEffect(() => {
+    const db = getFirestore();
+    const clinicId = userProfile?.clinicId;
+    
+    if (!clinicId) {
+      console.log('🔄 DashboardPage: Waiting for clinicId...');
+      return;
+    }
+
+    console.log('🔄 DashboardPage: Setting up real-time doctor listener for clinic:', clinicId);
+
+    const q = query(
+      collection(db, 'users'),
+      where('clinicId', '==', clinicId),
+      where('role', '==', 'doctor'),
+      where('isActive', '==', true)
+    );
+
+    const unsub = onSnapshot(q, (snap) => {
+      const list = snap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
+      setAvailableDoctors(list);
+      console.log('✅ DashboardPage: Real-time doctors updated:', {
+        count: list.length,
+        doctors: list.map(d => ({
+          id: d.id,
+          firstName: d.firstName || 'Unknown',
+          lastName: d.lastName || 'Doctor',
+          fullName: `${d.firstName || 'Unknown'} ${d.lastName || 'Doctor'}`,
+          email: d.email || 'No email'
+        }))
+      });
+
+      // Add global debug function for dashboard doctor resolution
+      (window as any).debugDashboardDoctorResolution = () => {
+        console.log('🔍 DASHBOARD DOCTOR RESOLUTION DEBUG:', {
+          availableDoctors: list.map(d => ({
+            id: d.id,
+            name: `${d.firstName || 'Unknown'} ${d.lastName || 'Doctor'}`
+          })),
+          sampleAppointmentResolution: appointments.length > 0 ? {
+            appointment: appointments[0],
+            resolvedName: getAppointmentDoctorName(appointments[0])
+          } : 'No appointments'
+        });
+      };
+    }, (error) => {
+      console.error('❌ DashboardPage: Error in doctor listener:', error);
+      setAvailableDoctors([]);
+    });
+
+    return () => {
+      console.log('🔄 DashboardPage: Cleaning up doctor listener');
+      unsub();
+    };
+  }, [userProfile?.clinicId, appointments]);
+
+  // ✅ Helper function to detect Firebase IDs
+  const isFirebaseId = (value: string): boolean => {
+    if (!value || typeof value !== 'string') return false;
+    return value.length >= 20 && /^[a-zA-Z0-9]+$/.test(value);
+  };
+
+  // ✅ Helper function to resolve doctor name from appointment
+  const getAppointmentDoctorName = (appointment: any): string => {
+    console.log('🔍 DashboardPage: Resolving doctor name for appointment:', {
+      appointmentId: appointment.id,
+      doctorField: appointment.doctor,
+      doctorIdField: appointment.doctorId,
+      availableDoctorsCount: availableDoctors.length
+    });
+
+    // ✅ PRIORITY 1: Check if doctorField contains a valid Firebase ID first
+    if (appointment.doctor && isFirebaseId(appointment.doctor)) {
+      const doctor = availableDoctors.find(d => d.id === appointment.doctor);
+      if (doctor) {
+        const resolvedName = `${doctor.firstName || 'Unknown'} ${doctor.lastName || 'Doctor'}`;
+        console.log('✅ DASHBOARD PRIORITY 1 SUCCESS: Resolved doctorField Firebase ID to name:', {
+          id: appointment.doctor,
+          resolvedName: resolvedName
+        });
+        return resolvedName;
+      } else {
+        console.log('❌ DASHBOARD PRIORITY 1 FAILED: doctorField Firebase ID not found:', appointment.doctor);
+      }
+    }
+
+    // ✅ PRIORITY 2: Check if doctorField has a readable name (not an ID)
+    if (appointment.doctor && appointment.doctor.length < 50 && !isFirebaseId(appointment.doctor)) {
+      console.log('✅ DASHBOARD PRIORITY 2 SUCCESS: Using doctorField as name:', appointment.doctor);
+      return appointment.doctor;
+    }
+    
+    // ✅ PRIORITY 3: Check doctorId field for Firebase ID resolution (only as fallback)
+    if (appointment.doctorId && isFirebaseId(appointment.doctorId)) {
+      const doctor = availableDoctors.find(d => d.id === appointment.doctorId);
+      if (doctor) {
+        const resolvedName = `${doctor.firstName || 'Unknown'} ${doctor.lastName || 'Doctor'}`;
+        console.log('✅ DASHBOARD PRIORITY 3 SUCCESS: Resolved doctorId field Firebase ID to name:', {
+          id: appointment.doctorId,
+          resolvedName: resolvedName
+        });
+        return resolvedName;
+      } else {
+        console.log('❌ DASHBOARD PRIORITY 3 FAILED: doctorId field Firebase ID not found:', appointment.doctorId);
+      }
+    }
+
+    // ✅ PRIORITY 4: Use doctorId as name if it's not a Firebase ID
+    if (appointment.doctorId && !isFirebaseId(appointment.doctorId)) {
+      console.log('✅ DASHBOARD PRIORITY 4 SUCCESS: Using doctorId field as name:', appointment.doctorId);
+      return appointment.doctorId;
+    }
+    
+    // ✅ FALLBACK: Use whatever is in doctor field
+    if (appointment.doctor) {
+      console.log('✅ DASHBOARD FALLBACK: Using doctor field as final attempt:', appointment.doctor);
+      return appointment.doctor;
+    }
+    
+    console.log('❌ DASHBOARD ALL PRIORITIES FAILED: No doctor information found in appointment');
+    return 'Not Assigned';
+  };
+
   // Refresh function
   const refreshData = () => {
     if (!initialized || authLoading || !user) {
@@ -585,7 +719,7 @@ const DashboardPage: React.FC = () => {
       specialtyStats
     });
 
-    // Doctor performance - Enhanced matching logic with comprehensive debugging
+    // Doctor performance - Enhanced matching logic with ID-to-name resolution
     console.log('🔧 DOCTOR PERFORMANCE DEBUG - Starting Analysis:', {
       totalDoctors: doctors.length,
       totalAppointments: appointments.length,
@@ -597,306 +731,159 @@ const DashboardPage: React.FC = () => {
       sampleAppointment: appointments[0] ? {
         patient: appointments[0].patient,
         doctor: appointments[0].doctor,
-        doctorName: appointments[0].doctorName,
+        doctorName: (appointments[0] as any).doctorName,
+        doctorId: (appointments[0] as any).doctorId,
         type: appointments[0].type,
         status: appointments[0].status,
-        completed: appointments[0].completed,
-        fullAppointmentObject: appointments[0]
+        completed: appointments[0].completed
       } : 'No appointments',
-      allAppointments: appointments.map(apt => ({
-        id: apt.id,
-        patient: apt.patient,
+      appointmentDoctorFields: appointments.slice(0, 3).map(apt => ({
         doctor: apt.doctor,
-        doctorName: apt.doctorName,
-        doctorId: apt.doctorId,
-        type: apt.type,
-        status: apt.status,
-        completed: apt.completed,
-        date: apt.date
-      })),
-      appointmentDoctorFields: appointments.length > 0 ? Object.keys(appointments[0]).filter(key => key.toLowerCase().includes('doctor')) : [],
-      uniqueAppointmentDoctors: [...new Set(appointments.map(apt => apt.doctor || apt.doctorName).filter(Boolean))],
-      doctorNames: doctors.map(d => d.name),
-      exactMatches: doctors.map(doctor => {
-        const matches = appointments.filter(apt => 
-          apt.doctor === doctor.name || 
-          apt.doctorName === doctor.name ||
-          (apt.doctor && apt.doctor.toLowerCase() === doctor.name.toLowerCase())
-        );
-        return { doctorName: doctor.name, matches: matches.length, matchedApts: matches };
-      }),
-      detailedAppointmentAnalysis: appointments.map(apt => ({
-        id: apt.id,
-        allFields: Object.keys(apt),
-        doctorField: apt.doctor,
-        doctorNameField: apt.doctorName,
-        doctorIdField: apt.doctorId,
-        patientField: apt.patient,
-        patientNameField: apt.patientName,
-        typeField: apt.type,
-        statusField: apt.status
-      })),
-      detailedDoctorAnalysis: doctors.map(doc => ({
-        id: doc.id,
-        name: doc.name,
-        specialty: doc.specialty,
-        allFields: Object.keys(doc)
+        doctorName: (apt as any).doctorName,
+        doctorId: (apt as any).doctorId
       }))
     });
 
-        const doctorPerformance = doctors.map(doctor => {
-      // COMPREHENSIVE MATCHING SYSTEM - Handle all possible data variations
-      const doctorAppointments = appointments.filter(apt => {
-        // Get all possible doctor field variations from appointment
-        const doctorFields = [
-          apt.doctor,
-          apt.doctorName, 
-          apt.doctorId,
-          apt.assignedDoctor,
-          apt.physician,
-          apt.medic
-        ].filter(Boolean);
+    // ✅ Enhanced matching with both ID and name resolution using availableDoctors state
+
+         // Enhanced matching with both ID and name resolution using availableDoctors state
+     console.log('🩺 STARTING DOCTOR PERFORMANCE ANALYSIS:', {
+       totalDoctors: doctors.length,
+       totalAppointments: appointments.length,
+       availableDoctorsLoaded: availableDoctors.length,
+       doctorNames: doctors.map(d => d.name),
+       sampleResolvedAppointments: appointments.slice(0, 2).map(apt => ({
+         patient: apt.patient,
+         originalDoctor: apt.doctor,
+         originalDoctorId: (apt as any).doctorId,
+         resolvedName: getAppointmentDoctorName(apt)
+       }))
+     });
+
+     const doctorPerformance = doctors.map(doctor => {
+       console.log(`🔍 Analyzing doctor: ${doctor.name}`);
+       
+       const doctorAppointments = appointments.filter(appointment => {
+         const appointmentDoctorName = getAppointmentDoctorName(appointment);
         
-        if (doctorFields.length === 0) {
-          console.log(`⚠️ Appointment has NO doctor field:`, {
-            appointmentId: apt.id || 'unknown',
-            allFields: Object.keys(apt),
-            appointmentData: apt
-          });
-          return false;
-        }
+        // Strategy 1: Exact match (case insensitive)
+        const exactMatch = appointmentDoctorName.toLowerCase() === doctor.name.toLowerCase();
         
-        // Get all possible doctor name variations to match against
-        const doctorVariations = [
-          doctor.name,                                          // "Dr. Sahda Ahmed"
-          doctor.name?.replace(/^Dr\.?\s*/i, '').trim(),       // "Sahda Ahmed"  
-          doctor.id?.toString(),                               // doctor ID as string
-          doctor.specialty                                     // "General Practice"
-        ].filter(Boolean).filter(v => typeof v === 'string') as string[];
+        // Strategy 2: Clean name match (remove "Dr." prefixes)
+        const cleanDoctorName = doctor.name.replace(/^Dr\.?\s*/i, '').trim();
+        const cleanAppointmentName = appointmentDoctorName.replace(/^Dr\.?\s*/i, '').trim();
+        const cleanMatch = cleanAppointmentName.toLowerCase() === cleanDoctorName.toLowerCase();
         
-        console.log(`🔍 Matching appointment with doctor fields [${doctorFields.join(', ')}] against doctor variations [${doctorVariations.join(', ')}]`);
+        // Strategy 3: Partial match (contains logic)
+        const partialMatch = appointmentDoctorName.toLowerCase().includes(cleanDoctorName.toLowerCase()) ||
+                           cleanDoctorName.toLowerCase().includes(appointmentDoctorName.toLowerCase());
         
-        // Try all combinations of appointment doctor fields vs doctor variations
-        for (const aptDoctorField of doctorFields) {
-          for (const doctorVariation of doctorVariations) {
-            // Strategy 1: Exact match
-            if (aptDoctorField === doctorVariation) {
-              console.log(`✅ EXACT MATCH: "${aptDoctorField}" === "${doctorVariation}"`);
-              return true;
-            }
-            
-            // Strategy 2: Case-insensitive match
-            if (aptDoctorField.toLowerCase() === doctorVariation.toLowerCase()) {
-              console.log(`✅ CASE INSENSITIVE MATCH: "${aptDoctorField}" ~= "${doctorVariation}"`);
-              return true;
-            }
-            
-            // Strategy 3: Remove common prefixes/suffixes and match
-            const cleanAptDoctor = aptDoctorField
-              .replace(/^(Dr\.?|Doctor|Prof\.?|Mr\.?|Ms\.?|Mrs\.?)\s*/i, '')
-              .replace(/\s*(MD|PhD|M\.D\.|Ph\.D\.)$/i, '')
-              .trim();
-            const cleanDoctorVar = doctorVariation
-              .replace(/^(Dr\.?|Doctor|Prof\.?|Mr\.?|Ms\.?|Mrs\.?)\s*/i, '')
-              .replace(/\s*(MD|PhD|M\.D\.|Ph\.D\.)$/i, '')
-              .trim();
-              
-            if (cleanAptDoctor.toLowerCase() === cleanDoctorVar.toLowerCase()) {
-              console.log(`✅ CLEAN NAME MATCH: "${cleanAptDoctor}" ~= "${cleanDoctorVar}"`);
-              return true;
-            }
-            
-            // Strategy 4: Partial name matching (contains)
-            if (cleanAptDoctor.toLowerCase().includes(cleanDoctorVar.toLowerCase()) ||
-                cleanDoctorVar.toLowerCase().includes(cleanAptDoctor.toLowerCase())) {
-              console.log(`✅ PARTIAL MATCH: "${cleanAptDoctor}" contains "${cleanDoctorVar}"`);
-              return true;
-            }
-            
-            // Strategy 5: Word-by-word matching
-            const aptWords = cleanAptDoctor.toLowerCase().split(/\s+/);
-            const docWords = cleanDoctorVar.toLowerCase().split(/\s+/);
-            
-            // Check if significant words match (ignore common short words)
-            const significantAptWords = aptWords.filter((word: string) => word.length > 2);
-            const significantDocWords = docWords.filter((word: string) => word.length > 2);
-            
-            const matchingWords = significantAptWords.filter((aptWord: string) => 
-              significantDocWords.some((docWord: string) => 
-                aptWord === docWord || aptWord.includes(docWord) || docWord.includes(aptWord)
-              )
-            );
-            
-            if (matchingWords.length >= Math.min(significantAptWords.length, significantDocWords.length)) {
-              console.log(`✅ WORD MATCH: Found ${matchingWords.length} matching words: [${matchingWords.join(', ')}]`);
-              return true;
-            }
-          }
-        }
-        
-        console.log(`❌ NO MATCH found for appointment doctor fields [${doctorFields.join(', ')}] vs doctor "${doctor.name}"`);
-        return false;
-      });
-
-      // Enhanced status checking for completed appointments
-      const completed = doctorAppointments.filter(apt => {
-        return apt.status === 'completed' || 
-               apt.completed === true || 
-               apt.status === 'done' ||
-               apt.status === 'finished' ||
-               apt.status === 'closed' ||
-               apt.status === 'resolved' ||
-               (apt.status === 'confirmed' && apt.completed === true);
-      }).length;
-
-      const pending = doctorAppointments.filter(apt => {
-        return apt.status === 'pending' || 
-               apt.status === 'confirmed' || 
-               apt.status === 'scheduled' ||
-               apt.status === 'booked' ||
-               (!apt.completed && apt.status !== 'completed' && apt.status !== 'cancelled' && apt.status !== 'no-show');
-      }).length;
-
-      const cancelled = doctorAppointments.filter(apt => {
-        return apt.status === 'cancelled' || 
-               apt.status === 'no-show' ||
-               apt.status === 'declined' ||
-               apt.status === 'rejected';
-      }).length;
-
-      const total = doctorAppointments.length;
-      const efficiency = total > 0 ? Math.round((completed / total) * 100) : 0;
-
-      // Detailed debug logging for each doctor
-      if (total > 0 || doctor.name.includes('Dr')) {
-        console.log(`🔍 Doctor Performance - ${doctor.name}:`, {
-          doctorInfo: {
-            name: doctor.name,
-            specialty: doctor.specialty,
-            id: doctor.id
-          },
-          matchedAppointments: total,
-          breakdown: {
-            completed,
-            pending,
-            cancelled,
-            other: total - completed - pending - cancelled
-          },
-          efficiency: `${efficiency}%`,
-          matchedAppointmentDetails: doctorAppointments.map(apt => ({
-            patient: apt.patient || apt.patientName,
-            doctor: apt.doctor || apt.doctorName,
-            type: apt.type,
-            status: apt.status,
-            completed: apt.completed,
-            date: apt.date,
-            id: apt.id
-          }))
-        });
-      }
-
-      return {
-        id: doctor.id,
-        name: doctor.name,
-        avatar: doctor.avatar || doctor.name.split(' ').map(n => n[0]).join('').slice(0, 2),
-        specialty: doctor.specialty,
-        appointments: total,
-        completed,
-        pending,
-        cancelled,
-        efficiency,
-        workingHours: doctor.workingHours || { start: '09:00', end: '17:00' },
-        offDays: doctor.offDays || [],
-      };
-    });
-
-    // FALLBACK: Create "Unknown Doctor" entry for unmatched appointments
-    const totalMatchedAppointments = doctorPerformance.reduce((sum, d) => sum + d.appointments, 0);
-    const unmatchedAppointments = appointments.filter(apt => {
-      // Check if this appointment was matched to any doctor
-      return !doctors.some(doctor => {
-        const doctorFields = [apt.doctor, apt.doctorName, apt.doctorId].filter(Boolean);
-        const doctorVariations = [
-          doctor.name,
-          doctor.name?.replace(/^Dr\.?\s*/i, '').trim(),
-          doctor.id?.toString(),
-          doctor.specialty
-        ].filter(Boolean).filter(v => typeof v === 'string') as string[];
-        
-        return doctorFields.some(field => 
-          doctorVariations.some(variation => 
-            field.toLowerCase().includes(variation.toLowerCase()) ||
-            variation.toLowerCase().includes(field.toLowerCase())
+        // Strategy 4: Word-by-word match (handles names like "jeje" matching "jeje samier")
+        const doctorWords = cleanDoctorName.toLowerCase().split(/\s+/);
+        const appointmentWords = cleanAppointmentName.toLowerCase().split(/\s+/);
+        const wordMatch = doctorWords.some(word => 
+          appointmentWords.some(aptWord => 
+            word.includes(aptWord) || aptWord.includes(word)
           )
-        );
+        ) && (doctorWords.length > 0 && appointmentWords.length > 0);
+        
+        const isMatch = exactMatch || cleanMatch || partialMatch || wordMatch;
+        
+        if (isMatch) {
+          console.log(`✅ MATCH FOUND: "${doctor.name}" ↔️ "${appointmentDoctorName}" (${exactMatch ? 'exact' : cleanMatch ? 'clean' : partialMatch ? 'partial' : 'word'})`);
+        }
+        
+        return isMatch;
       });
-    });
 
-    // Add unmatched appointments as "Unknown Doctor" if any exist
-    if (unmatchedAppointments.length > 0) {
-      const unknownCompleted = unmatchedAppointments.filter(apt => 
+      const completedAppointments = doctorAppointments.filter(apt => 
         apt.status === 'completed' || apt.completed === true
       ).length;
-      const unknownPending = unmatchedAppointments.filter(apt => 
-        apt.status === 'pending' || apt.status === 'confirmed'
+      
+      const pendingAppointments = doctorAppointments.filter(apt => 
+        apt.status === 'confirmed' || apt.status === 'pending' || (!apt.completed && apt.status !== 'completed')
       ).length;
       
-      doctorPerformance.push({
-        id: -1, // Use -1 for unknown doctor ID
-        name: '🔍 Unmatched Appointments',
-        avatar: '❓',
-        specialty: 'Unknown',
-        appointments: unmatchedAppointments.length,
-        completed: unknownCompleted,
-        pending: unknownPending,
-        cancelled: unmatchedAppointments.length - unknownCompleted - unknownPending,
-        efficiency: unmatchedAppointments.length > 0 ? Math.round((unknownCompleted / unmatchedAppointments.length) * 100) : 0,
-        workingHours: { start: '00:00', end: '23:59' },
-        offDays: [],
+      const totalAppointments = doctorAppointments.length;
+      const efficiency = totalAppointments > 0 ? Math.round((completedAppointments / totalAppointments) * 100) : 0;
+
+      console.log(`📊 ${doctor.name}: ${totalAppointments} total, ${completedAppointments} completed, ${pendingAppointments} pending, ${efficiency}% efficiency`);
+
+             return {
+         name: doctor.name,
+         specialty: doctor.specialty,
+         appointments: totalAppointments,
+         completed: completedAppointments,
+         pending: pendingAppointments,
+         efficiency: efficiency
+       };
+    });
+
+    // Track unmatched appointments for debugging
+    const matchedAppointmentIds = new Set();
+    doctors.forEach(doctor => {
+      appointments.forEach(appointment => {
+        const appointmentDoctorName = getAppointmentDoctorName(appointment);
+        const cleanDoctorName = doctor.name.replace(/^Dr\.?\s*/i, '').trim();
+        const cleanAppointmentName = appointmentDoctorName.replace(/^Dr\.?\s*/i, '').trim();
+        
+        const isMatch = appointmentDoctorName.toLowerCase() === doctor.name.toLowerCase() ||
+                       cleanAppointmentName.toLowerCase() === cleanDoctorName.toLowerCase() ||
+                       appointmentDoctorName.toLowerCase().includes(cleanDoctorName.toLowerCase()) ||
+                       cleanDoctorName.toLowerCase().includes(appointmentDoctorName.toLowerCase());
+        
+        if (isMatch) {
+          matchedAppointmentIds.add(appointment.id);
+        }
       });
+    });
+
+    const unmatchedAppointments = appointments.filter(apt => !matchedAppointmentIds.has(apt.id));
+    
+    if (unmatchedAppointments.length > 0) {
+      console.log('⚠️ UNMATCHED APPOINTMENTS:', unmatchedAppointments.map(apt => ({
+        id: apt.id,
+        patient: apt.patient,
+        doctorField: apt.doctor,
+        doctorIdField: (apt as any).doctorId,
+        resolvedName: getAppointmentDoctorName(apt),
+        status: apt.status
+      })));
       
-      console.log('🚨 UNMATCHED APPOINTMENTS FOUND:', {
-        count: unmatchedAppointments.length,
-        appointments: unmatchedAppointments.map(apt => ({
-          id: apt.id,
-          patient: apt.patient || apt.patientName,
-          doctor: apt.doctor || apt.doctorName,
-          doctorId: apt.doctorId,
-          status: apt.status,
-          type: apt.type
-        }))
+      // Add fallback entries for unmatched appointments
+      unmatchedAppointments.forEach(apt => {
+        const resolvedName = getAppointmentDoctorName(apt);
+        if (!doctorPerformance.find(dp => dp.name === resolvedName)) {
+          console.log(`➕ Adding fallback entry for: ${resolvedName}`);
+                     doctorPerformance.push({
+             name: resolvedName,
+             specialty: 'Unknown',
+             appointments: 1,
+             completed: apt.status === 'completed' || apt.completed ? 1 : 0,
+             pending: apt.status !== 'completed' && !apt.completed ? 1 : 0,
+             efficiency: apt.status === 'completed' || apt.completed ? 100 : 0
+           });
+        }
       });
     }
 
-    // Comprehensive debug summary for doctor performance
-    console.log('📊 DOCTOR PERFORMANCE SUMMARY:', {
-      totalDoctors: doctors.length,
-      totalAppointments: appointments.length,
+    console.log('📈 FINAL DOCTOR PERFORMANCE SUMMARY:', {
+      totalDoctorsAnalyzed: doctorPerformance.length,
       doctorsWithAppointments: doctorPerformance.filter(d => d.appointments > 0).length,
-      totalMatchedAppointments,
-      unmatchedAppointmentsCount: unmatchedAppointments.length,
-      performanceData: doctorPerformance.map(d => ({
+      doctorsWithoutAppointments: doctorPerformance.filter(d => d.appointments === 0).length,
+      totalAppointmentsMatched: doctorPerformance.reduce((sum, d) => sum + d.appointments, 0),
+      totalUnmatchedAppointments: unmatchedAppointments.length,
+      detailedResults: doctorPerformance.map(d => ({
         name: d.name,
         specialty: d.specialty,
         appointments: d.appointments,
         completed: d.completed,
         pending: d.pending,
-        efficiency: `${d.efficiency}%`
-      })),
-      dataIntegrity: {
-        appointmentDoctorNames: [...new Set(appointments.map(apt => apt.doctor || apt.doctorName).filter(Boolean))],
-        doctorNames: doctors.map(d => d.name),
-        unmatchedDoctorNames: unmatchedAppointments.map(apt => apt.doctor || apt.doctorName).filter(Boolean),
-        appointmentSample: appointments.slice(0, 3).map(apt => ({
-          id: apt.id,
-          patient: apt.patient || apt.patientName,
-          doctor: apt.doctor || apt.doctorName,
-          status: apt.status,
-          completed: apt.completed,
-          type: apt.type
-        }))
-      }
+        efficiency: d.efficiency + '%'
+      }))
     });
+
+    console.log('📈 FINAL DOCTOR PERFORMANCE:', doctorPerformance);
 
     return {
       // Basic counts
@@ -945,7 +932,7 @@ const DashboardPage: React.FC = () => {
     { name: t('cancelled'), value: cancelledAppointments.length, color: '#f44336' },
       ].filter(item => item.value > 0),
     };
-  }, [appointments, patients, doctors, refreshKey]);
+  }, [appointments, patients, doctors, availableDoctors, refreshKey]);
 
   // Debug function for testing doctor sync (browser console)
   React.useEffect(() => {
@@ -1023,6 +1010,88 @@ const DashboardPage: React.FC = () => {
     value: count,
     color: [colorPalette.primary, colorPalette.success, colorPalette.warning, colorPalette.purple][index % 4],
   }));
+
+  // Add global debug function for doctor performance analytics
+  React.useEffect(() => {
+    (window as any).testDoctorPerformanceAnalytics = () => {
+      console.log('🩺 TESTING DOCTOR PERFORMANCE ANALYTICS - REAL DATA CHECK:');
+      
+      console.log('📋 Raw Data Summary:', {
+        totalAppointments: appointments.length,
+        totalDoctors: doctors.length,
+        availableDoctors: availableDoctors.length,
+        appointmentSample: appointments.slice(0, 2).map(apt => ({
+          id: apt.id,
+          patient: apt.patient,
+          doctorField: apt.doctor,
+          doctorIdField: (apt as any).doctorId,
+          resolvedName: getAppointmentDoctorName(apt),
+          status: apt.status,
+          completed: apt.completed
+        })),
+        doctorSample: doctors.map(d => ({
+          name: d.name,
+          specialty: d.specialty
+        })),
+        availableDoctorsSample: availableDoctors.map(d => ({
+          id: d.id,
+          name: `${d.firstName} ${d.lastName}`
+        }))
+      });
+
+      // Test doctor-appointment matching manually
+      console.log('🔍 MANUAL DOCTOR-APPOINTMENT MATCHING TEST:');
+      doctors.forEach(doctor => {
+        const matchedAppointments = appointments.filter(appointment => {
+          const appointmentDoctorName = getAppointmentDoctorName(appointment);
+          const cleanDoctorName = doctor.name.replace(/^Dr\.?\s*/i, '').trim();
+          const cleanAppointmentName = appointmentDoctorName.replace(/^Dr\.?\s*/i, '').trim();
+          
+          const exactMatch = appointmentDoctorName.toLowerCase() === doctor.name.toLowerCase();
+          const cleanMatch = cleanAppointmentName.toLowerCase() === cleanDoctorName.toLowerCase();
+          const partialMatch = appointmentDoctorName.toLowerCase().includes(cleanDoctorName.toLowerCase()) ||
+                             cleanDoctorName.toLowerCase().includes(appointmentDoctorName.toLowerCase());
+          
+          return exactMatch || cleanMatch || partialMatch;
+        });
+
+        const completed = matchedAppointments.filter(apt => 
+          apt.status === 'completed' || apt.completed === true
+        ).length;
+        
+        const pending = matchedAppointments.filter(apt => 
+          apt.status === 'confirmed' || apt.status === 'pending' || (!apt.completed && apt.status !== 'completed')
+        ).length;
+
+        console.log(`👨‍⚕️ ${doctor.name}:`, {
+          totalAppointments: matchedAppointments.length,
+          completed: completed,
+          pending: pending,
+          efficiency: matchedAppointments.length > 0 ? Math.round((completed / matchedAppointments.length) * 100) : 0,
+          matchedAppointmentDetails: matchedAppointments.map(apt => ({
+            patient: apt.patient,
+            resolvedDoctorName: getAppointmentDoctorName(apt),
+            status: apt.status
+          }))
+        });
+      });
+
+      // Check if dashboard stats match
+      console.log('📊 CURRENT DASHBOARD STATS:', stats.doctorPerformance);
+      
+      return {
+        rawDataSummary: {
+          appointments: appointments.length,
+          doctors: doctors.length,
+          availableDoctors: availableDoctors.length
+        },
+        dashboardStats: stats.doctorPerformance
+      };
+    };
+
+    console.log('🩺 Doctor Performance Analytics debug function available:');
+    console.log('Run: testDoctorPerformanceAnalytics()');
+  }, [appointments, doctors, availableDoctors, stats.doctorPerformance]);
 
   // Show loading spinner while data is loading
   if (dataLoading || loadingDoctors) {
@@ -1413,14 +1482,11 @@ const DashboardPage: React.FC = () => {
                                     fontWeight: 700,
                                   }}
                                 >
-                                  {doctor.avatar}
+                                  {doctor.name.split(' ').map(n => n[0]).join('')}
                                 </Avatar>
                                 <Box>
                                   <Typography variant="body2" fontWeight={700}>
                                     {doctor.name}
-                                  </Typography>
-                                  <Typography variant="caption" color="text.secondary">
-                                    {doctor.workingHours.start} - {doctor.workingHours.end}
                                   </Typography>
                                 </Box>
                               </Box>
@@ -1451,11 +1517,11 @@ const DashboardPage: React.FC = () => {
                                 {doctor.pending || 0}
                               </Typography>
                             </TableCell>
-                            <TableCell>
-                              <Typography variant="body2" fontWeight={600}>
-                                {doctor.efficiency}%
-                              </Typography>
-                            </TableCell>
+                                                          <TableCell>
+                                <Typography variant="body2" fontWeight={600}>
+                                 {doctor.efficiency}%
+                                </Typography>
+                              </TableCell>
                             <TableCell>
                               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                 <LinearProgress
@@ -1544,6 +1610,72 @@ if (typeof window !== 'undefined') {
     FirebaseDataBridge.refreshAll('demo-clinic');
   };
   
+  // 🩺 DOCTOR PERFORMANCE ANALYTICS DEBUG COMMAND
+  (window as any).testDoctorPerformance = async () => {
+    console.log('🩺 TESTING DOCTOR PERFORMANCE ANALYTICS...');
+    
+    try {
+      const testAppointments = await AppointmentService.getAllAppointments('demo-clinic');
+      const testDoctors = await PatientService.searchPatients('demo-clinic', ''); // This might have doctor data
+      
+      console.log('📋 Raw Data:', {
+        appointments: testAppointments.length,
+        appointmentSample: testAppointments.slice(0, 3).map(apt => ({
+          patient: apt.patient,
+          doctor: apt.doctor || (apt as any).doctorName,
+          status: apt.status,
+          completed: apt.completed
+        })),
+        uniqueDoctorNames: [...new Set(testAppointments.map(apt => apt.doctor || (apt as any).doctorName).filter(Boolean))]
+      });
+      
+      alert(`🩺 Doctor Performance Test Results:\n\n📅 Appointments: ${testAppointments.length}\n👩‍⚕️ Unique Doctors: ${[...new Set(testAppointments.map(apt => apt.doctor || (apt as any).doctorName).filter(Boolean))].length}\n\nCheck console for detailed appointment-doctor matching analysis!`);
+      
+    } catch (error) {
+      console.error('❌ Doctor Performance Test Failed:', error);
+      alert(`❌ Test Failed: ${error}`);
+    }
+  };
+  
+  // 🔍 SPECIFIC DOCTOR-APPOINTMENT MATCHING DEBUG COMMAND
+  (window as any).debugDoctorMatching = async () => {
+    console.log('🔍 DEBUGGING DOCTOR-APPOINTMENT MATCHING...');
+    
+    try {
+      const testAppointments = await AppointmentService.getAllAppointments('demo-clinic');
+      const testDoctors = []; // We'll use the doctors from dashboard state
+      
+      console.log('🔍 DETAILED DOCTOR-APPOINTMENT MATCHING ANALYSIS:');
+      console.log('=====================================');
+      
+      // Show all appointment doctor names
+      const appointmentDoctorNames = testAppointments.map(apt => ({
+        patient: apt.patient,
+        doctor: apt.doctor,
+        doctorName: (apt as any).doctorName,
+        doctorId: (apt as any).doctorId,
+        allDoctorFields: Object.keys(apt).filter(k => k.toLowerCase().includes('doctor'))
+      }));
+      
+      console.log('📋 All Appointment Doctor Data:', appointmentDoctorNames);
+      
+      // Show unique doctor names in appointments
+      const uniqueAppointmentDoctors = [...new Set([
+        ...testAppointments.map(apt => apt.doctor),
+        ...testAppointments.map(apt => (apt as any).doctorName),
+        ...testAppointments.map(apt => (apt as any).doctorId)
+      ].filter(Boolean))];
+      
+      console.log('👩‍⚕️ Unique Doctor Names in Appointments:', uniqueAppointmentDoctors);
+      
+      alert(`🔍 Doctor Matching Debug Complete!\n\nAppointments: ${testAppointments.length}\nUnique Doctor Names: ${uniqueAppointmentDoctors.length}\n\nFound doctor names:\n${uniqueAppointmentDoctors.join('\n')}\n\nCheck console for full analysis!`);
+      
+    } catch (error) {
+      console.error('❌ Doctor Matching Debug Failed:', error);
+      alert(`❌ Debug Failed: ${error}`);
+    }
+  };
+  
   // Add console command info
   console.log(`
   🎯 DASHBOARD PAGE DEBUG COMMANDS AVAILABLE:
@@ -1552,6 +1684,8 @@ if (typeof window !== 'undefined') {
   • debugDashboardAndForceRefresh() - Same as above
   • dashboardSync() - Sync data via Firebase Data Bridge  
   • dashboardRefresh() - Force refresh all dashboard data
+  • testDoctorPerformance() - Test doctor-appointment matching 🩺
+  • debugDoctorMatching() - Test doctor-appointment matching 🔍
   
   💡 Type any of these commands in the console to test dashboard data flow!
   `);
