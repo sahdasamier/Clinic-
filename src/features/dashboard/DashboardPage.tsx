@@ -65,7 +65,9 @@ import {
 } from '../appointments/AppointmentListPage';
 import { loadPatientsFromStorage } from '../patients/PatientListPage';
 import { doctorSchedules } from '../DoctorScheduling';
-import { loadPaymentsFromStorage } from '../payments/PaymentListPage';
+import { loadPaymentsFromStorage } from '../../utils/paymentUtils';
+import { firebaseDataManager } from '../../utils/firebaseDataManager';
+import { initializeFirebaseDataManager } from '../../utils/firebaseDataManagerInit';
 import { getDefaultAppointments } from '../../data/mockData';
 import { 
   organizeAppointmentsByCompletion,

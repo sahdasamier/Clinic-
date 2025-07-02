@@ -11,6 +11,8 @@ import './utils/manualSync'
 import './utils/emergencyFix'
 // Import Firebase-friendly sync (replaces aggressive auto-sync)
 import './utils/firebaseFriendlySync'
+// Import Firebase Data Manager for real-time synchronization
+import './utils/firebaseDataManagerInit'
 
 // Initialize EmailJS for email sending functionality
 initializeEmailJS();

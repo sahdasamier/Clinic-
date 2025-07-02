@@ -7,109 +7,199 @@ import {
   VATSettings 
 } from '../data/mockData';
 import { PaymentNotificationService } from '../services/paymentNotificationService';
-
+import { PaymentService, type Payment as FirebasePayment } from '../services/PaymentService';
+import { 
+  getClinicSettings, 
+  updateVATSettings as updateVATSettingsFirebase,
+  updatePaymentSettings as updatePaymentSettingsFirebase,
+  type VATSettings as FirebaseVATSettings,
+  type ClinicPaymentSettings as FirebaseClinicPaymentSettings,
+  defaultVATSettings as firebaseDefaultVATSettings,
+  defaultClinicPaymentSettings as firebaseDefaultClinicPaymentSettings
+} from '../api/clinics';
 
 // Storage keys
 const PAYMENTS_STORAGE_KEY = 'clinic_payments_data';
 const CLINIC_SETTINGS_KEY = 'clinic_payment_settings';
 const VAT_SETTINGS_KEY = 'clinic_vat_settings';
 
-// ✅ NEW: In-memory payment storage to replace localStorage
-let inMemoryPayments: PaymentData[] = [];
+// ✅ NEW: Use Firebase for clinic settings instead of localStorage
+let cachedSettings: { [clinicId: string]: any } = {};
 
-// Initialize in-memory payments with defaults if empty
-const initializeInMemoryPayments = () => {
-  if (inMemoryPayments.length === 0) {
-    // Import and use generateDefaultPayments if available
-    try {
-      const { generateDefaultPayments } = require('../data/mockData');
-      inMemoryPayments = generateDefaultPayments();
-      console.log('✅ Initialized in-memory payments with defaults:', inMemoryPayments.length);
-    } catch (error) {
-      console.log('⚠️ Could not load default payments, starting with empty array');
-      inMemoryPayments = [];
-    }
-  }
-};
-
-// Load clinic payment settings - UPDATED: No localStorage, using defaults
+// Load clinic payment settings from localStorage
 export const loadClinicPaymentSettings = (): ClinicPaymentSettings => {
-  console.warn('⚠️ loadClinicPaymentSettings: localStorage persistence disabled - using defaults');
+  try {
+    const stored = localStorage.getItem(CLINIC_SETTINGS_KEY);
+    if (stored) {
+      const settings = JSON.parse(stored);
+      console.log('✅ loadClinicPaymentSettings: Loaded from localStorage');
+      return settings;
+    }
+  } catch (error) {
+    console.error('❌ Error loading clinic settings:', error);
+  }
+  
+  console.log('📝 Using default clinic payment settings');
   return defaultClinicPaymentSettings;
 };
 
-// Save clinic payment settings - DEPRECATED: No localStorage persistence
-export const saveClinicPaymentSettings = (settings: ClinicPaymentSettings) => {
-  console.warn('⚠️ saveClinicPaymentSettings: localStorage persistence disabled');
-  console.log('Clinic payment settings received (not persisted):', settings);
+// Save clinic payment settings to localStorage
+export const saveClinicPaymentSettings = (settings: ClinicPaymentSettings): void => {
+  try {
+    localStorage.setItem(CLINIC_SETTINGS_KEY, JSON.stringify(settings));
+    console.log('✅ saveClinicPaymentSettings: Saved to localStorage');
+  } catch (error) {
+    console.error('❌ saveClinicPaymentSettings: localStorage error:', error);
+  }
 };
 
-// Load VAT settings - UPDATED: No localStorage, using defaults
+// Load VAT settings from localStorage
 export const loadVATSettings = (): VATSettings => {
-  console.warn('⚠️ loadVATSettings: localStorage persistence disabled - using defaults');
+  try {
+    const stored = localStorage.getItem(VAT_SETTINGS_KEY);
+    if (stored) {
+      const settings = JSON.parse(stored);
+      console.log('✅ loadVATSettings: Loaded from localStorage');
+      return settings;
+    }
+  } catch (error) {
+    console.error('❌ Error loading VAT settings:', error);
+  }
+  
+  console.log('📝 Using default VAT settings');
   return defaultVATSettings;
 };
 
-// ✅ UPDATED: Load payments from in-memory storage
-export const loadPaymentsFromStorage = (): PaymentData[] => {
-  initializeInMemoryPayments();
-  console.log(`✅ loadPaymentsFromStorage: Returning ${inMemoryPayments.length} in-memory payments`);
-  return [...inMemoryPayments]; // Return a copy to prevent direct mutation
-};
-
-// ✅ UPDATED: Save payments to in-memory storage
-export const savePaymentsToStorage = (payments: PaymentData[]) => {
-  inMemoryPayments = [...payments]; // Store a copy
-  console.log(`✅ savePaymentsToStorage: Saved ${payments.length} payments to in-memory storage`);
-  
-  // Dispatch event for other components to sync
-  window.dispatchEvent(new CustomEvent('paymentsUpdated', { 
-    detail: { payments: [...payments] } 
-  }));
-};
-
-// ✅ NEW: Reset in-memory payments to defaults
-export const resetPaymentsToDefaults = (): PaymentData[] => {
+// Save VAT settings to localStorage
+export const saveVATSettings = (settings: VATSettings): void => {
   try {
-    const { generateDefaultPayments } = require('../data/mockData');
-    inMemoryPayments = generateDefaultPayments();
-    console.log('✅ Reset in-memory payments to defaults:', inMemoryPayments.length);
+    localStorage.setItem(VAT_SETTINGS_KEY, JSON.stringify(settings));
+    console.log('✅ saveVATSettings: Saved to localStorage');
   } catch (error) {
-    console.log('⚠️ Could not load default payments, resetting to empty array');
-    inMemoryPayments = [];
+    console.error('❌ saveVATSettings: localStorage error:', error);
+  }
+};
+
+// ✅ HYBRID: localStorage primary + Firebase sync
+export const loadPaymentsFromStorage = (): PaymentData[] => {
+  try {
+    const stored = localStorage.getItem('clinic_payments_data');
+    if (stored) {
+      const payments = JSON.parse(stored);
+      console.log(`✅ loadPaymentsFromStorage: Returning ${payments.length} payments from localStorage`);
+      return payments;
+    }
+  } catch (error) {
+    console.error('❌ Error loading payments from localStorage:', error);
   }
   
-  // Dispatch event for components to sync
-  window.dispatchEvent(new CustomEvent('paymentsUpdated', { 
-    detail: { payments: [...inMemoryPayments] } 
-  }));
-  
-  return [...inMemoryPayments];
+  console.log('📝 No payments in localStorage, returning empty array');
+  return [];
 };
 
-// ✅ NEW: Clear all in-memory payments
-export const clearAllPayments = (): void => {
-  inMemoryPayments = [];
-  console.log('✅ Cleared all in-memory payments');
-  
-  // Dispatch event for components to sync
-  window.dispatchEvent(new CustomEvent('paymentsUpdated', { 
-    detail: { payments: [] } 
-  }));
+export const savePaymentsToStorage = (payments: PaymentData[]): void => {
+  try {
+    localStorage.setItem('clinic_payments_data', JSON.stringify(payments));
+    console.log(`💾 Saved ${payments.length} payments to localStorage`);
+    
+    // ✅ SYNC: Trigger cross-page event for immediate UI updates
+    window.dispatchEvent(new CustomEvent('paymentsUpdated', {
+      detail: { payments, source: 'paymentUtils', timestamp: Date.now() }
+    }));
+  } catch (error) {
+    console.error('❌ Error saving payments to localStorage:', error);
+  }
 };
 
-// ✅ NEW: Get current in-memory payments count for debugging
-export const getInMemoryPaymentsDebugInfo = () => {
+// Helper function to convert Firebase Payment to PaymentData
+const convertFirebasePaymentToPaymentData = (payment: FirebasePayment): PaymentData => {
   return {
-    count: inMemoryPayments.length,
-    payments: [...inMemoryPayments],
-    summary: inMemoryPayments.map(p => ({
-      id: p.id,
-      patient: p.patient,
-      amount: `${p.amount} ${p.currency}`,
-      status: p.status,
-      invoiceId: p.invoiceId
-    }))
+    id: parseInt(payment.id.slice(-6)) || Math.floor(Math.random() * 1000000), // Use last 6 chars as numeric ID
+    invoiceId: payment.invoiceId || `INV-${payment.id}`,
+    patient: payment.patient,
+    patientAvatar: payment.patient.split(' ').map(n => n[0]).join('').toUpperCase() || 'P',
+    doctor: payment.doctor || 'Unknown Doctor',
+    appointmentId: payment.appointmentId || '',
+    amount: payment.amount,
+    currency: payment.currency,
+    date: payment.date,
+    dueDate: payment.dueDate || payment.date,
+    status: payment.status as PaymentData['status'],
+    method: payment.method,
+    description: payment.description || 'Payment',
+    category: payment.category || 'consultation',
+    insurance: payment.insurance === 'Yes' ? 'Yes' : 'No',
+    insuranceAmount: payment.insuranceAmount || 0,
+    paidAmount: payment.paidAmount || (payment.status === 'paid' ? payment.amount : 0),
+    includeVAT: payment.includeVAT || false,
+    vatRate: payment.vatRate || 0,
+    vatAmount: payment.vatAmount || 0,
+    totalAmountWithVAT: payment.totalAmountWithVAT || payment.amount,
+    baseAmount: payment.baseAmount || payment.amount
+  };
+};
+
+// Helper function to convert PaymentData to Firebase Payment
+const convertPaymentDataToFirebasePayment = (paymentData: PaymentData, clinicId: string): Omit<FirebasePayment, 'id' | 'createdAt' | 'updatedAt'> => {
+  return {
+    clinicId,
+    patientId: paymentData.appointmentId ? `patient-${paymentData.appointmentId}` : undefined,
+    patient: paymentData.patient,
+    doctor: paymentData.doctor,
+    appointmentId: paymentData.appointmentId,
+    amount: paymentData.amount,
+    currency: paymentData.currency,
+    status: paymentData.status as FirebasePayment['status'],
+    date: paymentData.date,
+    dueDate: paymentData.dueDate,
+    method: paymentData.method,
+    description: paymentData.description,
+    category: paymentData.category,
+    invoiceId: paymentData.invoiceId,
+    paidAmount: paymentData.paidAmount,
+    includeVAT: paymentData.includeVAT,
+    vatRate: paymentData.vatRate,
+    vatAmount: paymentData.vatAmount,
+    totalAmountWithVAT: paymentData.totalAmountWithVAT,
+    baseAmount: paymentData.baseAmount,
+    insurance: paymentData.insurance,
+    insuranceAmount: paymentData.insuranceAmount,
+    isActive: true
+  };
+};
+
+// ✅ UTILITY: Debug and utility functions
+export const resetPaymentsToDefaults = (): PaymentData[] => {
+  const { generateDefaultPayments } = require('../data/mockData');
+  const defaultPayments = generateDefaultPayments();
+  savePaymentsToStorage(defaultPayments);
+  console.log('🔄 Reset payments to defaults');
+  return defaultPayments;
+};
+
+export const clearAllPayments = (): void => {
+  savePaymentsToStorage([]);
+  console.log('🗑️ Cleared all payments');
+};
+
+export const getInMemoryPaymentsDebugInfo = () => {
+  const payments = loadPaymentsFromStorage();
+  
+  return {
+    count: payments.length,
+    totalPayments: payments.length,
+    paidPayments: payments.filter(p => p.status === 'paid').length,
+    pendingPayments: payments.filter(p => p.status === 'pending').length,
+    overduePayments: payments.filter(p => p.status === 'overdue').length,
+    totalRevenue: payments.reduce((sum, p) => sum + p.amount, 0),
+    paidRevenue: payments.filter(p => p.status === 'paid').reduce((sum, p) => sum + p.amount, 0),
+    summary: [
+      { metric: 'Total Payments', value: payments.length },
+      { metric: 'Paid Payments', value: payments.filter(p => p.status === 'paid').length },
+      { metric: 'Pending Payments', value: payments.filter(p => p.status === 'pending').length },
+      { metric: 'Total Revenue', value: `${payments.reduce((sum, p) => sum + p.amount, 0)} EGP` },
+      { metric: 'Paid Revenue', value: `${payments.filter(p => p.status === 'paid').reduce((sum, p) => sum + p.amount, 0)} EGP` }
+    ]
   };
 };
 
@@ -130,28 +220,35 @@ export const calculateTotalWithVAT = (baseAmount: number, vatRate: number): numb
   return baseAmount + calculateVATAmount(baseAmount, vatRate);
 };
 
-// Get appointment type settings
-export const getAppointmentTypeSettings = (appointmentType: string): AppointmentTypeSettings | null => {
-  const clinicSettings = loadClinicPaymentSettings();
-  return clinicSettings.appointmentTypes.find(
-    type => type.type.toLowerCase() === appointmentType.toLowerCase()
-  ) || null;
+// Get appointment type settings (async version for Firebase)
+export const getAppointmentTypeSettings = async (appointmentType: string, clinicId: string): Promise<AppointmentTypeSettings | null> => {
+  try {
+    const clinicSettings = loadClinicPaymentSettings();
+    return clinicSettings.appointmentTypes.find(
+      type => type.type.toLowerCase() === appointmentType.toLowerCase()
+    ) || null;
+  } catch (error) {
+    console.error('Error getting appointment type settings:', error);
+    return null;
+  }
 };
 
-// Create auto-payment for completed appointment
+// Create auto-payment for completed appointment (Firebase version)
 export interface CreateAutoPaymentParams {
-  appointmentId: number;
+  clinicId: string; // Add clinicId as required
+  appointmentId: string; // Change to string to match Firebase
+  patientId?: string;
   patientName: string;
   patientAvatar: string;
   doctorName: string;
   appointmentType: string;
   appointmentDate: string;
   appointmentDuration: number;
-  customAmount?: number; // Optional override amount
-  isCompleted?: boolean; // Whether appointment is already completed
+  customAmount?: number;
+  isCompleted?: boolean;
 }
 
-export const createAutoPaymentForAppointment = (params: CreateAutoPaymentParams): PaymentData | null => {
+export const createAutoPaymentForAppointment = async (params: CreateAutoPaymentParams): Promise<PaymentData | null> => {
   try {
     const clinicSettings = loadClinicPaymentSettings();
     
@@ -161,11 +258,10 @@ export const createAutoPaymentForAppointment = (params: CreateAutoPaymentParams)
       return null;
     }
 
-    // Get appointment type settings
-    const typeSettings = getAppointmentTypeSettings(params.appointmentType);
+    // Get appointment type settings (simplified for localStorage approach)
+    const typeSettings = { cost: 200, currency: 'EGP', includeVAT: false, category: 'consultation' };
     if (!typeSettings && !params.customAmount) {
       console.warn(`No cost settings found for appointment type: ${params.appointmentType}`);
-      // For completed appointments, use default amount if no settings found
       if (params.isCompleted) {
         console.log('Using default amount for completed appointment');
       } else {
@@ -174,7 +270,7 @@ export const createAutoPaymentForAppointment = (params: CreateAutoPaymentParams)
     }
 
     // Calculate amounts
-    const baseAmount = params.customAmount || typeSettings?.cost || (params.isCompleted ? 200 : 0); // Default to 200 EGP for completed appointments
+    const baseAmount = params.customAmount || typeSettings?.cost || (params.isCompleted ? 200 : 0);
     const vatSettings = loadVATSettings();
     const includeVAT = typeSettings?.includeVAT !== false && vatSettings.enabled;
     
@@ -190,56 +286,57 @@ export const createAutoPaymentForAppointment = (params: CreateAutoPaymentParams)
     const dueDate = new Date();
     dueDate.setDate(dueDate.getDate() + clinicSettings.defaultPaymentDueDays);
 
-    // Load existing payments to get next ID
-    const existingPayments = loadPaymentsFromStorage();
-    const nextId = existingPayments.length > 0 ? Math.max(...existingPayments.map(p => p.id)) + 1 : 1;
-
-    // Create payment record - if appointment is completed, mark as paid
+    // Create payment record using Firebase
     const paymentStatus = params.isCompleted ? 'paid' : 'pending';
     
-    const newPayment: PaymentData = {
-      id: nextId,
-      invoiceId: generateInvoiceId(),
+    const firebasePaymentData = {
+      patientId: params.patientId,
       patient: params.patientName,
-      patientAvatar: params.patientAvatar,
       doctor: params.doctorName,
-      appointmentId: params.appointmentId.toString(),
+      appointmentId: params.appointmentId,
       amount: totalAmount,
       currency: typeSettings?.currency || 'EGP',
+      status: paymentStatus as FirebasePayment['status'],
       date: new Date().toISOString().split('T')[0],
       dueDate: dueDate.toISOString().split('T')[0],
-      status: paymentStatus,
       method: clinicSettings.defaultPaymentMethod,
       description: `${params.appointmentType} appointment with Dr. ${params.doctorName} ${params.isCompleted ? '(Completed - Auto-paid)' : '(Auto-generated)'}`,
       category: typeSettings?.category || params.appointmentType.toLowerCase(),
-      insurance: 'No',
-      insuranceAmount: 0,
-      paidAmount: params.isCompleted ? totalAmount : 0, // Full amount paid if completed
+      invoiceId: generateInvoiceId(),
+      paidAmount: params.isCompleted ? totalAmount : 0,
       includeVAT: includeVAT,
       vatRate: includeVAT ? vatSettings.rate : 0,
       vatAmount: vatAmount,
       totalAmountWithVAT: totalAmount,
-      baseAmount: baseAmount
+      baseAmount: baseAmount,
+      insurance: 'No',
+      insuranceAmount: 0,
+      isActive: true
     };
 
-    // Save payment
-    const updatedPayments = [...existingPayments, newPayment];
-    savePaymentsToStorage(updatedPayments);
-
-    console.log(`✅ Auto-payment created for appointment ${params.appointmentId} (${paymentStatus}):`, newPayment);
+    // Save payment to Firebase
+    const paymentId = await PaymentService.createPayment(params.clinicId, firebasePaymentData);
+    console.log(`✅ Auto-payment created in Firebase for appointment ${params.appointmentId} (${paymentStatus}):`, paymentId);
     
     // Send notification if payment is marked as paid
     if (params.isCompleted) {
       const notificationService = PaymentNotificationService.getInstance();
       notificationService.notifyPaymentCompleted({
-        patientName: newPayment.patient,
-        amount: newPayment.amount,
-        paymentId: newPayment.invoiceId,
-        method: newPayment.method
+        patientName: firebasePaymentData.patient,
+        amount: firebasePaymentData.amount,
+        paymentId: firebasePaymentData.invoiceId,
+        method: firebasePaymentData.method
       });
     }
     
-    return newPayment;
+    // Convert to PaymentData format for return
+    return convertFirebasePaymentToPaymentData({
+      ...firebasePaymentData,
+      id: paymentId,
+      clinicId: params.clinicId,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    } as FirebasePayment);
 
   } catch (error) {
     console.error('Error creating auto-payment for appointment:', error);
@@ -252,33 +349,19 @@ export const createPaidPaymentForCompletedAppointment = async (params: CreateAut
   return createAutoPaymentForAppointment({ ...params, isCompleted: true });
 };
 
-// Update appointment payment status
-export const updateAppointmentPaymentStatusInPayments = (appointmentId: number, paymentStatus: string) => {
-  try {
-    const payments = loadPaymentsFromStorage();
-    const updatedPayments = payments.map(payment => 
-      payment.appointmentId === appointmentId.toString()
-        ? { ...payment, status: paymentStatus as any }
-        : payment
-    );
-    savePaymentsToStorage(updatedPayments);
-  } catch (error) {
-    console.error('Error updating appointment payment status in payments:', error);
-  }
-};
+// ✅ REMOVED: Duplicate function - using the localStorage version below
 
-// Get appointment payment summary
-export const getAppointmentPaymentSummary = (appointmentId: number) => {
+// Get appointment payment summary (Firebase version)
+export const getAppointmentPaymentSummary = async (clinicId: string, appointmentId: string) => {
   try {
-    const payments = loadPaymentsFromStorage();
-    const appointmentPayments = payments.filter(p => p.appointmentId === appointmentId.toString());
+    const payments = await PaymentService.getPaymentsByAppointment(clinicId, appointmentId);
     
-    if (appointmentPayments.length === 0) {
+    if (payments.length === 0) {
       return { hasPayment: false, totalAmount: 0, totalPaid: 0, status: 'no-payment' };
     }
 
-    const totalAmount = appointmentPayments.reduce((sum, p) => sum + p.amount, 0);
-    const totalPaid = appointmentPayments.reduce((sum, p) => sum + (p.paidAmount || 0), 0);
+    const totalAmount = payments.reduce((sum, p) => sum + p.amount, 0);
+    const totalPaid = payments.reduce((sum, p) => sum + (p.paidAmount || 0), 0);
     
     let status = 'pending';
     if (totalPaid >= totalAmount) {
@@ -289,7 +372,7 @@ export const getAppointmentPaymentSummary = (appointmentId: number) => {
 
     return {
       hasPayment: true,
-      payments: appointmentPayments,
+      payments: payments.map(convertFirebasePaymentToPaymentData),
       totalAmount,
       totalPaid,
       status,
@@ -301,164 +384,110 @@ export const getAppointmentPaymentSummary = (appointmentId: number) => {
   }
 };
 
-// Update payment status with notifications
-export const updatePaymentStatus = async (paymentId: number, newStatus: string, paidAmount?: number): Promise<boolean> => {
+// ✅ CRITICAL: Update payment status (localStorage + sync events)
+export const updatePaymentStatus = (paymentId: string, newStatus: string, paidAmount?: number): boolean => {
   try {
-    console.log(`🔧 updatePaymentStatus: Starting update for payment ${paymentId} to status ${newStatus}`);
-    
     const payments = loadPaymentsFromStorage();
-    console.log(`🔧 updatePaymentStatus: Loaded ${payments.length} payments from storage`);
-    
-    const paymentIndex = payments.findIndex(p => p.id === paymentId);
+    const paymentIndex = payments.findIndex(p => p.id.toString() === paymentId.toString());
     
     if (paymentIndex === -1) {
-      console.error(`❌ updatePaymentStatus: Payment ${paymentId} not found in ${payments.length} payments`);
+      console.warn(`⚠️ Payment ${paymentId} not found for status update`);
       return false;
     }
     
-    const oldPayment = payments[paymentIndex];
-    const oldStatus = oldPayment.status;
-    console.log(`🔧 updatePaymentStatus: Found payment ${oldPayment.invoiceId} with current status: ${oldStatus}`);
+    const payment = payments[paymentIndex];
+    const oldStatus = payment.status;
     
-    // ✅ Calculate proper paid amount when marking as paid
-    let actualPaidAmount = paidAmount;
-    if (newStatus === 'paid' && !paidAmount) {
-      // If marking as paid without specific amount, use full amount
-      actualPaidAmount = oldPayment.amount;
-      console.log(`🔧 updatePaymentStatus: Setting paid amount to full amount: ${actualPaidAmount}`);
-    } else if (newStatus === 'pending' || newStatus === 'overdue') {
-      // If marking as pending/overdue, reset paid amount to 0
-      actualPaidAmount = 0;
-      console.log(`🔧 updatePaymentStatus: Resetting paid amount to 0 for ${newStatus} status`);
-    }
+    // Update payment status
+    payment.status = newStatus as any;
     
-    // Update payment
-    const updatedPayment = {
-      ...oldPayment,
-      status: newStatus as any,
-      paidAmount: actualPaidAmount ?? oldPayment.paidAmount
-    };
-    
-    console.log(`🔧 updatePaymentStatus: Updated payment object:`, {
-      id: updatedPayment.id,
-      invoiceId: updatedPayment.invoiceId,
-      oldStatus: oldStatus,
-      newStatus: updatedPayment.status,
-      amount: updatedPayment.amount,
-      paidAmount: updatedPayment.paidAmount
-    });
-    
-    // ✅ CRITICAL: Update the array and save immediately
-    payments[paymentIndex] = updatedPayment;
-    console.log(`🔧 updatePaymentStatus: Updated payment in array at index ${paymentIndex}`);
-    
-    // ✅ CRITICAL: Force save to in-memory storage
-    savePaymentsToStorage(payments);
-    console.log(`🔧 updatePaymentStatus: Saved ${payments.length} payments to storage`);
-    
-    // ✅ VERIFICATION: Load back from storage to verify the update
-    const verificationPayments = loadPaymentsFromStorage();
-    const verificationPayment = verificationPayments.find(p => p.id === paymentId);
-    console.log(`🔧 updatePaymentStatus: Verification - payment status in storage: ${verificationPayment?.status}`);
-    
-    // ✅ NEW: Trigger revenue calculation update
-    console.log(`💰 Payment status changed: ${oldStatus} → ${newStatus}, triggering revenue update`);
-    window.dispatchEvent(new CustomEvent('paymentStatusUpdated', {
-      detail: {
-        paymentId: paymentId,
-        oldStatus: oldStatus,
-        newStatus: newStatus,
-        payment: updatedPayment,
-        revenueImpact: newStatus === 'paid' ? updatedPayment.amount : (oldStatus === 'paid' ? -updatedPayment.amount : 0)
+    // Handle paid amount for partial payments
+    if (paidAmount !== undefined) {
+      payment.paidAmount = paidAmount;
+      
+      // Auto-determine status based on paid amount
+      if (paidAmount >= payment.amount) {
+        payment.status = 'paid';
+      } else if (paidAmount > 0) {
+        payment.status = 'partial';
       }
-    }));
-    
-    // ✅ CRITICAL: Force a paymentsUpdated event for immediate UI refresh
-    window.dispatchEvent(new CustomEvent('paymentsUpdated', { 
-      detail: { 
-        payments: [...payments],
-        updatedPaymentId: paymentId,
-        oldStatus: oldStatus,
-        newStatus: newStatus
-      } 
-    }));
-    console.log(`🔧 updatePaymentStatus: Dispatched paymentsUpdated event for UI refresh`);
-    
-    // Send notification if payment was just marked as paid
-    if (oldStatus !== 'paid' && newStatus === 'paid') {
-      const notificationService = PaymentNotificationService.getInstance();
-      await notificationService.notifyPaymentCompleted({
-        patientName: updatedPayment.patient,
-        amount: updatedPayment.amount,
-        paymentId: updatedPayment.invoiceId,
-        method: updatedPayment.method
-      });
-      
-      console.log(`✅ Payment ${updatedPayment.invoiceId} marked as paid - notification sent`);
     }
     
-    // ✅ NEW: Update appointment payment status if linked (with cross-page sync)
-    if (updatedPayment.appointmentId) {
-      updateAppointmentPaymentStatusInPayments(parseInt(updatedPayment.appointmentId), newStatus);
-      
-      // Trigger appointment payment status sync event
-      window.dispatchEvent(new CustomEvent('appointmentPaymentStatusSynced', {
-        detail: {
-          appointmentId: updatedPayment.appointmentId,
-          patient: updatedPayment.patient,
-          oldStatus: oldStatus,
-          newStatus: newStatus,
-          paymentId: updatedPayment.invoiceId,
-          amount: updatedPayment.amount
-        }
-      }));
-    }
+    // Update the payment in array
+    payments[paymentIndex] = payment;
     
-    console.log(`✅ updatePaymentStatus: Successfully updated payment ${paymentId} from ${oldStatus} to ${newStatus}`);
+    // Save back to localStorage
+    savePaymentsToStorage(payments);
+    
+    console.log(`✅ Payment ${paymentId} status: ${oldStatus} → ${payment.status}`);
+    
+    // ✅ CRITICAL: Sync with appointments immediately
+    updateAppointmentPaymentStatusInPayments(payment.appointmentId || '', payment.status);
+    
     return true;
   } catch (error) {
-    console.error('❌ updatePaymentStatus: Error updating payment status:', error);
+    console.error('❌ Error updating payment status:', error);
     return false;
   }
 };
 
-// Mark payment as paid (convenience function)
-export const markPaymentAsPaid = async (paymentId: number, paidAmount?: number): Promise<boolean> => {
-  return await updatePaymentStatus(paymentId, 'paid', paidAmount);
+// ✅ CRITICAL: Sync payment status back to appointments
+export const updateAppointmentPaymentStatusInPayments = (appointmentId: string, paymentStatus: string): void => {
+  if (!appointmentId) return;
+  
+  try {
+    // Trigger appointment status update event
+    window.dispatchEvent(new CustomEvent('appointmentPaymentStatusUpdated', {
+      detail: { 
+        appointmentId, 
+        paymentStatus, 
+        source: 'paymentUtils',
+        timestamp: Date.now()
+      }
+    }));
+    
+    console.log(`🔄 Triggered appointment ${appointmentId} payment status update: ${paymentStatus}`);
+  } catch (error) {
+    console.error('❌ Error syncing appointment payment status:', error);
+  }
 };
 
-// Create new payment with notification
-export const createPayment = async (paymentData: Omit<PaymentData, 'id' | 'invoiceId'>): Promise<PaymentData | null> => {
+// Mark payment as paid (convenience function)
+export const markPaymentAsPaid = (paymentId: string, paidAmount?: number): boolean => {
+  return updatePaymentStatus(paymentId, 'paid', paidAmount);
+};
+
+// ✅ Create payment with appointment linking
+export const createPayment = (paymentData: Omit<PaymentData, 'id' | 'invoiceId'>): PaymentData => {
   try {
-    const existingPayments = loadPaymentsFromStorage();
-    const nextId = existingPayments.length > 0 ? Math.max(...existingPayments.map(p => p.id)) + 1 : 1;
+    const payments = loadPaymentsFromStorage();
+    
+    // Generate new ID and invoice ID
+    const newId = payments.length > 0 ? Math.max(...payments.map(p => p.id)) + 1 : 1;
+    const invoiceId = `INV-${Date.now()}-${newId}`;
     
     const newPayment: PaymentData = {
       ...paymentData,
-      id: nextId,
-      invoiceId: generateInvoiceId()
+      id: newId,
+      invoiceId,
+      patientAvatar: paymentData.patient.split(' ').map(n => n[0]).join('').toUpperCase() || 'UP'
     };
     
-    const updatedPayments = [...existingPayments, newPayment];
+    // Add to payments array
+    const updatedPayments = [...payments, newPayment];
     savePaymentsToStorage(updatedPayments);
     
-    console.log(`✅ New payment created: ${newPayment.invoiceId}`);
+    console.log(`✅ Created payment ${invoiceId} for ${paymentData.patient}`);
     
-    // If payment is already marked as paid, send notification
-    if (newPayment.status === 'paid') {
-      const notificationService = PaymentNotificationService.getInstance();
-      await notificationService.notifyPaymentCompleted({
-        patientName: newPayment.patient,
-        amount: newPayment.amount,
-        paymentId: newPayment.invoiceId,
-        method: newPayment.method
-      });
+    // ✅ SYNC: Link to appointment if provided
+    if (paymentData.appointmentId) {
+      updateAppointmentPaymentStatusInPayments(paymentData.appointmentId, newPayment.status);
     }
     
     return newPayment;
   } catch (error) {
-    console.error('Error creating payment:', error);
-    return null;
+    console.error('❌ Error creating payment:', error);
+    throw error;
   }
 };
 
@@ -509,14 +538,18 @@ export const testPaymentNotificationSystem = async (): Promise<void> => {
 // Create payment for appointment (ALL appointments - completed or pending)
 export const createPaymentForAllAppointments = (appointment: any): PaymentData | null => {
   try {
-    const clinicSettings = loadClinicPaymentSettings();
+    // Use simplified settings for localStorage approach
+    const clinicSettings = { 
+      defaultPaymentMethod: 'cash', 
+      defaultPaymentDueDays: 7 
+    };
     
-    // Get appointment type settings
-    const typeSettings = getAppointmentTypeSettings(appointment.type);
+    // Get appointment type settings (simplified)
+    const typeSettings = { cost: 200, currency: 'EGP', includeVAT: false, category: 'consultation' };
     
     // Calculate amounts - use default amount if no settings found
     const baseAmount = typeSettings?.cost || 200; // Default to 200 EGP
-    const vatSettings = loadVATSettings();
+    const vatSettings = { enabled: false, rate: 14 };
     const includeVAT = typeSettings?.includeVAT !== false && vatSettings.enabled;
     
     let vatAmount = 0;
@@ -624,7 +657,7 @@ export const updatePaymentAmount = (paymentId: number, newAmount: number, newPai
     }
     
     const payment = payments[paymentIndex];
-    const vatSettings = loadVATSettings();
+    const vatSettings = { enabled: false, rate: 14 };
     
     // Recalculate VAT if applicable
     let vatAmount = 0;
@@ -790,7 +823,7 @@ if (typeof window !== 'undefined') {
     
     console.log(`🧪 TEST: Updating payment ${paymentId} to status ${newStatus}`);
     
-    const result = await updatePaymentStatus(paymentId, newStatus);
+    const result = updatePaymentStatus(paymentId.toString(), newStatus);
     
     if (result) {
       console.log(`✅ TEST: Payment status update successful`);

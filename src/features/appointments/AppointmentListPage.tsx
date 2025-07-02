@@ -105,6 +105,7 @@ import {
   ServiceUtils,
   type Appointment as FirestoreAppointment
 } from '../../services';
+import { createAutoPaymentForAppointment, createPayment } from '../../utils/paymentUtils';
 import { globalDataSync } from '../../utils/globalDataSync';
 import {
   appointmentTypesOptions,
@@ -112,6 +113,7 @@ import {
   type AppointmentData,
 } from '../../data/mockData';
 import FirebaseFriendlySync, { FirebaseDataBridge } from '../../utils/firebaseFriendlySync';
+import { firebaseDataManager, type Appointment as FirebaseAppointment, type Payment as FirebasePayment } from '../../utils/firebaseDataManager';
 
 // Doctor interface for Firestore data
 interface Doctor {
@@ -265,6 +267,22 @@ const StatCard: React.FC<{
   );
 };
 
+// Helper function to map appointment payment status to payment status
+const mapAppointmentPaymentStatusToPaymentStatus = (appointmentPaymentStatus: string): string => {
+  switch (appointmentPaymentStatus) {
+    case 'completed':
+    case 'paid':
+      return 'paid';
+    case 'partial':
+      return 'partial';
+    case 'failed':
+      return 'failed';
+    case 'pending':
+    default:
+      return 'pending';
+  }
+};
+
 // Main Component
 const AppointmentListPage: React.FC = () => {
   const { t } = useTranslation();
@@ -315,6 +333,8 @@ const AppointmentListPage: React.FC = () => {
     paymentStatus: 'pending'
   });
   const [availableDoctors, setAvailableDoctors] = useState<Doctor[]>([]);
+  const [firebaseConnected, setFirebaseConnected] = useState(false);
+  const [firebaseAppointments, setFirebaseAppointments] = useState<FirebaseAppointment[]>([]);
 
   // ✅ NEW: Real-time Firebase data bridge (like localStorage events)
   useEffect(() => {
@@ -377,6 +397,82 @@ const AppointmentListPage: React.FC = () => {
       window.removeEventListener('appointmentPaymentStatusSynced', handleAppointmentPaymentStatusSync as EventListener);
     };
   }, [initialized, authLoading, user, userProfile]);
+
+  // ✅ FIREBASE DATA MANAGER - Real-time synchronization
+  useEffect(() => {
+    if (!userProfile?.clinicId) return;
+
+    console.log('🔥 Initializing Firebase Data Manager for appointments...');
+    
+    // Initialize Firebase Data Manager
+    const dataManager = firebaseDataManager.initialize({
+      clinicId: userProfile.clinicId,
+      userId: userProfile.id
+    });
+    
+    // Listen to real-time appointment updates
+    dataManager.addEventListener('appointments', (firebaseAppointments: FirebaseAppointment[]) => {
+      console.log(`🔥 REALTIME: Received ${firebaseAppointments.length} appointments from Firebase Data Manager`);
+      setFirebaseAppointments(firebaseAppointments);
+      
+      // Convert Firebase appointments to local format for UI compatibility
+      const convertedAppointments = firebaseAppointments.map(convertFirebaseAppointmentToLocal);
+      setAppointmentList(convertedAppointments);
+      setDataLoading(false);
+      setFirebaseConnected(true);
+    });
+    
+    // Listen to payment-related events from other pages
+    const handlePaymentUpdated = (event: CustomEvent) => {
+      const { updates, appointmentId } = event.detail;
+      console.log('🔄 Cross-page event: Payment updated from payments page', event.detail);
+      
+      if (appointmentId) {
+        // Update appointment payment status based on payment status
+        setAppointmentList(prev => prev.map(apt => 
+          apt.id === appointmentId 
+            ? { ...apt, paymentStatus: updates.status || apt.paymentStatus }
+            : apt
+        ));
+      }
+    };
+    
+    // Add browser event listeners
+    window.addEventListener('paymentUpdated', handlePaymentUpdated as EventListener);
+    
+    // Cleanup function
+    return () => {
+      window.removeEventListener('paymentUpdated', handlePaymentUpdated as EventListener);
+      console.log('🧹 Cleaned up Firebase Data Manager listeners');
+    };
+  }, [userProfile?.clinicId]);
+
+  // ✅ HELPER: Convert Firebase appointment to local format
+  const convertFirebaseAppointmentToLocal = (firebaseApt: FirebaseAppointment): Appointment => {
+    return {
+      id: firebaseApt.id,
+      patient: firebaseApt.patient,
+      patientId: firebaseApt.patientId,
+      doctor: firebaseApt.doctor,
+      doctorId: firebaseApt.doctorId,
+      date: firebaseApt.date,
+      time: firebaseApt.time,
+      timeSlot: firebaseApt.timeSlot,
+      type: firebaseApt.type,
+      duration: firebaseApt.duration,
+      priority: firebaseApt.priority,
+      status: firebaseApt.status,
+      paymentStatus: firebaseApt.paymentStatus,
+      location: firebaseApt.location || '',
+      notes: firebaseApt.notes || '',
+      phone: firebaseApt.phone || '',
+      completed: firebaseApt.status === 'completed',
+      isActive: firebaseApt.isActive,
+      clinicId: firebaseApt.clinicId,
+      createdAt: firebaseApt.createdAt || new Date().toISOString(),
+      updatedAt: firebaseApt.updatedAt || new Date().toISOString()
+    };
+  };
 
   // ✅ Listen for browser Firebase events (backup method)
   useEffect(() => {
@@ -673,8 +769,8 @@ const AppointmentListPage: React.FC = () => {
     try {
       const previousStatus = statusEditAppointment.status;
       
-      // ✅ Use Firestore service instead of localStorage
-      await AppointmentService.updateAppointment(statusEditAppointment.id, {
+      // ✅ Use Firebase Data Manager
+      await firebaseDataManager.updateAppointment(statusEditAppointment.id, {
         status: newStatus as any,
         completed: newStatus === 'completed'
       });
@@ -702,25 +798,63 @@ const AppointmentListPage: React.FC = () => {
     if (!paymentStatusEditAppointment) return;
 
     try {
-      // ✅ Use Firestore service instead of localStorage
-      await AppointmentService.updateAppointment(paymentStatusEditAppointment.id, {
-        paymentStatus: newPaymentStatus as any
-      });
+      // ✅ Use Firebase Data Manager with cross-page sync
+      await firebaseDataManager.syncAppointmentPaymentStatus(
+        paymentStatusEditAppointment.id,
+        newPaymentStatus
+      );
       
-      // ✅ NEW: Trigger Firebase Data Bridge refresh to sync across all pages
-      console.log('✅ Triggering Firebase Data Bridge refresh after payment status change');
-      FirebaseDataBridge.refreshAll(userProfile?.clinicId || 'demo-clinic');
-      
-      // ✅ Dispatch custom event for immediate cross-page sync
-      window.dispatchEvent(new CustomEvent('appointmentPaymentStatusChanged', {
-        detail: {
-          appointmentId: paymentStatusEditAppointment.id,
-          patient: paymentStatusEditAppointment.patient,
-          oldStatus: paymentStatusEditAppointment.paymentStatus,
-          newStatus: newPaymentStatus,
-          appointment: paymentStatusEditAppointment
+      // ✅ FIXED: Create or update corresponding payment record in Firebase
+      try {
+        const existingPayments = await PaymentService.getPayments(userProfile?.clinicId || 'demo-clinic');
+        const linkedPayment = existingPayments.find(payment => 
+          payment.patient === paymentStatusEditAppointment.patient
+        );
+
+        // Map appointment payment status to payment status
+        const mappedStatus = mapAppointmentPaymentStatusToPaymentStatus(newPaymentStatus);
+
+        if (linkedPayment) {
+          // Update existing payment status
+          await PaymentService.updatePayment(linkedPayment.id, {
+            status: mappedStatus as any
+          });
+          console.log(`✅ Updated linked payment ${linkedPayment.id} status: ${newPaymentStatus} → ${mappedStatus}`);
+        } else {
+          // Create new payment record if none exists
+          const paymentData = {
+            patient: paymentStatusEditAppointment.patient,
+            patientAvatar: paymentStatusEditAppointment.patient.split(' ').map(n => n[0]).join('').toUpperCase() || 'P',
+            doctor: paymentStatusEditAppointment.doctor || 'Unknown Doctor',
+            amount: 100, // Default amount - should be configurable
+            currency: 'EGP',
+            date: ServiceUtils.getToday(),
+            dueDate: paymentStatusEditAppointment.date,
+            status: mappedStatus === 'cancelled' ? 'pending' : mappedStatus as 'pending' | 'paid',
+            method: 'cash',
+            description: `Payment for ${paymentStatusEditAppointment.type} appointment`,
+            category: 'consultation',
+            insurance: 'No' as 'Yes' | 'No',
+            insuranceAmount: 0,
+            paidAmount: mappedStatus === 'paid' ? 100 : 0,
+            includeVAT: false,
+            vatRate: 0,
+            vatAmount: 0,
+            totalAmountWithVAT: 100,
+            baseAmount: 100,
+            appointmentId: paymentStatusEditAppointment.id
+          };
+
+          const newPayment = createPayment(paymentData);
+          console.log(`✅ Created new payment ${newPayment.invoiceId} with status ${mappedStatus} (from appointment status ${newPaymentStatus})`);
         }
-      }));
+      } catch (paymentError) {
+        console.error('❌ Error syncing payment record:', paymentError);
+        // Don't fail the appointment update if payment sync fails
+      }
+      
+      // ✅ SIMPLIFIED: Firebase handles real-time sync automatically
+      console.log('✅ Payment status updated in Firebase - real-time listeners will handle sync');
       
       // ✅ State updates automatically via real-time listener!
       console.log('✅ Payment status updated via Firestore and synced across pages');
@@ -760,40 +894,61 @@ const AppointmentListPage: React.FC = () => {
     try {
       console.log(`🏥 Creating payment for completed appointment: ${appointment.id}`);
       
-      // ✅ Create payment using Firestore service
-      const paymentData = {
-        patientId: appointment.patientId || 'legacy-patient',
-        patient: appointment.patient,
-        amount: 100, // Default amount - should be configurable
-        date: ServiceUtils.getToday(),
-        invoiceDate: appointment.date,
-        dueDate: appointment.date,
-        status: 'paid' as const,
-        method: 'cash' as const,
-        category: 'consultation' as const,
-        description: `Payment for ${appointment.type} appointment`,
-        currency: 'USD',
-        isActive: true
+      // ✅ Use the new Firebase auto-payment creation function
+      const paymentParams = {
+        clinicId: userProfile!.clinicId,
+        appointmentId: appointment.id,
+        patientId: appointment.patientId,
+        patientName: appointment.patient,
+        patientAvatar: appointment.patient.split(' ').map(n => n[0]).join('').toUpperCase(),
+        doctorName: appointment.doctor,
+        appointmentType: appointment.type,
+        appointmentDate: appointment.date,
+        appointmentDuration: appointment.duration || 30,
+        isCompleted: true
       };
 
-      const paymentId = await PaymentService.createPayment(userProfile!.clinicId, paymentData);
-      
-      // Update appointment payment status to 'paid'
-      await AppointmentService.updateAppointment(appointment.id, {
+      // Update appointment status to completed and create payment
+      await firebaseDataManager.updateAppointment(appointment.id, {
+        status: 'completed',
+        completed: true,
         paymentStatus: 'paid'
       });
 
-      console.log(`✅ Payment ${paymentId} created and marked as PAID`);
-      
-      // ✅ NEW: Trigger Firebase Data Bridge refresh to sync across all pages
-      console.log('✅ Triggering Firebase Data Bridge refresh after appointment completion');
-      FirebaseDataBridge.refreshAll(userProfile?.clinicId || 'demo-clinic');
-      
+      // Create payment in Firebase
+      const paymentData = {
+        clinicId: userProfile!.clinicId,
+        patient: appointment.patient,
+        doctor: appointment.doctor,
+        appointmentId: appointment.id,
+        amount: 200, // Default amount - should be configurable
+        currency: 'EGP',
+        status: 'paid' as const,
+        date: new Date().toISOString().split('T')[0],
+        dueDate: appointment.date,
+        method: 'cash',
+        description: `Payment for completed ${appointment.type} appointment`,
+        category: appointment.type.toLowerCase(),
+        invoiceId: `INV-${Date.now()}-${appointment.id.slice(-6)}`,
+        paidAmount: 200,
+        includeVAT: false,
+        vatRate: 0,
+        vatAmount: 0,
+        totalAmountWithVAT: 200,
+        baseAmount: 200,
+        insurance: 'No' as const,
+        insuranceAmount: 0,
+        isActive: true
+      };
+
+      const paymentId = await firebaseDataManager.createPayment(paymentData);
+      console.log(`✅ Appointment completed and payment ${paymentId} created and marked as PAID`);
+        
       // Dispatch custom event to notify Payment Management about new revenue
       window.dispatchEvent(new CustomEvent('appointmentCompletedWithPayment', {
         detail: {
           appointment,
-          payment: { id: paymentId, ...paymentData },
+          payment: paymentData,
           revenue: paymentData.amount
         }
       }));
@@ -829,12 +984,13 @@ const AppointmentListPage: React.FC = () => {
           paymentStatus: (newAppointment.paymentStatus as 'pending' | 'paid' | 'partial' | 'overdue') || 'pending'
         };
 
-        await AppointmentService.updateAppointment(selectedAppointment.id, updatedData);
+        await firebaseDataManager.updateAppointment(selectedAppointment.id, updatedData);
         setEditDialogOpen(false);
-        console.log('✅ Appointment updated via Firestore service');
+        console.log('✅ Appointment updated via Firebase Data Manager');
       } else {
-        // ✅ CREATE: Use Firestore service instead of localStorage
+        // ✅ CREATE: Use Firebase Data Manager
         const appointmentData = {
+          clinicId: userProfile.clinicId,
           patient: newAppointment.patient,
           patientId: 'legacy-patient', // TODO: Get actual patient ID
           doctor: newAppointment.doctor,
@@ -852,9 +1008,9 @@ const AppointmentListPage: React.FC = () => {
           isActive: true
         };
 
-        await AppointmentService.createAppointment(userProfile.clinicId, appointmentData);
+        await firebaseDataManager.createAppointment(appointmentData);
         setAddAppointmentOpen(false);
-        console.log('✅ Appointment created via Firestore service');
+        console.log('✅ Appointment created via Firebase Data Manager');
         
         // ✅ Trigger global sync to notify other pages
         globalDataSync.triggerAppointmentSync(appointmentData);
@@ -3616,6 +3772,22 @@ const AppointmentListPage: React.FC = () => {
              </Box>
            </MenuItem>
          </Menu>
+
+         {/* Firebase Status */}
+         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+           <Box
+             sx={{
+               width: 8,
+               height: 8,
+               borderRadius: '50%',
+               backgroundColor: firebaseConnected ? 'success.main' : 'error.main'
+             }}
+           />
+           <Typography variant="body2" color="textSecondary">
+             Firebase: {firebaseConnected ? 'Connected' : 'Disconnected'} • 
+             Real-time sync: {firebaseConnected ? 'Active' : 'Inactive'}
+           </Typography>
+         </Box>
         </Container>
   );
 };

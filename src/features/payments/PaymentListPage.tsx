@@ -47,7 +47,7 @@ import {
   Switch,
   CircularProgress,
 } from '@mui/material';
-import { useAuth } from '../../contexts/AuthContext';
+
 import { useUser } from '../../contexts/UserContext';
 import {
   Search,
@@ -77,6 +77,7 @@ import {
   Percent,
   Business,
   Refresh,
+  Sync,
 } from '@mui/icons-material';
 
 import {
@@ -93,6 +94,7 @@ import {
 import { 
   PaymentService,
   AppointmentService,
+  ServiceUtils,
   type Payment as FirestorePayment,
   type Appointment as FirestoreAppointment
 } from '../../services';
@@ -122,14 +124,17 @@ import {
 import { 
   testPaymentNotificationSystem,
   processAllAppointmentsForPayments,
-  loadPaymentsFromStorage as loadPaymentsFromPaymentUtils,
+  loadPaymentsFromStorage,
   savePaymentsToStorage as savePaymentsToPaymentUtils,
   updatePaymentStatus,
-  updatePaymentAmount
+  updatePaymentAmount,
+  createPayment
 } from '../../utils/paymentUtils';
 import VATAdjustmentModal from './components/VATAdjustmentModal';
 import ExpenseManagementModal from './components/ExpenseManagementModal';
 import FirebaseFriendlySync, { FirebaseDataBridge } from '../../utils/firebaseFriendlySync';
+import { firebaseDataManager, type Payment as FirebasePayment } from '../../utils/firebaseDataManager';
+import { useAuth } from '../../hooks/useAuth';
 
 // Doctor interface for Firestore data
 interface Doctor {
@@ -206,22 +211,7 @@ const generateRecentDates = () => {
 
 
 
-// Data persistence utilities
-const STORAGE_KEY = 'clinic_payments_data';
-const PATIENTS_STORAGE_KEY = 'clinic_patients_data';
-
-// ✅ UPDATED: Use shared in-memory payment storage
-export const loadPaymentsFromStorage = (): PaymentData[] => {
-  return loadPaymentsFromPaymentUtils();
-};
-
-const savePaymentsToStorage = (payments: PaymentData[]) => {
-  // ✅ Use shared in-memory payment storage
-  savePaymentsToPaymentUtils(payments);
-  
-  // ✅ Use centralized sync manager for consistent event dispatching
-  paymentSync.save(payments, 'PaymentListPage');
-};
+// Data persistence utilities - removed duplicate functions to avoid conflicts
 
 // StatCard component
 interface StatCardProps {
@@ -411,6 +401,9 @@ const PaymentListPage: React.FC = () => {
   const [payments, setPayments] = useState<PaymentData[]>([]);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
+  const [firebasePayments, setFirebasePayments] = useState<FirebasePayment[]>([]);
+  const [firebaseConnected, setFirebaseConnected] = useState(false);
+  const [processingAppointments, setProcessingAppointments] = useState(false);
   
   // ✅ Initialize invoice form with defaults (no localStorage)
   const [newInvoiceData, setNewInvoiceData] = useState<NewInvoiceData>(() => {
@@ -444,15 +437,41 @@ const PaymentListPage: React.FC = () => {
         const directAppointments = await AppointmentService.getAllAppointments(clinicId);
         console.log(`📋 Direct fetch: Found ${directAppointments.length} appointments`);
         
-        // Update states directly
+        // ✅ FIXED: Convert Firebase payments to PaymentData format properly
         if (directPayments.length > 0) {
-          // Convert Firestore payments to PaymentData format if needed
           const convertedPayments = directPayments.map((payment: any) => ({
-            ...payment,
-            // Add any necessary type conversions here
+            id: parseInt(payment.id) || Math.random() * 1000,
+            invoiceId: payment.invoiceId || `INV-${payment.id}`,
+            patient: payment.patient || 'Unknown Patient',
+            patientAvatar: payment.patient?.split(' ').map((n: string) => n[0]).join('').toUpperCase() || 'UP',
+            doctor: payment.doctor || 'Unknown Doctor',
+            appointmentId: payment.appointmentId || '',
+            amount: payment.amount || 0,
+            currency: payment.currency || 'USD',
+            date: payment.date || ServiceUtils.getToday(),
+            dueDate: payment.dueDate || ServiceUtils.getToday(),
+            status: payment.status || 'pending',
+            method: payment.method || 'cash',
+            description: payment.description || 'Payment',
+            category: payment.category || 'consultation',
+            insurance: 'No',
+            insuranceAmount: 0,
+            paidAmount: payment.paidAmount || (payment.status === 'completed' ? payment.amount : 0),
+            includeVAT: false,
+            vatRate: 0,
+            vatAmount: 0,
+            totalAmountWithVAT: payment.amount || 0,
+            baseAmount: payment.amount || 0
           })) as PaymentData[];
+          
           setPayments(convertedPayments);
-          console.log('✅ Payments state updated');
+          console.log('✅ Payments state updated from Firebase');
+        } else {
+          // No Firebase payments, check if we should load from local storage as fallback
+          console.log('💰 No Firebase payments found, loading from local storage as fallback...');
+          const localPayments = loadPaymentsFromStorage();
+          setPayments(localPayments);
+          console.log(`💰 Loaded ${localPayments.length} payments from local storage`);
         }
         
         if (directAppointments.length > 0) {
@@ -470,14 +489,15 @@ const PaymentListPage: React.FC = () => {
         console.error('❌ PAYMENT DIRECT TEST: Firebase connection failed:', error);
         
         // Fallback to defaults
-        console.log('🔄 Using default payment data as fallback...');
-        setPayments(generateDefaultPayments());
+        console.log('🔄 Using local payment data as fallback...');
+        const localPayments = generateDefaultPayments();
+        setPayments(localPayments);
         setIsDataLoaded(true);
         setDataLoading(false);
         
         // Show error to user
         setTimeout(() => {
-          alert(`❌ Payment Firebase Connection Test Failed:\n\n${error}\n\nUsing sample data. Please check:\n1. Internet connection\n2. Firebase configuration\n3. Browser console for details`);
+          alert(`❌ Payment Firebase Connection Failed:\n\n${error}\n\nUsing local data. Please check:\n1. Internet connection\n2. Firebase configuration\n3. Browser console for details`);
         }, 1000);
       }
     };
@@ -514,112 +534,36 @@ const PaymentListPage: React.FC = () => {
       FirebaseDataBridge.refreshAll(userProfile.clinicId || 'demo-clinic');
     }, 3000);
 
-    // ✅ NEW: Listen for appointment payment status changes from appointment page
-    const handleAppointmentPaymentStatusChange = (event: CustomEvent) => {
-      console.log('💚 Payment page: Appointment payment status changed:', event.detail);
-      
-      // Force refresh to get updated data
-      FirebaseDataBridge.refreshAll(userProfile.clinicId || 'demo-clinic');
-      
-      // Reload payments from storage to sync changes
-      const updatedPayments = loadPaymentsFromPaymentUtils();
-      setPayments(updatedPayments);
-      
-      const { patient, oldStatus, newStatus } = event.detail;
-      console.log(`💰 Payment page synced: ${patient}'s appointment payment status ${oldStatus} → ${newStatus}`);
-    };
+    // ✅ REMOVED: Firebase real-time listener handles this automatically
 
-    // ✅ NEW: Listen for appointment completion events that create payments
-    const handleAppointmentCompletion = (event: CustomEvent) => {
-      console.log('💚 Payment page: Appointment completed with payment:', event.detail);
-      
-      // Force refresh and reload payments
-      FirebaseDataBridge.refreshAll(userProfile.clinicId || 'demo-clinic');
-      const updatedPayments = loadPaymentsFromPaymentUtils();
-      setPayments(updatedPayments);
-      
-      const { appointment, payment, revenue } = event.detail;
-      console.log(`💰 Payment page synced: New payment for ${appointment.patient}, revenue: ${revenue}`);
-    };
+    // ✅ REMOVED: All redundant event handlers - Firebase real-time listener handles updates
 
-    // ✅ NEW: Listen for revenue calculation update requests
-    const handleRevenueCalculationRequest = (event: CustomEvent) => {
-      console.log('💚 Payment page: Revenue calculation requested:', event.detail);
-      
-      // Force refresh payments to recalculate revenue
-      const updatedPayments = loadPaymentsFromPaymentUtils();
-      setPayments(updatedPayments);
-      
-      console.log(`💰 Payment page: Revenue recalculated with ${updatedPayments.length} payments`);
-    };
-
-    // ✅ NEW: Listen for payment status updates for real-time revenue calculation
-    const handlePaymentStatusUpdate = (event: CustomEvent) => {
-      console.log('💚 Payment page: Payment status updated for revenue calculation:', event.detail);
-      
-      // Reload payments and recalculate revenue
-      const updatedPayments = loadPaymentsFromPaymentUtils();
-      setPayments(updatedPayments);
-      
-      const { payment, revenueImpact } = event.detail;
-      console.log(`💰 Payment page: Revenue impact from ${payment.invoiceId}: ${revenueImpact > 0 ? '+' : ''}${revenueImpact} EGP`);
-    };
-
-    // ✅ NEW: Listen for appointment payment status sync events
-    const handleAppointmentPaymentStatusSync = (event: CustomEvent) => {
-      console.log('💚 Payment page: Appointment payment status synced:', event.detail);
-      
-      // Force refresh to sync appointment-linked payments
-      const updatedPayments = loadPaymentsFromPaymentUtils();
-      setPayments(updatedPayments);
-      
-      const { appointmentId, patient, paymentId, newStatus } = event.detail;
-      console.log(`💰 Payment page: Synced appointment ${appointmentId} payment ${paymentId} status to ${newStatus}`);
-    };
-
-    // ✅ NEW: Listen for direct payment updates from in-memory storage
+    // ✅ SIMPLIFIED: Only handle critical payment updates to prevent infinite loop
     const handlePaymentsUpdated = (event: CustomEvent) => {
-      console.log('💚 Payment page: Direct payments updated event received:', event.detail);
+      const { payments: updatedPayments, source } = event.detail;
       
-      const { payments: updatedPayments, updatedPaymentId, oldStatus, newStatus } = event.detail;
+      // ✅ PREVENT INFINITE LOOP: Ignore events from PaymentListPage itself
+      if (source === 'PaymentListPage') {
+        console.log('🔄 Ignoring payment update from self to prevent infinite loop');
+        return;
+      }
+      
+      console.log('💚 Payment page: External payment update received from:', source);
       
       if (updatedPayments && Array.isArray(updatedPayments)) {
         console.log(`🔄 Payment page: Updating UI with ${updatedPayments.length} payments`);
-        
-        // ✅ FORCE: Multiple re-render mechanisms
-        setPayments([...updatedPayments]); // Force new array reference for React re-render
-        forceRerender(); // Force component re-render with key change
-        
-        if (updatedPaymentId) {
-          console.log(`✅ Payment page: Payment ${updatedPaymentId} status updated: ${oldStatus} → ${newStatus}`);
-          
-          // ✅ ADDITIONAL: Show immediate visual feedback
-          setSnackbar({
-            open: true,
-            message: `💰 Payment ${updatedPaymentId} status: ${oldStatus} → ${newStatus}`,
-            severity: 'success'
-          });
-        }
+        setPayments([...updatedPayments]);
+        forceRerender();
       }
     };
 
-    // Add event listeners
-    window.addEventListener('appointmentPaymentStatusChanged', handleAppointmentPaymentStatusChange as EventListener);
-    window.addEventListener('appointmentCompletedWithPayment', handleAppointmentCompletion as EventListener);
-    window.addEventListener('revenueCalculationRequested', handleRevenueCalculationRequest as EventListener);
-    window.addEventListener('paymentStatusUpdated', handlePaymentStatusUpdate as EventListener);
-    window.addEventListener('appointmentPaymentStatusSynced', handleAppointmentPaymentStatusSync as EventListener);
+    // ✅ SIMPLIFIED: Only essential event listeners
     window.addEventListener('paymentsUpdated', handlePaymentsUpdated as EventListener);
 
     // Cleanup on unmount
     return () => {
       console.log('💚 Cleaning up Payment Firebase Data Bridge...');
       unsubscribe();
-      window.removeEventListener('appointmentPaymentStatusChanged', handleAppointmentPaymentStatusChange as EventListener);
-      window.removeEventListener('appointmentCompletedWithPayment', handleAppointmentCompletion as EventListener);
-      window.removeEventListener('revenueCalculationRequested', handleRevenueCalculationRequest as EventListener);
-      window.removeEventListener('paymentStatusUpdated', handlePaymentStatusUpdate as EventListener);
-      window.removeEventListener('appointmentPaymentStatusSynced', handleAppointmentPaymentStatusSync as EventListener);
       window.removeEventListener('paymentsUpdated', handlePaymentsUpdated as EventListener);
     };
   }, [initialized, authLoading, user, userProfile]);
@@ -640,7 +584,7 @@ const PaymentListPage: React.FC = () => {
     setDataLoading(true);
 
     try {
-      const loadedPayments = loadPaymentsFromStorage();
+      const loadedPayments = generateDefaultPayments();
       setPayments(loadedPayments);
       setIsDataLoaded(true);
       console.log('✅ PaymentListPage: Payment data loaded successfully');
@@ -728,39 +672,61 @@ const PaymentListPage: React.FC = () => {
     };
   }, [userProfile?.clinicId]);
 
-  // ✅ Set up Firestore listeners for real-time data
+  // ✅ FIREBASE REAL-TIME STATE - Firebase Data Manager Integration
   useEffect(() => {
-    // Wait for auth to be initialized and user to be available
-    if (!initialized || authLoading || !user || !userProfile) {
-      console.log('🔄 PaymentListPage: Waiting for auth initialization...', {
-        initialized,
-        authLoading,
-        hasUser: !!user,
-        hasUserProfile: !!userProfile
-      });
+    if (!userProfile?.clinicId) {
+      console.log('🔄 PaymentListPage: Waiting for userProfile.clinicId...');
       return;
     }
 
-    console.log('✅ PaymentListPage: Setting up Firestore listeners...');
-    setDataLoading(true);
-
-    const clinicId = userProfile.clinicId;
-
-    // Set up real-time listeners
-    const unsubscribePayments = PaymentService.listenPayments(clinicId, (updatedPayments: FirestorePayment[]) => {
-      console.log(`💰 Payments updated: ${updatedPayments.length} payments`);
-      // For now, use empty array until type mapping is resolved
-      setPayments([]);
-      setIsDataLoaded(true);
+    console.log('🔥 Initializing Firebase Data Manager for payments...');
+    
+    // Initialize Firebase Data Manager
+    const dataManager = firebaseDataManager.initialize({
+      clinicId: userProfile.clinicId,
+      userId: userProfile.id
+    });
+    
+    // Listen to real-time payment updates
+    dataManager.addEventListener('payments', (firebasePayments: FirebasePayment[]) => {
+      console.log(`🔥 REALTIME: Received ${firebasePayments.length} payments from Firebase`);
+      setFirebasePayments(firebasePayments);
+      
+      // Convert Firebase payments to PaymentData format for UI compatibility
+      const convertedPayments = firebasePayments.map(convertFirebasePaymentToPaymentData);
+      setPayments(convertedPayments);
       setDataLoading(false);
+      setFirebaseConnected(true);
+      setIsDataLoaded(true);
     });
-
-    const unsubscribeAppointments = AppointmentService.listenAppointments(clinicId, (updatedAppointments: FirestoreAppointment[]) => {
-      console.log(`📅 Appointments updated: ${updatedAppointments.length} appointments`);
-      setAppointments(updatedAppointments);
-    });
-
-    // Listen for user data clearing
+    
+    // Listen to cross-page events
+    const handlePaymentCreated = (event: CustomEvent) => {
+      console.log('🔄 Cross-page event: Payment created', event.detail);
+      // Data will be updated via real-time listener automatically
+    };
+    
+    const handlePaymentUpdated = (event: CustomEvent) => {
+      console.log('🔄 Cross-page event: Payment updated', event.detail);
+      // Data will be updated via real-time listener automatically
+    };
+    
+    const handleAppointmentPaymentSynced = (event: CustomEvent) => {
+      console.log('🔄 Cross-page event: Appointment payment synced', event.detail);
+      // Show notification
+      setSnackbar({
+        open: true,
+        message: `Payment status synced for appointment ${event.detail.appointmentId}`,
+        severity: 'info'
+      });
+    };
+    
+    // Add browser event listeners
+    window.addEventListener('paymentCreated', handlePaymentCreated as EventListener);
+    window.addEventListener('paymentUpdated', handlePaymentUpdated as EventListener);
+    window.addEventListener('appointmentPaymentSynced', handleAppointmentPaymentSynced as EventListener);
+    
+    // Handle user data clearing
     const handleUserDataCleared = () => {
       // Reset to default state
       setPayments([]);
@@ -772,6 +738,7 @@ const PaymentListPage: React.FC = () => {
         ...defaultNewInvoiceData,
         includeVAT: getVATSettings().defaultIncludeVAT,
         vatRate: getVATSettings().rate,
+        insuranceAmount: '0'
       });
       setSelectedPayment(null);
       setSelectedInvoiceForView(null);
@@ -794,23 +761,21 @@ const PaymentListPage: React.FC = () => {
 
     window.addEventListener('userDataCleared', handleUserDataCleared);
     window.addEventListener('openAddPayment', handleOpenAddPayment);
-
+    
     // Cleanup function
     return () => {
-      console.log('🧹 Cleaning up Firestore listeners...');
-      unsubscribePayments();
-      unsubscribeAppointments();
+      window.removeEventListener('paymentCreated', handlePaymentCreated as EventListener);
+      window.removeEventListener('paymentUpdated', handlePaymentUpdated as EventListener);
+      window.removeEventListener('appointmentPaymentSynced', handleAppointmentPaymentSynced as EventListener);
       window.removeEventListener('userDataCleared', handleUserDataCleared);
       window.removeEventListener('openAddPayment', handleOpenAddPayment);
+      console.log('🧹 Cleaned up payment listeners');
     };
-  }, [initialized, authLoading, user, userProfile]);
+  }, [userProfile?.clinicId]);
 
-  // Save data to localStorage whenever payments change
-  useEffect(() => {
-    if (isDataLoaded && payments.length > 0) {
-      savePaymentsToStorage(payments);
-    }
-  }, [payments, isDataLoaded]);
+  // ✅ REMOVED: This was causing infinite loop
+  // No longer auto-saving to localStorage when payments change
+  // Firebase handles persistence automatically
 
   // Removed: Invoice form localStorage saving - keeping UI state only
 
@@ -984,7 +949,7 @@ const PaymentListPage: React.FC = () => {
       
       // Reload payments after processing appointments
       setTimeout(() => {
-        const updatedPayments = loadPaymentsFromPaymentUtils();
+        const updatedPayments = loadPaymentsFromStorage();
         setPayments(updatedPayments);
         console.log(`🔄 Reloaded ${updatedPayments.length} payments after processing appointments`);
       }, 100);
@@ -1028,167 +993,155 @@ const PaymentListPage: React.FC = () => {
   const pendingAmount = payments.filter(p => p.status === 'pending').reduce((sum, p) => sum + p.amount, 0);
 
   // Event handlers
-  const handleCreatePayment = () => {
-    // Validation
-    if (!newInvoiceData.patient || !newInvoiceData.amount || !newInvoiceData.category || 
-        !newInvoiceData.invoiceDate || !newInvoiceData.dueDate || !newInvoiceData.description || !newInvoiceData.method) {
+  const handleCreatePayment = async () => {
+    try {
+      // Validation
+      if (!newInvoiceData.patient || !newInvoiceData.amount || !newInvoiceData.category || 
+          !newInvoiceData.invoiceDate || !newInvoiceData.dueDate || !newInvoiceData.description || !newInvoiceData.method) {
+        setSnackbar({
+          open: true,
+          message: t('payment.validation.fillAllFields'),
+          severity: 'error'
+        });
+        return;
+      }
+
+      const amount = parseFloat(newInvoiceData.amount);
+      if (isNaN(amount) || amount <= 0) {
+        setSnackbar({
+          open: true,
+          message: t('payment.validation.validAmount'),
+          severity: 'error'
+        });
+        return;
+      }
+
+      // Validate dates
+      const invoiceDate = new Date(newInvoiceData.invoiceDate);
+      const today = new Date();
+      today.setHours(23, 59, 59, 999);
+      
+      if (invoiceDate > today) {
+        setSnackbar({
+          open: true,
+          message: t('payment.validation.futureDateNotAllowed'),
+          severity: 'error'
+        });
+        return;
+      }
+
+      const dueDate = new Date(newInvoiceData.dueDate);
+      if (dueDate <= invoiceDate) {
+        setSnackbar({
+          open: true,
+          message: t('payment.validation.dueDateAfterInvoice'),
+          severity: 'error'
+        });
+        return;
+      }
+
+      const insuranceAmount = parseFloat(newInvoiceData.insuranceAmount) || 0;
+      
+      // Calculate VAT
+      const vatCalculation = calculateVAT(amount, newInvoiceData.vatRate, newInvoiceData.includeVAT);
+
+      // ✅ Use Firebase createPayment function
+      const paymentData: Omit<PaymentData, 'id' | 'invoiceId'> = {
+        patientAvatar: newInvoiceData.patient.split(' ').map((n: string) => n[0]).join('').toUpperCase(),
+        date: newInvoiceData.invoiceDate,
+        status: 'pending',
+        currency: 'EGP',
+        patient: newInvoiceData.patient,
+        doctor: newInvoiceData.doctor,
+        amount: vatCalculation.totalAmountWithVAT,
+        category: newInvoiceData.category,
+        dueDate: newInvoiceData.dueDate,
+        description: newInvoiceData.description,
+        method: newInvoiceData.method,
+        insurance: insuranceAmount > 0 ? 'Yes' : 'No',
+        insuranceAmount: insuranceAmount,
+        includeVAT: vatCalculation.includeVAT,
+        vatRate: vatCalculation.vatRate,
+        vatAmount: vatCalculation.vatAmount,
+        totalAmountWithVAT: vatCalculation.totalAmountWithVAT,
+        baseAmount: vatCalculation.baseAmount,
+        paidAmount: 0,
+        ...(newInvoiceData.appointmentId && { appointmentId: newInvoiceData.appointmentId }),
+      };
+
+      const newPayment = createPayment(paymentData);
+      
+      if (newPayment) {
+        // ✅ Reload payments from localStorage to get updated data
+        const updatedPayments = loadPaymentsFromStorage();
+        setPayments(updatedPayments);
+        
+        setAddPaymentOpen(false);
+        
+        // Reset form
+        setNewInvoiceData({
+          ...defaultNewInvoiceData,
+          includeVAT: vatSettings.defaultIncludeVAT,
+          vatRate: vatSettings.rate,
+          insuranceAmount: '0'
+        });
+
+        setSnackbar({
+          open: true,
+          message: t('payment.success.invoiceCreated', { invoiceId: newPayment.invoiceId, patient: newPayment.patient }),
+          severity: 'success'
+        });
+
+        // Auto-open invoice for viewing
+        setTimeout(() => {
+          setSelectedInvoiceForView(newPayment);
+          setInvoiceDialogOpen(true);
+        }, 1000);
+      } else {
+        throw new Error('Failed to create payment in Firebase');
+      }
+    } catch (error) {
+      console.error('❌ Error creating payment:', error);
       setSnackbar({
         open: true,
-        message: t('payment.validation.fillAllFields'),
+        message: 'Failed to create payment. Please try again.',
         severity: 'error'
       });
-      return;
     }
-
-    const amount = parseFloat(newInvoiceData.amount);
-    if (isNaN(amount) || amount <= 0) {
-      setSnackbar({
-        open: true,
-        message: t('payment.validation.validAmount'),
-        severity: 'error'
-      });
-      return;
-    }
-
-    // Validate dates
-    const invoiceDate = new Date(newInvoiceData.invoiceDate);
-    const today = new Date();
-    today.setHours(23, 59, 59, 999);
-    
-    if (invoiceDate > today) {
-      setSnackbar({
-        open: true,
-        message: t('payment.validation.futureDateNotAllowed'),
-        severity: 'error'
-      });
-      return;
-    }
-
-    const dueDate = new Date(newInvoiceData.dueDate);
-    if (dueDate <= invoiceDate) {
-      setSnackbar({
-        open: true,
-        message: t('payment.validation.dueDateAfterInvoice'),
-        severity: 'error'
-      });
-      return;
-    }
-
-    const insuranceAmount = parseFloat(newInvoiceData.insuranceAmount) || 0;
-    
-    // Calculate VAT
-    const vatCalculation = calculateVAT(amount, newInvoiceData.vatRate, newInvoiceData.includeVAT);
-
-    const newPayment: PaymentData = {
-      id: payments.length > 0 ? Math.max(...payments.map(p => p.id)) + 1 : 1,
-      invoiceId: `INV-2024-${String(payments.length + 1).padStart(3, '0')}`,
-      patientAvatar: newInvoiceData.patient.split(' ').map((n: string) => n[0]).join('').toUpperCase(),
-      date: newInvoiceData.invoiceDate,
-      status: 'pending',
-      currency: 'EGP',
-      patient: newInvoiceData.patient,
-      doctor: newInvoiceData.doctor, // Added doctor field
-      amount: vatCalculation.totalAmountWithVAT, // Total amount including VAT if applicable
-      category: newInvoiceData.category,
-      dueDate: newInvoiceData.dueDate,
-      description: newInvoiceData.description,
-      method: newInvoiceData.method,
-      insurance: insuranceAmount > 0 ? 'Yes' : 'No',
-      insuranceAmount: insuranceAmount,
-      includeVAT: vatCalculation.includeVAT,
-      vatRate: vatCalculation.vatRate,
-      vatAmount: vatCalculation.vatAmount,
-      totalAmountWithVAT: vatCalculation.totalAmountWithVAT,
-      baseAmount: vatCalculation.baseAmount,
-      ...(newInvoiceData.appointmentId && { appointmentId: newInvoiceData.appointmentId }), // Link to appointment if selected
-    };
-
-    setPayments(prev => [newPayment, ...prev]);
-    setAddPaymentOpen(false);
-    
-    // Reset form
-    setNewInvoiceData({
-      ...defaultNewInvoiceData,
-      includeVAT: vatSettings.defaultIncludeVAT,
-      vatRate: vatSettings.rate,
-    });
-
-    setSnackbar({
-      open: true,
-      message: t('payment.success.invoiceCreated', { invoiceId: newPayment.invoiceId, patient: newPayment.patient }),
-      severity: 'success'
-    });
-
-    // Auto-open invoice for viewing
-    setTimeout(() => {
-      setSelectedInvoiceForView(newPayment);
-      setInvoiceDialogOpen(true);
-    }, 1000);
   };
 
   const handleUpdatePaymentStatus = async (paymentId: number, newStatus: string, paidAmount?: number) => {
     try {
-      console.log(`🔄 Updating payment ${paymentId} status to: ${newStatus}`);
+      console.log(`🔄 Firebase: Updating payment ${paymentId} status to: ${newStatus}`);
       
-      // Use the notification-enabled payment status update
-      const success = await updatePaymentStatus(paymentId, newStatus, paidAmount);
+      // ✅ Use the localStorage payment utility function
+      const success = updatePaymentStatus(
+        paymentId.toString(),
+        newStatus,
+        paidAmount
+      );
       
       if (success) {
-        console.log(`✅ Payment status update successful for payment ${paymentId}`);
-        
-        // ✅ IMMEDIATE: Force reload payments from storage
-        const updatedPayments = loadPaymentsFromPaymentUtils();
-        console.log(`🔄 Reloaded ${updatedPayments.length} payments from storage`);
-        
-        // ✅ IMMEDIATE: Update React state
+        // ✅ Reload payments from localStorage to get updated data
+        const updatedPayments = loadPaymentsFromStorage();
         setPayments(updatedPayments);
-        console.log(`✅ React state updated with ${updatedPayments.length} payments`);
         
-        const payment = updatedPayments.find(p => p.id === paymentId);
-        console.log(`🔍 Updated payment found:`, payment?.status);
-        
+        const updatedPayment = updatedPayments.find(p => p.id === paymentId);
         const statusText = t(`payment.status.${newStatus}`);
-        
-        // ✅ NEW: Trigger Firebase Data Bridge refresh to sync across all pages
-        console.log('✅ Triggering Firebase Data Bridge refresh after payment status change');
-        FirebaseDataBridge.refreshAll(userProfile?.clinicId || 'demo-clinic');
-        
-        // ✅ NEW: Dispatch custom event for immediate cross-page sync
-        window.dispatchEvent(new CustomEvent('paymentStatusChanged', {
-          detail: {
-            paymentId: paymentId,
-            patient: payment?.patient,
-            oldStatus: payment?.status, // Note: this might be the old status still
-            newStatus: newStatus,
-            invoiceId: payment?.invoiceId,
-            amount: payment?.amount,
-            payment: payment
-          }
-        }));
-        
-        console.log(`✅ Payment page: Payment ${payment?.invoiceId} status changed to ${newStatus}, synced across pages`);
-        
-        // ✅ FORCE: Trigger component re-render with a small delay
-        setTimeout(() => {
-          const finalPayments = loadPaymentsFromPaymentUtils();
-          setPayments(finalPayments);
-          forceRerender(); // Force UI re-render
-          console.log(`🔄 Final verification: ${finalPayments.length} payments loaded`);
-        }, 100);
-        
-        // ✅ IMMEDIATE: Force re-render right away
-        forceRerender();
         
         setSnackbar({
           open: true,
-          message: `Payment ${payment?.invoiceId} status updated to ${statusText}. ${newStatus === 'paid' ? 'Notifications sent!' : ''}`,
+          message: `Payment ${updatedPayment?.invoiceId} status updated to ${statusText} via Firebase!`,
           severity: 'success'
         });
+        
+        console.log(`✅ Firebase: Payment ${paymentId} status updated successfully`);
       } else {
-        throw new Error('Failed to update payment status');
+        throw new Error('Failed to update payment status in Firebase');
       }
+      
     } catch (error) {
-      console.error('Error updating payment status:', error);
+      console.error('❌ Error updating payment status:', error);
       setSnackbar({
         open: true,
         message: 'Failed to update payment status. Please try again.',
@@ -1309,8 +1262,8 @@ const PaymentListPage: React.FC = () => {
       const success = updatePaymentAmount(selectedPaymentForEdit.id, newAmount, newPaidAmount);
       
       if (success) {
-        // Reload payments
-        const updatedPayments = loadPaymentsFromPaymentUtils();
+        // Reload payments from localStorage
+        const updatedPayments = loadPaymentsFromStorage();
         setPayments(updatedPayments);
         
         setEditPaymentModalOpen(false);
@@ -1365,7 +1318,7 @@ const PaymentListPage: React.FC = () => {
       
       // ✅ FORCE: Immediate UI refresh
       setTimeout(() => {
-        const refreshedPayments = loadPaymentsFromPaymentUtils();
+        const refreshedPayments = loadPaymentsFromStorage();
         setPayments(refreshedPayments);
         forceRerender(); // Force UI re-render
         console.log(`🔄 STATUS MENU: UI refreshed with ${refreshedPayments.length} payments`);
@@ -1568,8 +1521,130 @@ ${formatDate(new Date().toISOString())}
     return `🏥 *${t('payment.reminder.title')}*\n\n${t('payment.reminder.dear')} ${payment.patient},\n\n${t('payment.reminder.friendlyReminder')}:\n\n📋 *${t('invoice.labels.invoiceId')}:* ${payment.invoiceId}\n🗓️ *${t('invoice.labels.serviceDate')}:* ${formatDate(payment.date)}\n📝 *${t('invoice.table.description')}:* ${payment.description}\n💰 *${t('payment.reminder.amountDue')}:* ${payment.currency} ${formatCurrency(amountDue)}\n📅 *${t('invoice.labels.dueDate')}:* ${formatDate(payment.dueDate)}\n\n${t('payment.reminder.pleaseArrange')}\n\n${t('payment.reminder.questions')}\n\n${t('payment.reminder.thankYou')} 🙏`;
   };
 
-  // Show loading spinner while data is loading
-  if (dataLoading) {
+  // ✅ HELPER FUNCTION: Convert Firebase Payment to PaymentData
+  const convertFirebasePaymentToPaymentData = (firebasePayment: FirebasePayment): PaymentData => {
+    return {
+      id: parseInt(firebasePayment.id.slice(-6)) || Math.floor(Math.random() * 1000000),
+      invoiceId: firebasePayment.invoiceId || `INV-${firebasePayment.id}`,
+      patient: firebasePayment.patient,
+      patientAvatar: firebasePayment.patient.split(' ').map(n => n[0]).join('').toUpperCase() || 'P',
+      doctor: firebasePayment.doctor || 'Unknown Doctor',
+      appointmentId: firebasePayment.appointmentId || '',
+      amount: firebasePayment.amount,
+      currency: firebasePayment.currency,
+      date: firebasePayment.date,
+      dueDate: firebasePayment.dueDate || firebasePayment.date,
+      status: firebasePayment.status as PaymentData['status'],
+      method: firebasePayment.method,
+      description: firebasePayment.description || 'Payment',
+      category: firebasePayment.category || 'consultation',
+      insurance: firebasePayment.insurance === 'Yes' ? 'Yes' : 'No',
+      insuranceAmount: firebasePayment.insuranceAmount || 0,
+      paidAmount: firebasePayment.paidAmount || (firebasePayment.status === 'paid' ? firebasePayment.amount : 0),
+      includeVAT: firebasePayment.includeVAT || false,
+      vatRate: firebasePayment.vatRate || 0,
+      vatAmount: firebasePayment.vatAmount || 0,
+      totalAmountWithVAT: firebasePayment.totalAmountWithVAT || firebasePayment.amount,
+      baseAmount: firebasePayment.baseAmount || firebasePayment.amount
+    };
+  };
+
+  // ✅ APPOINTMENT PROCESSING WITH FIREBASE
+  const handleProcessAppointments = async () => {
+    if (!userProfile?.clinicId) return;
+    
+    try {
+      setProcessingAppointments(true);
+      
+      // Get appointments from Firebase
+      const appointments = await firebaseDataManager.getAppointments();
+      console.log(`📋 Processing ${appointments.length} appointments for payments...`);
+      
+      let createdCount = 0;
+      const errors: string[] = [];
+      
+      for (const appointment of appointments) {
+        // Only create payments for completed appointments that don't have payments yet
+        if (appointment.status === 'completed' || appointment.completed) {
+          // Check if payment already exists
+          const existingPayment = firebasePayments.find(p => p.appointmentId === appointment.id);
+          
+          if (!existingPayment) {
+            try {
+              const paymentData = {
+                clinicId: userProfile.clinicId,
+                patient: appointment.patient,
+                doctor: appointment.doctor,
+                appointmentId: appointment.id,
+                amount: 200, // Default amount - should be configurable
+                currency: 'EGP',
+                status: 'paid' as const, // Completed appointments get paid status
+                date: appointment.date,
+                dueDate: appointment.date,
+                method: 'cash',
+                description: `Payment for ${appointment.type} appointment`,
+                category: appointment.type.toLowerCase(),
+                invoiceId: `INV-${Date.now()}-${appointment.id.slice(-6)}`,
+                paidAmount: 200,
+                includeVAT: false,
+                vatRate: 0,
+                vatAmount: 0,
+                totalAmountWithVAT: 200,
+                baseAmount: 200,
+                insurance: 'No' as const,
+                insuranceAmount: 0,
+                isActive: true
+              };
+              
+              await firebaseDataManager.createPayment(paymentData);
+              createdCount++;
+              
+            } catch (error) {
+              console.error(`❌ Error creating payment for appointment ${appointment.id}:`, error);
+              errors.push(`Appointment ${appointment.patient}: ${error}`);
+            }
+          }
+        }
+      }
+      
+      setSnackbar({
+        open: true,
+        message: `✅ Processed ${appointments.length} appointments. Created ${createdCount} payments.${errors.length > 0 ? ` ${errors.length} errors.` : ''}`,
+        severity: createdCount > 0 ? 'success' : 'info'
+      });
+      
+    } catch (error) {
+      console.error('❌ Error processing appointments:', error);
+      setSnackbar({
+        open: true,
+        message: 'Failed to process appointments',
+        severity: 'error'
+      });
+    } finally {
+      setProcessingAppointments(false);
+    }
+  };
+
+  // Add Firebase connection indicator
+  const renderFirebaseStatus = () => (
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+      <Box
+        sx={{
+          width: 8,
+          height: 8,
+          borderRadius: '50%',
+          backgroundColor: firebaseConnected ? 'success.main' : 'error.main'
+        }}
+      />
+      <Typography variant="body2" color="textSecondary">
+        Firebase: {firebaseConnected ? 'Connected' : 'Disconnected'} • 
+        Real-time sync: {firebaseConnected ? 'Active' : 'Inactive'}
+      </Typography>
+    </Box>
+  );
+
+  // Show loading state while connecting to Firebase
+  if (dataLoading && !firebaseConnected) {
     return (
       <Container maxWidth="xl" sx={{ mt: 4, mb: 4, flex: 1, overflow: 'auto' }}>
         <Box
@@ -1584,18 +1659,23 @@ ${formatDate(new Date().toISOString())}
         >
           <CircularProgress size={60} />
           <Typography variant="h6" color="textSecondary">
-            Loading payment data...
+            🔥 Connecting to Firebase...
           </Typography>
           <Typography variant="body2" color="textSecondary">
-            Please wait while we load your payment information
+            Setting up real-time payment synchronization
           </Typography>
         </Box>
       </Container>
     );
   }
 
+
+
   return (
     <Container key={`payment-list-${forceRenderKey}`} maxWidth="xl" sx={{ mt: 4, mb: 4, flex: 1, overflow: 'auto', direction: isRTL ? 'rtl' : 'ltr' }}>
+          {/* Firebase Status */}
+          {renderFirebaseStatus()}
+          
           {/* Header Section */}
           <Box sx={{ 
             mb: 4, 
@@ -1737,22 +1817,13 @@ ${formatDate(new Date().toISOString())}
                     </Box>
                   </Button>
                   
-                  {/* ✅ NEW: Manual Refresh Button for Testing */}
+                  {/* ✅ NEW: Sync Appointments Button */}
                   <Button
                     variant="outlined"
                     size="large"
-                    startIcon={<Refresh />}
-                    onClick={() => {
-                      console.log('🔄 MANUAL REFRESH: Forcing payment data refresh...');
-                      const refreshedPayments = loadPaymentsFromPaymentUtils();
-                      setPayments(refreshedPayments);
-                      console.log(`✅ MANUAL REFRESH: Loaded ${refreshedPayments.length} payments`);
-                      setSnackbar({
-                        open: true,
-                        message: `🔄 Payment data refreshed! ${refreshedPayments.length} payments loaded.`,
-                        severity: 'info'
-                      });
-                    }}
+                    startIcon={<Sync />}
+                    onClick={handleProcessAppointments}
+                    disabled={processingAppointments}
                     sx={{ 
                       borderRadius: 3,
                       px: { xs: 3, md: 4 },
@@ -1766,7 +1837,7 @@ ${formatDate(new Date().toISOString())}
                       textTransform: 'none',
                       fontSize: { xs: '0.9rem', md: '1rem' },
                       flex: { xs: 1, sm: 'none' },
-                      minWidth: { xs: 'auto', sm: 100 },
+                      minWidth: { xs: 'auto', sm: 140 },
                       whiteSpace: 'nowrap',
                       textOverflow: 'ellipsis',
                       overflow: 'hidden',
@@ -1778,7 +1849,12 @@ ${formatDate(new Date().toISOString())}
                       transition: 'all 0.3s ease'
                     }}
                   >
-                    🔄 Refresh
+                    <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                      {processingAppointments ? 'Processing...' : 'Sync Appointments'}
+                    </Box>
+                    <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
+                      {processingAppointments ? 'Processing...' : 'Sync'}
+                    </Box>
                   </Button>
               </Box>
             </Box>
@@ -3190,17 +3266,17 @@ ${formatDate(new Date().toISOString())}
                onClick={() => {
                  const created = processAllAppointmentsForPayments(appointments);
                  
-                 // Reload payments
-                 setTimeout(() => {
-                   const updatedPayments = loadPaymentsFromPaymentUtils();
-                   setPayments(updatedPayments);
-                   
-                   setSnackbar({
-                     open: true,
-                     message: `🔄 Processed ${appointments.length} appointments, ${created.length} payments created/updated!`,
-                     severity: 'success'
-                   });
-                 }, 100);
+                                 // Reload payments
+                setTimeout(() => {
+                  const updatedPayments = loadPaymentsFromStorage();
+                  setPayments(updatedPayments);
+                  
+                  setSnackbar({
+                    open: true,
+                    message: `🔄 Processed ${appointments.length} appointments, ${created.length} payments created/updated!`,
+                    severity: 'success'
+                  });
+                }, 100);
                }}
                sx={{
                  position: 'fixed',
@@ -3260,6 +3336,9 @@ ${formatDate(new Date().toISOString())}
                💰
              </Button>
            </Tooltip>
+
+           {/* Firebase Status */}
+           {renderFirebaseStatus()}
          </Container>
  );
 };
@@ -3318,3 +3397,5 @@ if (typeof window !== 'undefined') {
   💡 Type any of these commands in the console to test payment data flow!
   `);
 }
+
+// ✅ REMOVED: This code was outside the component and causing compilation errors
