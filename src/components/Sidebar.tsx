@@ -109,8 +109,7 @@ const navLinks: NavLink[] = [
     icon: <Schedule />, 
     permission: 'doctor_scheduling',
     minLevel: 'read',
-    group: 'advanced',
-    badge: 'Pro'
+    group: 'advanced'
   },
   { 
     to: '/settings', 

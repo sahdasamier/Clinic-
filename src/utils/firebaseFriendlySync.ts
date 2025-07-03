@@ -73,6 +73,18 @@ export class FirebaseFriendlySync {
    * ✅ NEW: Refresh all pages data from Firebase (minimal reads)
    */
   static async refreshAllPagesData(clinicId = 'demo-clinic') {
+    // Check authentication before proceeding
+    try {
+      const { auth } = await import('../api/firebase');
+      if (!auth.currentUser) {
+        console.log('💚 FirebaseFriendlySync: No authenticated user, cannot refresh data');
+        return null;
+      }
+    } catch (error) {
+      console.warn('⚠️ FirebaseFriendlySync: Auth check failed during refresh:', error);
+      return null;
+    }
+    
     try {
       console.log('💚 Refreshing data for all pages...');
       
@@ -109,17 +121,47 @@ export class FirebaseFriendlySync {
   static init() {
     console.log('💚 FirebaseFriendlySync: Initializing (Free Tier Optimized with Real-Time Communication)...');
     
-    // Only run initial sync once when app loads
-    if (!this.hasRunInitialSync) {
-      setTimeout(() => {
-        this.runInitialSyncOnce();
-      }, 5000);
-    }
+    // Wait for authentication before running sync
+    this.waitForAuthAndInit();
 
     // Much less frequent monitoring - every 5 minutes instead of 10 seconds
     setInterval(() => {
       this.gentleCheck();
     }, 300000); // 5 minutes
+  }
+
+  /**
+   * Wait for Firebase authentication before initializing sync
+   */
+  static async waitForAuthAndInit() {
+    try {
+      const { auth } = await import('../api/firebase');
+      
+      // Wait for auth state to be determined
+      const waitForAuth = new Promise((resolve) => {
+        const unsubscribe = auth.onAuthStateChanged((user) => {
+          unsubscribe();
+          resolve(user);
+        });
+      });
+      
+      const user = await waitForAuth;
+      
+      if (user) {
+        console.log('💚 FirebaseFriendlySync: User authenticated, proceeding with sync');
+        
+        // Only run initial sync once when app loads and user is authenticated
+        if (!this.hasRunInitialSync) {
+          setTimeout(() => {
+            this.runInitialSyncOnce();
+          }, 2000); // Reduced delay since auth is confirmed
+        }
+      } else {
+        console.log('💚 FirebaseFriendlySync: No authenticated user, skipping sync');
+      }
+    } catch (error) {
+      console.warn('⚠️ FirebaseFriendlySync: Auth check failed:', error);
+    }
   }
 
   /**
@@ -152,25 +194,36 @@ export class FirebaseFriendlySync {
    * Gentle check using cached data to minimize Firebase reads
    */
   static async gentleCheck() {
-    const now = Date.now();
-    
-    // Use cache if recent
-    if (now - this.cache.lastCacheTime < this.cache.cacheTimeout) {
-      console.log('💚 FirebaseFriendlySync: Using cached data (no Firebase reads)');
-      
-      if (this.cache.appointmentCount > 0 && this.cache.patientCount === 0) {
-        console.log('💚 Cached data shows sync needed, but respecting cooldown...');
-        // Only proceed if cooldown has passed
-        if (now - this.lastSyncTime > this.syncCooldown) {
-          await this.checkAndSyncIfNeeded('demo-clinic');
-        }
+    try {
+      // Check if user is authenticated first
+      const { auth } = await import('../api/firebase');
+      if (!auth.currentUser) {
+        console.log('💚 FirebaseFriendlySync: No authenticated user, skipping gentle check');
+        return;
       }
-      return;
-    }
 
-    // Light check - only if cooldown has passed
-    if (now - this.lastSyncTime > this.syncCooldown) {
-      await this.checkAndSyncIfNeeded('demo-clinic');
+      const now = Date.now();
+      
+      // Use cache if recent
+      if (now - this.cache.lastCacheTime < this.cache.cacheTimeout) {
+        console.log('💚 FirebaseFriendlySync: Using cached data (no Firebase reads)');
+        
+        if (this.cache.appointmentCount > 0 && this.cache.patientCount === 0) {
+          console.log('💚 Cached data shows sync needed, but respecting cooldown...');
+          // Only proceed if cooldown has passed
+          if (now - this.lastSyncTime > this.syncCooldown) {
+            await this.checkAndSyncIfNeeded('demo-clinic');
+          }
+        }
+        return;
+      }
+
+      // Light check - only if cooldown has passed
+      if (now - this.lastSyncTime > this.syncCooldown) {
+        await this.checkAndSyncIfNeeded('demo-clinic');
+      }
+    } catch (error) {
+      console.warn('⚠️ FirebaseFriendlySync: Gentle check failed:', error);
     }
   }
 
@@ -179,6 +232,18 @@ export class FirebaseFriendlySync {
    */
   static async checkAndSyncIfNeeded(clinicId = 'demo-clinic') {
     if (this.isRunning) return null;
+    
+    // Check authentication before proceeding
+    try {
+      const { auth } = await import('../api/firebase');
+      if (!auth.currentUser) {
+        console.log('💚 FirebaseFriendlySync: No authenticated user, cannot proceed with sync');
+        return null;
+      }
+    } catch (error) {
+      console.warn('⚠️ FirebaseFriendlySync: Auth check failed:', error);
+      return null;
+    }
     
     const now = Date.now();
     if (now - this.lastSyncTime < this.syncCooldown) {
@@ -425,6 +490,26 @@ export const FirebaseDataBridge = {
 export const testFirebaseSync = async () => {
   console.log('🧪 Running comprehensive Firebase sync test...');
   
+  // Check authentication first
+  try {
+    const { auth } = await import('../api/firebase');
+    if (!auth.currentUser) {
+      const message = '❌ Authentication Required:\n\nPlease log in to run Firebase sync tests.\nTests require authenticated access to Firebase.';
+      console.error(message);
+      if (typeof window !== 'undefined') {
+        alert(message);
+      }
+      return { error: 'Not authenticated' };
+    }
+    console.log('✅ User authenticated:', auth.currentUser.email);
+  } catch (authError) {
+    console.error('❌ Auth check failed:', authError);
+    if (typeof window !== 'undefined') {
+      alert(`❌ Authentication Error: ${authError}`);
+    }
+    return { error: 'Auth check failed' };
+  }
+  
   try {
     const clinicId = 'demo-clinic';
     
@@ -528,6 +613,26 @@ export const testFirebaseSync = async () => {
 export const debugAndForceRefresh = async () => {
   console.log('🔍 DEBUG: Testing Firebase connection and forcing data refresh...');
   
+  // Check authentication first
+  try {
+    const { auth } = await import('../api/firebase');
+    if (!auth.currentUser) {
+      const message = '❌ Authentication Required:\n\nPlease log in to access Firebase data.\nYou need to be authenticated to view appointments and patients.';
+      console.error(message);
+      if (typeof window !== 'undefined') {
+        alert(message);
+      }
+      return false;
+    }
+    console.log('✅ User authenticated:', auth.currentUser.email);
+  } catch (authError) {
+    console.error('❌ Auth check failed:', authError);
+    if (typeof window !== 'undefined') {
+      alert(`❌ Authentication Error: ${authError}`);
+    }
+    return false;
+  }
+  
   try {
     const clinicId = 'demo-clinic';
     
@@ -582,8 +687,53 @@ export const debugAndForceRefresh = async () => {
 (window as any).debugAndForceRefresh = debugAndForceRefresh;
 (window as any).forceRefresh = debugAndForceRefresh;
 
+// ✅ NEW: Authentication helper for users
+export const checkAuthAndShowInstructions = async () => {
+  try {
+    const { auth } = await import('../api/firebase');
+    
+    if (auth.currentUser) {
+      console.log('✅ Authentication Status: LOGGED IN');
+      console.log('📧 Email:', auth.currentUser.email);
+      console.log('🆔 UID:', auth.currentUser.uid);
+      
+      if (typeof window !== 'undefined') {
+        alert(`✅ Authentication Status: LOGGED IN\n\n📧 Email: ${auth.currentUser.email}\n🆔 UID: ${auth.currentUser.uid}\n\n🎉 Firebase operations should work correctly!`);
+      }
+      return true;
+    } else {
+      console.log('❌ Authentication Status: NOT LOGGED IN');
+      console.log('');
+      console.log('🔐 TO FIX THE FIREBASE PERMISSION ERRORS:');
+      console.log('   1. Go to the login page: /login or /admin/login');
+      console.log('   2. Sign in with your credentials');
+      console.log('   3. Return to this page');
+      console.log('   4. The sync will work automatically');
+      console.log('');
+      console.log('📧 If you are a super admin, use: admin@sahdasclinic.com');
+      console.log('🔑 If you need an account, contact your administrator');
+      
+      if (typeof window !== 'undefined') {
+        const message = `❌ Authentication Status: NOT LOGGED IN\n\n🔐 TO FIX THE FIREBASE PERMISSION ERRORS:\n\n1️⃣ Go to the login page (/login or /admin/login)\n2️⃣ Sign in with your credentials\n3️⃣ Return to this page\n4️⃣ The sync will work automatically\n\n📧 Super admin email: admin@sahdasclinic.com\n🔑 Need an account? Contact your administrator`;
+        alert(message);
+      }
+      return false;
+    }
+  } catch (error) {
+    console.error('❌ Auth check failed:', error);
+    if (typeof window !== 'undefined') {
+      alert(`❌ Auth check failed: ${error}`);
+    }
+    return false;
+  }
+};
+
+// Make auth checker available globally
+(window as any).checkAuth = checkAuthAndShowInstructions;
+
 // Update the console commands
 console.log('💚 Firebase-Friendly Sync Commands:');
+console.log('   checkAuth() - Check authentication status & show login instructions');
 console.log('   fbSync() - Manual sync (efficient)');
 console.log('   fbRefresh() - Refresh all pages data');
 console.log('   fbTest() - Run comprehensive test');

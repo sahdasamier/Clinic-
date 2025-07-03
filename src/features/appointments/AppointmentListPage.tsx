@@ -2744,73 +2744,7 @@ const AppointmentListPage: React.FC = () => {
                </Card>
              </Grid>
   
-             {/* Performance Insights */}
-             <Grid item xs={12} md={4}>
-               <Card sx={{ 
-                 borderRadius: 3, 
-                 boxShadow: 3,
-                 background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
-                 color: 'white',
-                 height: '100%',
-                 position: 'relative',
-                 overflow: 'hidden'
-               }}>
-                 <Box sx={{ 
-                   position: 'absolute', 
-                   bottom: 0, 
-                   left: 0, 
-                   width: 80, 
-                   height: 80, 
-                   background: 'rgba(255,255,255,0.1)', 
-                   borderRadius: '50%', 
-                   transform: 'translate(-20px, 20px)' 
-                 }} />
-                 <CardContent sx={{ p: 4, position: 'relative', zIndex: 1 }}>
-                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                     <TrendingUp sx={{ fontSize: 28, mr: 2 }} />
-                     <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                       {t('performance_today')}
-                     </Typography>
-                   </Box>
-                   
-                   <Box sx={{ mb: 3 }}>
-                     <Typography variant="h2" sx={{ fontWeight: 800, mb: 0.5 }}>
-                       {Math.round((completedToday / (todayAppointments.length || 1)) * 100)}%
-                     </Typography>
-                     <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                       {t('completion_rate')}
-                     </Typography>
-                   </Box>
-  
-                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                       <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                         {t('completed')}
-                       </Typography>
-                       <Typography variant="body2" fontWeight={600}>
-                         {completedToday}/{todayAppointments.length}
-                       </Typography>
-                     </Box>
-                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                       <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                         {t('time_remaining')}
-                       </Typography>
-                       <Typography variant="body2" fontWeight={600}>
-                         {getRemainingTime().split(' remaining')[0]}
-                       </Typography>
-                     </Box>
-                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                       <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                         {t('avg_duration')}
-                       </Typography>
-                       <Typography variant="body2" fontWeight={600}>
-                         {Math.round(appointmentList.reduce((sum, apt) => sum + apt.duration, 0) / appointmentList.length)} {t('min')}
-                       </Typography>
-                     </Box>
-                   </Box>
-                 </CardContent>
-               </Card>
-             </Grid>
+
   
              {/* Analytics Dashboard */}
              <Grid item xs={12}>

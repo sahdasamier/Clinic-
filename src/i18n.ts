@@ -1335,7 +1335,7 @@ const resources = {
       
       // Missing Appointment Keys
       "schedule": "جدولة",
-      "performance_today": "الأداء اليوم", 
+       
       "clinic_analytics_overview": "نظرة عامة على تحليلات العيادة",
       "time_remaining": "الوقت المتبقي",
       "avg_duration": "متوسط المدة",
