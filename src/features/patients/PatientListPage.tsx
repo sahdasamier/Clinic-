@@ -2008,7 +2008,7 @@ const PatientListPage: React.FC = () => {
           <Box sx={{ 
             mb: 4, 
             p: 4,
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
             borderRadius: 4,
             color: 'white',
             position: 'relative',
@@ -2265,8 +2265,8 @@ const PatientListPage: React.FC = () => {
                               transform: 'translateY(-1px)',
                             },
                             '&.Mui-focused': {
-                              border: '2px solid #667eea',
-                              boxShadow: '0 8px 32px rgba(102, 126, 234, 0.2)',
+                              border: '2px solid rgba(9, 9, 121, 1)',
+                              boxShadow: '0 8px 32px rgba(9, 9, 121, 0.3)',
                             }
                           },
                           '& .MuiInputBase-input': {
@@ -2297,13 +2297,13 @@ const PatientListPage: React.FC = () => {
                           },
                           transition: 'all 0.3s ease',
                           ...(getActiveFilterCount() > 0 && {
-                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                            background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
                             color: 'white',
                             border: 'none',
                             '&:hover': {
-                              background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
+                              background: 'linear-gradient(90deg,rgba(2, 0, 36, 0.9) 0%, rgba(9, 9, 121, 0.9) 35%, rgba(0, 212, 255, 0.9) 100%)',
                               transform: 'translateY(-1px)',
-                              boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)',
+                              boxShadow: '0 8px 32px rgba(9, 9, 121, 0.4)',
                             }
                           })
                         }}
@@ -2367,8 +2367,8 @@ const PatientListPage: React.FC = () => {
                             px: 2,
                             minWidth: 'fit-content',
                             ...(patientOrganizationMode === 'all' && {
-                              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                              boxShadow: '0 4px 16px rgba(102, 126, 234, 0.3)',
+                              background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
+                              boxShadow: '0 4px 16px rgba(9, 9, 121, 0.4)',
                             }),
                             '&:hover': {
                               transform: 'translateY(-1px)',
@@ -2452,7 +2452,7 @@ const PatientListPage: React.FC = () => {
                             px: 2,
                             minWidth: 'fit-content',
                             ...(viewMode === 'table' && {
-                              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                              background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
                               boxShadow: '0 4px 16px rgba(102, 126, 234, 0.3)',
                             }),
                             '&:hover': {
@@ -2475,7 +2475,7 @@ const PatientListPage: React.FC = () => {
                             px: 2,
                             minWidth: 'fit-content',
                             ...(viewMode === 'cards' && {
-                              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                              background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
                               boxShadow: '0 4px 16px rgba(102, 126, 234, 0.3)',
                             }),
                             '&:hover': {
@@ -2775,7 +2775,7 @@ const PatientListPage: React.FC = () => {
                       color: 'primary.main',
                       fontWeight: 700,
                       '&.Mui-selected': {
-                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
                         color: 'white',
                       }
                     }}
@@ -6446,7 +6446,7 @@ const PatientListPage: React.FC = () => {
             sx={{ '& .MuiDialog-paper': { maxHeight: '90vh' } }}
           >
             <DialogTitle sx={{ 
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
+              background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)', 
               color: 'white',
               fontWeight: 700,
               fontSize: '1.5rem'

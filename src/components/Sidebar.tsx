@@ -173,7 +173,7 @@ const Sidebar: React.FC = () => {
     width: isSmallMobile ? 52 : 60,
     height: isSmallMobile ? 52 : 60,
     borderRadius: '18px',
-    background: 'linear-gradient(145deg, #667eea 0%, #764ba2 50%, #8b5cf6 100%)',
+    background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
     backdropFilter: 'blur(20px)',
     border: '2px solid rgba(255, 255, 255, 0.25)',
     display: 'flex',
@@ -194,7 +194,7 @@ const Sidebar: React.FC = () => {
         0 8px 24px rgba(0, 0, 0, 0.3),
         inset 0 1px 0 rgba(255, 255, 255, 0.4)
       `,
-      background: 'linear-gradient(145deg, #7c3aed 0%, #8b5cf6 50%, #a855f7 100%)',
+      background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
       borderColor: 'rgba(255, 255, 255, 0.4)',
       '& img': {
         filter: 'drop-shadow(0 6px 12px rgba(0, 0, 0, 0.4)) brightness(1.4) contrast(1.3)',
@@ -388,10 +388,7 @@ const Sidebar: React.FC = () => {
                 fontWeight: 700, 
                 fontSize: { xs: '1.15rem', md: '1.3rem' },
                 lineHeight: 1.2,
-                background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #e2e8f0 100%)',
-                backgroundClip: 'text',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
+                color: 'white',
                 letterSpacing: '-0.02em',
                 mb: 0.5,
                 textShadow: '0 1px 3px rgba(0, 0, 0, 0.15)',
@@ -399,7 +396,7 @@ const Sidebar: React.FC = () => {
                 transition: 'all 0.3s ease',
               }}
             >
-              {getClinicDisplayName()}
+              Clinicy Healthcare
             </Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2 }}>
               <Box 
@@ -407,7 +404,7 @@ const Sidebar: React.FC = () => {
                   width: 4, 
                   height: 4, 
                   borderRadius: '50%', 
-                  background: 'linear-gradient(45deg, #22d3ee, #06b6d4)',
+                  background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
                   boxShadow: '0 0 8px rgba(34, 211, 238, 0.5)',
                   animation: 'pulse 2s ease-in-out infinite',
                   '@keyframes pulse': {
@@ -710,7 +707,7 @@ const Sidebar: React.FC = () => {
             '& .MuiDrawer-paper': {
               width: mobileDrawerWidth,
               boxSizing: 'border-box',
-              backgroundColor: 'primary.main',
+              background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
               color: 'white',
               borderRight: 'none',
               transition: 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -756,7 +753,7 @@ const Sidebar: React.FC = () => {
           [`& .MuiDrawer-paper`]: {
             width: currentWidth,
             boxSizing: 'border-box',
-            backgroundColor: 'primary.main',
+            background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
             color: 'white',
             borderRight: 'none',
             transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)',

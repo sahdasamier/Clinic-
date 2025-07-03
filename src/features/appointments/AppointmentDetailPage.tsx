@@ -90,7 +90,7 @@ const AppointmentDetailPage: React.FC = () => {
           {/* Header Section */}
           <Card sx={{ 
             mb: 4, 
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
             color: 'white',
             borderRadius: 4,
             overflow: 'hidden',
@@ -187,9 +187,16 @@ const AppointmentDetailPage: React.FC = () => {
             {/* Main Details */}
             <Grid item xs={12} md={8}>
               <Card sx={{ 
+                background: 'linear-gradient(120deg, rgba(2, 0, 36, 0.03) 0%, rgba(9, 9, 121, 0.05) 35%, rgba(0, 212, 255, 0.03) 100%)',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(9, 9, 121, 0.08)',
                 borderRadius: 4,
-                boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
-                border: '1px solid rgba(0,0,0,0.05)'
+                boxShadow: '0 8px 32px rgba(9, 9, 121, 0.1)',
+                '&:hover': {
+                  background: 'linear-gradient(120deg, rgba(2, 0, 36, 0.05) 0%, rgba(9, 9, 121, 0.08) 35%, rgba(0, 212, 255, 0.05) 100%)',
+                  boxShadow: '0 12px 40px rgba(9, 9, 121, 0.15)',
+                },
+                transition: 'all 0.3s ease',
               }}>
                 <CardContent sx={{ p: 4 }}>
                   <Typography variant="h5" sx={{ fontWeight: 700, mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -298,9 +305,16 @@ const AppointmentDetailPage: React.FC = () => {
                 {/* Status Card */}
                 <Grid item xs={12}>
                   <Card sx={{ 
+                    background: 'linear-gradient(135deg, rgba(2, 0, 36, 0.05) 0%, rgba(9, 9, 121, 0.08) 35%, rgba(0, 212, 255, 0.05) 100%)',
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(9, 9, 121, 0.12)',
                     borderRadius: 4,
-                    boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
-                    border: '1px solid rgba(0,0,0,0.05)'
+                    boxShadow: '0 8px 32px rgba(9, 9, 121, 0.1)',
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, rgba(2, 0, 36, 0.08) 0%, rgba(9, 9, 121, 0.12) 35%, rgba(0, 212, 255, 0.08) 100%)',
+                      boxShadow: '0 12px 40px rgba(9, 9, 121, 0.15)',
+                    },
+                    transition: 'all 0.3s ease',
                   }}>
                     <CardContent sx={{ p: 4, textAlign: 'center' }}>
                       <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
@@ -332,7 +346,7 @@ const AppointmentDetailPage: React.FC = () => {
                           sx={{ 
                             borderRadius: 3,
                             py: 1.5,
-                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                            background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)'
                           }}
                         >
                           {t('mark_as_completed')}
@@ -362,9 +376,16 @@ const AppointmentDetailPage: React.FC = () => {
                 {/* Timeline Card */}
                 <Grid item xs={12}>
                   <Card sx={{ 
+                    background: 'linear-gradient(135deg, rgba(2, 0, 36, 0.05) 0%, rgba(9, 9, 121, 0.08) 35%, rgba(0, 212, 255, 0.05) 100%)',
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(9, 9, 121, 0.12)',
                     borderRadius: 4,
-                    boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
-                    border: '1px solid rgba(0,0,0,0.05)'
+                    boxShadow: '0 8px 32px rgba(9, 9, 121, 0.1)',
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, rgba(2, 0, 36, 0.08) 0%, rgba(9, 9, 121, 0.12) 35%, rgba(0, 212, 255, 0.08) 100%)',
+                      boxShadow: '0 12px 40px rgba(9, 9, 121, 0.15)',
+                    },
+                    transition: 'all 0.3s ease',
                   }}>
                     <CardContent sx={{ p: 4 }}>
                       <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>

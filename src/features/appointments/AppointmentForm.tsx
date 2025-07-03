@@ -660,7 +660,7 @@ const AppointmentForm: React.FC = () => {
           {/* Header Section */}
           <Card sx={{ 
             mb: 4, 
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
             color: 'white',
             borderRadius: 4,
             overflow: 'hidden',
@@ -725,10 +725,17 @@ const AppointmentForm: React.FC = () => {
  
           {/* Stepper Form */}
           <Card sx={{ 
+            background: 'linear-gradient(120deg, rgba(2, 0, 36, 0.03) 0%, rgba(9, 9, 121, 0.05) 35%, rgba(0, 212, 255, 0.03) 100%)',
+            backdropFilter: 'blur(10px)',
+            border: '1px solid rgba(9, 9, 121, 0.08)',
             borderRadius: 4,
-            boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
-            border: '1px solid rgba(0,0,0,0.05)',
-            overflow: 'hidden'
+            boxShadow: '0 8px 32px rgba(9, 9, 121, 0.1)',
+            overflow: 'hidden',
+            '&:hover': {
+              background: 'linear-gradient(120deg, rgba(2, 0, 36, 0.05) 0%, rgba(9, 9, 121, 0.08) 35%, rgba(0, 212, 255, 0.05) 100%)',
+              boxShadow: '0 12px 40px rgba(9, 9, 121, 0.15)',
+            },
+            transition: 'all 0.3s ease',
           }}>
             <CardContent sx={{ p: 4 }}>
               <Stepper activeStep={activeStep} orientation="vertical">
@@ -769,7 +776,7 @@ const AppointmentForm: React.FC = () => {
                             disabled={loading}
                             sx={{ 
                               borderRadius: 3,
-                              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                              background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
                               px: 4
                             }}
                           >
@@ -788,7 +795,7 @@ const AppointmentForm: React.FC = () => {
                             onClick={handleNext}
                             sx={{ 
                               borderRadius: 3,
-                              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                              background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)'
                             }}
                           >
                             {t('next')}

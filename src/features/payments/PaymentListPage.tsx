@@ -238,15 +238,16 @@ const StatCard: React.FC<StatCardProps> = ({
   return (
     <Card sx={{ 
       height: '100%',
-      background: `linear-gradient(135deg, ${color}10 0%, ${color}05 100%)`,
-      backdropFilter: 'blur(10px)',
-      border: `1px solid ${color}20`,
+      background: 'linear-gradient(120deg, rgba(2, 0, 36, 0.08) 0%, rgba(9, 9, 121, 0.12) 35%, rgba(0, 212, 255, 0.08) 100%)',
+      backdropFilter: 'blur(15px)',
+      border: '1px solid rgba(9, 9, 121, 0.2)',
       borderRadius: 3,
       position: 'relative',
       overflow: 'hidden',
       '&:hover': {
         transform: 'translateY(-4px)',
-        boxShadow: `0 8px 25px ${color}25`,
+        background: 'linear-gradient(120deg, rgba(2, 0, 36, 0.12) 0%, rgba(9, 9, 121, 0.18) 35%, rgba(0, 212, 255, 0.12) 100%)',
+        boxShadow: '0 8px 25px rgba(9, 9, 121, 0.25)',
       },
       transition: 'all 0.3s ease',
       '&::before': {
@@ -256,7 +257,7 @@ const StatCard: React.FC<StatCardProps> = ({
         left: 0,
         right: 0,
         height: '4px',
-        background: `linear-gradient(90deg, ${color} 0%, ${color}80 100%)`,
+        background: 'linear-gradient(90deg, rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
       }
     }}>
       <CardContent sx={{ p: 3, position: 'relative' }}>
@@ -266,13 +267,13 @@ const StatCard: React.FC<StatCardProps> = ({
               width: 56,
               height: 56,
               borderRadius: '16px',
-              background: `linear-gradient(135deg, ${color}20 0%, ${color}10 100%)`,
+              background: 'linear-gradient(135deg, rgba(9, 9, 121, 0.2) 0%, rgba(0, 212, 255, 0.15) 100%)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               color: color,
-              backdropFilter: 'blur(10px)',
-              border: `1px solid ${color}30`,
+              backdropFilter: 'blur(15px)',
+              border: '1px solid rgba(9, 9, 121, 0.3)',
               '& svg': {
                 fontSize: 28,
                 filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))'
@@ -1788,14 +1789,13 @@ ${formatDate(new Date().toISOString())}
 
   return (
     <Container key={`payment-list-${forceRenderKey}`} maxWidth="xl" sx={{ mt: 4, mb: 4, flex: 1, overflow: 'auto', direction: isRTL ? 'rtl' : 'ltr' }}>
-          {/* Firebase Status */}
-          {renderFirebaseStatus()}
+
           
           {/* Header Section */}
           <Box sx={{ 
             mb: 4, 
             p: 4,
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
             borderRadius: 3,
             color: 'white',
             position: 'relative',
@@ -2078,7 +2078,13 @@ ${formatDate(new Date().toISOString())}
           <Grid container spacing={3}>
             {/* Main Payments View */}
             <Grid item xs={12}>
-              <Card>
+              <Card sx={{
+                background: 'linear-gradient(120deg, rgba(2, 0, 36, 0.05) 0%, rgba(9, 9, 121, 0.08) 35%, rgba(0, 212, 255, 0.05) 100%)',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(9, 9, 121, 0.1)',
+                borderRadius: 3,
+                boxShadow: '0 4px 20px rgba(9, 9, 121, 0.1)',
+              }}>
                 <CardContent sx={{ p: 0 }}>
                   {/* Search and Filters */}
                   <Box sx={{ p: 3, borderBottom: 1, borderColor: 'divider' }}>
@@ -2222,33 +2228,78 @@ ${formatDate(new Date().toISOString())}
                       <TableContainer>
                         <Table>
                           <TableHead>
-                            <TableRow>
-                              <TableCell sx={{ fontWeight: 600 }}>
+                            <TableRow sx={{
+                              background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
+                            }}>
+                              <TableCell sx={{ 
+                                fontWeight: 700,
+                                color: 'white',
+                                fontSize: '0.95rem'
+                              }}>
                                 {t('payment.table.invoice')}
                               </TableCell>
-                              <TableCell sx={{ fontWeight: 600 }}>
+                              <TableCell sx={{ 
+                                fontWeight: 700,
+                                color: 'white',
+                                fontSize: '0.95rem'
+                              }}>
                                 {t('payment.table.patient')}
                               </TableCell>
-                              <TableCell sx={{ fontWeight: 600 }}>
+                              <TableCell sx={{ 
+                                fontWeight: 700,
+                                color: 'white',
+                                fontSize: '0.95rem'
+                              }}>
                                 {t('payment.table.amount')}
                               </TableCell>
-                              <TableCell sx={{ fontWeight: 600 }}>
+                              <TableCell sx={{ 
+                                fontWeight: 700,
+                                color: 'white',
+                                fontSize: '0.95rem'
+                              }}>
                                 {t('payment.table.method')}
                               </TableCell>
-                              <TableCell sx={{ fontWeight: 600 }}>
+                              <TableCell sx={{ 
+                                fontWeight: 700,
+                                color: 'white',
+                                fontSize: '0.95rem'
+                              }}>
                                 {t('payment.table.date')}
                               </TableCell>
-                              <TableCell sx={{ fontWeight: 600 }}>
+                              <TableCell sx={{ 
+                                fontWeight: 700,
+                                color: 'white',
+                                fontSize: '0.95rem'
+                              }}>
                                 {t('payment.table.status')}
                               </TableCell>
-                              <TableCell sx={{ fontWeight: 600 }}>
+                              <TableCell sx={{ 
+                                fontWeight: 700,
+                                color: 'white',
+                                fontSize: '0.95rem'
+                              }}>
                                 {t('payment.table.actions')}
                               </TableCell>
                             </TableRow>
                           </TableHead>
                           <TableBody>
                             {filteredPayments.map((payment) => (
-                              <TableRow key={payment.id} hover>
+                              <TableRow 
+                                key={payment.id} 
+                                hover
+                                sx={{
+                                  background: 'linear-gradient(135deg, rgba(9, 9, 121, 0.02) 0%, rgba(0, 212, 255, 0.02) 100%)',
+                                  '&:hover': {
+                                    background: 'linear-gradient(135deg, rgba(9, 9, 121, 0.05) 0%, rgba(0, 212, 255, 0.05) 100%)',
+                                  },
+                                  '&:nth-of-type(even)': {
+                                    background: 'linear-gradient(135deg, rgba(9, 9, 121, 0.01) 0%, rgba(0, 212, 255, 0.01) 100%)',
+                                    '&:hover': {
+                                      background: 'linear-gradient(135deg, rgba(9, 9, 121, 0.04) 0%, rgba(0, 212, 255, 0.04) 100%)',
+                                    }
+                                  }
+                                }}
+                              >
                                 <TableCell>
                                   <Box>
                                     <Typography variant="body2" fontWeight={600}>
@@ -2267,8 +2318,10 @@ ${formatDate(new Date().toISOString())}
                                          height: 32,
                                          mr: isRTL ? 0 : 1.5,
                                          ml: isRTL ? 1.5 : 0,
-                                         backgroundColor: 'primary.main',
+                                         background: 'linear-gradient(135deg, rgba(9, 9, 121, 1) 0%, rgba(0, 212, 255, 1) 100%)',
                                          fontSize: '0.75rem',
+                                         fontWeight: 600,
+                                         boxShadow: '0 4px 12px rgba(9, 9, 121, 0.3)'
                                        }}
                                      >
                                        {payment.patientAvatar}
@@ -2392,9 +2445,14 @@ ${formatDate(new Date().toISOString())}
                            <Grid item xs={12} sm={6} md={6} key={payment.id}>
                              <Card sx={{ 
                                height: '100%', 
-                               '&:hover': { boxShadow: 4 },
+                               background: 'linear-gradient(135deg, rgba(2, 0, 36, 0.05) 0%, rgba(9, 9, 121, 0.08) 35%, rgba(0, 212, 255, 0.05) 100%)',
+                               backdropFilter: 'blur(10px)',
                                border: payment.status === 'overdue' ? '2px solid #EF4444' : 
-                                       payment.status === 'pending' ? '2px solid #F59E0B' : 'none',
+                                       payment.status === 'pending' ? '2px solid #F59E0B' : '1px solid rgba(9, 9, 121, 0.15)',
+                               '&:hover': { 
+                                 boxShadow: '0 8px 25px rgba(9, 9, 121, 0.2)',
+                                 background: 'linear-gradient(135deg, rgba(2, 0, 36, 0.08) 0%, rgba(9, 9, 121, 0.12) 35%, rgba(0, 212, 255, 0.08) 100%)',
+                               },
                              }}>
                                <CardContent sx={{ p: 3 }}>
                                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
@@ -2531,10 +2589,16 @@ ${formatDate(new Date().toISOString())}
                <Grid item xs={12}>
                  <Card sx={{ 
                    height: '100%',
-                   background: 'linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%)',
-                   border: '1px solid #e9ecef',
+                   background: 'linear-gradient(135deg, rgba(2, 0, 36, 0.03) 0%, rgba(9, 9, 121, 0.06) 35%, rgba(0, 212, 255, 0.03) 100%)',
+                   backdropFilter: 'blur(10px)',
+                   border: '1px solid rgba(9, 9, 121, 0.1)',
                    borderRadius: 3,
-                   boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+                   boxShadow: '0 4px 20px rgba(9, 9, 121, 0.1)',
+                   '&:hover': {
+                     background: 'linear-gradient(135deg, rgba(2, 0, 36, 0.05) 0%, rgba(9, 9, 121, 0.08) 35%, rgba(0, 212, 255, 0.05) 100%)',
+                     boxShadow: '0 6px 25px rgba(9, 9, 121, 0.15)',
+                   },
+                   transition: 'all 0.3s ease',
                  }}>
                    <CardContent sx={{ p: 4 }}>
                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
@@ -2819,11 +2883,68 @@ ${formatDate(new Date().toISOString())}
                        label={t('payment.fields.paymentMethod')}
                        value={newInvoiceData.method}
                        onChange={(e) => setNewInvoiceData(prev => ({ ...prev, method: e.target.value }))}
+                       sx={{
+                         '& .MuiSelect-select': {
+                           background: 'linear-gradient(135deg, rgba(9, 9, 121, 0.05) 0%, rgba(0, 212, 255, 0.05) 100%)',
+                         }
+                       }}
                      >
-                       <MenuItem value="Cash">{t('payment.methods.cash')}</MenuItem>
-                       <MenuItem value="Credit Card">{t('payment.methods.credit_card')}</MenuItem>
-                       <MenuItem value="Bank Transfer">{t('payment.methods.bank_transfer')}</MenuItem>
-                       <MenuItem value="Insurance">{t('payment.methods.insurance')}</MenuItem>
+                       <MenuItem 
+                         value="Cash"
+                         sx={{
+                           '&:hover': {
+                             background: 'linear-gradient(90deg, rgba(9, 9, 121, 0.05) 0%, rgba(0, 212, 255, 0.05) 100%)'
+                           },
+                           '&.Mui-selected': {
+                             background: 'linear-gradient(90deg, rgba(9, 9, 121, 0.1) 0%, rgba(0, 212, 255, 0.1) 100%)',
+                             fontWeight: 700
+                           }
+                         }}
+                       >
+                         💵 {t('payment.methods.cash')}
+                       </MenuItem>
+                       <MenuItem 
+                         value="Credit Card"
+                         sx={{
+                           '&:hover': {
+                             background: 'linear-gradient(90deg, rgba(9, 9, 121, 0.05) 0%, rgba(0, 212, 255, 0.05) 100%)'
+                           },
+                           '&.Mui-selected': {
+                             background: 'linear-gradient(90deg, rgba(9, 9, 121, 0.1) 0%, rgba(0, 212, 255, 0.1) 100%)',
+                             fontWeight: 700
+                           }
+                         }}
+                       >
+                         💳 {t('payment.methods.credit_card')}
+                       </MenuItem>
+                       <MenuItem 
+                         value="Bank Transfer"
+                         sx={{
+                           '&:hover': {
+                             background: 'linear-gradient(90deg, rgba(9, 9, 121, 0.05) 0%, rgba(0, 212, 255, 0.05) 100%)'
+                           },
+                           '&.Mui-selected': {
+                             background: 'linear-gradient(90deg, rgba(9, 9, 121, 0.1) 0%, rgba(0, 212, 255, 0.1) 100%)',
+                             fontWeight: 700
+                           }
+                         }}
+                       >
+                         🏦 {t('payment.methods.bank_transfer')}
+                       </MenuItem>
+                       <MenuItem 
+                         value="Insurance"
+                         sx={{
+                           '&:hover': {
+                             background: 'linear-gradient(90deg, rgba(9, 9, 121, 0.05) 0%, rgba(0, 212, 255, 0.05) 100%)'
+                           },
+                           '&.Mui-selected': {
+                             background: 'linear-gradient(90deg, rgba(9, 9, 121, 0.1) 0%, rgba(0, 212, 255, 0.1) 100%)',
+                             fontWeight: 700
+                           }
+                         }}
+                       >
+                         🏥 {t('payment.methods.insurance')}
+                       </MenuItem>
                      </Select>
                    </FormControl>
                  </Grid>
@@ -3433,7 +3554,7 @@ ${formatDate(new Date().toISOString())}
                  width: 64,
                  height: 64,
                  minWidth: 64,
-                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                 background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
                  color: 'white',
                  boxShadow: '0 8px 32px rgba(102, 126, 234, 0.4)',
                  zIndex: 1000,

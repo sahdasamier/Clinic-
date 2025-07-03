@@ -168,10 +168,10 @@ const BlurredPermissionGuard: React.FC<BlurredPermissionGuardProps> = ({
                   window.open('mailto:admin@sahdasclinic.com?subject=Access Request&body=I need access to: ' + feature, '_blank');
                 }}
                 sx={{
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  '&:hover': {
-                    background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
-                  }
+                  background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
+                                      '&:hover': {
+                      background: 'linear-gradient(90deg,rgba(3, 1, 41, 1) 0%, rgba(10, 10, 135, 1) 35%, rgba(1, 191, 230, 1) 100%)',
+                    }
                 }}
               >
                 Request Access

@@ -41,6 +41,8 @@ import {
   Groups,
   ShowChart,
   Refresh,
+  AccessTime,
+  Warning,
 } from '@mui/icons-material';
 import { 
   BarChart, 
@@ -55,6 +57,9 @@ import {
   AreaChart,
   Tooltip as RechartsTooltip,
 } from 'recharts';
+
+// Import the new Revenue & Profit Trend Widget
+import RevenueProfitTrendWidget from './widgets/RevenueProfitTrendWidget';
 
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
@@ -102,6 +107,27 @@ const colorPalette = {
   teal: '#009688',
   pink: '#e91e63',
   gradient: {
+    // Main custom gradient theme
+    main: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
+    
+    // Lighter gradient variations for stat cards
+    appointments: 'linear-gradient(135deg, rgba(30, 50, 80, 0.8) 0%, rgba(40, 60, 150, 0.85) 50%, rgba(80, 160, 220, 0.8) 100%)', // Lighter blue
+    patients: 'linear-gradient(120deg, rgba(20, 60, 100, 0.75) 0%, rgba(50, 80, 160, 0.8) 40%, rgba(100, 180, 230, 0.75) 100%)', // Lighter teal
+    doctors: 'linear-gradient(45deg, rgba(40, 40, 80, 0.7) 0%, rgba(60, 80, 170, 0.75) 45%, rgba(120, 200, 255, 0.7) 100%)', // Very light blue
+    completion: 'linear-gradient(160deg, rgba(25, 35, 75, 0.75) 0%, rgba(45, 60, 150, 0.8) 35%, rgba(100, 220, 255, 0.75) 100%)', // Light cyan
+    
+    // Subtle background variations
+    lightVariant: 'linear-gradient(135deg, rgba(2, 0, 36, 0.03) 0%, rgba(9, 9, 121, 0.05) 35%, rgba(0, 212, 255, 0.03) 100%)',
+    mediumVariant: 'linear-gradient(120deg, rgba(2, 0, 36, 0.08) 0%, rgba(9, 9, 121, 0.12) 35%, rgba(0, 212, 255, 0.08) 100%)',
+    
+    // Chart and accent colors
+    chartGradient: 'linear-gradient(45deg, rgba(9, 9, 121, 0.8) 0%, rgba(0, 212, 255, 0.6) 100%)',
+    
+    // Revenue widget specific gradients
+    revenueCard: 'linear-gradient(135deg, rgba(2, 0, 36, 0.95) 0%, rgba(9, 9, 121, 0.98) 35%, rgba(0, 212, 255, 0.95) 100%)',
+    revenueHeader: 'linear-gradient(90deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.8) 100%)',
+    
+    // Keep original gradients as fallback
     blue: 'linear-gradient(135deg, #1976d2 0%, #2196f3 100%)',
     green: 'linear-gradient(135deg, #4caf50 0%, #66bb6a 100%)',
     orange: 'linear-gradient(135deg, #ff9800 0%, #ffb74d 100%)',
@@ -125,33 +151,51 @@ const StatCard: React.FC<{
     overflow: 'hidden',
     background: gradient,
     color: 'white',
-    boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
-    transition: 'all 0.3s ease',
+    borderRadius: 4,
+    boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+    border: '1px solid rgba(255,255,255,0.1)',
+    backdropFilter: 'blur(10px)',
+    transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
     '&:hover': {
-      transform: 'translateY(-4px)',
-      boxShadow: '0 16px 48px rgba(0,0,0,0.15)',
+      transform: 'translateY(-8px) scale(1.02)',
+      boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
+      '& .stat-icon': {
+        transform: 'scale(1.1) rotate(5deg)',
+      },
+      '& .decorative-element-1': {
+        transform: 'scale(1.2)',
+        opacity: 0.8,
+      },
+      '& .decorative-element-2': {
+        transform: 'scale(1.3)',
+        opacity: 0.6,
+      }
     }
   }}>
-    <CardContent sx={{ p: { xs: 2, md: 3 }, position: 'relative', zIndex: 2 }}>
+    <CardContent sx={{ p: { xs: 2.5, md: 3.5 }, position: 'relative', zIndex: 2, height: '100%' }}>
       <Box sx={{ 
         display: 'flex', 
-        alignItems: 'center', 
+        alignItems: 'flex-start', 
         justifyContent: 'space-between', 
-        mb: { xs: 1.5, md: 2 },
+        mb: { xs: 2, md: 2.5 },
         flexDirection: { xs: 'column', sm: 'row' },
-        gap: { xs: 1, sm: 0 }
+        gap: { xs: 1.5, sm: 0 }
       }}>
         <Box
+          className="stat-icon"
           sx={{
-            width: { xs: 40, md: 56 },
-            height: { xs: 40, md: 56 },
-            borderRadius: { xs: '12px', md: '16px' },
-            backgroundColor: 'rgba(255,255,255,0.2)',
+            width: { xs: 48, md: 64 },
+            height: { xs: 48, md: 64 },
+            borderRadius: { xs: '16px', md: '20px' },
+            backgroundColor: 'rgba(255,255,255,0.25)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255,255,255,0.3)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             color: 'white',
-            backdropFilter: 'blur(10px)',
+            transition: 'all 0.3s ease',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
           }}
         >
           {icon}
@@ -161,64 +205,108 @@ const StatCard: React.FC<{
             size="small"
             label={change}
             sx={{
-              backgroundColor: 'rgba(255,255,255,0.2)',
+              backgroundColor: 'rgba(255,255,255,0.25)',
+              backdropFilter: 'blur(20px)',
+              border: '1px solid rgba(255,255,255,0.3)',
               color: 'white',
               fontWeight: 700,
-              backdropFilter: 'blur(10px)',
               fontSize: { xs: '0.7rem', md: '0.75rem' },
-              height: { xs: 24, md: 32 },
+              height: { xs: 28, md: 32 },
+              px: 1.5,
+              boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
+              '& .MuiChip-label': {
+                px: 0.5
+              }
             }}
           />
         )}
       </Box>
+      
+      <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
       <Typography variant="h3" sx={{ 
-        fontWeight: 800, 
-        mb: 0.5, 
+          fontWeight: 900, 
+          mb: 1, 
         color: 'white',
-        fontSize: { xs: '1.5rem', sm: '2rem', md: '3rem' },
-        textAlign: { xs: 'center', sm: 'left' }
+          fontSize: { xs: '1.75rem', sm: '2.25rem', md: '3rem' },
+          textAlign: { xs: 'center', sm: 'left' },
+          lineHeight: 1.1,
+          textShadow: '0 2px 8px rgba(0,0,0,0.2)',
+          background: 'linear-gradient(45deg, #ffffff 0%, rgba(255,255,255,0.9) 100%)',
+          backgroundClip: 'text',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
       }}>
         {value}
       </Typography>
+        
+        <Box>
       <Typography variant="body1" sx={{ 
-        color: 'rgba(255,255,255,0.9)', 
-        fontWeight: 600,
-        fontSize: { xs: '0.8rem', md: '1rem' },
-        textAlign: { xs: 'center', sm: 'left' }
+            color: 'rgba(255,255,255,0.95)', 
+            fontWeight: 700,
+            fontSize: { xs: '0.9rem', md: '1.1rem' },
+            textAlign: { xs: 'center', sm: 'left' },
+            mb: subtitle ? 0.5 : 0,
+            textShadow: '0 1px 4px rgba(0,0,0,0.1)',
       }}>
         {title}
       </Typography>
       {subtitle && (
         <Typography variant="caption" sx={{ 
-          color: 'rgba(255,255,255,0.7)', 
+              color: 'rgba(255,255,255,0.8)', 
           display: 'block', 
-          mt: 0.5,
-          fontSize: { xs: '0.7rem', md: '0.75rem' },
-          textAlign: { xs: 'center', sm: 'left' }
+              fontSize: { xs: '0.75rem', md: '0.85rem' },
+              textAlign: { xs: 'center', sm: 'left' },
+              fontWeight: 500,
+              textShadow: '0 1px 4px rgba(0,0,0,0.1)',
         }}>
           {subtitle}
         </Typography>
       )}
+        </Box>
+      </Box>
     </CardContent>
-    {/* Decorative Elements */}
-    <Box sx={{
+    
+    {/* Enhanced Decorative Elements */}
+    <Box 
+      className="decorative-element-1"
+      sx={{
       position: 'absolute',
-      top: -20,
-      right: -20,
-      width: 80,
-      height: 80,
+        top: -25,
+        right: -25,
+        width: 100,
+        height: 100,
       borderRadius: '50%',
-      backgroundColor: 'rgba(255,255,255,0.1)',
+        background: 'radial-gradient(circle, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 70%, transparent 100%)',
       zIndex: 1,
-    }} />
-    <Box sx={{
+        transition: 'all 0.4s ease',
+      }} 
+    />
+    <Box 
+      className="decorative-element-2"
+      sx={{
       position: 'absolute',
       bottom: -30,
       left: -30,
-      width: 100,
-      height: 100,
+        width: 80,
+        height: 80,
       borderRadius: '50%',
-      backgroundColor: 'rgba(255,255,255,0.05)',
+        background: 'radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.03) 70%, transparent 100%)',
+        zIndex: 1,
+        transition: 'all 0.4s ease',
+      }} 
+    />
+    
+    {/* Subtle border glow */}
+    <Box sx={{
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      borderRadius: 4,
+      background: 'linear-gradient(45deg, rgba(255,255,255,0.1) 0%, transparent 50%, rgba(255,255,255,0.1) 100%)',
+      opacity: 0.5,
+      pointerEvents: 'none',
       zIndex: 1,
     }} />
   </Card>
@@ -229,17 +317,40 @@ const DashboardPage: React.FC = () => {
   const { user, loading: authLoading, initialized } = useAuth();
   const { userProfile } = useUser();
   const [refreshKey, setRefreshKey] = useState(0);
-  const [dataLoading, setDataLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(false); // ✅ CHANGED: Start with false to force display
   
   // ✅ Firestore-powered dashboard data
   const [appointments, setAppointments] = useState<any[]>([]);
   const [patients, setPatients] = useState<any[]>([]);
   const [payments, setPayments] = useState<any[]>([]);
   const [doctors, setDoctors] = useState<SchedulingDoctor[]>([]);
-  const [loadingDoctors, setLoadingDoctors] = useState(true);
+  const [loadingDoctors, setLoadingDoctors] = useState(false); // ✅ CHANGED: Start with false
   
   // ✅ Load real doctors from Firebase for accurate matching
   const [availableDoctors, setAvailableDoctors] = useState<any[]>([]);
+
+  // ✅ DEBUGGING: Log component mount and state
+  React.useEffect(() => {
+    console.log('🎯 DASHBOARD: Component mounted/updated', {
+      user: !!user,
+      userProfile: !!userProfile,
+      authLoading,
+      initialized,
+      dataLoading,
+      loadingDoctors,
+      paymentsLength: payments.length,
+      appointmentsLength: appointments.length,
+      patientsLength: patients.length,
+      doctorsLength: doctors.length
+    });
+  }, [user, userProfile, authLoading, initialized, dataLoading, loadingDoctors, payments.length, appointments.length, patients.length, doctors.length]);
+
+  // ✅ SIMPLE FALLBACK: Just log when no data
+  React.useEffect(() => {
+    if (payments.length === 0 && appointments.length === 0 && patients.length === 0) {
+      console.log('📊 DASHBOARD: No data found - dashboard will show with empty state');
+    }
+  }, [payments.length, appointments.length, patients.length]);
 
   // ✅ NEW: Direct Firebase connection test for dashboard
   React.useEffect(() => {
@@ -2029,8 +2140,47 @@ The dashboard should now display proper revenue data!`);
     console.log('Run: fixRevenueNow()');
   }, [userProfile, setPayments, setRefreshKey]);
 
-  // Show loading spinner while data is loading
-  if (dataLoading || loadingDoctors) {
+  // ✅ TEMPORARY FIX: Show loading spinner but with timeout to prevent infinite loading
+  const [showLoadingOverride, setShowLoadingOverride] = React.useState(false);
+  
+  React.useEffect(() => {
+    // Force show content after 10 seconds even if still loading
+    const timeout = setTimeout(() => {
+      console.log('⏰ Dashboard: Loading timeout reached, forcing display');
+      setShowLoadingOverride(true);
+      setDataLoading(false);
+      setLoadingDoctors(false);
+    }, 10000);
+    
+    // Also add a shorter timeout for quick loading override
+    const quickTimeout = setTimeout(() => {
+      console.log('⚡ Dashboard: Quick loading check...');
+      console.log('📊 Current State:', { 
+        dataLoading, 
+        loadingDoctors, 
+        paymentsCount: payments.length,
+        appointmentsCount: appointments.length,
+        patientsCount: patients.length,
+        doctorsCount: doctors.length
+      });
+      
+      // If we have some data but still loading, show the dashboard
+      if ((payments.length > 0 || appointments.length > 0 || patients.length > 0) && (dataLoading || loadingDoctors)) {
+        console.log('⚡ Dashboard: Have data but still loading, forcing display');
+        setDataLoading(false);
+        setLoadingDoctors(false);
+      }
+    }, 3000);
+    
+    return () => {
+      clearTimeout(timeout);
+      clearTimeout(quickTimeout);
+    };
+  }, [dataLoading, loadingDoctors, payments.length, appointments.length, patients.length, doctors.length]);
+
+  // Show loading spinner while data is loading (with override)
+  if ((dataLoading || loadingDoctors) && !showLoadingOverride) {
+    console.log('🔄 Dashboard Loading State:', { dataLoading, loadingDoctors, showLoadingOverride });
     return (
       <Container maxWidth="xl" sx={{ mt: { xs: 2, md: 4 }, mb: { xs: 2, md: 4 }, flex: 1, overflow: 'auto' }}>
         <Box
@@ -2055,6 +2205,9 @@ The dashboard should now display proper revenue data!`);
               🏥 Connecting to Firebase for real-time doctor data
             </Typography>
           )}
+          <Typography variant="caption" color="text.disabled" sx={{ mt: 2 }}>
+            Debug: dataLoading={dataLoading.toString()}, loadingDoctors={loadingDoctors.toString()}
+          </Typography>
         </Box>
       </Container>
     );
@@ -2062,20 +2215,21 @@ The dashboard should now display proper revenue data!`);
 
   return (
     <Container maxWidth="xl" sx={{ mt: { xs: 2, md: 4 }, mb: { xs: 2, md: 4 }, flex: 1, overflow: 'auto' }}>
-          {/* Welcome Section */}
+          {/* Enhanced Welcome Section */}
           <Box sx={{ 
-            mb: { xs: 3, md: 4 }, 
-            p: { xs: 3, md: 4 },
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            borderRadius: { xs: 3, md: 4 },
-            color: 'white',
             position: 'relative',
-            overflow: 'hidden',
+            background: colorPalette.gradient.main,
+            borderRadius: 4,
+            p: { xs: 3, md: 4 },
+            mb: { xs: 3, md: 4 },
+            color: 'white',
+            overflow: 'hidden'
           }}>
-            <Box sx={{ position: 'relative', zIndex: 2 }}>
               <Box sx={{ 
+              position: 'relative', 
+              zIndex: 2,
                 display: 'flex', 
-                alignItems: { xs: 'flex-start', md: 'center' }, 
+              alignItems: 'center',
                 justifyContent: 'space-between',
                 flexDirection: { xs: 'column', md: 'row' },
                 gap: { xs: 2, md: 0 }
@@ -2084,16 +2238,20 @@ The dashboard should now display proper revenue data!`);
                   <Typography variant="h3" sx={{ 
                     fontWeight: 800, 
                     mb: 1,
-                    fontSize: { xs: '1.75rem', sm: '2.25rem', md: '3rem' }
+                  fontSize: { xs: '1.75rem', sm: '2.25rem', md: '3rem' },
+                  background: 'linear-gradient(45deg, #ffffff 0%, rgba(255,255,255,0.8) 100%)',
+                  backgroundClip: 'text',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
                   }}>
-                    {t('clinical_dashboard')} 🏥
+                  {t('clinical_dashboard')} 
                   </Typography>
                   <Typography variant="h6" sx={{ 
                     opacity: 0.9, 
                     fontWeight: 400,
                     fontSize: { xs: '1rem', md: '1.25rem' }
                   }}>
-                    {t('real_time_data_description')}
+                  🩺 {t('comprehensive_healthcare_management')}
                   </Typography>
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -2116,7 +2274,14 @@ The dashboard should now display proper revenue data!`);
                       sx={{ 
                         color: 'white',
                         backgroundColor: 'rgba(255,255,255,0.2)',
-                        '&:hover': { backgroundColor: 'rgba(255,255,255,0.3)' }
+                      backdropFilter: 'blur(10px)',
+                      border: '1px solid rgba(255,255,255,0.3)',
+                      '&:hover': { 
+                        backgroundColor: 'rgba(255,255,255,0.3)',
+                        transform: 'translateY(-2px)',
+                        boxShadow: '0 8px 25px rgba(0,0,0,0.2)'
+                      },
+                      transition: 'all 0.3s ease'
                       }}
                     >
                       {loadingDoctors ? <CircularProgress size={20} sx={{ color: 'white' }} /> : <LocalHospital />}
@@ -2128,25 +2293,41 @@ The dashboard should now display proper revenue data!`);
                       sx={{ 
                         color: 'white',
                         backgroundColor: 'rgba(255,255,255,0.2)',
-                        '&:hover': { backgroundColor: 'rgba(255,255,255,0.3)' }
+                      backdropFilter: 'blur(10px)',
+                      border: '1px solid rgba(255,255,255,0.3)',
+                      '&:hover': { 
+                        backgroundColor: 'rgba(255,255,255,0.3)',
+                        transform: 'translateY(-2px)',
+                        boxShadow: '0 8px 25px rgba(0,0,0,0.2)'
+                      },
+                      transition: 'all 0.3s ease'
                       }}
                     >
                       <Refresh />
                     </IconButton>
                   </Tooltip>
-               
                 </Box>
               </Box>
-            </Box>
-            {/* Decorative background */}
+            
+            {/* Enhanced Decorative Elements */}
             <Box sx={{
               position: 'absolute',
-              top: -50,
-              right: -50,
-              width: 200,
-              height: 200,
+              top: -30,
+              right: -30,
+              width: 150,
+              height: 150,
               borderRadius: '50%',
-              backgroundColor: 'rgba(255,255,255,0.1)',
+              background: 'radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 70%, transparent 100%)',
+              zIndex: 1,
+            }} />
+            <Box sx={{
+              position: 'absolute',
+              bottom: -40,
+              left: -40,
+              width: 120,
+              height: 120,
+              borderRadius: '50%',
+              background: 'radial-gradient(circle, rgba(0,212,255,0.2) 0%, rgba(0,212,255,0.1) 70%, transparent 100%)',
               zIndex: 1,
             }} />
           </Box>
@@ -2155,30 +2336,12 @@ The dashboard should now display proper revenue data!`);
           <Grid container spacing={{ xs: 2, md: 3 }} sx={{ mb: { xs: 3, md: 4 } }}>
             <Grid item xs={6} sm={6} lg={3}>
               <StatCard
-                title={t('working_doctors_today')}
-                value={`${stats.workingDoctors}/${stats.totalDoctors}`}
-                icon={<LocalHospital sx={{ fontSize: { xs: 24, md: 32 } }} />}
-                gradient={colorPalette.gradient.blue}
-                change={stats.workingDoctors > 0 ? `${stats.workingDoctors} ${t('active')}` : t('none_today')}
-              />
-            </Grid>
-            <Grid item xs={6} sm={6} lg={3}>
-              <StatCard
                 title={t('total_appointments')}
                 value={stats.totalAppointments}
                 icon={<CalendarToday sx={{ fontSize: { xs: 24, md: 32 } }} />}
-                gradient={colorPalette.gradient.green}
+                gradient={colorPalette.gradient.appointments}
                 change={stats.todayAppointments > 0 ? `${stats.todayAppointments} ${t('today')}` : t('none_today')}
-              />
-            </Grid>
-            <Grid item xs={6} sm={6} lg={3}>
-              <StatCard
-                title={t('completion_rate')}
-                value={stats.totalAppointments > 0 ? `${Math.round((stats.completedAppointments / stats.totalAppointments) * 100)}%` : '0%'}
-                icon={<CheckCircle sx={{ fontSize: { xs: 24, md: 32 } }} />}
-                gradient={colorPalette.gradient.orange}
-                change={`${stats.completedAppointments} ${t('completed')}`}
-                subtitle={`${stats.pendingAppointments} ${t('pending_completion')}`}
+                subtitle={`${stats.completedAppointments} ${t('completed')}`}
               />
             </Grid>
             <Grid item xs={6} sm={6} lg={3}>
@@ -2186,125 +2349,378 @@ The dashboard should now display proper revenue data!`);
                 title={t('total_patients')}
                 value={stats.totalPatients}
                 icon={<Groups sx={{ fontSize: { xs: 24, md: 32 } }} />}
-                gradient={colorPalette.gradient.purple}
+                gradient={colorPalette.gradient.patients}
                 change={`${stats.newPatients} ${t('new_patients')}`}
+                subtitle={`${stats.uniquePatients} ${t('unique_patients')}`}
+              />
+            </Grid>
+            <Grid item xs={6} sm={6} lg={3}>
+              <StatCard
+                title={t('working_doctors_today')}
+                value={`${stats.workingDoctors}/${stats.totalDoctors}`}
+                icon={<LocalHospital sx={{ fontSize: { xs: 24, md: 32 } }} />}
+                gradient={colorPalette.gradient.doctors}
+                change={stats.workingDoctors > 0 ? `${stats.workingDoctors} ${t('active')}` : t('none_today')}
+                subtitle={`${stats.totalDoctors - stats.workingDoctors} ${t('off_today')}`}
+              />
+            </Grid>
+            <Grid item xs={6} sm={6} lg={3}>
+              <StatCard
+                title={t('completion_rate')}
+                value={stats.totalAppointments > 0 ? `${Math.round((stats.completedAppointments / stats.totalAppointments) * 100)}%` : '0%'}
+                icon={<CheckCircle sx={{ fontSize: { xs: 24, md: 32 } }} />}
+                gradient={colorPalette.gradient.completion}
+                change={`${stats.completedAppointments} ${t('completed')}`}
+                subtitle={`${stats.pendingAppointments} ${t('pending_completion')}`}
               />
             </Grid>
           </Grid>
           
 
-          {/* Key Performance Indicators */}
+          {/* New Revenue & Profit Trend Widget */}
           <Grid container spacing={3} sx={{ mb: 4 }}>
-            <Grid item xs={12} md={4}>
-              <Card sx={{ height: '100%', p: 3 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                  <Analytics sx={{ fontSize: 28, color: colorPalette.primary, mr: 2 }} />
-                  <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                    {t('revenue_analytics_egp')}
-                  </Typography>
-                </Box>
-                <Box sx={{ textAlign: 'center', mb: 2 }}>
-                  <Typography variant="h3" sx={{ fontWeight: 800, color: colorPalette.success }}>
-                    EGP {stats.totalRevenue.toLocaleString()}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Total All Revenue ({stats.totalPayments} payments - all statuses)
-                  </Typography>
-                </Box>
-                <Divider sx={{ my: 2 }} />
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="body2">Paid Revenue ({stats.paidPayments}):</Typography>
-                  <Typography variant="body2" fontWeight={600} color="success.main">
-                    EGP {(stats.totalRevenue - stats.totalPendingRevenue - stats.totalOverdueRevenue - stats.totalPartialRevenue).toLocaleString()}
-                  </Typography>
-                </Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="body2">{t('pending')} ({stats.pendingPayments}):</Typography>
-                  <Typography variant="body2" fontWeight={600} color="warning.main">
-                    EGP {stats.totalPendingRevenue.toLocaleString()}
-                  </Typography>
-                </Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="body2">{t('overdue')} ({stats.overduePayments}):</Typography>
-                  <Typography variant="body2" fontWeight={600} color="error.main">
-                    EGP {stats.totalOverdueRevenue.toLocaleString()}
-                  </Typography>
-                </Box>
-                {stats.partialPayments > 0 && (
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                    <Typography variant="body2">{t('partial')} ({stats.partialPayments}):</Typography>
-                    <Typography variant="body2" fontWeight={600} color="info.main">
-                      EGP {stats.totalPartialRevenue.toLocaleString()}
-                    </Typography>
+            <Grid item xs={12}>
+              <Card sx={{
+                borderRadius: 4,
+                background: colorPalette.gradient.revenueCard,
+                boxShadow: '0 12px 40px rgba(0,0,0,0.15)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                overflow: 'hidden',
+                position: 'relative'
+              }}>
+                {/* Enhanced Header */}
+                <Box sx={{
+                  p: { xs: 3, md: 4 },
+                  background: colorPalette.gradient.main,
+                  color: 'white',
+                  position: 'relative',
+                  overflow: 'hidden'
+                }}>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'space-between',
+                    position: 'relative',
+                    zIndex: 2
+                  }}>
+                    <Box>
+                      <Typography variant="h5" sx={{ 
+                        fontWeight: 800, 
+                        mb: 1,
+                        background: colorPalette.gradient.revenueHeader,
+                        backgroundClip: 'text',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 2
+                      }}>
+                        <TrendingUp sx={{ fontSize: 32, color: 'white' }} />
+                        {t('revenue_profit_trends')} 📈
+                      </Typography>
+                      <Typography variant="body1" sx={{ 
+                        opacity: 0.9,
+                        fontWeight: 500
+                      }}>
+                        💰 {t('comprehensive_financial_analytics')}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Tooltip title="Refresh Revenue Data">
+                        <IconButton 
+                          sx={{ 
+                            color: 'white',
+                            backgroundColor: 'rgba(255,255,255,0.2)',
+                            backdropFilter: 'blur(10px)',
+                            border: '1px solid rgba(255,255,255,0.3)',
+                            '&:hover': { 
+                              backgroundColor: 'rgba(255,255,255,0.3)',
+                              transform: 'scale(1.1)',
+                              boxShadow: '0 8px 25px rgba(0,0,0,0.2)'
+                            },
+                            transition: 'all 0.3s ease'
+                          }}
+                        >
+                          <Analytics />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
                   </Box>
-                )}
-                <Divider sx={{ my: 1 }} />
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="body2" fontWeight={700}>{t('total_expected')}:</Typography>
-                  <Typography variant="body2" fontWeight={700} color="primary.main">
-                    EGP {(stats.totalRevenue + stats.totalPendingRevenue + stats.totalOverdueRevenue + stats.totalPartialRevenue).toLocaleString()}
-                  </Typography>
+                  
+                  {/* Decorative elements */}
+                  <Box sx={{
+                    position: 'absolute',
+                    top: -20,
+                    right: -20,
+                    width: 120,
+                    height: 120,
+                    borderRadius: '50%',
+                    background: 'radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 70%, transparent 100%)',
+                    zIndex: 1,
+                  }} />
+                  <Box sx={{
+                    position: 'absolute',
+                    bottom: -30,
+                    left: -30,
+                    width: 100,
+                    height: 100,
+                    borderRadius: '50%',
+                    background: 'radial-gradient(circle, rgba(0,212,255,0.2) 0%, rgba(0,212,255,0.1) 70%, transparent 100%)',
+                    zIndex: 1,
+                  }} />
                 </Box>
 
+                {/* Widget Content */}
+                <Box sx={{ 
+                  p: { xs: 2, md: 3 },
+                  background: 'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(248,250,252,0.98) 100%)',
+                  backdropFilter: 'blur(10px)',
+                  position: 'relative'
+                }}>
+                  {(() => {
+                    try {
+                      return (
+                        <RevenueProfitTrendWidget
+                          payments={payments.map(p => {
+                            // Resolve doctor name using the same logic as the main dashboard
+                            let resolvedDoctorName = 'Unknown Doctor';
+                            
+                            if (p.doctor) {
+                              // If it's a Firebase ID, resolve it to a name
+                              if (isFirebaseId(p.doctor)) {
+                                const doctorFromAvailable = availableDoctors.find(d => d.id === p.doctor);
+                                if (doctorFromAvailable) {
+                                  resolvedDoctorName = `${doctorFromAvailable.firstName || 'Unknown'} ${doctorFromAvailable.lastName || 'Doctor'}`;
+                                } else {
+                                  resolvedDoctorName = p.doctor; // Keep the ID if no match found
+                                }
+                              } else {
+                                // It's already a readable name
+                                resolvedDoctorName = p.doctor;
+                              }
+                            }
+                            
+                            console.log(`🔄 Dashboard → Widget: Payment doctor resolution:`, {
+                              originalDoctor: p.doctor,
+                              isFirebaseId: p.doctor ? isFirebaseId(p.doctor) : false,
+                              resolvedName: resolvedDoctorName,
+                              availableDoctorsCount: availableDoctors.length,
+                              availableDoctorsPreview: availableDoctors.slice(0, 3).map(d => ({
+                                id: d.id,
+                                name: `${d.firstName} ${d.lastName}`
+                              }))
+                            });
+                            
+                            return {
+                              id: parseInt(p.id?.toString() || '0'),
+                              patient: p.patient || 'Unknown',
+                              doctor: resolvedDoctorName,
+                              amount: p.amount || 0,
+                              currency: p.currency || 'EGP',
+                              date: p.date || new Date().toISOString().split('T')[0],
+                              status: (p.status as 'paid' | 'pending' | 'overdue' | 'partial') || 'pending',
+                              method: p.method || 'cash',
+                              description: p.description || 'Payment',
+                            };
+                          })}
+                          colorPalette={{
+                            primary: 'rgba(9, 9, 121, 1)',
+                            success: 'rgba(76, 175, 80, 1)', 
+                            warning: 'rgba(255, 152, 0, 1)',
+                            error: 'rgba(244, 67, 54, 1)',
+                            info: 'rgba(0, 212, 255, 1)'
+                          }}
+                          refreshKey={refreshKey}
+                        />
+                      );
+                    } catch (error) {
+                      console.error('❌ Revenue & Profit Trend Widget Error:', error);
+                      return (
+                        <Box sx={{ 
+                          p: 4, 
+                          textAlign: 'center',
+                          background: 'linear-gradient(135deg, rgba(244, 67, 54, 0.1) 0%, rgba(255, 193, 7, 0.1) 100%)',
+                          borderRadius: 3,
+                          border: '1px solid rgba(244, 67, 54, 0.2)'
+                        }}>
+                          <Typography variant="h6" sx={{ 
+                            color: 'rgba(244, 67, 54, 1)',
+                            fontWeight: 700,
+                            mb: 1
+                          }}>
+                            📊 Revenue & Profit Trends Temporarily Unavailable
+                          </Typography>
+                          <Typography variant="body2" sx={{ 
+                            color: 'rgba(102, 102, 102, 1)',
+                            mb: 2
+                          }}>
+                            There was an issue loading the revenue trends. Please refresh the page.
+                          </Typography>
+                          <Typography variant="caption" sx={{ 
+                            color: 'rgba(158, 158, 158, 1)',
+                            fontStyle: 'italic'
+                          }}>
+                            Error: {String(error)}
+                          </Typography>
+                        </Box>
+                      );
+                    }
+                  })()}
+                </Box>
+                
+                {/* Bottom gradient overlay */}
+                <Box sx={{
+                  position: 'absolute',
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  height: 4,
+                  background: colorPalette.gradient.main,
+                }} />
               </Card>
             </Grid>
-
-
-
-
           </Grid>
 
-          {/* Charts Section */}
+          {/* Enhanced Charts Section */}
           <Grid container spacing={3} sx={{ mb: 4 }}>
             {/* Weekly Appointments Trend */}
             <Grid item xs={12} lg={8}>
-              <Card sx={{ p: 3 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
-                  <Typography variant="h6" sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <ShowChart sx={{ color: colorPalette.primary }} />
+              <Card sx={{ 
+                p: 3,
+                borderRadius: 4,
+                background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
+                border: '1px solid rgba(9, 9, 121, 0.1)',
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                <Box sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'space-between', 
+                  mb: 3,
+                  position: 'relative',
+                  zIndex: 2
+                }}>
+                  <Typography variant="h6" sx={{ 
+                    fontWeight: 700, 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: 1,
+                    background: colorPalette.gradient.main,
+                    backgroundClip: 'text',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                  }}>
+                    <ShowChart sx={{ color: 'rgba(9, 9, 121, 1)' }} />
                     {t('weekly_appointment_trends')}
                   </Typography>
-                  <Alert severity="info">
+                  <Alert 
+                    severity="info" 
+                    sx={{
+                      backgroundColor: 'rgba(9, 9, 121, 0.1)',
+                      color: 'rgba(9, 9, 121, 1)',
+                      border: '1px solid rgba(9, 9, 121, 0.2)',
+                      '& .MuiAlert-icon': {
+                        color: 'rgba(9, 9, 121, 1)'
+                      }
+                    }}
+                  >
                     {t('last_7_days_real_data')}
                   </Alert>
                 </Box>
-                <Box sx={{ height: 300 }}>
+                <Box sx={{ height: 300, position: 'relative', zIndex: 2 }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={stats.weeklyData}>
                       <defs>
                         <linearGradient id="appointmentGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor={colorPalette.primary} stopOpacity={0.8}/>
-                          <stop offset="95%" stopColor={colorPalette.primary} stopOpacity={0.1}/>
+                          <stop offset="5%" stopColor="rgba(9, 9, 121, 1)" stopOpacity={0.8}/>
+                          <stop offset="95%" stopColor="rgba(0, 212, 255, 1)" stopOpacity={0.1}/>
                         </linearGradient>
                       </defs>
-                      <XAxis dataKey="name" />
-                      <YAxis />
-                      <RechartsTooltip />
+                      <XAxis 
+                        dataKey="name" 
+                        axisLine={{ stroke: 'rgba(9, 9, 121, 0.3)' }}
+                        tickLine={{ stroke: 'rgba(9, 9, 121, 0.3)' }}
+                        tick={{ fill: 'rgba(9, 9, 121, 0.7)' }}
+                      />
+                      <YAxis 
+                        axisLine={{ stroke: 'rgba(9, 9, 121, 0.3)' }}
+                        tickLine={{ stroke: 'rgba(9, 9, 121, 0.3)' }}
+                        tick={{ fill: 'rgba(9, 9, 121, 0.7)' }}
+                      />
+                      <RechartsTooltip 
+                        contentStyle={{
+                          backgroundColor: 'white',
+                          border: '1px solid rgba(9, 9, 121, 0.2)',
+                          borderRadius: '8px',
+                          boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
+                        }}
+                      />
                       <Area 
                         type="monotone" 
                         dataKey="appointments" 
-                        stroke={colorPalette.primary} 
+                        stroke="rgba(9, 9, 121, 1)" 
+                        strokeWidth={3}
                         fillOpacity={1} 
                         fill="url(#appointmentGradient)" 
                       />
                     </AreaChart>
                   </ResponsiveContainer>
                 </Box>
+                {/* Subtle background decoration */}
+                <Box sx={{
+                  position: 'absolute',
+                  top: -20,
+                  right: -20,
+                  width: 100,
+                  height: 100,
+                  borderRadius: '50%',
+                  background: colorPalette.gradient.lightVariant,
+                  zIndex: 1,
+                }} />
               </Card>
             </Grid>
 
-            {/* Appointment Status Distribution */}
+            {/* Enhanced Appointment Status Distribution */}
             <Grid item xs={12} lg={4}>
-              <Card sx={{ p: 3 }}>
-                <Typography variant="h6" sx={{ mb: 3, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Assignment sx={{ color: colorPalette.warning }} />
+              <Card sx={{ 
+                p: 3,
+                borderRadius: 4,
+                background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
+                border: '1px solid rgba(9, 9, 121, 0.1)',
+                position: 'relative',
+                overflow: 'hidden',
+                height: '100%'
+              }}>
+                <Typography variant="h6" sx={{ 
+                  mb: 3, 
+                  fontWeight: 700, 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: 1,
+                  background: colorPalette.gradient.main,
+                  backgroundClip: 'text',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  position: 'relative',
+                  zIndex: 2
+                }}>
+                  <Assignment sx={{ color: 'rgba(9, 9, 121, 1)' }} />
                   {t('status_distribution')}
                 </Typography>
-                <Box sx={{ height: 200, mb: 2 }}>
+                <Box sx={{ height: 200, mb: 2, position: 'relative', zIndex: 2 }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
-                        data={stats.statusDistribution}
+                        data={stats.statusDistribution.map((item, index) => ({
+                          ...item,
+                          color: index === 0 ? 'rgba(76, 175, 80, 1)' : // Completed - Green
+                                index === 1 ? 'rgba(9, 9, 121, 1)' : // Confirmed - Main blue
+                                index === 2 ? 'rgba(0, 212, 255, 1)' : // Pending - Light blue
+                                'rgba(244, 67, 54, 1)' // Cancelled - Red
+                        }))}
                         cx="50%"
                         cy="50%"
                         innerRadius={50}
@@ -2313,14 +2729,29 @@ The dashboard should now display proper revenue data!`);
                         dataKey="value"
                       >
                         {stats.statusDistribution.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
+                          <Cell 
+                            key={`cell-${index}`} 
+                            fill={
+                              index === 0 ? 'rgba(76, 175, 80, 1)' : // Completed - Green
+                              index === 1 ? 'rgba(9, 9, 121, 1)' : // Confirmed - Main blue
+                              index === 2 ? 'rgba(0, 212, 255, 1)' : // Pending - Light blue
+                              'rgba(244, 67, 54, 1)' // Cancelled - Red
+                            } 
+                          />
                         ))}
                       </Pie>
-                      <RechartsTooltip />
+                      <RechartsTooltip 
+                        contentStyle={{
+                          backgroundColor: 'white',
+                          border: '1px solid rgba(9, 9, 121, 0.2)',
+                          borderRadius: '8px',
+                          boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
+                        }}
+                      />
                     </PieChart>
                   </ResponsiveContainer>
                 </Box>
-                <Box>
+                <Box sx={{ position: 'relative', zIndex: 2 }}>
                   {stats.statusDistribution.map((item, index) => (
                     <Box key={index} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
                       <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -2329,47 +2760,128 @@ The dashboard should now display proper revenue data!`);
                             width: 12,
                             height: 12,
                             borderRadius: '50%',
-                            backgroundColor: item.color,
+                            backgroundColor: index === 0 ? 'rgba(76, 175, 80, 1)' : // Completed - Green
+                                           index === 1 ? 'rgba(9, 9, 121, 1)' : // Confirmed - Main blue
+                                           index === 2 ? 'rgba(0, 212, 255, 1)' : // Pending - Light blue
+                                           'rgba(244, 67, 54, 1)', // Cancelled - Red
                             mr: 1,
                           }}
                         />
-                        <Typography variant="body2">{item.name}</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>{item.name}</Typography>
                       </Box>
-                      <Typography variant="body2" fontWeight={600}>
+                      <Typography variant="body2" fontWeight={700} sx={{ 
+                        color: index === 0 ? 'rgba(76, 175, 80, 1)' : 'rgba(9, 9, 121, 1)'
+                      }}>
                         {item.value} ({stats.totalAppointments > 0 ? Math.round((item.value / stats.totalAppointments) * 100) : 0}%)
                       </Typography>
                     </Box>
                   ))}
                 </Box>
+                {/* Subtle background decoration */}
+                <Box sx={{
+                  position: 'absolute',
+                  bottom: -30,
+                  left: -30,
+                  width: 80,
+                  height: 80,
+                  borderRadius: '50%',
+                  background: colorPalette.gradient.lightVariant,
+                  zIndex: 1,
+                }} />
               </Card>
             </Grid>
           </Grid>
 
-          {/* Doctor Performance Table */}
+          {/* Enhanced Doctor Performance Table */}
           <Grid container spacing={3}>
             <Grid item xs={12}>
-              <Card>
+              <Card sx={{
+                borderRadius: 4,
+                background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
+                border: '1px solid rgba(9, 9, 121, 0.1)',
+                overflow: 'hidden'
+              }}>
                 <CardContent sx={{ p: 0 }}>
-                  <Box sx={{ p: 3, pb: 0 }}>
-                    <Typography variant="h6" sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <People sx={{ color: colorPalette.success }} />
+                  <Box sx={{ 
+                    p: 3, 
+                    pb: 0,
+                    background: colorPalette.gradient.lightVariant,
+                    borderBottom: '1px solid rgba(9, 9, 121, 0.1)'
+                  }}>
+                    <Typography variant="h6" sx={{ 
+                      fontWeight: 700, 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: 1,
+                      background: colorPalette.gradient.main,
+                      backgroundClip: 'text',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                    }}>
+                      <People sx={{ color: 'rgba(9, 9, 121, 1)' }} />
                       {t('doctor_performance_analytics')}
                     </Typography>
                   </Box>
                   <TableContainer>
                     <Table>
                       <TableHead>
-                        <TableRow sx={{ backgroundColor: '#f8fafc' }}>
-                          <TableCell sx={{ fontWeight: 700, py: 2 }}>{t('doctor')}</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>{t('specialty')}</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>{t('total_appointments')}</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>{t('completed')}</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>{t('pending')}</TableCell>
+                        <TableRow sx={{ 
+                          background: colorPalette.gradient.mediumVariant,
+                          backdropFilter: 'blur(10px)'
+                        }}>
+                          <TableCell sx={{ 
+                            fontWeight: 700, 
+                            py: 2,
+                            background: colorPalette.gradient.main,
+                            backgroundClip: 'text',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                          }}>{t('doctor')}</TableCell>
+                          <TableCell sx={{ 
+                            fontWeight: 700,
+                            background: colorPalette.gradient.main,
+                            backgroundClip: 'text',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                          }}>{t('specialty')}</TableCell>
+                          <TableCell sx={{ 
+                            fontWeight: 700,
+                            background: colorPalette.gradient.main,
+                            backgroundClip: 'text',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                          }}>{t('total_appointments')}</TableCell>
+                          <TableCell sx={{ 
+                            fontWeight: 700,
+                            background: colorPalette.gradient.main,
+                            backgroundClip: 'text',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                          }}>{t('completed')}</TableCell>
+                          <TableCell sx={{ 
+                            fontWeight: 700,
+                            background: colorPalette.gradient.main,
+                            backgroundClip: 'text',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                          }}>{t('pending')}</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
                         {stats.doctorPerformance.map((doctor, index) => (
-                          <TableRow key={index} hover sx={{ '&:hover': { backgroundColor: '#f8fafc' } }}>
+                          <TableRow 
+                            key={index} 
+                            hover 
+                            sx={{ 
+                              '&:hover': { 
+                                background: colorPalette.gradient.lightVariant,
+                                transform: 'translateX(4px)',
+                                transition: 'all 0.3s ease'
+                              },
+                              transition: 'all 0.3s ease'
+                            }}
+                          >
                             <TableCell>
                               <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                 <Avatar
@@ -2377,14 +2889,20 @@ The dashboard should now display proper revenue data!`);
                                     width: 40,
                                     height: 40,
                                     mr: 2,
-                                    backgroundColor: colorPalette.primary,
+                                    background: colorPalette.gradient.doctors,
                                     fontWeight: 700,
+                                    color: 'white'
                                   }}
                                 >
                                   {doctor.name.split(' ').map(n => n[0]).join('')}
                                 </Avatar>
                                 <Box>
-                                  <Typography variant="body2" fontWeight={700}>
+                                  <Typography variant="body2" fontWeight={700} sx={{
+                                    background: colorPalette.gradient.main,
+                                    backgroundClip: 'text',
+                                    WebkitBackgroundClip: 'text',
+                                    WebkitTextFillColor: 'transparent',
+                                  }}>
                                     {doctor.name}
                                   </Typography>
                                 </Box>
@@ -2395,24 +2913,31 @@ The dashboard should now display proper revenue data!`);
                                 label={t(doctor.specialty)} 
                                 size="small" 
                                 sx={{ 
-                                  backgroundColor: `${colorPalette.info}15`,
-                                  color: colorPalette.info,
+                                  background: colorPalette.gradient.lightVariant,
+                                  color: 'rgba(9, 9, 121, 1)',
                                   fontWeight: 600,
+                                  border: '1px solid rgba(9, 9, 121, 0.2)'
                                 }}
                               />
                             </TableCell>
                             <TableCell>
-                              <Typography variant="body2" fontWeight={600}>
+                              <Typography variant="body2" fontWeight={700} sx={{
+                                color: 'rgba(9, 9, 121, 1)'
+                              }}>
                                 {doctor.appointments}
                               </Typography>
                             </TableCell>
                             <TableCell>
-                              <Typography variant="body2" fontWeight={600} color="success.main">
+                              <Typography variant="body2" fontWeight={700} sx={{
+                                color: 'rgba(76, 175, 80, 1)'
+                              }}>
                                 {doctor.completed}
                               </Typography>
                             </TableCell>
                             <TableCell>
-                              <Typography variant="body2" fontWeight={600} color="warning.main">
+                              <Typography variant="body2" fontWeight={700} sx={{
+                                color: 'rgba(0, 212, 255, 1)'
+                              }}>
                                 {doctor.pending || 0}
                               </Typography>
                             </TableCell>

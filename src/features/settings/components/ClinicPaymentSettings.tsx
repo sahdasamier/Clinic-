@@ -309,59 +309,136 @@ const ClinicPaymentSettingsComponent: React.FC = () => {
             </Alert>
           )}
 
-          <TableContainer>
+          <TableContainer sx={{ 
+            borderRadius: 3,
+            border: '1px solid rgba(9, 9, 121, 0.1)',
+            background: 'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(248,250,252,0.98) 100%)',
+            backdropFilter: 'blur(10px)',
+            boxShadow: '0 4px 20px rgba(9, 9, 121, 0.08)'
+          }}>
             <Table>
               <TableHead>
-                <TableRow>
-                  <TableCell>{t('appointment_type')}</TableCell>
-                  <TableCell>{t('base_cost')}</TableCell>
-                  <TableCell>{t('final_cost')}</TableCell>
-                  <TableCell>{t('category')}</TableCell>
-                  <TableCell>{t('description')}</TableCell>
-                  <TableCell>{t('actions')}</TableCell>
+                <TableRow sx={{
+                  background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)'
+                }}>
+                  <TableCell sx={{ 
+                    color: 'white', 
+                    fontWeight: 700,
+                    borderColor: 'rgba(255,255,255,0.2)'
+                  }}>{t('appointment_type')}</TableCell>
+                  <TableCell sx={{ 
+                    color: 'white', 
+                    fontWeight: 700,
+                    borderColor: 'rgba(255,255,255,0.2)'
+                  }}>{t('base_cost')}</TableCell>
+                  <TableCell sx={{ 
+                    color: 'white', 
+                    fontWeight: 700,
+                    borderColor: 'rgba(255,255,255,0.2)'
+                  }}>{t('final_cost')}</TableCell>
+                  <TableCell sx={{ 
+                    color: 'white', 
+                    fontWeight: 700,
+                    borderColor: 'rgba(255,255,255,0.2)'
+                  }}>{t('category')}</TableCell>
+                  <TableCell sx={{ 
+                    color: 'white', 
+                    fontWeight: 700,
+                    borderColor: 'rgba(255,255,255,0.2)'
+                  }}>{t('description')}</TableCell>
+                  <TableCell sx={{ 
+                    color: 'white', 
+                    fontWeight: 700,
+                    borderColor: 'rgba(255,255,255,0.2)'
+                  }}>{t('actions')}</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {settings.appointmentTypes.map((appointmentType) => (
-                  <TableRow key={appointmentType.type}>
-                    <TableCell>
+                  <TableRow key={appointmentType.type} sx={{
+                    background: 'linear-gradient(135deg, rgba(9, 9, 121, 0.02) 0%, rgba(0, 212, 255, 0.02) 100%)',
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, rgba(9, 9, 121, 0.08) 0%, rgba(0, 212, 255, 0.05) 100%)',
+                      transform: 'translateX(2px)',
+                    },
+                    transition: 'all 0.3s ease'
+                  }}>
+                    <TableCell sx={{ borderColor: 'rgba(9, 9, 121, 0.1)' }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography variant="body2" fontWeight={600}>
+                        <Typography variant="body2" sx={{ 
+                          fontWeight: 700,
+                          background: 'linear-gradient(90deg, rgba(9, 9, 121, 1) 0%, rgba(0, 212, 255, 1) 100%)',
+                          backgroundClip: 'text',
+                          WebkitBackgroundClip: 'text',
+                          WebkitTextFillColor: 'transparent'
+                        }}>
                           {appointmentType.type}
                         </Typography>
                         {appointmentType.includeVAT && vatSettings.enabled && (
-                          <Chip label="VAT" size="small" color="info" />
+                          <Chip 
+                            label="VAT" 
+                            size="small" 
+                            sx={{
+                              background: 'linear-gradient(135deg, rgba(9, 9, 121, 0.15) 0%, rgba(0, 212, 255, 0.1) 100%)',
+                              color: 'rgba(9, 9, 121, 1)',
+                              border: '1px solid rgba(9, 9, 121, 0.3)',
+                              fontWeight: 600,
+                              fontSize: '0.7rem'
+                            }}
+                          />
                         )}
                       </Box>
                     </TableCell>
-                    <TableCell>
-                      <Typography variant="body2">
+                    <TableCell sx={{ borderColor: 'rgba(9, 9, 121, 0.1)' }}>
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
                         {appointmentType.cost} {appointmentType.currency}
                       </Typography>
                     </TableCell>
-                    <TableCell>
-                      <Typography variant="body2" fontWeight={600} color="primary.main">
+                    <TableCell sx={{ borderColor: 'rgba(9, 9, 121, 0.1)' }}>
+                      <Typography variant="body2" sx={{ 
+                        fontWeight: 700,
+                        background: 'linear-gradient(90deg, rgba(9, 9, 121, 1) 0%, rgba(0, 212, 255, 1) 100%)',
+                        backgroundClip: 'text',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent'
+                      }}>
                         {calculateDisplayAmount(appointmentType.cost, appointmentType.includeVAT).toFixed(2)} {appointmentType.currency}
                       </Typography>
                     </TableCell>
-                    <TableCell>
+                    <TableCell sx={{ borderColor: 'rgba(9, 9, 121, 0.1)' }}>
                       <Chip 
                         label={t(appointmentType.category)} 
                         size="small" 
-                        variant="outlined" 
+                        variant="outlined"
+                        sx={{
+                          borderColor: 'rgba(9, 9, 121, 0.3)',
+                          color: 'rgba(9, 9, 121, 1)',
+                          fontWeight: 600
+                        }}
                       />
                     </TableCell>
-                    <TableCell>
-                      <Typography variant="caption" color="text.secondary">
+                    <TableCell sx={{ borderColor: 'rgba(9, 9, 121, 0.1)' }}>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
                         {appointmentType.description}
                       </Typography>
                     </TableCell>
-                    <TableCell>
+                    <TableCell sx={{ borderColor: 'rgba(9, 9, 121, 0.1)' }}>
                       <Box sx={{ display: 'flex', gap: 0.5 }}>
                         <Tooltip title={t('edit')}>
                           <IconButton
                             size="small"
                             onClick={() => handleEditAppointmentType(appointmentType)}
+                            sx={{
+                              background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
+                              color: 'white',
+                              boxShadow: '0 2px 8px rgba(9, 9, 121, 0.3)',
+                              '&:hover': {
+                                background: 'linear-gradient(90deg,rgba(2, 0, 36, 0.9) 0%, rgba(9, 9, 121, 0.9) 35%, rgba(0, 212, 255, 0.9) 100%)',
+                                transform: 'scale(1.1)',
+                                boxShadow: '0 4px 12px rgba(9, 9, 121, 0.4)',
+                              },
+                              transition: 'all 0.3s ease'
+                            }}
                           >
                             <EditIcon fontSize="small" />
                           </IconButton>
@@ -369,8 +446,18 @@ const ClinicPaymentSettingsComponent: React.FC = () => {
                         <Tooltip title={t('delete')}>
                           <IconButton
                             size="small"
-                            color="error"
                             onClick={() => handleDeleteAppointmentType(appointmentType)}
+                            sx={{
+                              background: 'linear-gradient(135deg, rgba(244, 67, 54, 0.9) 0%, rgba(244, 67, 54, 0.7) 100%)',
+                              color: 'white',
+                              boxShadow: '0 2px 8px rgba(244, 67, 54, 0.3)',
+                              '&:hover': {
+                                background: 'linear-gradient(135deg, rgba(244, 67, 54, 1) 0%, rgba(244, 67, 54, 0.9) 100%)',
+                                transform: 'scale(1.1)',
+                                boxShadow: '0 4px 12px rgba(244, 67, 54, 0.4)',
+                              },
+                              transition: 'all 0.3s ease'
+                            }}
                           >
                             <DeleteIcon fontSize="small" />
                           </IconButton>

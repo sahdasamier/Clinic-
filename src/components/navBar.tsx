@@ -580,7 +580,7 @@ const NavBar: React.FC = () => {
                 sx={{
                   width: { xs: 32, sm: 36, md: 42, lg: 48 },
                   height: { xs: 32, sm: 36, md: 42, lg: 48 },
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #667eea 100%)',
+                  background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
                   fontFamily: "'Inter', 'SF Pro Display', sans-serif",
                   fontWeight: 800,
                   fontSize: { xs: '0.9rem', sm: '1rem', md: '1.05rem', lg: '1.1rem' },

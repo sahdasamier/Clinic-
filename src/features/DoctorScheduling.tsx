@@ -1230,7 +1230,7 @@ const DoctorSchedulingPage: React.FC = () => {
           <Box sx={{ 
             mb: 4, 
             p: 4,
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
             borderRadius: 4,
             color: 'white',
             position: 'relative',
@@ -1466,7 +1466,7 @@ const DoctorSchedulingPage: React.FC = () => {
                  label={`${t(getSelectedDayOfWeek())}`}
                  sx={{ 
                    textTransform: 'capitalize',
-                   background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                   background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
                    color: 'white',
                    fontWeight: 600,
                    alignSelf: { xs: 'flex-start', sm: 'center' }
@@ -1730,11 +1730,11 @@ const DoctorSchedulingPage: React.FC = () => {
                    padding: { xs: '8px 12px', md: '12px 16px' },
                    borderRadius: '8px 8px 0 0',
                    margin: { xs: '0 1px', md: '0 2px' },
-                   '&.Mui-selected': {
-                     color: 'white',
-                     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                     boxShadow: '0 4px 16px rgba(102, 126, 234, 0.3)',
-                   },
+                                        '&.Mui-selected': {
+                       color: 'white',
+                       background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
+                       boxShadow: '0 4px 16px rgba(9, 9, 121, 0.4)',
+                     },
                    '&:hover': {
                      backgroundColor: 'rgba(102, 126, 234, 0.1)',
                    }
@@ -1742,7 +1742,7 @@ const DoctorSchedulingPage: React.FC = () => {
                  '& .MuiTabs-indicator': {
                    height: 4,
                    borderRadius: '4px 4px 0 0',
-                   background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                   background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
                  },
                }}
              >
@@ -1845,10 +1845,10 @@ const DoctorSchedulingPage: React.FC = () => {
                                    height: { xs: 56, md: 64 }, 
                                    mr: { xs: 0, sm: 3 },
                                    mb: { xs: 1, sm: 0 },
-                                   background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                   background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
                                    fontSize: { xs: '1.1rem', md: '1.3rem' },
                                    fontWeight: 'bold',
-                                   boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)',
+                                   boxShadow: '0 8px 32px rgba(9, 9, 121, 0.4)',
                                    color: 'white'
                                  }}
                                >
@@ -1903,13 +1903,13 @@ const DoctorSchedulingPage: React.FC = () => {
                                  <IconButton 
                                    onClick={() => handleAddAppointment(doctor.id)}
                                    sx={{
-                                     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                     background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
                                      color: 'white',
-                                     boxShadow: '0 4px 16px rgba(102, 126, 234, 0.3)',
+                                     boxShadow: '0 4px 16px rgba(9, 9, 121, 0.4)',
                                      '&:hover': {
-                                       background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
+                                       background: 'linear-gradient(90deg,rgba(2, 0, 36, 0.9) 0%, rgba(9, 9, 121, 0.9) 35%, rgba(0, 212, 255, 0.9) 100%)',
                                        transform: 'scale(1.1)',
-                                       boxShadow: '0 6px 20px rgba(102, 126, 234, 0.4)',
+                                       boxShadow: '0 6px 20px rgba(9, 9, 121, 0.5)',
                                      },
                                      transition: 'all 0.3s ease'
                                    }}
@@ -1923,11 +1923,11 @@ const DoctorSchedulingPage: React.FC = () => {
                                  max={99}
                                  sx={{
                                    '& .MuiBadge-badge': {
-                                     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                     background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
                                      color: 'white',
                                      fontWeight: 700,
                                      fontSize: '0.75rem',
-                                     boxShadow: '0 2px 8px rgba(102, 126, 234, 0.3)',
+                                     boxShadow: '0 2px 8px rgba(9, 9, 121, 0.4)',
                                    }
                                  }}
                                >
@@ -1973,134 +1973,176 @@ const DoctorSchedulingPage: React.FC = () => {
                              </Box>
                            </Box>
 
-                           {/* Time Slots */}
-                           <Typography variant="subtitle2" sx={{ 
-                             fontWeight: 600, 
-                             mb: 2,
-                             fontSize: { xs: '0.9rem', md: '1rem' }
-                           }}>
-                             {t('time_slots_total', { count: timeSlots.length })}:
-                           </Typography>
-                           <Box sx={{ 
-                             display: 'flex', 
-                             flexWrap: 'wrap', 
-                             gap: { xs: 0.5, md: 1 },
-                             justifyContent: { xs: 'center', sm: 'flex-start' }
-                           }}>
-                             {timeSlots.map((slot, index) => {
-                               const slotType = slot.isReserved ? 'reserved' : 
-                                              slot.isAvailableSlot ? 'available' : 'regular';
-                               const slotIcon = slot.isReserved ? '🔒' : 
-                                              slot.isAvailableSlot ? '⏰' : '✅';
-                               
-                               return (
-                                 <Chip
-                                   key={index}
-                                   label={`${slotIcon} ${slot.time}`}
+                           {/* Time Slots - Enhanced */}
+                           <Grid container spacing={1}>
+                             {generateDoctorTimeSlots(doctor).map((timeSlot) => (
+                               <Grid item xs={6} sm={4} md={3} key={timeSlot.time}>
+                                 <Button
+                                   variant="outlined"
+                                   fullWidth
                                    size="small"
-                                   variant={slot.isReserved ? 'filled' : 'outlined'}
-                                   clickable
-                                   onClick={() => handleTimeSlotClick(doctor.id, slot.time, slotType, slot.appointment || undefined)}
-                                   sx={{ 
-                                     fontSize: { xs: '0.65rem', md: '0.75rem' },
-                                     fontWeight: slot.isReserved ? 700 : 600,
-                                     textDecoration: slot.isReserved ? 'line-through' : 'none',
-                                     cursor: 'pointer',
-                                     minWidth: { xs: 'auto', md: 'auto' },
-                                     height: { xs: 28, md: 32 },
-                                     
-                                     // ✅ Regular Working Hours (Green)
-                                     ...(slotType === 'regular' && {
-                                       backgroundColor: '#e8f5e8',
-                                       borderColor: '#4caf50',
-                                       color: '#2e7d32',
-                                       '&:hover': { 
-                                         backgroundColor: '#c8e6c8',
-                                         borderColor: '#388e3c',
-                                         transform: 'scale(1.05)',
-                                       },
-                                     }),
-                                     
-                                     // ⏰ Available Slot (Added Manually) (Blue)
-                                     ...(slotType === 'available' && {
-                                       backgroundColor: '#e3f2fd',
-                                       borderColor: '#2196f3',
-                                       color: '#1976d2',
-                                       '&:hover': { 
-                                         backgroundColor: '#bbdefb',
-                                         borderColor: '#1976d2',
-                                         transform: 'scale(1.05)',
-                                       },
-                                     }),
-                                     
-                                     // 🔒 Reserved (Patient Appointment) (Red)
-                                     ...(slotType === 'reserved' && {
-                                       backgroundColor: '#ffcdd2',
-                                       borderColor: '#f44336',
-                                       color: '#d32f2f',
-                                       '&:hover': { 
-                                         backgroundColor: '#ffb3ba',
-                                         borderColor: '#d32f2f',
-                                         transform: 'scale(1.05)',
-                                       },
-                                     }),
-                                     
-                                     transition: 'all 0.2s ease',
-                                     boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                                                                       onClick={() => handleTimeSlotClick(doctor.id, timeSlot.time, 
+                                      timeSlot.isReserved ? 'reserved' : (timeSlot.isAvailableSlot ? 'available' : 'regular'),
+                                      timeSlot.appointment || undefined
+                                    )}
+                                   sx={{
+                                     py: 1.5,
+                                     borderRadius: 2,
+                                     fontSize: '0.75rem',
+                                     fontWeight: 600,
+                                     textTransform: 'none',
+                                     background: timeSlot.isReserved 
+                                       ? 'linear-gradient(135deg, rgba(244, 67, 54, 0.15) 0%, rgba(244, 67, 54, 0.1) 100%)'
+                                       : timeSlot.isAvailableSlot 
+                                         ? 'linear-gradient(135deg, rgba(255, 152, 0, 0.15) 0%, rgba(255, 152, 0, 0.1) 100%)'
+                                         : 'linear-gradient(135deg, rgba(9, 9, 121, 0.05) 0%, rgba(0, 212, 255, 0.03) 100%)',
+                                     borderColor: timeSlot.isReserved 
+                                       ? 'rgba(244, 67, 54, 0.3)'
+                                       : timeSlot.isAvailableSlot 
+                                         ? 'rgba(255, 152, 0, 0.3)'
+                                         : 'rgba(9, 9, 121, 0.2)',
+                                     color: timeSlot.isReserved 
+                                       ? '#d32f2f'
+                                       : timeSlot.isAvailableSlot 
+                                         ? '#f57c00'
+                                         : 'rgba(9, 9, 121, 1)',
+                                     backdropFilter: 'blur(5px)',
                                      '&:hover': {
-                                       boxShadow: '0 4px 8px rgba(0,0,0,0.15)',
-                                     }
+                                       background: timeSlot.isReserved 
+                                         ? 'linear-gradient(135deg, rgba(244, 67, 54, 0.25) 0%, rgba(244, 67, 54, 0.2) 100%)'
+                                         : timeSlot.isAvailableSlot 
+                                           ? 'linear-gradient(135deg, rgba(255, 152, 0, 0.25) 0%, rgba(255, 152, 0, 0.2) 100%)'
+                                           : 'linear-gradient(135deg, rgba(9, 9, 121, 0.1) 0%, rgba(0, 212, 255, 0.08) 100%)',
+                                       borderColor: timeSlot.isReserved 
+                                         ? 'rgba(244, 67, 54, 0.5)'
+                                         : timeSlot.isAvailableSlot 
+                                           ? 'rgba(255, 152, 0, 0.5)'
+                                           : 'rgba(9, 9, 121, 0.4)',
+                                       transform: 'translateY(-1px)',
+                                       boxShadow: timeSlot.isReserved 
+                                         ? '0 4px 12px rgba(244, 67, 54, 0.2)'
+                                         : timeSlot.isAvailableSlot 
+                                           ? '0 4px 12px rgba(255, 152, 0, 0.2)'
+                                           : '0 4px 12px rgba(9, 9, 121, 0.15)',
+                                     },
+                                     transition: 'all 0.3s ease'
                                    }}
-                                   title={slot.isReserved ? t('reserved_slot_tooltip', { patient: slot.patient }) : 
-                                         slot.isAvailableSlot ? t('available_slot_tooltip') :
-                                         t('regular_hours_tooltip')}
-                                 />
-                               );
-                             })}
-                           </Box>
+                                 >
+                                   <Box sx={{ textAlign: 'center' }}>
+                                     <Typography variant="body2" sx={{ 
+                                       fontWeight: 700,
+                                       fontSize: '0.8rem',
+                                       mb: 0.5
+                                     }}>
+                                       {timeSlot.time}
+                                     </Typography>
+                                     {timeSlot.isReserved && (
+                                       <Typography variant="caption" sx={{ 
+                                         display: 'block',
+                                         fontSize: '0.65rem',
+                                         fontWeight: 600,
+                                         opacity: 0.8
+                                       }}>
+                                         {timeSlot.patient}
+                                       </Typography>
+                                     )}
+                                     {timeSlot.isAvailableSlot && (
+                                       <Typography variant="caption" sx={{ 
+                                         display: 'block',
+                                         fontSize: '0.65rem',
+                                         fontWeight: 600,
+                                         opacity: 0.8
+                                       }}>
+                                         Available
+                                       </Typography>
+                                     )}
+                                   </Box>
+                                 </Button>
+                               </Grid>
+                             ))}
+                           </Grid>
 
                            {/* Reserved Appointments */}
                            {doctorAppointments.filter(apt => apt.patient && !apt.isAvailableSlot).length > 0 && (
                              <Box sx={{ mt: 3 }}>
-                               <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 2 }}>
-                                 🔒 {t('reserved_appointments_count', { count: doctorAppointments.filter(apt => apt.patient && !apt.isAvailableSlot).length })}:
-                               </Typography>
-                               <List dense>
-                                 {doctorAppointments.filter(apt => apt.patient && !apt.isAvailableSlot).map((apt: Appointment, index: number) => (
-                                   <ListItem 
-                                     key={index} 
-                                     sx={{ 
-                                       px: 0, 
-                                       py: 0.5,
-                                       backgroundColor: '#ffebee',
-                                       borderRadius: 1,
-                                       mb: 1,
-                                       border: '2px solid #f44336'
-                                     }}
-                                   >
-                                     <ListItemText
-                                       primary={
-                                         <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                           🔒 {apt.time} - {apt.patient}
-                                         </Typography>
-                                       }
-                                       secondary={
-                                         <Typography variant="caption" color="text.secondary">
-                                           {apt.duration} {t('min')} • Dr. {doctor.name} • {t('reserved_appointment')}
-                                         </Typography>
-                                       }
-                                     />
-                                     <ListItemSecondaryAction>
-                                       <IconButton 
-                                         size="small"
-                                         onClick={(e) => handleMenuOpen(e, apt)}
-                                       >
-                                         <MoreVert fontSize="small" />
-                                       </IconButton>
-                                     </ListItemSecondaryAction>
-                                   </ListItem>
-                                 ))}
-                               </List>
+                               <Typography variant="subtitle2" sx={{ 
+                                 fontWeight: 700, 
+                                 mb: 2,
+                                 background: 'linear-gradient(90deg, rgba(9, 9, 121, 1) 0%, rgba(0, 212, 255, 1) 100%)',
+                                 backgroundClip: 'text',
+                                 WebkitBackgroundClip: 'text',
+                                 WebkitTextFillColor: 'transparent',
+                                 fontSize: '1rem'
+                               }}>
+                                  📋 Reserved Appointments ({doctorAppointments.filter(apt => apt.patient && !apt.isAvailableSlot).length}):
+                                </Typography>
+                                <Box sx={{ 
+                                  display: 'flex', 
+                                  flexDirection: 'column',
+                                  gap: 1.5
+                                }}>
+                                  {doctorAppointments.filter(apt => apt.patient && !apt.isAvailableSlot).map((appointment, index) => (
+                                    <Card key={index} sx={{ 
+                                      borderRadius: 3,
+                                      background: 'linear-gradient(135deg, rgba(9, 9, 121, 0.05) 0%, rgba(0, 212, 255, 0.03) 100%)',
+                                      border: '1px solid rgba(9, 9, 121, 0.1)',
+                                      backdropFilter: 'blur(5px)',
+                                      boxShadow: '0 2px 8px rgba(9, 9, 121, 0.1)',
+                                      '&:hover': {
+                                        transform: 'translateX(4px)',
+                                        background: 'linear-gradient(135deg, rgba(9, 9, 121, 0.08) 0%, rgba(0, 212, 255, 0.05) 100%)',
+                                        boxShadow: '0 4px 12px rgba(9, 9, 121, 0.15)',
+                                      },
+                                      transition: 'all 0.3s ease'
+                                    }}>
+                                      <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                          <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
+                                            <Avatar sx={{ 
+                                              width: 32, 
+                                              height: 32, 
+                                              mr: 1.5, 
+                                              background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
+                                              color: 'white',
+                                              fontSize: '0.8rem',
+                                              fontWeight: 600
+                                            }}>
+                                              {appointment.patient.charAt(0).toUpperCase()}
+                                            </Avatar>
+                                            <Box sx={{ flex: 1 }}>
+                                              <Typography variant="body2" sx={{ 
+                                                fontWeight: 700,
+                                                color: 'rgba(9, 9, 121, 1)',
+                                                fontSize: '0.85rem'
+                                              }}>
+                                                {appointment.patient}
+                                              </Typography>
+                                              <Typography variant="caption" sx={{ 
+                                                color: 'text.secondary',
+                                                fontWeight: 500
+                                              }}>
+                                                {appointment.timeSlot} • {appointment.type}
+                                              </Typography>
+                                            </Box>
+                                          </Box>
+                                          <Chip 
+                                            label={appointment.status} 
+                                            size="small" 
+                                            sx={{
+                                              background: appointment.status === 'confirmed' 
+                                                ? 'linear-gradient(135deg, rgba(76, 175, 80, 0.15) 0%, rgba(76, 175, 80, 0.1) 100%)'
+                                                : 'linear-gradient(135deg, rgba(255, 152, 0, 0.15) 0%, rgba(255, 152, 0, 0.1) 100%)',
+                                              color: appointment.status === 'confirmed' ? '#2e7d32' : '#f57c00',
+                                              border: `1px solid ${appointment.status === 'confirmed' ? 'rgba(76, 175, 80, 0.3)' : 'rgba(255, 152, 0, 0.3)'}`,
+                                              fontWeight: 600,
+                                              fontSize: '0.7rem'
+                                            }}
+                                          />
+                                        </Box>
+                                      </CardContent>
+                                    </Card>
+                                  ))}
+                                </Box>
                              </Box>
                            )}
 
@@ -2166,90 +2208,66 @@ const DoctorSchedulingPage: React.FC = () => {
                        <Grid item xs={12} sm={6} md={4} lg={3} key={doctor.id}>
                          <Card sx={{ 
                            borderRadius: 4,
-                           boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-                           border: '2px solid rgba(0,0,0,0.1)',
+                           boxShadow: '0 8px 32px rgba(9, 9, 121, 0.12)',
+                           border: '1px solid rgba(9, 9, 121, 0.1)',
                            position: 'relative',
                            overflow: 'hidden',
+                           background: 'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(248,250,252,0.98) 100%)',
+                           backdropFilter: 'blur(10px)',
                            '&:hover': { 
-                             boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
-                             transform: 'translateY(-2px)',
-                             borderColor: 'rgba(102, 126, 234, 0.3)'
+                             boxShadow: '0 12px 40px rgba(9, 9, 121, 0.18)',
+                             transform: 'translateY(-4px)',
+                             borderColor: 'rgba(9, 9, 121, 0.2)'
                            },
                            transition: 'all 0.3s ease',
-                           background: 'linear-gradient(135deg, rgba(0,0,0,0.02) 0%, rgba(0,0,0,0.05) 100%)',
                          }}>
-                           <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+                           <CardContent sx={{ p: 3 }}>
+                             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                               <Avatar sx={{ 
+                                 width: 50, 
+                                 height: 50, 
+                                 mr: 2, 
+                                 background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
+                                 color: 'white',
+                                 fontWeight: 'bold',
+                                 fontSize: '1.1rem',
+                                 boxShadow: '0 6px 20px rgba(9, 9, 121, 0.3)'
+                               }}>
+                                 {doctor.avatar}
+                               </Avatar>
+                               <Box>
+                                 <Typography variant="h6" sx={{ 
+                                   fontWeight: 700,
+                                   fontSize: '1.1rem',
+                                   background: 'linear-gradient(90deg, rgba(9, 9, 121, 1) 0%, rgba(0, 212, 255, 1) 100%)',
+                                   backgroundClip: 'text',
+                                   WebkitBackgroundClip: 'text',
+                                   WebkitTextFillColor: 'transparent'
+                                 }}>
+                                   {doctor.name}
+                                 </Typography>
+                                 <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+                                   {doctor.specialty}
+                                 </Typography>
+                               </Box>
+                             </Box>
                              <Box sx={{ 
                                display: 'flex', 
-                               flexDirection: { xs: 'column', sm: 'row' },
                                alignItems: 'center', 
-                               justifyContent: 'space-between',
-                               textAlign: { xs: 'center', sm: 'left' },
-                               gap: { xs: 2, sm: 0 }
+                               justifyContent: 'center',
+                               p: 2,
+                               background: 'linear-gradient(135deg, rgba(244, 67, 54, 0.1) 0%, rgba(244, 67, 54, 0.05) 100%)',
+                               borderRadius: 3,
+                               border: '1px solid rgba(244, 67, 54, 0.2)',
+                               backdropFilter: 'blur(5px)'
                              }}>
-                               <Box sx={{ 
-                                 display: 'flex', 
-                                 flexDirection: { xs: 'column', sm: 'row' },
-                                 alignItems: 'center', 
-                                 flex: 1 
+                               <EventBusy sx={{ mr: 1, color: '#d32f2f', fontSize: 20 }} />
+                               <Typography variant="body2" sx={{ 
+                                 fontWeight: 600,
+                                 color: '#d32f2f'
                                }}>
-                                 <Avatar sx={{ 
-                                   width: { xs: 40, md: 48 }, 
-                                   height: { xs: 40, md: 48 }, 
-                                   mr: { xs: 0, sm: 2 },
-                                   mb: { xs: 1, sm: 0 },
-                                   backgroundColor: '#bdbdbd',
-                                   fontSize: { xs: '1rem', md: '1.1rem' },
-                                   fontWeight: 'bold'
-                                 }}>
-                                   {doctor.avatar}
-                                 </Avatar>
-                                 <Box sx={{ flex: 1 }}>
-                                   <Typography variant="body1" sx={{ 
-                                     fontWeight: 700,
-                                     fontSize: { xs: '0.9rem', md: '1rem' }
-                                   }}>
-                                     {doctor.name}
-                                   </Typography>
-                                   <Typography variant="body2" color="text.secondary" sx={{ 
-                                     fontWeight: 500,
-                                     fontSize: { xs: '0.8rem', md: '0.875rem' }
-                                   }}>
-                                     {doctor.specialty}
-                                   </Typography>
-                                   <Typography variant="caption" sx={{ 
-                                     color: 'warning.main', 
-                                     fontWeight: 600,
-                                     backgroundColor: 'rgba(255, 152, 0, 0.1)',
-                                     padding: '2px 8px',
-                                     borderRadius: '12px',
-                                     display: 'inline-block',
-                                     mt: 0.5,
-                                     fontSize: { xs: '0.7rem', md: '0.75rem' }
-                                   }}>
-                                     📅 {t('day_off')}
-                                   </Typography>
-                                 </Box>
-                               </Box>
-                               <Tooltip title={t('edit_doctor_schedule')}>
-                                 <IconButton 
-                                   onClick={() => handleEditDoctor(doctor)}
-                                   sx={{
-                                     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                                     color: 'white',
-                                     boxShadow: '0 4px 16px rgba(102, 126, 234, 0.3)',
-                                     '&:hover': {
-                                       background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
-                                       transform: 'scale(1.05)',
-                                       boxShadow: '0 6px 20px rgba(102, 126, 234, 0.4)',
-                                     },
-                                     transition: 'all 0.3s ease'
-                                   }}
-                                   size="small"
-                                 >
-                                   <Edit fontSize="small" />
-                                 </IconButton>
-                               </Tooltip>
+                                 {t('day_off_today', { day: t(getSelectedDayOfWeek()) })}
+                               </Typography>
                              </Box>
                            </CardContent>
                          </Card>
@@ -2299,22 +2317,41 @@ const DoctorSchedulingPage: React.FC = () => {
                <Box sx={{ display: { xs: 'none', lg: 'block' } }}>
                  <TableContainer component={Paper} sx={{ 
                    borderRadius: 4,
-                   boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
-                   border: '1px solid rgba(0,0,0,0.05)',
-                   overflow: 'hidden'
+                   boxShadow: '0 8px 32px rgba(9, 9, 121, 0.15)',
+                   border: '1px solid rgba(9, 9, 121, 0.1)',
+                   overflow: 'hidden',
+                   background: 'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(248,250,252,0.98) 100%)',
+                   backdropFilter: 'blur(10px)'
                  }}>
                    <Table>
                      <TableHead sx={{ 
-                       background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)'
+                       background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)'
                      }}>
                        <TableRow>
-                         <TableCell sx={{ fontWeight: 700, fontSize: '0.95rem' }}>{t('doctor')}</TableCell>
+                         <TableCell sx={{ 
+                           fontWeight: 700, 
+                           fontSize: '0.95rem',
+                           color: 'white',
+                           borderColor: 'rgba(255,255,255,0.2)'
+                         }}>{t('doctor')}</TableCell>
                          {daysOfWeek.map((day) => (
-                           <TableCell key={day} sx={{ fontWeight: 700, textTransform: 'capitalize', fontSize: '0.95rem' }}>
+                           <TableCell key={day} sx={{ 
+                             fontWeight: 700, 
+                             textTransform: 'capitalize', 
+                             fontSize: '0.95rem',
+                             color: 'white',
+                             borderColor: 'rgba(255,255,255,0.2)'
+                           }}>
                              {t(day).substring(0, 3)}
                            </TableCell>
                          ))}
-                         <TableCell sx={{ fontWeight: 700, fontSize: '0.95rem', textAlign: 'center' }}>
+                         <TableCell sx={{ 
+                           fontWeight: 700, 
+                           fontSize: '0.95rem', 
+                           textAlign: 'center',
+                           color: 'white',
+                           borderColor: 'rgba(255,255,255,0.2)'
+                         }}>
                            {t('actions')}
                          </TableCell>
                        </TableRow>
@@ -2322,25 +2359,35 @@ const DoctorSchedulingPage: React.FC = () => {
                      <TableBody>
                        {doctors.map((doctor) => (
                          <TableRow key={doctor.id} hover sx={{
+                           background: 'linear-gradient(135deg, rgba(9, 9, 121, 0.02) 0%, rgba(0, 212, 255, 0.02) 100%)',
                            '&:hover': {
-                             backgroundColor: 'rgba(102, 126, 234, 0.02)',
-                           }
+                             background: 'linear-gradient(135deg, rgba(9, 9, 121, 0.08) 0%, rgba(0, 212, 255, 0.05) 100%)',
+                             transform: 'translateX(2px)',
+                           },
+                           transition: 'all 0.3s ease'
                          }}>
-                           <TableCell>
+                           <TableCell sx={{ borderColor: 'rgba(9, 9, 121, 0.1)' }}>
                              <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                <Avatar sx={{ 
                                  width: 40, 
                                  height: 40, 
                                  mr: 2, 
-                                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                 background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
                                  color: 'white',
                                  fontWeight: 'bold',
-                                 fontSize: '1rem'
+                                 fontSize: '1rem',
+                                 boxShadow: '0 4px 12px rgba(9, 9, 121, 0.3)'
                                }}>
                                  {doctor.avatar}
                                </Avatar>
                                <Box>
-                                 <Typography variant="body2" fontWeight={700}>
+                                 <Typography variant="body2" sx={{ 
+                                   fontWeight: 700,
+                                   background: 'linear-gradient(90deg, rgba(9, 9, 121, 1) 0%, rgba(0, 212, 255, 1) 100%)',
+                                   backgroundClip: 'text',
+                                   WebkitBackgroundClip: 'text',
+                                   WebkitTextFillColor: 'transparent'
+                                 }}>
                                    {doctor.name}
                                  </Typography>
                                  <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
@@ -2350,13 +2397,13 @@ const DoctorSchedulingPage: React.FC = () => {
                              </Box>
                            </TableCell>
                            {daysOfWeek.map((day) => (
-                             <TableCell key={day}>
+                             <TableCell key={day} sx={{ borderColor: 'rgba(9, 9, 121, 0.1)' }}>
                                {doctor.offDays.includes(day) ? (
                                  <Chip 
                                    label={t('off')} 
                                    size="small" 
                                    sx={{
-                                     backgroundColor: 'rgba(244, 67, 54, 0.1)',
+                                     background: 'linear-gradient(135deg, rgba(244, 67, 54, 0.15) 0%, rgba(244, 67, 54, 0.1) 100%)',
                                      color: '#d32f2f',
                                      border: '1px solid rgba(244, 67, 54, 0.3)',
                                      fontWeight: 600
@@ -2365,9 +2412,10 @@ const DoctorSchedulingPage: React.FC = () => {
                                ) : (
                                  <Box sx={{
                                    p: 1,
-                                   backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                                   background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.15) 0%, rgba(76, 175, 80, 0.1) 100%)',
                                    borderRadius: 2,
-                                   border: '1px solid rgba(76, 175, 80, 0.3)'
+                                   border: '1px solid rgba(76, 175, 80, 0.3)',
+                                   backdropFilter: 'blur(5px)'
                                  }}>
                                    <Typography variant="caption" sx={{ 
                                      fontWeight: 700,
@@ -2389,7 +2437,7 @@ const DoctorSchedulingPage: React.FC = () => {
                                )}
                              </TableCell>
                            ))}
-                           <TableCell sx={{ textAlign: 'center' }}>
+                           <TableCell sx={{ textAlign: 'center', borderColor: 'rgba(9, 9, 121, 0.1)' }}>
                              <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
                                <Tooltip title={t('weekly_schedule')}>
                                  <Button
@@ -2398,42 +2446,23 @@ const DoctorSchedulingPage: React.FC = () => {
                                    startIcon={<Schedule />}
                                    onClick={() => handleOpenWeeklySchedule(doctor)}
                                    sx={{
-                                     background: 'linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%)',
+                                     background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
                                      color: 'white',
-                                     boxShadow: '0 4px 16px rgba(76, 175, 80, 0.3)',
+                                     boxShadow: '0 4px 16px rgba(9, 9, 121, 0.3)',
                                      borderRadius: 2,
                                      fontSize: '0.75rem',
                                      fontWeight: 600,
                                      px: 2,
                                      '&:hover': {
-                                       background: 'linear-gradient(135deg, #388E3C 0%, #1B5E20 100%)',
+                                       background: 'linear-gradient(90deg,rgba(2, 0, 36, 0.9) 0%, rgba(9, 9, 121, 0.9) 35%, rgba(0, 212, 255, 0.9) 100%)',
                                        transform: 'scale(1.05)',
-                                       boxShadow: '0 6px 20px rgba(76, 175, 80, 0.4)',
+                                       boxShadow: '0 6px 20px rgba(9, 9, 121, 0.4)',
                                      },
                                      transition: 'all 0.3s ease'
                                    }}
                                  >
                                    Weekly Schedule
                                  </Button>
-                               </Tooltip>
-                               <Tooltip title={t('edit_doctor_profile')}>
-                                 <IconButton 
-                                   onClick={() => handleEditDoctor(doctor)}
-                                   sx={{
-                                     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                                     color: 'white',
-                                     boxShadow: '0 4px 16px rgba(102, 126, 234, 0.3)',
-                                     '&:hover': {
-                                       background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
-                                       transform: 'scale(1.05)',
-                                       boxShadow: '0 6px 20px rgba(102, 126, 234, 0.4)',
-                                     },
-                                     transition: 'all 0.3s ease'
-                                   }}
-                                   size="small"
-                                 >
-                                   <Edit fontSize="small" />
-                                 </IconButton>
                                </Tooltip>
                              </Box>
                            </TableCell>
@@ -2833,7 +2862,7 @@ const DoctorSchedulingPage: React.FC = () => {
            }}
          >
            <DialogTitle sx={{ 
-             background: 'linear-gradient(135deg, #4caf50 0%, #66bb6a 50%, #81c784 100%)',
+             background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
              color: 'white',
              borderRadius: 0,
              position: 'relative',
@@ -3160,7 +3189,7 @@ const DoctorSchedulingPage: React.FC = () => {
            }}
          >
            <DialogTitle sx={{ 
-             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+             background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
              color: 'white',
              borderRadius: 0,
              position: 'relative',
@@ -3198,7 +3227,7 @@ const DoctorSchedulingPage: React.FC = () => {
            <DialogContent sx={{ p: 5, backgroundColor: '#fafafa' }}>
              <Grid container spacing={4}>
                <Grid item xs={12}>
-                 <Typography variant="h6" sx={{ fontWeight: 700, color: '#667eea', mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
+                 <Typography variant="h6" sx={{ fontWeight: 700, color: 'rgba(9, 9, 121, 1)', mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
                    <Person />
                    {t('personal_information')}
                  </Typography>
@@ -3215,10 +3244,10 @@ const DoctorSchedulingPage: React.FC = () => {
                      '& .MuiOutlinedInput-root': {
                        borderRadius: 3,
                        backgroundColor: 'white',
-                       '&:hover fieldset': { borderColor: '#667eea' },
-                       '&.Mui-focused fieldset': { borderColor: '#667eea', borderWidth: 2 },
+                       '&:hover fieldset': { borderColor: 'rgba(9, 9, 121, 1)' },
+                       '&.Mui-focused fieldset': { borderColor: 'rgba(9, 9, 121, 1)', borderWidth: 2 },
                      },
-                     '& .MuiInputLabel-root.Mui-focused': { color: '#667eea' },
+                     '& .MuiInputLabel-root.Mui-focused': { color: 'rgba(9, 9, 121, 1)' },
                    }}
                  />
                </Grid>
@@ -3228,10 +3257,10 @@ const DoctorSchedulingPage: React.FC = () => {
                    '& .MuiOutlinedInput-root': {
                      borderRadius: 3,
                      backgroundColor: 'white',
-                     '&:hover fieldset': { borderColor: '#667eea' },
-                     '&.Mui-focused fieldset': { borderColor: '#667eea', borderWidth: 2 },
+                     '&:hover fieldset': { borderColor: 'rgba(9, 9, 121, 1)' },
+                     '&.Mui-focused fieldset': { borderColor: 'rgba(9, 9, 121, 1)', borderWidth: 2 },
                    },
-                   '& .MuiInputLabel-root.Mui-focused': { color: '#667eea' },
+                   '& .MuiInputLabel-root.Mui-focused': { color: 'rgba(9, 9, 121, 1)' },
                  }}>
                    <InputLabel>{t('medical_specialty')}</InputLabel>
                    <Select
@@ -3250,7 +3279,7 @@ const DoctorSchedulingPage: React.FC = () => {
                </Grid>
 
                <Grid item xs={12}>
-                 <Typography variant="h6" sx={{ fontWeight: 700, color: '#667eea', mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
+                 <Typography variant="h6" sx={{ fontWeight: 700, color: 'rgba(9, 9, 121, 1)', mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
                    <Schedule />
                    {t('working_hours_and_schedule')}
                  </Typography>
@@ -3268,10 +3297,10 @@ const DoctorSchedulingPage: React.FC = () => {
                      '& .MuiOutlinedInput-root': {
                        borderRadius: 3,
                        backgroundColor: 'white',
-                       '&:hover fieldset': { borderColor: '#667eea' },
-                       '&.Mui-focused fieldset': { borderColor: '#667eea', borderWidth: 2 },
+                       '&:hover fieldset': { borderColor: 'rgba(9, 9, 121, 1)' },
+                       '&.Mui-focused fieldset': { borderColor: 'rgba(9, 9, 121, 1)', borderWidth: 2 },
                      },
-                     '& .MuiInputLabel-root.Mui-focused': { color: '#667eea' },
+                     '& .MuiInputLabel-root.Mui-focused': { color: 'rgba(9, 9, 121, 1)' },
                    }}
                  />
                </Grid>
@@ -3288,10 +3317,10 @@ const DoctorSchedulingPage: React.FC = () => {
                      '& .MuiOutlinedInput-root': {
                        borderRadius: 3,
                        backgroundColor: 'white',
-                       '&:hover fieldset': { borderColor: '#667eea' },
-                       '&.Mui-focused fieldset': { borderColor: '#667eea', borderWidth: 2 },
+                       '&:hover fieldset': { borderColor: 'rgba(9, 9, 121, 1)' },
+                       '&.Mui-focused fieldset': { borderColor: 'rgba(9, 9, 121, 1)', borderWidth: 2 },
                      },
-                     '& .MuiInputLabel-root.Mui-focused': { color: '#667eea' },
+                     '& .MuiInputLabel-root.Mui-focused': { color: 'rgba(9, 9, 121, 1)' },
                    }}
                  />
                </Grid>
@@ -3301,10 +3330,10 @@ const DoctorSchedulingPage: React.FC = () => {
                    '& .MuiOutlinedInput-root': {
                      borderRadius: 3,
                      backgroundColor: 'white',
-                     '&:hover fieldset': { borderColor: '#667eea' },
-                     '&.Mui-focused fieldset': { borderColor: '#667eea', borderWidth: 2 },
+                     '&:hover fieldset': { borderColor: 'rgba(9, 9, 121, 1)' },
+                     '&.Mui-focused fieldset': { borderColor: 'rgba(9, 9, 121, 1)', borderWidth: 2 },
                    },
-                   '& .MuiInputLabel-root.Mui-focused': { color: '#667eea' },
+                   '& .MuiInputLabel-root.Mui-focused': { color: 'rgba(9, 9, 121, 1)' },
                  }}>
                    <InputLabel>{t('off_days')}</InputLabel>
                    <Select
@@ -3321,7 +3350,7 @@ const DoctorSchedulingPage: React.FC = () => {
                              width: 8, 
                              height: 8, 
                              borderRadius: '50%', 
-                             backgroundColor: doctorFormData.offDays.includes(day) ? '#667eea' : '#e0e0e0' 
+                             backgroundColor: doctorFormData.offDays.includes(day) ? 'rgba(9, 9, 121, 1)' : '#e0e0e0' 
                            }} />
                            {t(day)}
                          </Box>
@@ -3344,10 +3373,10 @@ const DoctorSchedulingPage: React.FC = () => {
                      '& .MuiOutlinedInput-root': {
                        borderRadius: 3,
                        backgroundColor: 'white',
-                       '&:hover fieldset': { borderColor: '#667eea' },
-                       '&.Mui-focused fieldset': { borderColor: '#667eea', borderWidth: 2 },
+                       '&:hover fieldset': { borderColor: 'rgba(9, 9, 121, 1)' },
+                       '&.Mui-focused fieldset': { borderColor: 'rgba(9, 9, 121, 1)', borderWidth: 2 },
                      },
-                     '& .MuiInputLabel-root.Mui-focused': { color: '#667eea' },
+                     '& .MuiInputLabel-root.Mui-focused': { color: 'rgba(9, 9, 121, 1)' },
                    }}
                  />
                </Grid>
@@ -3365,10 +3394,10 @@ const DoctorSchedulingPage: React.FC = () => {
                      '& .MuiOutlinedInput-root': {
                        borderRadius: 3,
                        backgroundColor: 'white',
-                       '&:hover fieldset': { borderColor: '#667eea' },
-                       '&.Mui-focused fieldset': { borderColor: '#667eea', borderWidth: 2 },
+                       '&:hover fieldset': { borderColor: 'rgba(9, 9, 121, 1)' },
+                       '&.Mui-focused fieldset': { borderColor: 'rgba(9, 9, 121, 1)', borderWidth: 2 },
                      },
-                     '& .MuiInputLabel-root.Mui-focused': { color: '#667eea' },
+                     '& .MuiInputLabel-root.Mui-focused': { color: 'rgba(9, 9, 121, 1)' },
                    }}
                  />
                </Grid>
@@ -3407,13 +3436,13 @@ const DoctorSchedulingPage: React.FC = () => {
                  borderRadius: 3, 
                  px: 6,
                  py: 1.5,
-                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                 boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)',
+                 background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
+                 boxShadow: '0 8px 32px rgba(9, 9, 121, 0.4)',
                  fontWeight: 600,
                  fontSize: '1.1rem',
                  '&:hover': {
-                   background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
-                   boxShadow: '0 12px 40px rgba(102, 126, 234, 0.4)',
+                   background: 'linear-gradient(90deg,rgba(2, 0, 36, 0.9) 0%, rgba(9, 9, 121, 0.9) 35%, rgba(0, 212, 255, 0.9) 100%)',
+                   boxShadow: '0 12px 40px rgba(9, 9, 121, 0.5)',
                    transform: 'translateY(-2px)',
                  },
                  transition: 'all 0.3s ease',

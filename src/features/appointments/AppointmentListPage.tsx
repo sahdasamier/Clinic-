@@ -207,12 +207,15 @@ const StatCard: React.FC<{
   return (
     <Card sx={{ 
       height: '100%',
+      background: 'linear-gradient(120deg, rgba(2, 0, 36, 0.08) 0%, rgba(9, 9, 121, 0.12) 35%, rgba(0, 212, 255, 0.08) 100%)',
+      backdropFilter: 'blur(15px)',
+      border: '1px solid rgba(9, 9, 121, 0.2)',
       borderRadius: { xs: 2, md: 3 },
-      boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-      border: '1px solid rgba(0,0,0,0.05)',
+      boxShadow: '0 4px 20px rgba(9, 9, 121, 0.1)',
       '&:hover': {
         transform: 'translateY(-2px)',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
+        background: 'linear-gradient(120deg, rgba(2, 0, 36, 0.12) 0%, rgba(9, 9, 121, 0.18) 35%, rgba(0, 212, 255, 0.12) 100%)',
+        boxShadow: '0 8px 32px rgba(9, 9, 121, 0.2)',
       },
       transition: 'all 0.3s ease'
     }}>
@@ -225,7 +228,7 @@ const StatCard: React.FC<{
             width: { xs: 40, md: 56 },
             height: { xs: 40, md: 56 },
             borderRadius: { xs: '12px', md: '16px' },
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -240,7 +243,7 @@ const StatCard: React.FC<{
           fontWeight: 800, 
           mb: 0.5, 
           color: 'primary.main',
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
           backgroundClip: 'text',
@@ -1398,7 +1401,7 @@ const AppointmentListPage: React.FC = () => {
           <Box sx={{ 
             mb: 4, 
             p: 4,
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
             borderRadius: 4,
             color: 'white',
             position: 'relative',
@@ -1446,16 +1449,7 @@ const AppointmentListPage: React.FC = () => {
                   >
                     {t('appointment_management')}
                   </Typography>
-                  <Typography 
-                    variant="h6"
-                    sx={{ 
-                      color: 'rgba(255,255,255,0.9)',
-                      fontWeight: 400,
-                      fontSize: { xs: '0.9rem', sm: '1.1rem', md: '1.25rem' }
-                    }}
-                  >
-                    �� {t('comprehensive_appointment_scheduling')}
-                  </Typography>
+                  
                 </Box>
               </Box>
               
@@ -1544,11 +1538,18 @@ const AppointmentListPage: React.FC = () => {
           {/* Statistics Overview */}
           <Card sx={{ 
             mb: 4, 
-            background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+            background: 'linear-gradient(135deg, rgba(2, 0, 36, 0.05) 0%, rgba(9, 9, 121, 0.08) 35%, rgba(0, 212, 255, 0.05) 100%)',
+            backdropFilter: 'blur(10px)',
+            border: '1px solid rgba(9, 9, 121, 0.1)',
             borderRadius: 4,
-            boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+            boxShadow: '0 4px 20px rgba(9, 9, 121, 0.1)',
             position: 'relative',
-            overflow: 'hidden'
+            overflow: 'hidden',
+            '&:hover': {
+              background: 'linear-gradient(135deg, rgba(2, 0, 36, 0.08) 0%, rgba(9, 9, 121, 0.12) 35%, rgba(0, 212, 255, 0.08) 100%)',
+              boxShadow: '0 6px 25px rgba(9, 9, 121, 0.15)',
+            },
+            transition: 'all 0.3s ease',
           }}>
             <CardContent sx={{ p: 4, position: 'relative', zIndex: 2 }}>
              <Typography variant="h5" sx={{ fontWeight: 700, mb: 3, color: 'text.primary' }}>
@@ -1558,16 +1559,41 @@ const AppointmentListPage: React.FC = () => {
                <Grid item xs={12} sm={6} md={3}>
                  <Box sx={{ 
                    textAlign: 'center', 
-                   p: 2, 
-                   backgroundColor: 'rgba(255,255,255,0.8)', 
+                   p: 3, 
+                   background: 'linear-gradient(135deg, rgba(2, 0, 36, 0.08) 0%, rgba(9, 9, 121, 0.12) 35%, rgba(0, 212, 255, 0.08) 100%)',
                    borderRadius: 3,
-                   backdropFilter: 'blur(10px)',
-                   border: '1px solid rgba(255,255,255,0.2)'
+                   backdropFilter: 'blur(15px)',
+                   border: '1px solid rgba(9, 9, 121, 0.2)',
+                   boxShadow: '0 4px 20px rgba(9, 9, 121, 0.1)',
+                   position: 'relative',
+                   overflow: 'hidden',
+                   '&:hover': {
+                     background: 'linear-gradient(135deg, rgba(2, 0, 36, 0.12) 0%, rgba(9, 9, 121, 0.18) 35%, rgba(0, 212, 255, 0.12) 100%)',
+                     transform: 'translateY(-2px)',
+                     boxShadow: '0 8px 30px rgba(9, 9, 121, 0.2)',
+                   },
+                   transition: 'all 0.3s ease'
                  }}>
-                   <Typography variant="h4" sx={{ fontWeight: 800, color: 'primary.main', mb: 0.5 }}>
+                   <Box sx={{ 
+                     position: 'absolute', 
+                     top: -15, 
+                     right: -15, 
+                     width: 40, 
+                     height: 40, 
+                     background: 'linear-gradient(45deg, rgba(0, 212, 255, 0.2) 0%, rgba(9, 9, 121, 0.15) 100%)', 
+                     borderRadius: '50%' 
+                   }} />
+                   <Typography variant="h4" sx={{ 
+                     fontWeight: 800, 
+                     background: 'linear-gradient(135deg, rgba(0, 212, 255, 1) 0%, rgba(9, 9, 121, 1) 100%)',
+                     backgroundClip: 'text',
+                     WebkitBackgroundClip: 'text',
+                     WebkitTextFillColor: 'transparent',
+                     mb: 0.5 
+                   }}>
                      {`${completedToday}/${todayAppointments.length}`}
                    </Typography>
-                   <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+                   <Typography variant="body2" sx={{ color: 'rgba(2, 0, 36, 0.8)', fontWeight: 600 }}>
                      {t('todays_progress')}
                    </Typography>
                  </Box>
@@ -1575,16 +1601,41 @@ const AppointmentListPage: React.FC = () => {
                <Grid item xs={12} sm={6} md={3}>
                  <Box sx={{ 
                    textAlign: 'center', 
-                   p: 2, 
-                   backgroundColor: 'rgba(255,255,255,0.8)', 
+                   p: 3, 
+                   background: 'linear-gradient(135deg, rgba(2, 0, 36, 0.06) 0%, rgba(9, 9, 121, 0.08) 35%, rgba(0, 212, 255, 0.06) 100%)',
                    borderRadius: 3,
-                   backdropFilter: 'blur(10px)',
-                   border: '1px solid rgba(255,255,255,0.2)'
+                   backdropFilter: 'blur(15px)',
+                   border: '1px solid rgba(0, 212, 255, 0.15)',
+                   boxShadow: '0 4px 20px rgba(0, 212, 255, 0.08)',
+                   position: 'relative',
+                   overflow: 'hidden',
+                   '&:hover': {
+                     background: 'linear-gradient(135deg, rgba(2, 0, 36, 0.09) 0%, rgba(9, 9, 121, 0.12) 35%, rgba(0, 212, 255, 0.09) 100%)',
+                     transform: 'translateY(-2px)',
+                     boxShadow: '0 8px 30px rgba(0, 212, 255, 0.15)',
+                   },
+                   transition: 'all 0.3s ease'
                  }}>
-                   <Typography variant="h4" sx={{ fontWeight: 800, color: 'success.main', mb: 0.5 }}>
+                   <Box sx={{ 
+                     position: 'absolute', 
+                     top: -15, 
+                     right: -15, 
+                     width: 40, 
+                     height: 40, 
+                     background: 'linear-gradient(45deg, rgba(9, 9, 121, 0.2) 0%, rgba(0, 212, 255, 0.15) 100%)', 
+                     borderRadius: '50%' 
+                   }} />
+                   <Typography variant="h4" sx={{ 
+                     fontWeight: 800, 
+                     background: 'linear-gradient(135deg, rgba(9, 9, 121, 1) 0%, rgba(0, 212, 255, 1) 100%)',
+                     backgroundClip: 'text',
+                     WebkitBackgroundClip: 'text',
+                     WebkitTextFillColor: 'transparent',
+                     mb: 0.5 
+                   }}>
                      {t('doctor hours display')}
                    </Typography>
-                   <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+                   <Typography variant="body2" sx={{ color: 'rgba(2, 0, 36, 0.8)', fontWeight: 600 }}>
                      {t('doctor_hours')}
                    </Typography>
                  </Box>
@@ -1592,16 +1643,41 @@ const AppointmentListPage: React.FC = () => {
                <Grid item xs={12} sm={6} md={3}>
                  <Box sx={{ 
                    textAlign: 'center', 
-                   p: 2, 
-                   backgroundColor: 'rgba(255,255,255,0.8)', 
+                   p: 3, 
+                   background: 'linear-gradient(135deg, rgba(2, 0, 36, 0.05) 0%, rgba(9, 9, 121, 0.07) 35%, rgba(0, 212, 255, 0.04) 100%)',
                    borderRadius: 3,
-                   backdropFilter: 'blur(10px)',
-                   border: '1px solid rgba(255,255,255,0.2)'
+                   backdropFilter: 'blur(15px)',
+                   border: '1px solid rgba(2, 0, 36, 0.2)',
+                   boxShadow: '0 4px 20px rgba(2, 0, 36, 0.08)',
+                   position: 'relative',
+                   overflow: 'hidden',
+                   '&:hover': {
+                     background: 'linear-gradient(135deg, rgba(2, 0, 36, 0.08) 0%, rgba(9, 9, 121, 0.11) 35%, rgba(0, 212, 255, 0.07) 100%)',
+                     transform: 'translateY(-2px)',
+                     boxShadow: '0 8px 30px rgba(2, 0, 36, 0.15)',
+                   },
+                   transition: 'all 0.3s ease'
                  }}>
-                   <Typography variant="h4" sx={{ fontWeight: 800, color: 'warning.main', mb: 0.5 }}>
+                   <Box sx={{ 
+                     position: 'absolute', 
+                     top: -15, 
+                     right: -15, 
+                     width: 40, 
+                     height: 40, 
+                     background: 'linear-gradient(45deg, rgba(2, 0, 36, 0.15) 0%, rgba(9, 9, 121, 0.2) 100%)', 
+                     borderRadius: '50%' 
+                   }} />
+                   <Typography variant="h4" sx={{ 
+                     fontWeight: 800, 
+                     background: 'linear-gradient(135deg, rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 100%)',
+                     backgroundClip: 'text',
+                     WebkitBackgroundClip: 'text',
+                     WebkitTextFillColor: 'transparent',
+                     mb: 0.5 
+                   }}>
                      {appointmentList.filter(apt => apt.status === 'confirmed').length}
                    </Typography>
-                   <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+                   <Typography variant="body2" sx={{ color: 'rgba(2, 0, 36, 0.8)', fontWeight: 600 }}>
                      {t('confirmed_today')}
                    </Typography>
                  </Box>
@@ -1609,16 +1685,41 @@ const AppointmentListPage: React.FC = () => {
                <Grid item xs={12} sm={6} md={3}>
                  <Box sx={{ 
                    textAlign: 'center', 
-                   p: 2, 
-                   backgroundColor: 'rgba(255,255,255,0.8)', 
+                   p: 3, 
+                   background: 'linear-gradient(135deg, rgba(9, 9, 121, 0.05) 0%, rgba(2, 0, 36, 0.07) 35%, rgba(0, 212, 255, 0.03) 100%)',
                    borderRadius: 3,
-                   backdropFilter: 'blur(10px)',
-                   border: '1px solid rgba(255,255,255,0.2)'
+                   backdropFilter: 'blur(15px)',
+                   border: '1px solid rgba(9, 9, 121, 0.15)',
+                   boxShadow: '0 4px 20px rgba(9, 9, 121, 0.08)',
+                   position: 'relative',
+                   overflow: 'hidden',
+                   '&:hover': {
+                     background: 'linear-gradient(135deg, rgba(9, 9, 121, 0.08) 0%, rgba(2, 0, 36, 0.11) 35%, rgba(0, 212, 255, 0.06) 100%)',
+                     transform: 'translateY(-2px)',
+                     boxShadow: '0 8px 30px rgba(9, 9, 121, 0.15)',
+                   },
+                   transition: 'all 0.3s ease'
                  }}>
-                   <Typography variant="h4" sx={{ fontWeight: 800, color: 'info.main', mb: 0.5 }}>
+                   <Box sx={{ 
+                     position: 'absolute', 
+                     top: -15, 
+                     right: -15, 
+                     width: 40, 
+                     height: 40, 
+                     background: 'linear-gradient(45deg, rgba(0, 212, 255, 0.15) 0%, rgba(2, 0, 36, 0.2) 100%)', 
+                     borderRadius: '50%' 
+                   }} />
+                   <Typography variant="h4" sx={{ 
+                     fontWeight: 800, 
+                     background: 'linear-gradient(135deg, rgba(9, 9, 121, 1) 0%, rgba(2, 0, 36, 1) 100%)',
+                     backgroundClip: 'text',
+                     WebkitBackgroundClip: 'text',
+                     WebkitTextFillColor: 'transparent',
+                     mb: 0.5 
+                   }}>
                      {generateAvailableTimeSlots().filter(slot => slot.available).length}
                    </Typography>
-                   <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+                   <Typography variant="body2" sx={{ color: 'rgba(2, 0, 36, 0.8)', fontWeight: 600 }}>
                      {t('available_slots')}
                    </Typography>
                  </Box>
@@ -1629,11 +1730,18 @@ const AppointmentListPage: React.FC = () => {
 
          {/* Main Appointments Table */}
          <Card sx={{ 
+           background: 'linear-gradient(120deg, rgba(2, 0, 36, 0.03) 0%, rgba(9, 9, 121, 0.05) 35%, rgba(0, 212, 255, 0.03) 100%)',
+           backdropFilter: 'blur(10px)',
+           border: '1px solid rgba(9, 9, 121, 0.08)',
            borderRadius: 4,
-           boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
-           border: '1px solid rgba(0,0,0,0.05)',
+           boxShadow: '0 8px 32px rgba(9, 9, 121, 0.1)',
            overflow: 'hidden',
-           mb: 4
+           mb: 4,
+           '&:hover': {
+             background: 'linear-gradient(120deg, rgba(2, 0, 36, 0.05) 0%, rgba(9, 9, 121, 0.08) 35%, rgba(0, 212, 255, 0.05) 100%)',
+             boxShadow: '0 12px 40px rgba(9, 9, 121, 0.15)',
+           },
+           transition: 'all 0.3s ease',
          }}>
            <CardContent sx={{ p: 0 }}>
              {/* Search and Filters */}
@@ -1733,13 +1841,13 @@ const AppointmentListPage: React.FC = () => {
                          },
                          transition: 'all 0.3s ease',
                          ...(getActiveFilterCount() > 0 && {
-                           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                           background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
                            color: 'white',
                            border: 'none',
                            '&:hover': {
-                             background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
+                             background: 'linear-gradient(90deg,rgba(2, 0, 36, 0.9) 0%, rgba(9, 9, 121, 0.9) 35%, rgba(0, 212, 255, 0.9) 100%)',
                              transform: 'translateY(-1px)',
-                             boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)',
+                             boxShadow: '0 8px 32px rgba(9, 9, 121, 0.4)',
                            }
                          })
                        }}
@@ -1781,8 +1889,8 @@ const AppointmentListPage: React.FC = () => {
                            px: 2,
                            minWidth: 'fit-content',
                            ...(viewMode === 'table' && {
-                             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                             boxShadow: '0 4px 16px rgba(102, 126, 234, 0.3)',
+                             background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
+                             boxShadow: '0 4px 16px rgba(9, 9, 121, 0.3)',
                            }),
                            '&:hover': {
                              transform: 'translateY(-1px)',
@@ -1804,8 +1912,8 @@ const AppointmentListPage: React.FC = () => {
                            px: 2,
                            minWidth: 'fit-content',
                            ...(viewMode === 'cards' && {
-                             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                             boxShadow: '0 4px 16px rgba(102, 126, 234, 0.3)',
+                             background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
+                             boxShadow: '0 4px 16px rgba(9, 9, 121, 0.3)',
                            }),
                            '&:hover': {
                              transform: 'translateY(-1px)',
@@ -1826,7 +1934,7 @@ const AppointmentListPage: React.FC = () => {
                <Box sx={{ 
                  px: 4, 
                  py: 3, 
-                 background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%)', 
+                 background: 'linear-gradient(135deg, rgba(2, 0, 36, 0.05) 0%, rgba(9, 9, 121, 0.08) 35%, rgba(0, 212, 255, 0.05) 100%)', 
                  borderBottom: 1, 
                  borderColor: 'divider',
                  borderRadius: '0 0 16px 16px'
@@ -1837,7 +1945,7 @@ const AppointmentListPage: React.FC = () => {
                        width: 32,
                        height: 32,
                        borderRadius: '8px',
-                       background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                       background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
                        display: 'flex',
                        alignItems: 'center',
                        justifyContent: 'center',
@@ -1876,17 +1984,17 @@ const AppointmentListPage: React.FC = () => {
                      margin: '0 2px',
                      '&.Mui-selected': {
                        color: 'white',
-                       background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                       boxShadow: '0 4px 16px rgba(102, 126, 234, 0.3)',
+                       background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
+                       boxShadow: '0 4px 16px rgba(9, 9, 121, 0.4)',
                      },
                      '&:hover': {
-                       backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                       backgroundColor: 'rgba(9, 9, 121, 0.1)',
                      }
                    },
                    '& .MuiTabs-indicator': {
                      height: 4,
                      borderRadius: '4px 4px 0 0',
-                     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                     background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
                    },
                    '& .MuiTabs-scrollButtons': {
                      color: 'primary.main',
@@ -2013,8 +2121,14 @@ const AppointmentListPage: React.FC = () => {
                        <Chip 
                          label={appointmentList.filter(apt => apt.status === 'no-show').length} 
                          size="small" 
-                         color="secondary"
-                         sx={{ height: 20, fontSize: '0.75rem' }}
+                         sx={{ 
+                           height: 20, 
+                           fontSize: '0.75rem',
+                           background: 'linear-gradient(135deg, rgba(2, 0, 36, 0.8) 0%, rgba(9, 9, 121, 0.9) 100%)',
+                           color: 'white',
+                           fontWeight: 600,
+                           border: '1px solid rgba(2, 0, 36, 0.3)',
+                         }}
                        />
                      </Box>
                    }
@@ -2027,19 +2141,110 @@ const AppointmentListPage: React.FC = () => {
                <Box sx={{ py: 3 }}>
                  <TableContainer>
                    <Table>
-                     <TableHead>
+                     <TableHead sx={{ 
+                       background: 'linear-gradient(135deg, rgba(2, 0, 36, 0.05) 0%, rgba(9, 9, 121, 0.08) 35%, rgba(0, 212, 255, 0.05) 100%)',
+                       backdropFilter: 'blur(10px)',
+                     }}>
                        <TableRow>
-                         <TableCell sx={{ fontWeight: 600 }}>✓</TableCell>
-                         <TableCell sx={{ fontWeight: 600 }}>{t('patient')}</TableCell>
-                         <TableCell sx={{ fontWeight: 600 }}>{t('doctor')}</TableCell>
-                         <TableCell sx={{ fontWeight: 600 }}>{t('appointment_date')}</TableCell>
-                         <TableCell sx={{ fontWeight: 600 }}>{t('time_duration')}</TableCell>
-                         <TableCell sx={{ fontWeight: 600 }}>{t('type')}</TableCell>
-                         <TableCell sx={{ fontWeight: 600 }}>{t('priority')}</TableCell>
-                         <TableCell sx={{ fontWeight: 600 }}>{t('date_received')}</TableCell>
-                         <TableCell sx={{ fontWeight: 600 }}>{t('payment_status')}</TableCell>
-                         <TableCell sx={{ fontWeight: 600 }}>{t('status')}</TableCell>
-                         <TableCell sx={{ fontWeight: 600 }}>{t('actions')}</TableCell>
+                         <TableCell sx={{ 
+                           fontWeight: 700, 
+                           fontSize: '0.9rem',
+                           background: 'linear-gradient(135deg, rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 100%)',
+                           backgroundClip: 'text',
+                           WebkitBackgroundClip: 'text',
+                           WebkitTextFillColor: 'transparent',
+                           borderBottom: '2px solid rgba(9, 9, 121, 0.2)'
+                         }}>✓</TableCell>
+                         <TableCell sx={{ 
+                           fontWeight: 700, 
+                           fontSize: '0.9rem',
+                           background: 'linear-gradient(135deg, rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 100%)',
+                           backgroundClip: 'text',
+                           WebkitBackgroundClip: 'text',
+                           WebkitTextFillColor: 'transparent',
+                           borderBottom: '2px solid rgba(9, 9, 121, 0.2)'
+                         }}>{t('patient')}</TableCell>
+                         <TableCell sx={{ 
+                           fontWeight: 700, 
+                           fontSize: '0.9rem',
+                           background: 'linear-gradient(135deg, rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 100%)',
+                           backgroundClip: 'text',
+                           WebkitBackgroundClip: 'text',
+                           WebkitTextFillColor: 'transparent',
+                           borderBottom: '2px solid rgba(9, 9, 121, 0.2)'
+                         }}>{t('doctor')}</TableCell>
+                         <TableCell sx={{ 
+                           fontWeight: 700, 
+                           fontSize: '0.9rem',
+                           background: 'linear-gradient(135deg, rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 100%)',
+                           backgroundClip: 'text',
+                           WebkitBackgroundClip: 'text',
+                           WebkitTextFillColor: 'transparent',
+                           borderBottom: '2px solid rgba(9, 9, 121, 0.2)'
+                         }}>{t('appointment_date')}</TableCell>
+                         <TableCell sx={{ 
+                           fontWeight: 700, 
+                           fontSize: '0.9rem',
+                           background: 'linear-gradient(135deg, rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 100%)',
+                           backgroundClip: 'text',
+                           WebkitBackgroundClip: 'text',
+                           WebkitTextFillColor: 'transparent',
+                           borderBottom: '2px solid rgba(9, 9, 121, 0.2)'
+                         }}>{t('time_duration')}</TableCell>
+                         <TableCell sx={{ 
+                           fontWeight: 700, 
+                           fontSize: '0.9rem',
+                           background: 'linear-gradient(135deg, rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 100%)',
+                           backgroundClip: 'text',
+                           WebkitBackgroundClip: 'text',
+                           WebkitTextFillColor: 'transparent',
+                           borderBottom: '2px solid rgba(9, 9, 121, 0.2)'
+                         }}>{t('type')}</TableCell>
+                         <TableCell sx={{ 
+                           fontWeight: 700, 
+                           fontSize: '0.9rem',
+                           background: 'linear-gradient(135deg, rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 100%)',
+                           backgroundClip: 'text',
+                           WebkitBackgroundClip: 'text',
+                           WebkitTextFillColor: 'transparent',
+                           borderBottom: '2px solid rgba(9, 9, 121, 0.2)'
+                         }}>{t('priority')}</TableCell>
+                         <TableCell sx={{ 
+                           fontWeight: 700, 
+                           fontSize: '0.9rem',
+                           background: 'linear-gradient(135deg, rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 100%)',
+                           backgroundClip: 'text',
+                           WebkitBackgroundClip: 'text',
+                           WebkitTextFillColor: 'transparent',
+                           borderBottom: '2px solid rgba(9, 9, 121, 0.2)'
+                         }}>{t('date_received')}</TableCell>
+                         <TableCell sx={{ 
+                           fontWeight: 700, 
+                           fontSize: '0.9rem',
+                           background: 'linear-gradient(135deg, rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 100%)',
+                           backgroundClip: 'text',
+                           WebkitBackgroundClip: 'text',
+                           WebkitTextFillColor: 'transparent',
+                           borderBottom: '2px solid rgba(9, 9, 121, 0.2)'
+                         }}>{t('payment_status')}</TableCell>
+                         <TableCell sx={{ 
+                           fontWeight: 700, 
+                           fontSize: '0.9rem',
+                           background: 'linear-gradient(135deg, rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 100%)',
+                           backgroundClip: 'text',
+                           WebkitBackgroundClip: 'text',
+                           WebkitTextFillColor: 'transparent',
+                           borderBottom: '2px solid rgba(9, 9, 121, 0.2)'
+                         }}>{t('status')}</TableCell>
+                         <TableCell sx={{ 
+                           fontWeight: 700, 
+                           fontSize: '0.9rem',
+                           background: 'linear-gradient(135deg, rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 100%)',
+                           backgroundClip: 'text',
+                           WebkitBackgroundClip: 'text',
+                           WebkitTextFillColor: 'transparent',
+                           borderBottom: '2px solid rgba(9, 9, 121, 0.2)'
+                         }}>{t('actions')}</TableCell>
                        </TableRow>
                      </TableHead>
                      <TableBody>
@@ -2100,9 +2305,18 @@ const AppointmentListPage: React.FC = () => {
                              key={appointment.id} 
                              hover
                              sx={{ 
-                               opacity: appointment.completed ? 0.6 : 1,
-                               backgroundColor: appointment.completed ? '#f8f9fa' : 'inherit',
+                               opacity: appointment.completed ? 0.7 : 1,
+                               background: appointment.completed 
+                                 ? 'linear-gradient(135deg, rgba(2, 0, 36, 0.02) 0%, rgba(9, 9, 121, 0.03) 35%, rgba(0, 212, 255, 0.02) 100%)'
+                                 : 'linear-gradient(135deg, rgba(2, 0, 36, 0.01) 0%, rgba(9, 9, 121, 0.02) 35%, rgba(0, 212, 255, 0.01) 100%)',
                                borderLeft: `4px solid ${getPriorityColor(appointment.priority)}`,
+                               '&:hover': {
+                                 background: 'linear-gradient(135deg, rgba(2, 0, 36, 0.04) 0%, rgba(9, 9, 121, 0.06) 35%, rgba(0, 212, 255, 0.04) 100%)',
+                                 transform: 'translateX(2px)',
+                                 boxShadow: '0 2px 12px rgba(9, 9, 121, 0.1)',
+                               },
+                               transition: 'all 0.3s ease',
+                               borderBottom: '1px solid rgba(9, 9, 121, 0.05)',
                              }}
                            >
                              <TableCell>
@@ -2129,8 +2343,11 @@ const AppointmentListPage: React.FC = () => {
                                      width: 40,
                                      height: 40,
                                      mr: 2,
-                                     backgroundColor: 'primary.main',
+                                     background: 'linear-gradient(135deg, rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 100%)',
                                      fontSize: '0.875rem',
+                                     color: 'white',
+                                     fontWeight: 600,
+                                     boxShadow: '0 3px 12px rgba(2, 0, 36, 0.3)',
                                    }}
                                  >
                                    {appointment.patientAvatar}
@@ -2159,8 +2376,11 @@ const AppointmentListPage: React.FC = () => {
                                      width: 32,
                                      height: 32,
                                      mr: 1.5,
-                                     backgroundColor: 'success.main',
+                                     background: 'linear-gradient(135deg, rgba(9, 9, 121, 1) 0%, rgba(0, 212, 255, 1) 100%)',
                                      fontSize: '0.75rem',
+                                     color: 'white',
+                                     fontWeight: 600,
+                                     boxShadow: '0 2px 8px rgba(9, 9, 121, 0.3)',
                                    }}
                                  >
                                    👨‍⚕️
@@ -2169,7 +2389,12 @@ const AppointmentListPage: React.FC = () => {
                                                                         <Typography 
                                        variant="body2" 
                                        fontWeight={600}
-                                       color="success.main"
+                                       sx={{
+                                         background: 'linear-gradient(135deg, rgba(9, 9, 121, 1) 0%, rgba(0, 212, 255, 1) 100%)',
+                                         backgroundClip: 'text',
+                                         WebkitBackgroundClip: 'text',
+                                         WebkitTextFillColor: 'transparent',
+                                       }}
                                      >
                                        {getDoctorName(appointment)}
                                      </Typography>
@@ -2407,8 +2632,15 @@ const AppointmentListPage: React.FC = () => {
                          <Grid item xs={12} sm={6} md={6} key={appointment.id}>
                            <Card sx={{ 
                              height: '100%', 
-                             '&:hover': { boxShadow: 4 },
-                             border: appointment.status === 'pending' ? '2px solid #F59E0B' : 'none',
+                             background: 'linear-gradient(135deg, rgba(2, 0, 36, 0.04) 0%, rgba(9, 9, 121, 0.06) 35%, rgba(0, 212, 255, 0.04) 100%)',
+                             backdropFilter: 'blur(10px)',
+                             border: appointment.status === 'pending' ? '2px solid #F59E0B' : '1px solid rgba(9, 9, 121, 0.12)',
+                             '&:hover': { 
+                               background: 'linear-gradient(135deg, rgba(2, 0, 36, 0.06) 0%, rgba(9, 9, 121, 0.1) 35%, rgba(0, 212, 255, 0.06) 100%)',
+                               boxShadow: '0 8px 25px rgba(9, 9, 121, 0.15)',
+                               transform: 'translateY(-2px)',
+                             },
+                             transition: 'all 0.3s ease',
                            }}>
                              <CardContent sx={{ p: 3 }}>
                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
@@ -2418,7 +2650,11 @@ const AppointmentListPage: React.FC = () => {
                                        width: 50,
                                        height: 50,
                                        mr: 2,
-                                       backgroundColor: 'primary.main',
+                                       background: 'linear-gradient(135deg, rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 100%)',
+                                       color: 'white',
+                                       fontWeight: 600,
+                                       boxShadow: '0 4px 16px rgba(2, 0, 36, 0.3)',
+                                       border: '2px solid rgba(0, 212, 255, 0.2)',
                                      }}
                                    >
                                      {appointment.patientAvatar}
@@ -2478,7 +2714,13 @@ const AppointmentListPage: React.FC = () => {
                                  <Grid item xs={6}>
                                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                                      <People sx={{ fontSize: 16, mr: 1, color: 'text.secondary' }} />
-                                     <Typography variant="body2" color="text.secondary">
+                                     <Typography variant="body2" sx={{
+                                       fontWeight: 600,
+                                       background: 'linear-gradient(135deg, rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 100%)',
+                                       backgroundClip: 'text',
+                                       WebkitBackgroundClip: 'text',
+                                       WebkitTextFillColor: 'transparent',
+                                     }}>
                                        {getDoctorName(appointment)}
                                      </Typography>
                                    </Box>
@@ -2492,8 +2734,18 @@ const AppointmentListPage: React.FC = () => {
                                </Grid>
                                
                                {appointment.notes && (
-                                 <Box sx={{ mt: 2, p: 2, backgroundColor: 'grey.50', borderRadius: 2 }}>
-                                   <Typography variant="caption" color="text.secondary">
+                                 <Box sx={{ 
+                                   mt: 2, 
+                                   p: 2, 
+                                   background: 'linear-gradient(135deg, rgba(2, 0, 36, 0.03) 0%, rgba(9, 9, 121, 0.05) 35%, rgba(0, 212, 255, 0.03) 100%)',
+                                   backdropFilter: 'blur(10px)',
+                                   border: '1px solid rgba(9, 9, 121, 0.1)',
+                                   borderRadius: 2 
+                                 }}>
+                                   <Typography variant="caption" sx={{ 
+                                     color: 'rgba(2, 0, 36, 0.8)',
+                                     fontWeight: 500
+                                   }}>
                                      {t('notes')}: {appointment.notes}
                                    </Typography>
                                  </Box>
@@ -2506,8 +2758,21 @@ const AppointmentListPage: React.FC = () => {
                                        size="small"
                                        onClick={() => toggleAppointmentCompletion(appointment.id)}
                                        sx={{ 
-                                         color: appointment.completed ? 'success.main' : 'text.secondary',
-                                         '&:hover': { backgroundColor: 'primary.light' }
+                                         color: appointment.completed ? '#4CAF50' : 'rgba(9, 9, 121, 0.6)',
+                                         background: appointment.completed 
+                                           ? 'linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(76, 175, 80, 0.05) 100%)'
+                                           : 'linear-gradient(135deg, rgba(9, 9, 121, 0.05) 0%, rgba(9, 9, 121, 0.02) 100%)',
+                                         border: appointment.completed 
+                                           ? '1px solid rgba(76, 175, 80, 0.2)'
+                                           : '1px solid rgba(9, 9, 121, 0.1)',
+                                         borderRadius: 1.5,
+                                         '&:hover': { 
+                                           background: appointment.completed 
+                                             ? 'linear-gradient(135deg, rgba(76, 175, 80, 0.2) 0%, rgba(76, 175, 80, 0.1) 100%)'
+                                             : 'linear-gradient(135deg, rgba(9, 9, 121, 0.1) 0%, rgba(9, 9, 121, 0.05) 100%)',
+                                           transform: 'scale(1.1)',
+                                         },
+                                         transition: 'all 0.3s ease'
                                        }}
                                      >
                                        <CheckCircle fontSize="small" />
@@ -2516,7 +2781,18 @@ const AppointmentListPage: React.FC = () => {
                                    <Button 
                                      size="small" 
                                      startIcon={<Phone />}
-                                     sx={{ color: '#25D366' }}
+                                     sx={{ 
+                                       color: '#25D366',
+                                       background: 'linear-gradient(135deg, rgba(37, 211, 102, 0.1) 0%, rgba(37, 211, 102, 0.05) 100%)',
+                                       border: '1px solid rgba(37, 211, 102, 0.2)',
+                                       borderRadius: 2,
+                                       fontWeight: 600,
+                                       '&:hover': {
+                                         background: 'linear-gradient(135deg, rgba(37, 211, 102, 0.2) 0%, rgba(37, 211, 102, 0.1) 100%)',
+                                         transform: 'translateY(-1px)',
+                                       },
+                                       transition: 'all 0.3s ease'
+                                     }}
                                      onClick={(e) => {
                                        e.stopPropagation();
                                        const message = t('whatsapp_reminder_message', {
@@ -2537,7 +2813,10 @@ const AppointmentListPage: React.FC = () => {
                                    variant="outlined"
                                    sx={{ 
                                      borderColor: getPriorityColor(appointment.priority),
-                                     color: getPriorityColor(appointment.priority)
+                                     color: getPriorityColor(appointment.priority),
+                                     background: `linear-gradient(135deg, ${getPriorityColor(appointment.priority)}10, ${getPriorityColor(appointment.priority)}05)`,
+                                     fontWeight: 600,
+                                     backdropFilter: 'blur(5px)',
                                    }}
                                  />
                                </Box>
@@ -2558,7 +2837,7 @@ const AppointmentListPage: React.FC = () => {
                <Card sx={{ 
                  borderRadius: 3, 
                  boxShadow: 3, 
-                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                 background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
                  color: 'white',
                  position: 'relative',
                  overflow: 'hidden'
@@ -2581,22 +2860,10 @@ const AppointmentListPage: React.FC = () => {
                          <Typography variant="h5" sx={{ fontWeight: 700, mb: 0.5 }}>
                            {t('todays_schedule')}
                          </Typography>
-                         <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                           {t('appointments_finishing_at', { 
-                             count: todayAppointments.length, 
-                             time: calculateEstimatedFinishTime() 
-                           })}
-                         </Typography>
+                         
                        </Box>
                      </Box>
-                     <Chip 
-                       label={t('done_count', { completed: completedToday, total: todayAppointments.length })}
-                       sx={{ 
-                         backgroundColor: 'rgba(255,255,255,0.2)', 
-                         color: 'white',
-                         fontWeight: 600
-                       }}
-                     />
+                     
                    </Box>
                    
                    {todayAppointments.length === 0 ? (
@@ -2690,7 +2957,16 @@ const AppointmentListPage: React.FC = () => {
                          >
                            <CardContent sx={{ p: 2, color: 'white' }}>
                              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                               <Avatar sx={{ width: 24, height: 24, mr: 1, fontSize: '0.75rem' }}>
+                               <Avatar sx={{ 
+                                 width: 24, 
+                                 height: 24, 
+                                 mr: 1, 
+                                 fontSize: '0.75rem',
+                                 background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0.1) 100%)',
+                                 color: 'white',
+                                 fontWeight: 600,
+                                 border: '1px solid rgba(255, 255, 255, 0.2)',
+                               }}>
                                  {appointment.patientAvatar}
                                </Avatar>
                                <Typography variant="body2" fontWeight={600}>
@@ -2748,7 +3024,18 @@ const AppointmentListPage: React.FC = () => {
   
              {/* Analytics Dashboard */}
              <Grid item xs={12}>
-               <Card sx={{ borderRadius: 3, boxShadow: 3 }}>
+               <Card sx={{ 
+                 background: 'linear-gradient(135deg, rgba(2, 0, 36, 0.03) 0%, rgba(9, 9, 121, 0.05) 35%, rgba(0, 212, 255, 0.03) 100%)',
+                 backdropFilter: 'blur(10px)',
+                 border: '1px solid rgba(9, 9, 121, 0.1)',
+                 borderRadius: 3, 
+                 boxShadow: '0 4px 20px rgba(9, 9, 121, 0.08)',
+                 '&:hover': {
+                   background: 'linear-gradient(135deg, rgba(2, 0, 36, 0.05) 0%, rgba(9, 9, 121, 0.08) 35%, rgba(0, 212, 255, 0.05) 100%)',
+                   boxShadow: '0 6px 25px rgba(9, 9, 121, 0.12)',
+                 },
+                 transition: 'all 0.3s ease',
+               }}>
                  <CardContent sx={{ p: 4 }}>
                    <Typography variant="h6" sx={{ fontWeight: 700, mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
                      <BarChart sx={{ color: 'primary.main' }} />
@@ -2759,11 +3046,20 @@ const AppointmentListPage: React.FC = () => {
                      <Grid item xs={12} sm={6} md={3}>
                        <Box sx={{ 
                          p: 3, 
-                         borderRadius: 2, 
-                         backgroundColor: '#E3F2FD',
+                         borderRadius: 3, 
+                         background: 'linear-gradient(135deg, rgba(2, 0, 36, 0.08) 0%, rgba(9, 9, 121, 0.12) 35%, rgba(0, 212, 255, 0.08) 100%)',
+                         backdropFilter: 'blur(15px)',
+                         border: '1px solid rgba(9, 9, 121, 0.2)',
                          textAlign: 'center',
                          position: 'relative',
-                         overflow: 'hidden'
+                         overflow: 'hidden',
+                         boxShadow: '0 4px 20px rgba(9, 9, 121, 0.1)',
+                         '&:hover': {
+                           background: 'linear-gradient(135deg, rgba(2, 0, 36, 0.12) 0%, rgba(9, 9, 121, 0.18) 35%, rgba(0, 212, 255, 0.12) 100%)',
+                           transform: 'translateY(-2px)',
+                           boxShadow: '0 8px 30px rgba(9, 9, 121, 0.2)',
+                         },
+                         transition: 'all 0.3s ease'
                        }}>
                          <Box sx={{ 
                            position: 'absolute', 
@@ -2771,14 +3067,21 @@ const AppointmentListPage: React.FC = () => {
                            right: -20, 
                            width: 60, 
                            height: 60, 
-                           background: 'rgba(25, 118, 210, 0.1)', 
+                           background: 'linear-gradient(45deg, rgba(0, 212, 255, 0.2) 0%, rgba(9, 9, 121, 0.15) 100%)', 
                            borderRadius: '50%' 
                          }} />
-                         <CalendarToday sx={{ fontSize: 32, color: '#1976D2', mb: 1 }} />
-                         <Typography variant="h4" sx={{ fontWeight: 800, color: '#1976D2', mb: 0.5 }}>
+                         <CalendarToday sx={{ fontSize: 32, color: 'rgba(0, 212, 255, 1)', mb: 1 }} />
+                         <Typography variant="h4" sx={{ 
+                           fontWeight: 800, 
+                           background: 'linear-gradient(135deg, rgba(0, 212, 255, 1) 0%, rgba(9, 9, 121, 1) 100%)',
+                           backgroundClip: 'text',
+                           WebkitBackgroundClip: 'text',
+                           WebkitTextFillColor: 'transparent',
+                           mb: 0.5 
+                         }}>
                            {appointmentList.length}
                          </Typography>
-                         <Typography variant="body2" color="text.secondary">
+                         <Typography variant="body2" sx={{ color: 'rgba(2, 0, 36, 0.8)', fontWeight: 600 }}>
                            {t('total_appointments')}
                          </Typography>
                        </Box>
@@ -2787,11 +3090,20 @@ const AppointmentListPage: React.FC = () => {
                      <Grid item xs={12} sm={6} md={3}>
                        <Box sx={{ 
                          p: 3, 
-                         borderRadius: 2, 
-                         backgroundColor: '#E8F5E8',
+                         borderRadius: 3, 
+                         background: 'linear-gradient(135deg, rgba(2, 0, 36, 0.06) 0%, rgba(9, 9, 121, 0.08) 35%, rgba(0, 212, 255, 0.06) 100%)',
+                         backdropFilter: 'blur(15px)',
+                         border: '1px solid rgba(0, 212, 255, 0.15)',
                          textAlign: 'center',
                          position: 'relative',
-                         overflow: 'hidden'
+                         overflow: 'hidden',
+                         boxShadow: '0 4px 20px rgba(0, 212, 255, 0.08)',
+                         '&:hover': {
+                           background: 'linear-gradient(135deg, rgba(2, 0, 36, 0.09) 0%, rgba(9, 9, 121, 0.12) 35%, rgba(0, 212, 255, 0.09) 100%)',
+                           transform: 'translateY(-2px)',
+                           boxShadow: '0 8px 30px rgba(0, 212, 255, 0.15)',
+                         },
+                         transition: 'all 0.3s ease'
                        }}>
                          <Box sx={{ 
                            position: 'absolute', 
@@ -2799,14 +3111,21 @@ const AppointmentListPage: React.FC = () => {
                            right: -20, 
                            width: 60, 
                            height: 60, 
-                           background: 'rgba(46, 125, 50, 0.1)', 
+                           background: 'linear-gradient(45deg, rgba(9, 9, 121, 0.2) 0%, rgba(0, 212, 255, 0.15) 100%)', 
                            borderRadius: '50%' 
                          }} />
-                         <CheckCircle sx={{ fontSize: 32, color: '#2E7D32', mb: 1 }} />
-                         <Typography variant="h4" sx={{ fontWeight: 800, color: '#2E7D32', mb: 0.5 }}>
+                         <CheckCircle sx={{ fontSize: 32, color: 'rgba(9, 9, 121, 1)', mb: 1 }} />
+                         <Typography variant="h4" sx={{ 
+                           fontWeight: 800, 
+                           background: 'linear-gradient(135deg, rgba(9, 9, 121, 1) 0%, rgba(0, 212, 255, 1) 100%)',
+                           backgroundClip: 'text',
+                           WebkitBackgroundClip: 'text',
+                           WebkitTextFillColor: 'transparent',
+                           mb: 0.5 
+                         }}>
                            {appointmentList.filter(apt => apt.completed).length}
                          </Typography>
-                         <Typography variant="body2" color="text.secondary">
+                         <Typography variant="body2" sx={{ color: 'rgba(2, 0, 36, 0.8)', fontWeight: 600 }}>
                            {t('completed')}
                          </Typography>
                        </Box>
@@ -2815,11 +3134,20 @@ const AppointmentListPage: React.FC = () => {
                      <Grid item xs={12} sm={6} md={3}>
                        <Box sx={{ 
                          p: 3, 
-                         borderRadius: 2, 
-                         backgroundColor: '#FFF3E0',
+                         borderRadius: 3, 
+                         background: 'linear-gradient(135deg, rgba(2, 0, 36, 0.05) 0%, rgba(9, 9, 121, 0.07) 35%, rgba(0, 212, 255, 0.04) 100%)',
+                         backdropFilter: 'blur(15px)',
+                         border: '1px solid rgba(2, 0, 36, 0.2)',
                          textAlign: 'center',
                          position: 'relative',
-                         overflow: 'hidden'
+                         overflow: 'hidden',
+                         boxShadow: '0 4px 20px rgba(2, 0, 36, 0.08)',
+                         '&:hover': {
+                           background: 'linear-gradient(135deg, rgba(2, 0, 36, 0.08) 0%, rgba(9, 9, 121, 0.11) 35%, rgba(0, 212, 255, 0.07) 100%)',
+                           transform: 'translateY(-2px)',
+                           boxShadow: '0 8px 30px rgba(2, 0, 36, 0.15)',
+                         },
+                         transition: 'all 0.3s ease'
                        }}>
                          <Box sx={{ 
                            position: 'absolute', 
@@ -2827,14 +3155,21 @@ const AppointmentListPage: React.FC = () => {
                            right: -20, 
                            width: 60, 
                            height: 60, 
-                           background: 'rgba(245, 124, 0, 0.1)', 
+                           background: 'linear-gradient(45deg, rgba(2, 0, 36, 0.15) 0%, rgba(9, 9, 121, 0.2) 100%)', 
                            borderRadius: '50%' 
                          }} />
-                         <Warning sx={{ fontSize: 32, color: '#F57C00', mb: 1 }} />
-                         <Typography variant="h4" sx={{ fontWeight: 800, color: '#F57C00', mb: 0.5 }}>
+                         <Warning sx={{ fontSize: 32, color: 'rgba(2, 0, 36, 1)', mb: 1 }} />
+                         <Typography variant="h4" sx={{ 
+                           fontWeight: 800, 
+                           background: 'linear-gradient(135deg, rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 100%)',
+                           backgroundClip: 'text',
+                           WebkitBackgroundClip: 'text',
+                           WebkitTextFillColor: 'transparent',
+                           mb: 0.5 
+                         }}>
                            {appointmentList.filter(apt => apt.status === 'pending').length}
                          </Typography>
-                         <Typography variant="body2" color="text.secondary">
+                         <Typography variant="body2" sx={{ color: 'rgba(2, 0, 36, 0.8)', fontWeight: 600 }}>
                            {t('pending_confirmation')}
                          </Typography>
                        </Box>
@@ -2843,11 +3178,20 @@ const AppointmentListPage: React.FC = () => {
                      <Grid item xs={12} sm={6} md={3}>
                        <Box sx={{ 
                          p: 3, 
-                         borderRadius: 2, 
-                         backgroundColor: '#FCE4EC',
+                         borderRadius: 3, 
+                         background: 'linear-gradient(135deg, rgba(9, 9, 121, 0.05) 0%, rgba(2, 0, 36, 0.07) 35%, rgba(0, 212, 255, 0.03) 100%)',
+                         backdropFilter: 'blur(15px)',
+                         border: '1px solid rgba(9, 9, 121, 0.15)',
                          textAlign: 'center',
                          position: 'relative',
-                         overflow: 'hidden'
+                         overflow: 'hidden',
+                         boxShadow: '0 4px 20px rgba(9, 9, 121, 0.08)',
+                         '&:hover': {
+                           background: 'linear-gradient(135deg, rgba(9, 9, 121, 0.08) 0%, rgba(2, 0, 36, 0.11) 35%, rgba(0, 212, 255, 0.06) 100%)',
+                           transform: 'translateY(-2px)',
+                           boxShadow: '0 8px 30px rgba(9, 9, 121, 0.15)',
+                         },
+                         transition: 'all 0.3s ease'
                        }}>
                          <Box sx={{ 
                            position: 'absolute', 
@@ -2855,14 +3199,21 @@ const AppointmentListPage: React.FC = () => {
                            right: -20, 
                            width: 60, 
                            height: 60, 
-                           background: 'rgba(194, 24, 91, 0.1)', 
+                           background: 'linear-gradient(45deg, rgba(0, 212, 255, 0.15) 0%, rgba(2, 0, 36, 0.2) 100%)', 
                            borderRadius: '50%' 
                          }} />
-                         <TrendingUp sx={{ fontSize: 32, color: '#C2185B', mb: 1 }} />
-                         <Typography variant="h4" sx={{ fontWeight: 800, color: '#C2185B', mb: 0.5 }}>
+                         <TrendingUp sx={{ fontSize: 32, color: 'rgba(9, 9, 121, 1)', mb: 1 }} />
+                         <Typography variant="h4" sx={{ 
+                           fontWeight: 800, 
+                           background: 'linear-gradient(135deg, rgba(9, 9, 121, 1) 0%, rgba(2, 0, 36, 1) 100%)',
+                           backgroundClip: 'text',
+                           WebkitBackgroundClip: 'text',
+                           WebkitTextFillColor: 'transparent',
+                           mb: 0.5 
+                         }}>
                            {appointmentList.filter(apt => apt.priority === 'high' || apt.priority === 'urgent').length}
                          </Typography>
-                         <Typography variant="body2" color="text.secondary">
+                         <Typography variant="body2" sx={{ color: 'rgba(2, 0, 36, 0.8)', fontWeight: 600 }}>
                            {t('high_priority')}
                          </Typography>
                        </Box>
@@ -3486,7 +3837,14 @@ const AppointmentListPage: React.FC = () => {
                {/* Appointment Summary */}
                {newAppointment.patient && newAppointment.doctor && newAppointment.date && newAppointment.time && (
                  <Grid item xs={12}>
-                   <Card sx={{ p: 2, backgroundColor: '#f0f7ff', border: '1px solid #2196f3' }}>
+                   <Card sx={{ 
+                     p: 2, 
+                     background: 'linear-gradient(135deg, rgba(2, 0, 36, 0.05) 0%, rgba(9, 9, 121, 0.08) 35%, rgba(0, 212, 255, 0.05) 100%)',
+                     backdropFilter: 'blur(10px)',
+                     border: '1px solid rgba(9, 9, 121, 0.2)',
+                     borderRadius: 2,
+                     boxShadow: '0 4px 15px rgba(9, 9, 121, 0.1)',
+                   }}>
                      <Typography variant="h6" color="primary.main" sx={{ mb: 1 }}>
                        📅 {t('appointment_summary')}
                      </Typography>
@@ -3756,9 +4114,14 @@ const AppointmentListPage: React.FC = () => {
              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                <Chip 
                  label={t('no_show')} 
-                 color="secondary" 
                  size="small" 
                  variant="outlined" 
+                 sx={{
+                   borderColor: 'rgba(2, 0, 36, 0.6)',
+                   color: 'rgba(2, 0, 36, 0.9)',
+                   background: 'linear-gradient(135deg, rgba(2, 0, 36, 0.05) 0%, rgba(9, 9, 121, 0.08) 100%)',
+                   fontWeight: 600,
+                 }}
                />
                <Typography variant="body2">{t('no_show')}</Typography>
              </Box>
@@ -3939,21 +4302,7 @@ const AppointmentListPage: React.FC = () => {
            </MenuItem>
          </Menu>
 
-         {/* Firebase Status */}
-         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-           <Box
-             sx={{
-               width: 8,
-               height: 8,
-               borderRadius: '50%',
-               backgroundColor: firebaseConnected ? 'success.main' : 'error.main'
-             }}
-           />
-           <Typography variant="body2" color="textSecondary">
-             Firebase: {firebaseConnected ? 'Connected' : 'Disconnected'} • 
-             Real-time sync: {firebaseConnected ? 'Active' : 'Inactive'}
-           </Typography>
-         </Box>
+
         </Container>
   );
 };

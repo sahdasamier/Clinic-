@@ -1115,7 +1115,7 @@ const SettingsPage: React.FC = () => {
           <Box sx={{ 
             mb: 4, 
             p: 4,
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
             borderRadius: 4,
             color: 'white',
             position: 'relative',
@@ -1231,20 +1231,20 @@ const SettingsPage: React.FC = () => {
                       color: 'grey.700',
                       border: '2px solid transparent',
                       '&:hover': {
-                        backgroundColor: 'rgba(59, 130, 246, 0.08)',
-                        color: 'primary.main',
+                        background: 'linear-gradient(135deg, rgba(9, 9, 121, 0.08) 0%, rgba(0, 212, 255, 0.05) 100%)',
+                        color: 'rgba(9, 9, 121, 1)',
                         transform: 'translateY(-2px)',
-                        borderColor: 'rgba(59, 130, 246, 0.2)'
+                        borderColor: 'rgba(9, 9, 121, 0.2)'
                       },
                       '&.Mui-selected': {
-                        backgroundColor: 'rgba(59, 130, 246, 0.12)',
-                        color: 'primary.main',
+                        background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
+                        color: 'white',
                         fontWeight: 700,
                         transform: 'translateY(-4px)',
-                        boxShadow: '0 4px 20px rgba(59, 130, 246, 0.25)',
-                        borderColor: 'primary.main',
+                        boxShadow: '0 8px 25px rgba(9, 9, 121, 0.25)',
+                        borderColor: 'transparent',
                         '& .MuiSvgIcon-root': {
-                          color: 'primary.main'
+                          color: 'white'
                         }
                       },
                       '& .MuiTab-iconWrapper': {
@@ -1332,25 +1332,26 @@ const SettingsPage: React.FC = () => {
                            transition: 'all 0.3s ease'
                          },
                          '&:hover': {
-                           backgroundColor: 'rgba(59, 130, 246, 0.08)',
-                           color: 'primary.main',
+                           background: 'linear-gradient(135deg, rgba(9, 9, 121, 0.08) 0%, rgba(0, 212, 255, 0.05) 100%)',
+                           color: 'rgba(9, 9, 121, 1)',
                            transform: 'translateX(4px)',
                            '&::before': {
-                             backgroundColor: 'primary.light'
+                             background: 'linear-gradient(90deg, rgba(9, 9, 121, 1) 0%, rgba(0, 212, 255, 1) 100%)',
+                             width: '6px'
                            }
                          },
                          '&.Mui-selected': {
-                           backgroundColor: 'rgba(59, 130, 246, 0.12)',
-                           color: 'primary.main',
+                           background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
+                           color: 'white',
                            fontWeight: 700,
                            transform: 'translateX(8px)',
-                           boxShadow: '0 4px 20px rgba(59, 130, 246, 0.25)',
+                           boxShadow: '0 8px 25px rgba(9, 9, 121, 0.25)',
                            '&::before': {
-                             backgroundColor: 'primary.main',
+                             background: 'white',
                              width: '6px'
                            },
                            '& .MuiSvgIcon-root': {
-                             color: 'primary.main'
+                             color: 'white'
                            }
                          },
                          '& .MuiTab-iconWrapper': {
@@ -1412,9 +1413,10 @@ const SettingsPage: React.FC = () => {
                         {/* Card Header */}
                         <Box sx={{ 
                           p: { xs: 3, md: 5 },
-                          background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+                          background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
                           position: 'relative',
-                          borderBottom: '1px solid rgba(226, 232, 240, 0.5)',
+                          borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
+                          color: 'white',
                           '&::before': {
                             content: '""',
                             position: 'absolute',
@@ -1422,7 +1424,7 @@ const SettingsPage: React.FC = () => {
                             left: 0,
                             right: 0,
                             height: '4px',
-                            background: 'linear-gradient(90deg, #1e3a8a 0%, #3b82f6 50%, #06b6d4 100%)'
+                            background: 'rgba(255, 255, 255, 0.3)'
                           }
                         }}>
                           <Box sx={{ 
@@ -1435,23 +1437,26 @@ const SettingsPage: React.FC = () => {
                             <Box sx={{
                               p: { xs: 2, md: 2.5 },
                               borderRadius: 3,
-                              background: 'linear-gradient(135deg, #3b82f6 0%, #1e3a8a 100%)',
+                              background: 'rgba(255, 255, 255, 0.2)',
                               color: 'white',
-                              boxShadow: '0 8px 25px rgba(59, 130, 246, 0.3)'
+                              boxShadow: '0 8px 25px rgba(255, 255, 255, 0.2)',
+                              backdropFilter: 'blur(10px)',
+                              border: '1px solid rgba(255, 255, 255, 0.3)'
                             }}>
                               <Person sx={{ fontSize: { xs: 28, md: 32 } }} />
                             </Box>
                             <Box>
                               <Typography variant="h3" sx={{ 
                                 fontWeight: 900, 
-                                color: 'grey.800',
+                                color: 'white',
                                 fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2rem' },
-                                mb: 0.5
+                                mb: 0.5,
+                                textShadow: '0 2px 4px rgba(0,0,0,0.3)'
                               }}>
                                 {t('profile_information')}
                               </Typography>
                               <Typography variant="body1" sx={{ 
-                                color: 'grey.600',
+                                color: 'rgba(255, 255, 255, 0.9)',
                                 fontWeight: 500,
                                 fontSize: { xs: '0.9rem', md: '1rem' }
                               }}>
@@ -2140,9 +2145,10 @@ const SettingsPage: React.FC = () => {
                         {/* Card Header */}
                         <Box sx={{ 
                           p: 4,
-                          background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+                          background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
                           position: 'relative',
-                          borderBottom: '1px solid rgba(147, 197, 253, 0.3)',
+                          borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
+                          color: 'white',
                           '&::before': {
                             content: '""',
                             position: 'absolute',
@@ -2150,7 +2156,7 @@ const SettingsPage: React.FC = () => {
                             left: 0,
                             right: 0,
                             height: '4px',
-                            background: 'linear-gradient(90deg, #3b82f6 0%, #06b6d4 100%)'
+                            background: 'rgba(255, 255, 255, 0.3)'
                           }
                         }}>
                           <Box sx={{ 
@@ -2161,23 +2167,26 @@ const SettingsPage: React.FC = () => {
                             <Box sx={{
                               p: 2,
                               borderRadius: 3,
-                              background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                              background: 'rgba(255, 255, 255, 0.2)',
                               color: 'white',
-                              boxShadow: '0 8px 25px rgba(59, 130, 246, 0.3)'
+                              boxShadow: '0 8px 25px rgba(255, 255, 255, 0.2)',
+                              backdropFilter: 'blur(10px)',
+                              border: '1px solid rgba(255, 255, 255, 0.3)'
                             }}>
                               <Business sx={{ fontSize: 24 }} />
                             </Box>
                             <Box>
                               <Typography variant="h6" sx={{ 
                                 fontWeight: 800, 
-                                color: 'grey.800',
+                                color: 'white',
                                 fontSize: '1.3rem',
-                                mb: 0.2
+                                mb: 0.2,
+                                textShadow: '0 2px 4px rgba(0,0,0,0.3)'
                               }}>
                                 {t('profile_statistics')}
                         </Typography>
                               <Typography variant="body2" sx={{ 
-                                color: 'grey.600',
+                                color: 'rgba(255, 255, 255, 0.9)',
                                 fontWeight: 500
                               }}>
                                 {t('performance_overview')}
@@ -2253,9 +2262,10 @@ const SettingsPage: React.FC = () => {
                             {/* Card Header */}
                             <Box sx={{ 
                               p: 4,
-                              background: 'linear-gradient(135deg, #fefce8 0%, #fef3c7 100%)',
+                              background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
                               position: 'relative',
-                              borderBottom: '1px solid rgba(252, 211, 77, 0.3)',
+                              borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
+                              color: 'white',
                               '&::before': {
                                 content: '""',
                                 position: 'absolute',
@@ -2263,7 +2273,7 @@ const SettingsPage: React.FC = () => {
                                 left: 0,
                                 right: 0,
                                 height: '4px',
-                                background: 'linear-gradient(90deg, #f59e0b 0%, #d97706 100%)'
+                                background: 'rgba(255, 255, 255, 0.3)'
                               }
                             }}>
                               <Box sx={{ 
@@ -2274,23 +2284,26 @@ const SettingsPage: React.FC = () => {
                                 <Box sx={{
                                   p: 2,
                                   borderRadius: 3,
-                                  background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                                  background: 'rgba(255, 255, 255, 0.2)',
                                   color: 'white',
-                                  boxShadow: '0 8px 25px rgba(245, 158, 11, 0.3)'
+                                  boxShadow: '0 8px 25px rgba(255, 255, 255, 0.2)',
+                                  backdropFilter: 'blur(10px)',
+                                  border: '1px solid rgba(255, 255, 255, 0.3)'
                                 }}>
                                   <Check sx={{ fontSize: 24 }} />
                                 </Box>
                                 <Box>
                                   <Typography variant="h6" sx={{ 
                                     fontWeight: 800, 
-                                    color: 'grey.800',
+                                    color: 'white',
                                     fontSize: '1.3rem',
-                                    mb: 0.2
+                                    mb: 0.2,
+                                    textShadow: '0 2px 4px rgba(0,0,0,0.3)'
                                   }}>
                                     {t('achievements_certifications')}
                                   </Typography>
                                   <Typography variant="body2" sx={{ 
-                                    color: 'grey.600',
+                                    color: 'rgba(255, 255, 255, 0.9)',
                                     fontWeight: 500
                                   }}>
                                     {t('awards_recognitions')}
@@ -2347,11 +2360,12 @@ const SettingsPage: React.FC = () => {
                                     textTransform: 'none',
                                     fontWeight: 600,
                                     py: 1.5,
-                                    boxShadow: 2,
-                                    background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                                    background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
+                                    boxShadow: '0 8px 25px rgba(9, 9, 121, 0.3)',
                                     '&:hover': {
-                                      background: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)',
-                                      boxShadow: 4
+                                      background: 'linear-gradient(90deg,rgba(2, 0, 36, 0.9) 0%, rgba(9, 9, 121, 0.9) 35%, rgba(0, 212, 255, 0.9) 100%)',
+                                      transform: 'translateY(-1px)',
+                                      boxShadow: '0 12px 35px rgba(9, 9, 121, 0.4)'
                                     }
                                   }}
                                 >
@@ -2378,9 +2392,10 @@ const SettingsPage: React.FC = () => {
                         {/* Card Header */}
                         <Box sx={{ 
                           p: 4,
-                          background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
+                          background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
                           position: 'relative',
-                          borderBottom: '1px solid rgba(134, 239, 172, 0.3)',
+                          borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
+                          color: 'white',
                           '&::before': {
                             content: '""',
                             position: 'absolute',
@@ -2388,7 +2403,7 @@ const SettingsPage: React.FC = () => {
                             left: 0,
                             right: 0,
                             height: '4px',
-                            background: 'linear-gradient(90deg, #10b981 0%, #059669 100%)'
+                            background: 'rgba(255, 255, 255, 0.3)'
                           }
                         }}>
                           <Box sx={{ 
@@ -2400,23 +2415,26 @@ const SettingsPage: React.FC = () => {
                             <Box sx={{
                               p: 2,
                               borderRadius: 3,
-                              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                              background: 'rgba(255, 255, 255, 0.2)',
                               color: 'white',
-                              boxShadow: '0 8px 25px rgba(16, 185, 129, 0.3)'
+                              boxShadow: '0 8px 25px rgba(255, 255, 255, 0.2)',
+                              backdropFilter: 'blur(10px)',
+                              border: '1px solid rgba(255, 255, 255, 0.3)'
                             }}>
                               <Shield sx={{ fontSize: 24 }} />
                             </Box>
                             <Box>
                               <Typography variant="h6" sx={{ 
                                 fontWeight: 800, 
-                                color: 'grey.800',
+                                color: 'white',
                                 fontSize: '1.3rem',
-                                mb: 0.2
+                                mb: 0.2,
+                                textShadow: '0 2px 4px rgba(0,0,0,0.3)'
                               }}>
                                   {t('professional_information_actions')}
                         </Typography>
                               <Typography variant="body2" sx={{ 
-                                color: 'grey.600',
+                                color: 'rgba(255, 255, 255, 0.9)',
                                 fontWeight: 500
                               }}>
                                   {t('license_details_quick_actions')}
@@ -2498,7 +2516,13 @@ const SettingsPage: React.FC = () => {
                               textTransform: 'none',
                               fontWeight: 600,
                               py: 1.5,
-                              boxShadow: 2
+                              background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
+                              boxShadow: '0 8px 25px rgba(9, 9, 121, 0.3)',
+                              '&:hover': {
+                                background: 'linear-gradient(90deg,rgba(2, 0, 36, 0.9) 0%, rgba(9, 9, 121, 0.9) 35%, rgba(0, 212, 255, 0.9) 100%)',
+                                transform: 'translateY(-1px)',
+                                boxShadow: '0 12px 35px rgba(9, 9, 121, 0.4)'
+                              }
                             }}
                           >
                           {t('update_credentials')}
@@ -2514,8 +2538,14 @@ const SettingsPage: React.FC = () => {
                               fontWeight: 600,
                               py: 1.5,
                               borderWidth: 2,
+                              borderColor: 'rgba(9, 9, 121, 1)',
+                              color: 'rgba(9, 9, 121, 1)',
                               '&:hover': {
-                                borderWidth: 2
+                                borderWidth: 2,
+                                borderColor: 'rgba(0, 212, 255, 1)',
+                                background: 'linear-gradient(90deg,rgba(9, 9, 121, 0.1) 0%, rgba(0, 212, 255, 0.05) 100%)',
+                                transform: 'translateY(-1px)',
+                                boxShadow: '0 8px 25px rgba(9, 9, 121, 0.2)'
                               }
                             }}
                           >
@@ -2547,9 +2577,10 @@ const SettingsPage: React.FC = () => {
                         {/* Card Header */}
                         <Box sx={{ 
                           p: 5,
-                          background: 'linear-gradient(135deg, #f0f9ff 0%, #dbeafe 100%)',
+                          background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
                           position: 'relative',
-                          borderBottom: '1px solid rgba(147, 197, 253, 0.3)',
+                          borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
+                          color: 'white',
                           '&::before': {
                             content: '""',
                             position: 'absolute',
@@ -2557,7 +2588,7 @@ const SettingsPage: React.FC = () => {
                             left: 0,
                             right: 0,
                             height: '4px',
-                            background: 'linear-gradient(90deg, #1e3a8a 0%, #3b82f6 50%, #06b6d4 100%)'
+                            background: 'rgba(255, 255, 255, 0.3)'
                           }
                         }}>
                           <Box sx={{ 
@@ -2568,23 +2599,26 @@ const SettingsPage: React.FC = () => {
                             <Box sx={{
                               p: 2.5,
                               borderRadius: 3,
-                              background: 'linear-gradient(135deg, #3b82f6 0%, #1e3a8a 100%)',
+                              background: 'rgba(255, 255, 255, 0.2)',
                               color: 'white',
-                              boxShadow: '0 8px 25px rgba(59, 130, 246, 0.3)'
+                              boxShadow: '0 8px 25px rgba(255, 255, 255, 0.2)',
+                              backdropFilter: 'blur(10px)',
+                              border: '1px solid rgba(255, 255, 255, 0.3)'
                             }}>
                               <LocalHospital sx={{ fontSize: 32 }} />
                             </Box>
                             <Box>
                               <Typography variant="h3" sx={{ 
                                 fontWeight: 900, 
-                                color: 'grey.800',
+                                color: 'white',
                                 fontSize: '2rem',
-                                mb: 0.5
+                                mb: 0.5,
+                                textShadow: '0 2px 4px rgba(0,0,0,0.3)'
                               }}>
                           {t('basic_clinic_information')}
                         </Typography>
                               <Typography variant="body1" sx={{ 
-                                color: 'grey.600',
+                                color: 'rgba(255, 255, 255, 0.9)',
                                 fontWeight: 500
                               }}>
                                 {t('view_clinic_core_details')}
@@ -2800,9 +2834,10 @@ const SettingsPage: React.FC = () => {
                         {/* Card Header */}
                         <Box sx={{ 
                           p: 4,
-                          background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
+                          background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
                           position: 'relative',
-                          borderBottom: '1px solid rgba(134, 239, 172, 0.3)',
+                          borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
+                          color: 'white',
                           '&::before': {
                             content: '""',
                             position: 'absolute',
@@ -2810,7 +2845,7 @@ const SettingsPage: React.FC = () => {
                             left: 0,
                             right: 0,
                             height: '4px',
-                            background: 'linear-gradient(90deg, #10b981 0%, #059669 100%)'
+                            background: 'rgba(255, 255, 255, 0.3)'
                           }
                         }}>
                           <Box sx={{ 
@@ -2821,23 +2856,26 @@ const SettingsPage: React.FC = () => {
                             <Box sx={{
                               p: 2,
                               borderRadius: 3,
-                              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                              background: 'rgba(255, 255, 255, 0.2)',
                               color: 'white',
-                              boxShadow: '0 8px 25px rgba(16, 185, 129, 0.3)'
+                              boxShadow: '0 8px 25px rgba(255, 255, 255, 0.2)',
+                              backdropFilter: 'blur(10px)',
+                              border: '1px solid rgba(255, 255, 255, 0.3)'
                             }}>
                               <MedicalServices sx={{ fontSize: 24 }} />
                             </Box>
                             <Box>
                               <Typography variant="h6" sx={{ 
                                 fontWeight: 800, 
-                                color: 'grey.800',
+                                color: 'white',
                                 fontSize: '1.3rem',
-                                mb: 0.2
+                                mb: 0.2,
+                                textShadow: '0 2px 4px rgba(0,0,0,0.3)'
                               }}>
                           Services & Specializations
                         </Typography>
                               <Typography variant="body2" sx={{ 
-                                color: 'grey.600',
+                                color: 'rgba(255, 255, 255, 0.9)',
                                 fontWeight: 500
                               }}>
                                 Configure offered services
@@ -2939,12 +2977,12 @@ const SettingsPage: React.FC = () => {
                               fontWeight: 600,
                               textTransform: 'none',
                               fontSize: '1rem',
-                              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                              boxShadow: '0 8px 25px rgba(16, 185, 129, 0.3)',
+                              background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
+                              boxShadow: '0 8px 25px rgba(9, 9, 121, 0.3)',
                               '&:hover': {
-                                background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+                                background: 'linear-gradient(90deg,rgba(2, 0, 36, 0.9) 0%, rgba(9, 9, 121, 0.9) 35%, rgba(0, 212, 255, 0.9) 100%)',
                                 transform: 'translateY(-1px)',
-                                boxShadow: '0 12px 35px rgba(16, 185, 129, 0.4)'
+                                boxShadow: '0 12px 35px rgba(9, 9, 121, 0.4)'
                               }
                             }}
                           >
@@ -2969,9 +3007,10 @@ const SettingsPage: React.FC = () => {
                         {/* Card Header */}
                         <Box sx={{ 
                           p: 4,
-                          background: 'linear-gradient(135deg, #fefce8 0%, #fef3c7 100%)',
+                          background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
                           position: 'relative',
-                          borderBottom: '1px solid rgba(252, 211, 77, 0.3)',
+                          borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
+                          color: 'white',
                           '&::before': {
                             content: '""',
                             position: 'absolute',
@@ -2979,7 +3018,7 @@ const SettingsPage: React.FC = () => {
                             left: 0,
                             right: 0,
                             height: '4px',
-                            background: 'linear-gradient(90deg, #f59e0b 0%, #d97706 100%)'
+                            background: 'rgba(255, 255, 255, 0.3)'
                           }
                         }}>
                           <Box sx={{ 
@@ -2990,23 +3029,26 @@ const SettingsPage: React.FC = () => {
                             <Box sx={{
                               p: 2,
                               borderRadius: 3,
-                              background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                              background: 'rgba(255, 255, 255, 0.2)',
                               color: 'white',
-                              boxShadow: '0 8px 25px rgba(245, 158, 11, 0.3)'
+                              boxShadow: '0 8px 25px rgba(255, 255, 255, 0.2)',
+                              backdropFilter: 'blur(10px)',
+                              border: '1px solid rgba(255, 255, 255, 0.3)'
                             }}>
                               <Payment sx={{ fontSize: 24 }} />
                             </Box>
                             <Box>
                               <Typography variant="h6" sx={{ 
                                 fontWeight: 800, 
-                                color: 'grey.800',
+                                color: 'white',
                                 fontSize: '1.3rem',
-                                mb: 0.2
+                                mb: 0.2,
+                                textShadow: '0 2px 4px rgba(0,0,0,0.3)'
                               }}>
                           Insurance & Payment
                         </Typography>
                               <Typography variant="body2" sx={{ 
-                                color: 'grey.600',
+                                color: 'rgba(255, 255, 255, 0.9)',
                                 fontWeight: 500
                               }}>
                                 Payment & insurance options
@@ -3147,12 +3189,12 @@ const SettingsPage: React.FC = () => {
                               fontWeight: 600,
                               textTransform: 'none',
                               fontSize: '1rem',
-                              background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                              boxShadow: '0 8px 25px rgba(245, 158, 11, 0.3)',
+                              background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
+                              boxShadow: '0 8px 25px rgba(9, 9, 121, 0.3)',
                               '&:hover': {
-                                background: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)',
+                                background: 'linear-gradient(90deg,rgba(2, 0, 36, 0.9) 0%, rgba(9, 9, 121, 0.9) 35%, rgba(0, 212, 255, 0.9) 100%)',
                                 transform: 'translateY(-1px)',
-                                boxShadow: '0 12px 35px rgba(245, 158, 11, 0.4)'
+                                boxShadow: '0 12px 35px rgba(9, 9, 121, 0.4)'
                               }
                             }}
                           >
@@ -3180,9 +3222,10 @@ const SettingsPage: React.FC = () => {
                         {/* Card Header */}
                         <Box sx={{ 
                           p: 4,
-                          background: 'linear-gradient(135deg, #f0f9ff 0%, #dbeafe 100%)',
+                          background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
                           position: 'relative',
-                          borderBottom: '1px solid rgba(147, 197, 253, 0.3)',
+                          borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
+                          color: 'white',
                           '&::before': {
                             content: '""',
                             position: 'absolute',
@@ -3190,7 +3233,7 @@ const SettingsPage: React.FC = () => {
                             left: 0,
                             right: 0,
                             height: '4px',
-                            background: 'linear-gradient(90deg, #3b82f6 0%, #1d4ed8 100%)'
+                            background: 'rgba(255, 255, 255, 0.3)'
                           }
                         }}>
                           <Box sx={{ 
@@ -3201,23 +3244,26 @@ const SettingsPage: React.FC = () => {
                             <Box sx={{
                               p: 2,
                               borderRadius: 3,
-                              background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                              background: 'rgba(255, 255, 255, 0.2)',
                               color: 'white',
-                              boxShadow: '0 8px 25px rgba(59, 130, 246, 0.3)'
+                              boxShadow: '0 8px 25px rgba(255, 255, 255, 0.2)',
+                              backdropFilter: 'blur(10px)',
+                              border: '1px solid rgba(255, 255, 255, 0.3)'
                             }}>
                               <Schedule sx={{ fontSize: 24 }} />
                             </Box>
                             <Box>
                               <Typography variant="h6" sx={{ 
                                 fontWeight: 800, 
-                                color: 'grey.800',
+                                color: 'white',
                                 fontSize: '1.3rem',
-                                mb: 0.2
+                                mb: 0.2,
+                                textShadow: '0 2px 4px rgba(0,0,0,0.3)'
                               }}>
                           Appointment Settings
                         </Typography>
                               <Typography variant="body2" sx={{ 
-                                color: 'grey.600',
+                                color: 'rgba(255, 255, 255, 0.9)',
                                 fontWeight: 500
                               }}>
                                 Configure appointment rules
@@ -3326,12 +3372,12 @@ const SettingsPage: React.FC = () => {
                                   fontWeight: 600,
                                   textTransform: 'none',
                                   fontSize: '1rem',
-                                  background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-                                  boxShadow: '0 8px 25px rgba(59, 130, 246, 0.3)',
+                                  background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
+                                  boxShadow: '0 8px 25px rgba(9, 9, 121, 0.3)',
                                   '&:hover': {
-                                    background: 'linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%)',
+                                    background: 'linear-gradient(90deg,rgba(2, 0, 36, 0.9) 0%, rgba(9, 9, 121, 0.9) 35%, rgba(0, 212, 255, 0.9) 100%)',
                                     transform: 'translateY(-1px)',
-                                    boxShadow: '0 12px 35px rgba(59, 130, 246, 0.4)'
+                                    boxShadow: '0 12px 35px rgba(9, 9, 121, 0.4)'
                                   }
                                 }}
                               >
@@ -3387,9 +3433,12 @@ const SettingsPage: React.FC = () => {
                               fontWeight: 600,
                               px: 4,
                               py: 1.5,
-                              boxShadow: 3,
+                              background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
+                              boxShadow: '0 8px 25px rgba(9, 9, 121, 0.3)',
                               '&:hover': {
-                                boxShadow: 6
+                                background: 'linear-gradient(90deg,rgba(2, 0, 36, 0.9) 0%, rgba(9, 9, 121, 0.9) 35%, rgba(0, 212, 255, 0.9) 100%)',
+                                transform: 'translateY(-1px)',
+                                boxShadow: '0 12px 35px rgba(9, 9, 121, 0.4)'
                               }
                             }}
                           >
@@ -3420,9 +3469,10 @@ const SettingsPage: React.FC = () => {
                     {/* Card Header */}
                     <Box sx={{ 
                       p: 5,
-                      background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+                      background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
                       position: 'relative',
-                      borderBottom: '1px solid rgba(251, 191, 36, 0.3)',
+                      borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
+                      color: 'white',
                       '&::before': {
                         content: '""',
                         position: 'absolute',
@@ -3430,7 +3480,7 @@ const SettingsPage: React.FC = () => {
                         left: 0,
                         right: 0,
                         height: '4px',
-                        background: 'linear-gradient(90deg, #f59e0b 0%, #d97706 100%)'
+                        background: 'rgba(255, 255, 255, 0.3)'
                       }
                     }}>
                       <Box sx={{ 
@@ -3441,23 +3491,26 @@ const SettingsPage: React.FC = () => {
                         <Box sx={{
                           p: 2.5,
                           borderRadius: 3,
-                          background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                          background: 'rgba(255, 255, 255, 0.2)',
                           color: 'white',
-                                                    boxShadow: '0 8px 25px rgba(245, 158, 11, 0.3)'
+                          boxShadow: '0 8px 25px rgba(255, 255, 255, 0.2)',
+                          backdropFilter: 'blur(10px)',
+                          border: '1px solid rgba(255, 255, 255, 0.3)'
                         }}>
                           <Security sx={{ fontSize: 32 }} />
                         </Box>
                         <Box>
                           <Typography variant="h3" sx={{ 
                             fontWeight: 900, 
-                            color: 'grey.800',
+                            color: 'white',
                             fontSize: '2rem',
-                            mb: 0.5
+                            mb: 0.5,
+                            textShadow: '0 2px 4px rgba(0,0,0,0.3)'
                           }}>
                             Security Settings
                           </Typography>
                           <Typography variant="body1" sx={{ 
-                            color: 'grey.600',
+                            color: 'rgba(255, 255, 255, 0.9)',
                             fontWeight: 500
                           }}>
                             Protect your account with advanced security features
@@ -3483,6 +3536,18 @@ const SettingsPage: React.FC = () => {
                               variant="outlined" 
                               size="small"
                               onClick={() => setPasswordDialogOpen(true)}
+                              sx={{
+                                background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
+                                color: 'white',
+                                borderColor: 'transparent',
+                                fontWeight: 600,
+                                '&:hover': {
+                                  background: 'linear-gradient(90deg,rgba(2, 0, 36, 0.9) 0%, rgba(9, 9, 121, 0.9) 35%, rgba(0, 212, 255, 0.9) 100%)',
+                                  borderColor: 'transparent',
+                                  transform: 'translateY(-1px)',
+                                  boxShadow: '0 8px 25px rgba(9, 9, 121, 0.3)'
+                                }
+                              }}
                             >
                               Change
                             </Button>
@@ -3574,6 +3639,18 @@ const SettingsPage: React.FC = () => {
                             variant="outlined" 
                             size="small"
                             onClick={() => setPasswordDialogOpen(true)}
+                            sx={{
+                              background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
+                              color: 'white',
+                              borderColor: 'transparent',
+                              fontWeight: 600,
+                              '&:hover': {
+                                background: 'linear-gradient(90deg,rgba(2, 0, 36, 0.9) 0%, rgba(9, 9, 121, 0.9) 35%, rgba(0, 212, 255, 0.9) 100%)',
+                                borderColor: 'transparent',
+                                transform: 'translateY(-1px)',
+                                boxShadow: '0 8px 25px rgba(9, 9, 121, 0.3)'
+                              }
+                            }}
                           >
                             Change
                           </Button>
@@ -3600,9 +3677,10 @@ const SettingsPage: React.FC = () => {
                     {/* Card Header */}
                     <Box sx={{ 
                       p: 5,
-                      background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
+                      background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
                       position: 'relative',
-                      borderBottom: '1px solid rgba(134, 239, 172, 0.3)',
+                      borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
+                      color: 'white',
                       '&::before': {
                         content: '""',
                         position: 'absolute',
@@ -3610,7 +3688,7 @@ const SettingsPage: React.FC = () => {
                         left: 0,
                         right: 0,
                         height: '4px',
-                        background: 'linear-gradient(90deg, #10b981 0%, #059669 100%)'
+                        background: 'rgba(255, 255, 255, 0.3)'
                       }
                     }}>
                       <Box sx={{ 
@@ -3621,23 +3699,26 @@ const SettingsPage: React.FC = () => {
                         <Box sx={{
                           p: 2.5,
                           borderRadius: 3,
-                          background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                          background: 'rgba(255, 255, 255, 0.2)',
                           color: 'white',
-                          boxShadow: '0 8px 25px rgba(16, 185, 129, 0.3)'
+                          boxShadow: '0 8px 25px rgba(255, 255, 255, 0.2)',
+                          backdropFilter: 'blur(10px)',
+                          border: '1px solid rgba(255, 255, 255, 0.3)'
                         }}>
                           <Storage sx={{ fontSize: 32 }} />
                         </Box>
                         <Box>
                           <Typography variant="h3" sx={{ 
                             fontWeight: 900, 
-                            color: 'grey.800',
+                            color: 'white',
                             fontSize: '2rem',
-                            mb: 0.5
+                            mb: 0.5,
+                            textShadow: '0 2px 4px rgba(0,0,0,0.3)'
                           }}>
                       System Settings
                     </Typography>
                           <Typography variant="body1" sx={{ 
-                            color: 'grey.600',
+                            color: 'rgba(255, 255, 255, 0.9)',
                             fontWeight: 500
                           }}>
                             Manage system preferences and data operations

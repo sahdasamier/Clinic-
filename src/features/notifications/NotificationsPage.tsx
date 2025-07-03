@@ -101,7 +101,7 @@ const getPriorityColor = (type: string) => {
       return {
         main: '#3B82F6',
         light: '#EBF8FF',
-        gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+        gradient: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)'
       };
     case 'payment':
       return {
@@ -119,13 +119,13 @@ const getPriorityColor = (type: string) => {
       return {
         main: '#8B5CF6',
         light: '#FAF5FF',
-        gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+        gradient: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)'
       };
     default:
       return {
         main: '#6B7280',
         light: '#F9FAFB',
-        gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+        gradient: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)'
       };
   }
 };
@@ -352,7 +352,7 @@ const NotificationsPage: React.FC = () => {
             sx={{ 
               textAlign: 'center', 
               py: 8,
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
               borderRadius: 4,
               color: 'white',
               position: 'relative',
@@ -623,7 +623,7 @@ const NotificationsPage: React.FC = () => {
           <Box sx={{ 
             mb: 4, 
             p: 4,
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
             borderRadius: 4,
             color: 'white',
             position: 'relative',
@@ -670,16 +670,7 @@ const NotificationsPage: React.FC = () => {
                   >
                     {t('notifications')}
                   </Typography>
-                  <Typography 
-                    variant="h6"
-                    sx={{ 
-                      color: 'rgba(255,255,255,0.9)',
-                      fontWeight: 400,
-                      fontSize: { xs: '0.9rem', sm: '1.1rem', md: '1.25rem' }
-                    }}
-                  >
-                    🔔 {t('real_time_clinic_notifications')}
-                  </Typography>
+                  
                 </Box>
               </Box>
               
@@ -814,7 +805,7 @@ const NotificationsPage: React.FC = () => {
                               transform: 'translateY(-1px)',
                             },
                             '&.Mui-selected': {
-                              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                              background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
                               color: 'white !important',
                               boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)',
                             }
@@ -949,11 +940,11 @@ const NotificationsPage: React.FC = () => {
                           sx={{
                             borderRadius: 3,
                             py: 1.5,
-                            borderColor: '#667eea',
-                            color: '#667eea',
+                            borderColor: 'rgba(9, 9, 121, 1)',
+                            color: 'rgba(9, 9, 121, 1)',
                             '&:hover': {
-                              borderColor: '#5a67d8',
-                              backgroundColor: '#667eea10',
+                              borderColor: 'rgba(0, 212, 255, 1)',
+                              backgroundColor: 'rgba(9, 9, 121, 0.1)',
                             }
                           }}
                         >
@@ -992,7 +983,7 @@ const NotificationsPage: React.FC = () => {
                     <CardContent sx={{ p: 0 }}>
                       <Box sx={{ 
                         p: 3, 
-                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
                         color: 'white'
                       }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
@@ -1073,7 +1064,7 @@ const NotificationsPage: React.FC = () => {
                             mt: 4,
                             borderRadius: 3,
                             py: 1.5,
-                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                            background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
                             boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)',
                             '&:hover': {
                               background: 'linear-gradient(135deg, #5a67d8 0%, #6c5ce7 100%)',
@@ -1104,8 +1095,10 @@ const NotificationsPage: React.FC = () => {
                     <CardContent sx={{ p: 0 }}>
                       <Box sx={{ 
                         p: 3, 
-                        background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
-                        color: 'white'
+                        background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
+                        color: 'white',
+                        position: 'relative',
+                        overflow: 'hidden'
                       }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                           <AutoAwesome sx={{ mr: 2, fontSize: 28 }} />
@@ -1116,27 +1109,43 @@ const NotificationsPage: React.FC = () => {
                         <Typography variant="body1" sx={{ opacity: 0.9 }}>
                           {t('manage_all_notifications')}
                         </Typography>
+                        {/* Decorative Element */}
+                        <Box sx={{
+                          position: 'absolute',
+                          top: -20,
+                          right: -20,
+                          width: 60,
+                          height: 60,
+                          borderRadius: '50%',
+                          backgroundColor: 'rgba(255,255,255,0.1)',
+                          zIndex: 1,
+                        }} />
                       </Box>
                       
                       <Box sx={{ p: 3 }}>
                         <Stack spacing={2}>
                           <Button 
-                            variant="outlined" 
+                            variant="contained" 
                             fullWidth 
                             size="large"
-                            startIcon={refreshing ? <CircularProgress size={20} /> : <Sync />}
+                            startIcon={refreshing ? <CircularProgress size={20} sx={{ color: 'white' }} /> : <Sync />}
                             onClick={handleRefresh}
                             disabled={refreshing}
                             sx={{
                               borderRadius: 3,
                               py: 1.5,
-                              borderColor: '#667eea',
-                              color: '#667eea',
+                              background: 'linear-gradient(90deg, rgba(9, 9, 121, 1) 0%, rgba(0, 212, 255, 1) 100%)',
+                              color: 'white',
                               fontWeight: 600,
+                              boxShadow: '0 4px 15px rgba(9, 9, 121, 0.3)',
                               '&:hover': {
-                                borderColor: '#5a67d8',
-                                backgroundColor: '#667eea15',
-                                transform: 'translateY(-1px)',
+                                background: 'linear-gradient(90deg, rgba(9, 9, 121, 0.9) 0%, rgba(0, 212, 255, 0.9) 100%)',
+                                transform: 'translateY(-2px)',
+                                boxShadow: '0 8px 25px rgba(9, 9, 121, 0.4)',
+                              },
+                              '&:disabled': {
+                                background: 'linear-gradient(90deg, rgba(9, 9, 121, 0.3) 0%, rgba(0, 212, 255, 0.3) 100%)',
+                                color: 'rgba(255, 255, 255, 0.7)',
                               },
                               transition: 'all 0.3s ease'
                             }}
@@ -1145,26 +1154,27 @@ const NotificationsPage: React.FC = () => {
                           </Button>
                           
                           <Button 
-                            variant="outlined" 
+                            variant="contained" 
                             fullWidth 
                             size="large"
-                            startIcon={updating ? <CircularProgress size={20} /> : <MarkEmailRead />}
+                            startIcon={updating ? <CircularProgress size={20} sx={{ color: 'white' }} /> : <MarkEmailRead />}
                             onClick={handleMarkAllAsRead}
                             disabled={updating || unreadCount === 0}
                             sx={{
                               borderRadius: 3,
                               py: 1.5,
-                              borderColor: '#10B981',
-                              color: '#10B981',
+                              background: 'linear-gradient(90deg, rgba(76, 175, 80, 1) 0%, rgba(102, 187, 106, 1) 100%)',
+                              color: 'white',
                               fontWeight: 600,
+                              boxShadow: '0 4px 15px rgba(76, 175, 80, 0.3)',
                               '&:hover': {
-                                borderColor: '#059669',
-                                backgroundColor: '#10B98115',
-                                transform: 'translateY(-1px)',
+                                background: 'linear-gradient(90deg, rgba(76, 175, 80, 0.9) 0%, rgba(102, 187, 106, 0.9) 100%)',
+                                transform: 'translateY(-2px)',
+                                boxShadow: '0 8px 25px rgba(76, 175, 80, 0.4)',
                               },
                               '&:disabled': {
-                                borderColor: '#D1D5DB',
-                                color: '#9CA3AF',
+                                background: 'linear-gradient(90deg, rgba(76, 175, 80, 0.3) 0%, rgba(102, 187, 106, 0.3) 100%)',
+                                color: 'rgba(255, 255, 255, 0.7)',
                               },
                               transition: 'all 0.3s ease'
                             }}

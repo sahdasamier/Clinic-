@@ -68,7 +68,7 @@ const VATSettingsPage: React.FC = () => {
         {/* Page Title */}
         <Box sx={{ 
           p: 4,
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
           borderRadius: 3,
           color: 'white',
           position: 'relative',

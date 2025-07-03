@@ -162,7 +162,7 @@ const InventoryListPage: React.FC = () => {
           <Box sx={{ 
             mb: 4, 
             p: 4,
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
             borderRadius: 4,
             color: 'white',
             position: 'relative',
@@ -329,7 +329,7 @@ const InventoryListPage: React.FC = () => {
                     margin: '0 auto',
                     mb: 2
                   }}>
-                    <Inventory sx={{ color: '#667eea', fontSize: 24 }} />
+                    <Inventory sx={{ color: 'rgba(9, 9, 121, 1)', fontSize: 24 }} />
                   </Box>
                   <Typography variant="h4" sx={{ fontWeight: 800, color: 'text.primary', mb: 0.5 }}>
                     {inventoryItems.length}

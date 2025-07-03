@@ -274,12 +274,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   right: { xs: 20, sm: 25 },
                   zIndex: (theme) => theme.zIndex.speedDial,
                   '& .MuiSpeedDial-fab': {
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
                     width: { xs: 56, sm: 64 },
                     height: { xs: 56, sm: 64 },
                     boxShadow: '0 8px 32px rgba(102, 126, 234, 0.4)',
                     '&:hover': {
-                      background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
+                      background: 'linear-gradient(90deg,rgba(3, 1, 41, 1) 0%, rgba(10, 10, 135, 1) 35%, rgba(1, 191, 230, 1) 100%)',
                       transform: 'scale(1.1)',
                       boxShadow: '0 12px 40px rgba(102, 126, 234, 0.5)',
                     }
