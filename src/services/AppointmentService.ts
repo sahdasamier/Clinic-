@@ -15,9 +15,6 @@ import {
 } from 'firebase/firestore';
 import { db } from '../api/firebase';
 
-// ✅ Add import for PatientService to create patients automatically
-import { PatientService, type Patient } from './PatientService';
-
 const COLLECTION_NAME = 'appointments';
 const appointmentsCollection = collection(db, COLLECTION_NAME);
 
@@ -58,6 +55,9 @@ export const AppointmentService = {
   // ✅ NEW: Helper function to check if patient exists and create if needed
   async ensurePatientExists(clinicId: string, patientName: string, patientPhone?: string): Promise<string | undefined> {
     try {
+      // Dynamic import to avoid circular dependency
+      const { PatientService } = await import('./PatientService');
+      
       // Check if patient already exists by name and phone
       const existingPatients = await PatientService.searchPatients(clinicId, patientName);
       
@@ -76,11 +76,11 @@ export const AppointmentService = {
       // Create new patient if not found
       console.log(`🆕 Creating new patient from appointment: ${patientName}`);
       
-      const newPatientData: Omit<Patient, 'id' | 'createdAt' | 'updatedAt' | 'clinicId'> = {
+      const newPatientData = {
         name: patientName,
         phone: patientPhone || '',
         email: '',
-        status: 'new',
+        status: 'new' as const,
         condition: '',
         isActive: true,
         // Set default values for required fields
@@ -510,7 +510,8 @@ export const AppointmentService = {
             });
             
             // Count if we created a new patient vs linked existing
-            const existingPatients = await PatientService.searchPatients(clinicId, appointment.patient);
+            const { PatientService: PatientServiceImport } = await import('./PatientService');
+            const existingPatients = await PatientServiceImport.searchPatients(clinicId, appointment.patient);
             const wasNewlyCreated = existingPatients.some(p => p.id === patientId && 
               p.createdAt && 
               (new Date().getTime() - new Date(p.createdAt.toDate()).getTime()) < 60000 // Created in last minute
@@ -554,16 +555,18 @@ export const AppointmentService = {
   },
 
   // ✅ NEW: Get appointments with enhanced patient data
-  async getAppointmentsWithPatientData(clinicId: string): Promise<Array<Appointment & { patientData?: Patient }>> {
+  async getAppointmentsWithPatientData(clinicId: string): Promise<Array<Appointment & { patientData?: any }>> {
     const appointments = await this.getAllAppointments(clinicId);
-    const result: Array<Appointment & { patientData?: Patient }> = [];
+    const result: Array<Appointment & { patientData?: any }> = [];
 
     for (const appointment of appointments) {
-      let appointmentWithPatient: Appointment & { patientData?: Patient } = { ...appointment };
+      let appointmentWithPatient: Appointment & { patientData?: any } = { ...appointment };
       
       // Try to get patient data if patientId exists
       if (appointment.patientId) {
         try {
+          // Dynamic import to avoid circular dependency
+          const { PatientService } = await import('./PatientService');
           const patients = await PatientService.searchPatients(clinicId, '');
           const patientData = patients.find(p => p.id === appointment.patientId);
           if (patientData) {

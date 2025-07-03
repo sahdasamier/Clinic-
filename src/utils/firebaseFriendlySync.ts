@@ -592,9 +592,18 @@ console.log('   fbUsage() - Check Firebase quota usage');
 console.log('   fbImprovement() - Show optimization results');
 
 // Auto-initialize when this module loads (Firebase-friendly)
-if (typeof window !== 'undefined') {
+// Only initialize if we're in a browser environment and not during bundling
+if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+  // Add safety check to prevent initialization during module bundling
   setTimeout(() => {
-    FirebaseFriendlySync.init();
+    try {
+      // Double-check we're in a real browser environment
+      if (window.location && document.readyState) {
+        FirebaseFriendlySync.init();
+      }
+    } catch (error) {
+      console.warn('⚠️ FirebaseFriendlySync auto-init failed (this is safe during bundling):', error);
+    }
   }, 3000);
 }
 

@@ -6,6 +6,7 @@ import { auth } from '../../api/firebase';
 import { loginWithInvitationCheck } from '../../api/auth';
 import { useAuth } from '../../contexts/AuthContext';
 import { isSuperAdmin } from '../../utils/adminConfig';
+import { updateDocumentDirection } from '../../utils/i18nUtils';
 import {
   Box,
   Card,
@@ -71,7 +72,7 @@ const LoginPage: React.FC = () => {
   const handleLanguageChange = (lng: string) => {
     setLanguage(lng);
     i18n.changeLanguage(lng);
-    document.documentElement.dir = i18n.dir();
+    updateDocumentDirection();
   };
 
   const handleSubmit = async (event: React.FormEvent) => {

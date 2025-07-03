@@ -9,6 +9,7 @@ import { NotificationProvider } from "../contexts/NotificationProvider";
 import { ensureDemoClinicExists } from "../scripts/initFirestore";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { initializeGlobalDataSync, cleanupGlobalDataSync } from "../utils/globalDataSync";
+import { updateDocumentDirection } from "../utils/i18nUtils";
 import Router from "./Router";
 
 const AppContent: React.FC = () => {
@@ -19,8 +20,7 @@ const AppContent: React.FC = () => {
 
   // Set RTL direction globally when language changes
   useEffect(() => {
-    document.documentElement.dir = i18n.dir();
-    document.documentElement.lang = i18n.language;
+    updateDocumentDirection();
   }, [i18n.language, i18n]);
 
   // Check demo clinic status on app start (non-blocking, safe)

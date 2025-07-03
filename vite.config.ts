@@ -3,54 +3,73 @@ import react from '@vitejs/plugin-react'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react({
+    // Use automatic JSX runtime and disable emotion babel plugin
+    jsxRuntime: 'automatic',
+    babel: {
+      plugins: []
+    }
+  })],
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
     sourcemap: false,
-    chunkSizeWarningLimit: 1000, // Increase chunk size limit to 1000 kB
+    chunkSizeWarningLimit: 1000,
     rollupOptions: {
+      // Use different module format
+      preserveEntrySignatures: 'strict',
+      treeshake: {
+        moduleSideEffects: false
+      },
       output: {
-        manualChunks: (id) => {
-          // Core vendor libraries
-          if (id.includes('node_modules')) {
-            if (id.includes('react') || id.includes('react-dom')) {
-              return 'vendor';
-            }
-            if (id.includes('@mui')) {
-              return 'mui';
-            }
-            if (id.includes('firebase')) {
-              return 'firebase';
-            }
-            if (id.includes('recharts')) {
-              return 'charts';
-            }
-            if (id.includes('i18next') || id.includes('react-i18next')) {
-              return 'i18n';
-            }
-            return 'vendor-misc';
-          }
-          
-          // Split large feature pages
-          if (id.includes('src/features/dashboard/')) {
-            return 'features-dashboard';
-          }
-          if (id.includes('src/features/appointments/')) {
-            return 'features-appointments';
-          }
-          if (id.includes('src/features/patients/')) {
-            return 'features-patients';
-          }
-          if (id.includes('src/features/payments/')) {
-            return 'features-payments';
-          }
-          if (id.includes('src/features/admin/') || id.includes('src/features/auth/')) {
-            return 'features-admin';
-          }
-        }
+        // Use format that handles circular deps better
+        format: 'es',
+        // Very simple chunking strategy
+        manualChunks: {
+          // Keep MUI and emotion completely separate from other vendors
+          'vendor-ui': ['@mui/material', '@mui/system', '@mui/icons-material', '@emotion/react', '@emotion/styled'],
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-firebase': ['firebase/app', 'firebase/auth', 'firebase/firestore'],
+          'vendor-charts': ['recharts'],
+          'vendor-misc': ['i18next', 'react-i18next', 'i18next-browser-languagedetector']
+        },
+        // Ensure proper loading order
+        entryFileNames: 'assets/[name]-[hash].js',
+        chunkFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash][extname]'
       }
     }
+  },
+  // More aggressive dependency optimization
+  optimizeDeps: {
+    // Don't pre-bundle problematic packages
+    exclude: [
+      '@emotion/react',
+      '@emotion/styled'
+    ],
+    include: [
+      'react', 
+      'react-dom',
+      '@mui/material',
+      '@mui/system'
+    ],
+    force: true,
+    esbuildOptions: {
+      target: 'es2020',
+      // Use different module format for esbuild
+      format: 'esm'
+    }
+  },
+  // Resolve configuration to handle modules better
+  resolve: {
+    // Ensure we're using the ES modules version
+    conditions: ['import', 'module', 'browser', 'default'],
+    mainFields: ['module', 'jsnext:main', 'jsnext']
+  },
+  // Define build-time constants
+  define: {
+    __DEV__: JSON.stringify(process.env.NODE_ENV === 'development'),
+    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'production')
   },
   server: {
     port: 5173,

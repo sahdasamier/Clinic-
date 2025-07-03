@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
 import { useAuth } from '../../contexts/AuthContext';
+import { updateDocumentDirection } from '../../utils/i18nUtils';
 import {
   Box,
   Container,
@@ -412,7 +413,7 @@ const SettingsPage: React.FC = () => {
   const handleLanguageChange = (lang: string) => {
     setPreferences({ ...preferences, language: lang });
     i18n.changeLanguage(lang);
-    document.documentElement.dir = i18n.dir();
+    updateDocumentDirection();
     showSnackbar('Language updated successfully', 'success');
   };
 

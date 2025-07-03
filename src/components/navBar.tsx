@@ -8,6 +8,7 @@ import { useUser } from '../contexts/UserContext';
 import { useNotifications } from '../contexts/NotificationContext';
 import { useSidebar } from '../contexts/SidebarContext';
 import { useClinicSettings } from '../hooks/useClinicSettings';
+import { updateDocumentDirection } from '../utils/i18nUtils';
 import logoImage from '../images/Logo.png';
 import {
   AppBar,
@@ -69,7 +70,7 @@ const NavBar: React.FC = () => {
 
   const changeLanguage = (lng: string) => {
     i18n.changeLanguage(lng);
-    document.documentElement.dir = i18n.dir();
+    updateDocumentDirection();
     setLanguageAnchorEl(null);
   };
 
