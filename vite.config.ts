@@ -3,7 +3,11 @@ import react from '@vitejs/plugin-react'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react({
+      jsxImportSource: '@emotion/react'
+    })
+  ],
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
@@ -13,8 +17,7 @@ export default defineConfig({
       output: {
         manualChunks: {
           'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-          'vendor-mui': ['@mui/material', '@mui/system', '@mui/icons-material'],
-          'vendor-emotion': ['@emotion/react', '@emotion/styled'],
+          'vendor-mui': ['@mui/material', '@mui/system', '@mui/icons-material', '@emotion/react', '@emotion/styled'],
           'vendor-firebase': ['firebase/app', 'firebase/auth', 'firebase/firestore'],
           'vendor-charts': ['recharts'],
           'vendor-i18n': ['i18next', 'react-i18next', 'i18next-browser-languagedetector']
@@ -30,8 +33,12 @@ export default defineConfig({
       '@mui/system',
       '@mui/icons-material',
       '@emotion/react',
-      '@emotion/styled'
+      '@emotion/styled',
+      '@emotion/cache'
     ]
+  },
+  define: {
+    global: 'globalThis'
   },
   server: {
     port: 5173,
