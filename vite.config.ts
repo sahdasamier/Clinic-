@@ -35,10 +35,19 @@ export default defineConfig({
       '@emotion/react',
       '@emotion/styled',
       '@emotion/cache'
+    ],
+    exclude: [
+      'firebase',
+      'firebase/app',
+      'firebase/auth',
+      'firebase/firestore'
     ]
   },
   define: {
     global: 'globalThis'
+  },
+  esbuild: {
+    target: 'es2020'
   },
   server: {
     port: 5173,

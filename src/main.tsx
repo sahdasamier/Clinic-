@@ -8,6 +8,19 @@ import './i18n';
 // Deferred initialization to prevent circular dependencies
 const initializeServices = async () => {
   try {
+    // Guard against Shadow DOM polyfill conflicts
+    if (typeof window !== 'undefined' && window.Element && !(window.Element.prototype.attachShadow as any)._guarded) {
+      const originalAttachShadow = window.Element.prototype.attachShadow;
+      window.Element.prototype.attachShadow = function(options) {
+        if (this.shadowRoot) {
+          console.warn('Shadow root already exists on element, skipping...');
+          return this.shadowRoot;
+        }
+        return originalAttachShadow.call(this, options);
+      };
+      (window.Element.prototype.attachShadow as any)._guarded = true;
+    }
+    
     // Initialize EmailJS for email sending functionality
     const { initializeEmailJS } = await import('./services/emailService');
     await initializeEmailJS();
@@ -32,9 +45,7 @@ const initializeServices = async () => {
 };
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
+  <App />
 )
 
 // Initialize services after React app has started
