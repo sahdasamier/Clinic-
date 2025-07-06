@@ -33,7 +33,21 @@ const initializeServices = async () => {
         await import('./utils/emergencyFix');
         await import('./utils/firebaseFriendlySync');
         await import('./utils/firebaseDataManagerInit');
+        await import('./utils/doctorDebugger');
+        await import('./utils/doctorSync');
+        await import('./utils/quickDoctorFix');
+        await import('./utils/emergencyDoctorFix');
+        
         console.log('✅ All utility modules loaded successfully');
+        
+        // Show doctor debugging availability message
+        console.log('👩‍⚕️ Doctor debugging tools are now available!');
+        console.log('   ⚡ Run fixDoctors() - EMERGENCY FIX (NEW - NO IMPORTS)');
+        console.log('   🚀 Run runInstantDoctorFix() - INSTANT FIX');
+        console.log('   📋 Run completeDoctorAssignmentSolution() - Complete solution');
+        console.log('   🔧 Run quickFixDoctorAssignment() - Quick fix');
+        console.log('   🔍 Run debugPatientDoctorAssignment() - Detailed analysis');
+        
       } catch (error) {
         console.warn('⚠️ Some utility modules failed to load:', error);
       }

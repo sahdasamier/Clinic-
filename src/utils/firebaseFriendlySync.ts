@@ -299,7 +299,92 @@ export class FirebaseFriendlySync {
   }
 
   /**
+   * ✅ NEW: Sync doctor information from appointments to patients
+   */
+  static async syncDoctorInformation(clinicId: string, appointments: any[], patients: any[]) {
+    console.log('👩‍⚕️ FirebaseFriendlySync: Starting doctor information sync...');
+    
+    try {
+      let patientsUpdated = 0;
+      const updatePromises: Promise<void>[] = [];
+      
+      // Group appointments by patient name
+      const appointmentsByPatient = new Map<string, any[]>();
+      appointments.forEach(apt => {
+        if (apt.patient && apt.patient.trim()) {
+          const patientName = apt.patient.trim();
+          if (!appointmentsByPatient.has(patientName)) {
+            appointmentsByPatient.set(patientName, []);
+          }
+          appointmentsByPatient.get(patientName)!.push(apt);
+        }
+      });
+      
+      // Process each patient
+      for (const [patientName, patientAppointments] of appointmentsByPatient) {
+        const patient = patients.find(p => p.name?.toLowerCase().trim() === patientName.toLowerCase().trim());
+        if (!patient) continue;
+        
+        // Get the most recent appointment with doctor information
+        const sortedAppointments = patientAppointments
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        
+        const mostRecentAppointmentWithDoctor = sortedAppointments.find(apt => 
+          apt.doctor && apt.doctor.trim() !== '' && apt.doctor !== 'Not Assigned'
+        );
+        
+        if (mostRecentAppointmentWithDoctor) {
+          const appointmentDoctor = mostRecentAppointmentWithDoctor.doctor;
+          const appointmentDoctorId = mostRecentAppointmentWithDoctor.doctorId;
+          
+          // Check if doctor information needs updating
+          const doctorChanged = patient.doctor !== appointmentDoctor || 
+                               patient.doctorId !== appointmentDoctorId;
+          
+          if (doctorChanged) {
+            const updateData = {
+              doctor: appointmentDoctor,
+              doctorId: appointmentDoctorId || appointmentDoctor,
+              doctorName: appointmentDoctor, // Also update doctorName field for compatibility
+              _lastDoctorSync: new Date().toISOString(), // Track when doctor was last synced
+              _doctorSyncSource: 'appointment' // Track source of doctor information
+            };
+            
+            updatePromises.push(
+              PatientService.updatePatient(patient.id, updateData)
+                .then(() => {
+                  patientsUpdated++;
+                  console.log(`✅ Updated patient ${patientName} doctor:`, {
+                    oldDoctor: patient.doctor,
+                    newDoctor: appointmentDoctor,
+                    doctorId: appointmentDoctorId,
+                    appointmentDate: mostRecentAppointmentWithDoctor.date
+                  });
+                })
+                .catch(error => {
+                  console.error(`❌ Failed to update patient ${patientName} doctor:`, error);
+                })
+            );
+          }
+        }
+      }
+      
+      // Wait for all updates to complete
+      await Promise.all(updatePromises);
+      
+      console.log(`👩‍⚕️ FirebaseFriendlySync: Doctor sync completed - Updated ${patientsUpdated} patients`);
+      
+      return patientsUpdated;
+      
+    } catch (error) {
+      console.error('❌ FirebaseFriendlySync: Doctor sync failed:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Efficient sync that minimizes writes by batching operations
+   * ✅ ENHANCED: Now also syncs doctor information
    */
   static async efficientSync(clinicId: string, appointments: any[]) {
     console.log('💚 FirebaseFriendlySync: Starting efficient sync...');
@@ -329,6 +414,16 @@ export class FirebaseFriendlySync {
       const patientCreationPromises: Promise<string>[] = [];
       
       for (const patientName of uniquePatientNames) {
+        // Find the most recent appointment for this patient to get doctor info
+        const patientAppointments = appointments.filter(apt => 
+          apt.patient && apt.patient.trim() === patientName
+        );
+        const sortedAppointments = patientAppointments
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        const mostRecentAppointmentWithDoctor = sortedAppointments.find(apt => 
+          apt.doctor && apt.doctor.trim() !== '' && apt.doctor !== 'Not Assigned'
+        );
+        
         const patientData = {
           name: patientName,
           phone: '',
@@ -341,7 +436,13 @@ export class FirebaseFriendlySync {
           visitNotes: [],
           vitalSigns: [],
           documents: [],
-          allergies: []
+          allergies: [],
+          // ✅ NEW: Include doctor information from appointment
+          doctor: mostRecentAppointmentWithDoctor?.doctor || '',
+          doctorId: mostRecentAppointmentWithDoctor?.doctorId || mostRecentAppointmentWithDoctor?.doctor || '',
+          doctorName: mostRecentAppointmentWithDoctor?.doctor || '',
+          _lastDoctorSync: new Date().toISOString(),
+          _doctorSyncSource: 'appointment'
         };
         
         patientCreationPromises.push(
@@ -355,11 +456,17 @@ export class FirebaseFriendlySync {
       
       console.log(`✅ FirebaseFriendlySync: Created ${patientsCreated} patients efficiently`);
       
+      // ✅ NEW: Sync doctor information for existing patients
+      let doctorsUpdated = 0;
+      if (existingPatients.length > 0) {
+        doctorsUpdated = await this.syncDoctorInformation(clinicId, appointments, existingPatients);
+      }
+      
       // ✅ Show user notification with auto-refresh message
-      if (patientsCreated > 0) {
+      if (patientsCreated > 0 || doctorsUpdated > 0) {
         setTimeout(() => {
           if (typeof window !== 'undefined') {
-            alert(`💚 Firebase-Friendly Sync Complete!\n\n✅ Created ${patientsCreated} patients\n✅ Minimal Firebase usage\n✅ All pages will update automatically\n\nData is now synced across all pages!`);
+            alert(`💚 Firebase-Friendly Sync Complete!\n\n✅ Created ${patientsCreated} patients\n✅ Updated ${doctorsUpdated} patient doctors\n✅ Minimal Firebase usage\n✅ All pages will update automatically\n\nData is now synced across all pages!`);
           }
         }, 1000);
       }
@@ -369,6 +476,7 @@ export class FirebaseFriendlySync {
         patientsCreated,
         patientsLinked: 0,
         appointmentsProcessed: appointments.length,
+        doctorsUpdated,
         errors: []
       };
       
@@ -467,6 +575,61 @@ export const FirebaseDataBridge = {
     alert(`💚 Firebase Free Tier Usage:\n\nDaily reads: ${usage.dailyReads}\nQuota used: ${usage.percentOfQuota}%\nWithin limits: ${usage.isWithinLimits ? '✅ Yes' : '❌ No'}`);
   }
   return usage;
+};
+
+// ✅ NEW: Manual doctor sync command
+(window as any).fbSyncDoctors = async () => {
+  console.log('👩‍⚕️ Manual doctor sync requested...');
+  try {
+    const appointments = await AppointmentService.getAllAppointments('demo-clinic');
+    const patients = await PatientService.searchPatients('demo-clinic', '');
+    
+    if (appointments.length === 0) {
+      const message = 'No appointments found to sync doctor information from.';
+      console.log('⚠️', message);
+      if (typeof window !== 'undefined') {
+        alert(`⚠️ ${message}`);
+      }
+      return 0;
+    }
+    
+    if (patients.length === 0) {
+      const message = 'No patients found to update doctor information for.';
+      console.log('⚠️', message);
+      if (typeof window !== 'undefined') {
+        alert(`⚠️ ${message}`);
+      }
+      return 0;
+    }
+    
+    const updatedCount = await FirebaseFriendlySync.syncDoctorInformation('demo-clinic', appointments, patients);
+    
+    if (updatedCount > 0) {
+      // Refresh all pages after doctor sync
+      await FirebaseDataBridge.refreshAll();
+      
+      const message = `✅ Doctor sync completed!\n\nUpdated ${updatedCount} patient(s) with doctor information from appointments.\n\nAll pages will update automatically.`;
+      console.log('✅', message);
+      if (typeof window !== 'undefined') {
+        alert(message);
+      }
+    } else {
+      const message = 'Doctor sync completed - no patients needed updates.';
+      console.log('ℹ️', message);
+      if (typeof window !== 'undefined') {
+        alert(`ℹ️ ${message}`);
+      }
+    }
+    
+    return updatedCount;
+    
+  } catch (error) {
+    console.error('❌ Manual doctor sync failed:', error);
+    if (typeof window !== 'undefined') {
+      alert(`❌ Manual doctor sync failed: ${error}`);
+    }
+    return 0;
+  }
 };
 
 // Show improvement comparison

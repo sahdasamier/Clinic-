@@ -1,5 +1,9 @@
 import { getDoctorsByClinic } from '../api/doctorPatients';
 import { UserData } from '../api/auth';
+import { AppointmentService } from '../services/AppointmentService';
+import { PatientService } from '../services/PatientService';
+import { updatePatientAppointmentFields, syncDoctorInformationForAllPatients } from './appointmentPatientSync';
+import { FirebaseFriendlySync } from './firebaseFriendlySync';
 
 export interface SchedulingDoctor {
   id: number;
@@ -17,6 +21,14 @@ export interface SchedulingDoctor {
   clinicId: string;  // 🔑 Clinic association
   isActive: boolean;
   syncedAt: string;  // Last sync timestamp
+}
+
+export interface DoctorSyncResult {
+  patientsUpdated: number;
+  patientsChecked: number;
+  errors: string[];
+  syncMethod: 'firebase' | 'localStorage';
+  timestamp: string;
 }
 
 /**
@@ -148,4 +160,173 @@ export const forceSyncDoctors = async (clinicId: string): Promise<SchedulingDoct
   console.warn('⚠️ forceSyncDoctors: localStorage sync timestamps disabled');
   const doctors = await syncFirebaseDoctorsToScheduling(clinicId);
   return doctors;
-}; 
+};
+
+/**
+ * Sync doctor information from appointments to patients using Firebase
+ */
+export const syncDoctorInformationFirebase = async (clinicId: string = 'demo-clinic'): Promise<DoctorSyncResult> => {
+  console.log('👩‍⚕️ Starting Firebase doctor sync...');
+  
+  try {
+    // Get data from Firebase
+    const appointments = await AppointmentService.getAllAppointments(clinicId);
+    const patients = await PatientService.searchPatients(clinicId, '');
+    
+    if (appointments.length === 0) {
+      console.log('⚠️ No appointments found for doctor sync');
+      return {
+        patientsUpdated: 0,
+        patientsChecked: 0,
+        errors: ['No appointments found'],
+        syncMethod: 'firebase',
+        timestamp: new Date().toISOString()
+      };
+    }
+    
+    if (patients.length === 0) {
+      console.log('⚠️ No patients found for doctor sync');
+      return {
+        patientsUpdated: 0,
+        patientsChecked: 0,
+        errors: ['No patients found'],
+        syncMethod: 'firebase',
+        timestamp: new Date().toISOString()
+      };
+    }
+    
+    // Use Firebase-friendly sync for doctor information
+    const patientsUpdated = await FirebaseFriendlySync.syncDoctorInformation(clinicId, appointments, patients);
+    
+    console.log(`✅ Firebase doctor sync completed: ${patientsUpdated} patients updated`);
+    
+    return {
+      patientsUpdated,
+      patientsChecked: patients.length,
+      errors: [],
+      syncMethod: 'firebase',
+      timestamp: new Date().toISOString()
+    };
+    
+  } catch (error) {
+    console.error('❌ Firebase doctor sync failed:', error);
+    return {
+      patientsUpdated: 0,
+      patientsChecked: 0,
+      errors: [error instanceof Error ? error.message : String(error)],
+      syncMethod: 'firebase',
+      timestamp: new Date().toISOString()
+    };
+  }
+};
+
+/**
+ * Sync doctor information from appointments to patients using localStorage
+ */
+export const syncDoctorInformationLocal = (): DoctorSyncResult => {
+  console.log('👩‍⚕️ Starting local doctor sync...');
+  
+  try {
+    const patientsUpdated = syncDoctorInformationForAllPatients();
+    
+    console.log(`✅ Local doctor sync completed: ${patientsUpdated} patients updated`);
+    
+    return {
+      patientsUpdated,
+      patientsChecked: 0, // Not tracked in local sync
+      errors: [],
+      syncMethod: 'localStorage',
+      timestamp: new Date().toISOString()
+    };
+    
+  } catch (error) {
+    console.error('❌ Local doctor sync failed:', error);
+    return {
+      patientsUpdated: 0,
+      patientsChecked: 0,
+      errors: [error instanceof Error ? error.message : String(error)],
+      syncMethod: 'localStorage',
+      timestamp: new Date().toISOString()
+    };
+  }
+};
+
+/**
+ * Automatic doctor sync that chooses the best method based on available data
+ */
+export const syncDoctorInformationAuto = async (clinicId: string = 'demo-clinic'): Promise<DoctorSyncResult> => {
+  console.log('👩‍⚕️ Starting automatic doctor sync...');
+  
+  try {
+    // Try Firebase first
+    const firebaseResult = await syncDoctorInformationFirebase(clinicId);
+    
+    if (firebaseResult.errors.length === 0) {
+      console.log('✅ Firebase doctor sync succeeded');
+      return firebaseResult;
+    }
+    
+    // Fallback to localStorage
+    console.log('⚠️ Firebase sync failed, falling back to localStorage...');
+    const localResult = syncDoctorInformationLocal();
+    
+    return {
+      ...localResult,
+      errors: [
+        ...firebaseResult.errors,
+        ...localResult.errors
+      ]
+    };
+    
+  } catch (error) {
+    console.error('❌ Automatic doctor sync failed:', error);
+    return {
+      patientsUpdated: 0,
+      patientsChecked: 0,
+      errors: [error instanceof Error ? error.message : String(error)],
+      syncMethod: 'firebase',
+      timestamp: new Date().toISOString()
+    };
+  }
+};
+
+/**
+ * Test the doctor synchronization functionality
+ */
+export const testDoctorSync = async (clinicId: string = 'demo-clinic'): Promise<void> => {
+  console.log('🧪 Testing doctor synchronization...');
+  
+  try {
+    // Test Firebase sync
+    console.log('📋 Testing Firebase sync...');
+    const firebaseResult = await syncDoctorInformationFirebase(clinicId);
+    console.log('Firebase sync result:', firebaseResult);
+    
+    // Test localStorage sync
+    console.log('📋 Testing localStorage sync...');
+    const localResult = syncDoctorInformationLocal();
+    console.log('localStorage sync result:', localResult);
+    
+    // Test automatic sync
+    console.log('📋 Testing automatic sync...');
+    const autoResult = await syncDoctorInformationAuto(clinicId);
+    console.log('Automatic sync result:', autoResult);
+    
+    console.log('✅ Doctor sync testing completed');
+    
+  } catch (error) {
+    console.error('❌ Doctor sync testing failed:', error);
+    throw error;
+  }
+};
+
+// Make functions available globally for console access
+if (typeof window !== 'undefined') {
+  (window as any).syncDoctorInformationFirebase = syncDoctorInformationFirebase;
+  (window as any).syncDoctorInformationLocal = syncDoctorInformationLocal;
+  (window as any).syncDoctorInformationAuto = syncDoctorInformationAuto;
+  (window as any).testDoctorSync = testDoctorSync;
+}
+
+// Export default auto sync function
+export default syncDoctorInformationAuto; 

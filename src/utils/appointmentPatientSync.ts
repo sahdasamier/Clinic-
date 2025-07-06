@@ -284,6 +284,7 @@ const syncCompletedAppointmentsToMedicalHistory = (patientIndex: number, patient
 
 /**
  * Update specific patient's lastVisit, todayAppointment, nextAppointment and sync medical history
+ * ✅ ENHANCED: Now also syncs doctor information from appointments
  */
 export const updatePatientAppointmentFields = (patientName: string) => {
   const patients = loadPatientsFromStorage();
@@ -299,6 +300,63 @@ export const updatePatientAppointmentFields = (patientName: string) => {
   const todayString = today.getFullYear() + '-' + 
     String(today.getMonth() + 1).padStart(2, '0') + '-' + 
     String(today.getDate()).padStart(2, '0');
+  
+  // ✅ NEW: Sync doctor information from appointments
+  const syncDoctorInformation = () => {
+    console.log(`🔍 Syncing doctor information for patient: ${patientName}`);
+    
+    // Get all appointments sorted by date (newest first)
+    const sortedAppointments = patientAppointments
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    
+    // Find the most recent appointment with doctor information
+    const mostRecentAppointmentWithDoctor = sortedAppointments.find(apt => 
+      apt.doctor && apt.doctor.trim() !== '' && apt.doctor !== 'Not Assigned'
+    );
+    
+    if (mostRecentAppointmentWithDoctor) {
+      const appointmentDoctor = mostRecentAppointmentWithDoctor.doctor;
+      const appointmentDoctorId = mostRecentAppointmentWithDoctor.doctorId;
+      
+      console.log(`👩‍⚕️ Found doctor from appointment:`, {
+        patientName,
+        appointmentId: mostRecentAppointmentWithDoctor.id,
+        appointmentDate: mostRecentAppointmentWithDoctor.date,
+        doctor: appointmentDoctor,
+        doctorId: appointmentDoctorId
+      });
+      
+      // Update patient's doctor information
+      const updatedPatient = patients[patientIndex];
+      const doctorChanged = updatedPatient.doctor !== appointmentDoctor || 
+                           updatedPatient.doctorId !== appointmentDoctorId;
+      
+      if (doctorChanged) {
+        patients[patientIndex] = {
+          ...updatedPatient,
+          doctor: appointmentDoctor,
+          doctorId: appointmentDoctorId || appointmentDoctor,
+          doctorName: appointmentDoctor, // Also update doctorName field for compatibility
+          _lastDoctorSync: new Date().toISOString(), // Track when doctor was last synced
+          _doctorSyncSource: 'appointment' // Track source of doctor information
+        };
+        
+        console.log(`✅ Updated patient ${patientName} doctor information:`, {
+          oldDoctor: updatedPatient.doctor,
+          newDoctor: appointmentDoctor,
+          doctorId: appointmentDoctorId,
+          syncTimestamp: new Date().toISOString()
+        });
+      } else {
+        console.log(`ℹ️ Doctor information already up to date for ${patientName}`);
+      }
+    } else {
+      console.log(`⚠️ No doctor information found in appointments for ${patientName}`);
+    }
+  };
+  
+  // Sync doctor information first
+  syncDoctorInformation();
   
   // Calculate all completed visits (including past appointments) and most recent one
   const completedAppointments = patientAppointments
@@ -447,7 +505,14 @@ export const updatePatientAppointmentFields = (patientName: string) => {
     futureAppointments: futureAppointments.length,
     newHistoryEntries,
     allCompletedVisitsDetails: allCompletedVisits,
-    rawAppointments: patientAppointments.map(apt => `${apt.date} ${apt.time} (${apt.status})`)
+    rawAppointments: patientAppointments.map(apt => `${apt.date} ${apt.time} (${apt.status})`),
+    // ✅ NEW: Doctor sync information
+    doctorInfo: {
+      currentDoctor: patients[patientIndex].doctor,
+      currentDoctorId: patients[patientIndex].doctorId,
+      lastDoctorSync: patients[patientIndex]._lastDoctorSync,
+      doctorSyncSource: patients[patientIndex]._doctorSyncSource
+    }
   });
 };
 
@@ -495,12 +560,88 @@ export const syncAllCompletedAppointmentsToMedicalHistory = () => {
 };
 
 /**
+ * ✅ NEW: Sync doctor information from appointments to all patients
+ */
+export const syncDoctorInformationForAllPatients = () => {
+  console.log('👩‍⚕️ Syncing doctor information from appointments to all patients...');
+  
+  const patients = loadPatientsFromStorage();
+  const appointments = loadAppointmentsEnhanced();
+  
+  // Get all unique patient names from appointments
+  const appointmentPatientNames = [...new Set(appointments.map(apt => apt.patient))];
+  
+  let patientsUpdated = 0;
+  
+  appointmentPatientNames.forEach(patientName => {
+    if (!patientName || patientName.trim() === '') return;
+    
+    const patientIndex = patients.findIndex(p => p.name === patientName);
+    if (patientIndex === -1) return;
+    
+    const patientAppointments = appointments.filter(apt => apt.patient === patientName);
+    
+    // Get all appointments sorted by date (newest first)
+    const sortedAppointments = patientAppointments
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    
+    // Find the most recent appointment with doctor information
+    const mostRecentAppointmentWithDoctor = sortedAppointments.find(apt => 
+      apt.doctor && apt.doctor.trim() !== '' && apt.doctor !== 'Not Assigned'
+    );
+    
+    if (mostRecentAppointmentWithDoctor) {
+      const appointmentDoctor = mostRecentAppointmentWithDoctor.doctor;
+      const appointmentDoctorId = mostRecentAppointmentWithDoctor.doctorId;
+      
+      // Update patient's doctor information
+      const updatedPatient = patients[patientIndex];
+      const doctorChanged = updatedPatient.doctor !== appointmentDoctor || 
+                           updatedPatient.doctorId !== appointmentDoctorId;
+      
+      if (doctorChanged) {
+        patients[patientIndex] = {
+          ...updatedPatient,
+          doctor: appointmentDoctor,
+          doctorId: appointmentDoctorId || appointmentDoctor,
+          doctorName: appointmentDoctor, // Also update doctorName field for compatibility
+          _lastDoctorSync: new Date().toISOString(), // Track when doctor was last synced
+          _doctorSyncSource: 'appointment' // Track source of doctor information
+        };
+        
+        patientsUpdated++;
+        
+        console.log(`✅ Updated patient ${patientName} doctor:`, {
+          oldDoctor: updatedPatient.doctor,
+          newDoctor: appointmentDoctor,
+          doctorId: appointmentDoctorId,
+          appointmentDate: mostRecentAppointmentWithDoctor.date
+        });
+      }
+    }
+  });
+  
+  if (patientsUpdated > 0) {
+    savePatientsToStorage(patients);
+    console.log(`👩‍⚕️ Doctor sync completed: Updated ${patientsUpdated} patients`);
+  } else {
+    console.log('👩‍⚕️ Doctor sync completed: No patients needed updates');
+  }
+  
+  return patientsUpdated;
+};
+
+/**
  * Sync appointment changes to patient data
+ * ✅ ENHANCED: Now also syncs doctor information
  */
 export const syncAppointmentChangesToPatients = () => {
   console.log('🔄 Syncing appointment changes to patients...');
   sendAppointmentDataToPatients();
   syncAllPatientsAppointmentFields();
+  
+  // ✅ NEW: Also sync doctor information
+  syncDoctorInformationForAllPatients();
   
   // Trigger storage event to notify other components
   window.dispatchEvent(new CustomEvent('appointmentPatientSync', {
@@ -600,9 +741,13 @@ export const debugPatientAppointments = (patientName: string) => {
 
 /**
  * Storage event listener to automatically sync when appointments change
+ * ✅ ENHANCED: Now includes doctor synchronization
  */
 export const setupAppointmentPatientSync = () => {
   window.addEventListener('appointmentsUpdated', syncAppointmentChangesToPatients);
+  
+  // ✅ NEW: Also listen for doctor assignment changes
+  window.addEventListener('doctorAssignmentChanged', syncDoctorInformationForAllPatients);
   
   // Also sync on page load
   syncAppointmentChangesToPatients();
@@ -614,4 +759,5 @@ export const setupAppointmentPatientSync = () => {
   
   // Make debug function available globally for console access
   (window as any).debugPatientAppointments = debugPatientAppointments;
+  (window as any).syncDoctorInformationForAllPatients = syncDoctorInformationForAllPatients;
 }; 
