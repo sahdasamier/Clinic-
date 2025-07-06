@@ -1,7 +1,7 @@
 // src/index.tsx
 import React from 'react';
 import ReactDOM from 'react-dom/client'; // Updated for React 18+
-import App from './App';
+import App from './app/App'; // Corrected path
 import { AppointmentProvider } from './contexts/AppointmentContext';
 import './index.css'; // Assuming a basic CSS file might exist or be added
 
