@@ -50,18 +50,18 @@ export interface UserInvitation {
 }
 
 // Generate a random invitation token
-const generateInvitationToken = (): string => {
+function generateInvitationToken(): string {
   return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-};
+}
 
 // Email validation function
-export const isValidEmail = (email: string): boolean => {
+export function isValidEmail(email: string): boolean {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(email.trim());
-};
+}
 
 // Simple and safe email checking function - NO authentication conflicts
-export const checkEmailExists = async (email: string): Promise<boolean> => {
+export async function checkEmailExists(email: string): Promise<boolean> {
   try {
     console.log(`🔍 Checking if email exists: ${email}`);
     const normalizedEmail = email.trim().toLowerCase();
@@ -89,10 +89,10 @@ export const checkEmailExists = async (email: string): Promise<boolean> => {
     console.warn('⚠️ Network error - assuming email does not exist');
     return false;
   }
-};
+}
 
 // Double-check email before creation (last-chance validation)
-export const doubleCheckEmailBeforeCreation = async (email: string): Promise<{ canCreate: boolean; error?: string }> => {
+export async function doubleCheckEmailBeforeCreation(email: string): Promise<{ canCreate: boolean; error?: string }> {
   try {
     console.log(`🔍 Double-checking email before creation: ${email}`);
     const normalizedEmail = email.trim().toLowerCase();
@@ -219,7 +219,7 @@ export const createUserInvitation = async (userData: {
 };
 
 // Accept invitation and create user account
-export const acceptInvitation = async (token: string, password: string): Promise<{ success: boolean; error?: string }> => {
+export async function acceptInvitation(token: string, password: string): Promise<{ success: boolean; error?: string }> {
   try {
     // Find the invitation
     const invitationsRef = collection(db, 'invitations');
@@ -233,11 +233,11 @@ export const acceptInvitation = async (token: string, password: string): Promise
     console.error('❌ Error accepting invitation:', error);
     return { success: false, error: 'Failed to accept invitation' };
   }
-};
+}
 
 // Create user account directly (for admin use) - ROBUST VERSION
 // Uses a secondary Firebase app to create users so admin session is not disturbed.
-export const createUserAccount = async (userData: {
+export async function createUserAccount(userData: {
   email: string;
   password: string;
   firstName: string;
@@ -245,7 +245,7 @@ export const createUserAccount = async (userData: {
   role: string;
   clinicId: string;
   createdBy?: string;
-}): Promise<{ success: boolean; error?: string; isOrphaned?: boolean }> => {
+}): Promise<{ success: boolean; error?: string; isOrphaned?: boolean }> {
   // Ensure firebaseConfig is imported for secondary app initialization
   // It's typically available from './firebase'
   const { firebaseConfig } = await import('./firebase');
@@ -424,10 +424,10 @@ export const createUserAccount = async (userData: {
       }
     }
   }
-};
+}
 
 // Login function
-export const loginUser = async (email: string, password: string): Promise<{ success: boolean; userData?: UserData; error?: string }> => {
+export async function loginUser(email: string, password: string): Promise<{ success: boolean; userData?: UserData; error?: string }> {
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
@@ -462,10 +462,10 @@ export const loginUser = async (email: string, password: string): Promise<{ succ
     
     return { success: false, error: errorMessage };
   }
-};
+}
 
 // Enhanced login function that handles invitations for first-time users
-export const loginWithInvitationCheck = async (email: string, password: string): Promise<{ success: boolean; userData?: UserData; error?: string }> => {
+export async function loginWithInvitationCheck(email: string, password: string): Promise<{ success: boolean; userData?: UserData; error?: string }> {
   try {
     console.log(`🔐 Attempting login for: ${email}`);
     
@@ -564,20 +564,20 @@ export const loginWithInvitationCheck = async (email: string, password: string):
     
     return { success: false, error: errorMessage };
   }
-};
+}
 
 // Logout function
-export const logoutUser = async (): Promise<void> => {
+export async function logoutUser(): Promise<void> {
   try {
     await signOut(auth);
   } catch (error) {
     console.error('❌ Logout error:', error);
     throw error;
   }
-};
+}
 
 // Get current user data
-export const getCurrentUserData = async (): Promise<UserData | null> => {
+export async function getCurrentUserData(): Promise<UserData | null> {
   try {
     const user = auth.currentUser;
     if (!user) return null;
@@ -592,10 +592,10 @@ export const getCurrentUserData = async (): Promise<UserData | null> => {
     console.error('❌ Error getting user data:', error);
     return null;
   }
-};
+}
 
 // Get permissions based on role
-export const getPermissionsByRole = (role: string): string[] => {
+export function getPermissionsByRole(role: string): string[] {
   switch (role) {
     case 'management':
       return ['manage_clinic', 'view_reports', 'manage_staff', 'manage_appointments', 'view_patients'];
@@ -606,10 +606,10 @@ export const getPermissionsByRole = (role: string): string[] => {
     default:
       return ['basic_access'];
   }
-};
+}
 
 // Test function for debugging email validation (call from console)
-export const testEmailValidation = async (email: string) => {
+export async function testEmailValidation(email: string) {
   console.log(`🧪 Testing email validation for: ${email}`);
   
   try {
@@ -727,10 +727,10 @@ export const createUserAccountWithCleanup = async (userData: {
       error: `Unexpected error: ${error.message || 'Failed to create user account'}` 
     };
   }
-};
+}
 
 // Function to suggest alternative emails
-export const suggestAlternativeEmails = (originalEmail: string): string[] => {
+export function suggestAlternativeEmails(originalEmail: string): string[] {
   const [localPart, domain] = originalEmail.split('@');
   if (!domain) return [];
   
@@ -741,7 +741,7 @@ export const suggestAlternativeEmails = (originalEmail: string): string[] => {
     `new.${localPart}@${domain}`,
     `${localPart}.clinic@${domain}`
   ];
-};
+}
 
 // Enhanced email checking with orphan detection
 export const checkEmailWithOrphanDetection = async (email: string): Promise<{

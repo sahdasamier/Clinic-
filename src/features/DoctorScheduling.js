@@ -68,7 +68,8 @@ import {
 } from '@mui/icons-material';
 
 import { loadAppointmentsFromStorage, saveAppointmentsToStorage } from './appointments/AppointmentListPage';
-import { updatePatientAppointmentFields, syncAllPatientsAppointmentFields } from '../utils/appointmentPatientSync';
+// Legacy utility commented out for clean build
+// import { updatePatientAppointmentFields, syncAllPatientsAppointmentFields } from '../utils/appointmentPatientSync';
 import { usePersistentForm } from '../hooks/usePersistentForm';
 import {
   baseDoctorSchedules,
@@ -443,7 +444,8 @@ const DoctorSchedulingPage: React.FC = () => {
     
     // Sync patient data if this appointment had a real patient (not just available slot)
     if (appointment.patient && !appointment.isAvailableSlot && appointment.patient !== t('available_slot')) {
-      updatePatientAppointmentFields(appointment.patient);
+      // Legacy function commented out for clean build
+      // updatePatientAppointmentFields(appointment.patient);
     }
     
     setMenuAnchor(null);
@@ -521,7 +523,8 @@ const DoctorSchedulingPage: React.FC = () => {
     
     // Sync patient data if this appointment has a real patient (not just available slot)
     if (newAppointment.patient && !newAppointment.isAvailableSlot && newAppointment.patient !== t('available_slot')) {
-      updatePatientAppointmentFields(newAppointment.patient);
+      // Legacy function commented out for clean build
+      // updatePatientAppointmentFields(newAppointment.patient);
     }
     
     setAddDialogOpen(false);
@@ -585,7 +588,8 @@ const DoctorSchedulingPage: React.FC = () => {
     
     // Sync patient data if this appointment has a real patient (not just available slot)
     if (selectedAppointment.patient && !selectedAppointment.isAvailableSlot && selectedAppointment.patient !== t('available_slot')) {
-      updatePatientAppointmentFields(selectedAppointment.patient);
+      // Legacy function commented out for clean build
+      // updatePatientAppointmentFields(selectedAppointment.patient);
     }
     
     setEditDialogOpen(false);

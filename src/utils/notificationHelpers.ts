@@ -12,7 +12,7 @@ export const STORAGE_KEYS = {
 
 // Helper functions for adding items with proper notification timestamps
 
-export const addNewPatient = (patientData: any) => {
+export function addNewPatient(patientData: any) {
   const patient = addNewItemToStorage(STORAGE_KEYS.PATIENTS, {
     ...patientData,
     status: 'new' // Ensure new patients are marked as 'new' for notifications
@@ -20,9 +20,9 @@ export const addNewPatient = (patientData: any) => {
   
   console.log('New patient added:', patient);
   return patient;
-};
+}
 
-export const addNewPayment = (paymentData: any) => {
+export function addNewPayment(paymentData: any) {
   const payment = addNewItemToStorage(STORAGE_KEYS.PAYMENTS, {
     ...paymentData,
     // Ensure current date if not provided
@@ -31,9 +31,9 @@ export const addNewPayment = (paymentData: any) => {
   
   console.log('New payment added:', payment);
   return payment;
-};
+}
 
-export const addNewAppointment = (appointmentData: any) => {
+export function addNewAppointment(appointmentData: any) {
   const appointment = addNewItemToStorage(STORAGE_KEYS.APPOINTMENTS, {
     ...appointmentData,
     status: appointmentData.status || 'confirmed'
@@ -41,33 +41,33 @@ export const addNewAppointment = (appointmentData: any) => {
   
   console.log('New appointment added:', appointment);
   return appointment;
-};
+}
 
 // Helper functions for updating existing items - REMOVED localStorage operations
 
-export const markPaymentAsPaid = (paymentId: string | number) => {
+export function markPaymentAsPaid(paymentId: string | number) {
   markAsRecentlyUpdated(STORAGE_KEYS.PAYMENTS, paymentId);
   
   // Note: Payment status updates should be handled by the calling component's state
   // No longer automatically updating localStorage - component manages its own state
   console.log(`Payment ${paymentId} marked as paid - state should be updated by calling component`);
-};
+}
 
-export const updateAppointmentStatus = (appointmentId: string | number, status: string) => {
+export function updateAppointmentStatus(appointmentId: string | number, status: string) {
   markAsRecentlyUpdated(STORAGE_KEYS.APPOINTMENTS, appointmentId);
   
   // Note: Appointment status updates should be handled by the calling component's state
   // No longer automatically updating localStorage - component manages its own state
   console.log(`Appointment ${appointmentId} status updated to ${status} - state should be updated by calling component`);
-};
+}
 
-export const updatePatientStatus = (patientId: string | number, status: string) => {
+export function updatePatientStatus(patientId: string | number, status: string) {
   markAsRecentlyUpdated(STORAGE_KEYS.PATIENTS, patientId);
   
   // Note: Patient status updates should be handled by the calling component's state
   // No longer automatically updating localStorage - component manages its own state
   console.log(`Patient ${patientId} status updated to ${status} - state should be updated by calling component`);
-};
+}
 
 // Example usage:
 /*

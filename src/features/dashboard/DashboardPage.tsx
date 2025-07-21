@@ -88,11 +88,12 @@ import {
   loadSchedulingDoctorsFromStorage,
   saveSchedulingDoctorsToStorage
 } from '../../utils/doctorSync';
-import { 
-  organizeAppointmentsByCompletion,
-  getPatientsOrganizedByAppointmentStatus,
-  setupAppointmentPatientSync 
-} from '../../utils/appointmentPatientSync';
+// Legacy import removed for clean build
+// import { 
+//   organizeAppointmentsByCompletion,
+//   getPatientsOrganizedByAppointmentStatus,
+//   setupAppointmentPatientSync 
+// } from '../../utils/appointmentPatientSync';
 
 // Professional Color Palette
 const colorPalette = {

@@ -27,12 +27,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const mainContentRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
-    const handleScroll = () => {
+    function handleScroll() {
       if (mainContentRef.current) {
         const scrollTop = mainContentRef.current.scrollTop;
         setShowScrollTop(scrollTop > 300);
       }
-    };
+    }
 
     const mainContent = mainContentRef.current;
     if (mainContent) {
@@ -41,17 +41,17 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     }
   }, []);
 
-  const scrollToTop = () => {
+  function scrollToTop() {
     if (mainContentRef.current) {
       mainContentRef.current.scrollTo({
         top: 0,
         behavior: 'smooth'
       });
     }
-  };
+  }
 
   // Mobile FAB Actions based on current page
-  const getFabActions = () => {
+  function getFabActions() {
     const currentPath = location.pathname;
     
     if (currentPath.includes('/appointments')) {
@@ -172,7 +172,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         }
       ];
     }
-  };
+  }
 
   return (
     <Box sx={{ 

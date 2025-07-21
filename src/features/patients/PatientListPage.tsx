@@ -100,7 +100,9 @@ import {
 import { globalDataSync } from '../../utils/globalDataSync';
 
 import FirebaseFriendlySync, { FirebaseDataBridge } from '../../utils/firebaseFriendlySync';
-import { updatePatientAppointmentFields } from '../../utils/appointmentPatientSync';
+// Legacy utility commented out for clean build
+// import { updatePatientAppointmentFields } from '../../utils/appointmentPatientSync';
+import { quickFixDoctorIssues } from '../../utils/quickDoctorFix';
 import {
   defaultNewPatientData,
   defaultMedicalHistoryData,
@@ -494,6 +496,97 @@ const PatientListPage: React.FC = () => {
       });
     };
 
+    // ✅ NEW: Direct Fix Function
+    (window as any).directFixPatientDoctors = async () => {
+      console.log('🚀 DIRECT FIX: Starting immediate doctor assignment...');
+      
+      if (!userProfile?.clinicId) {
+        console.error('❌ No clinic ID available');
+        return { error: 'No clinic ID' };
+      }
+      
+      if (availableDoctors.length === 0) {
+        console.error('❌ No doctors available');
+        return { error: 'No doctors available' };
+      }
+
+      if (patients.length === 0) {
+        console.error('❌ No patients available');
+        return { error: 'No patients available' };
+      }
+
+      console.log('🔧 Starting direct fix with:', {
+        clinicId: userProfile.clinicId,
+        availableDoctors: availableDoctors.length,
+        patients: patients.length,
+        patientsWithoutDoctors: patients.filter(p => !p.doctor && !p.doctorName && !p.doctorId).length
+      });
+
+      let fixedCount = 0;
+      const errors = [];
+
+      // Use first available doctor as default
+      const defaultDoctor = availableDoctors[0];
+      console.log('🎯 Using default doctor:', {
+        id: defaultDoctor.id,
+        firstName: defaultDoctor.firstName,
+        lastName: defaultDoctor.lastName
+      });
+
+      for (const patient of patients) {
+        // Only fix patients that have no doctor information
+        const hasDoctor = patient.doctor || patient.doctorName || patient.doctorId;
+        
+        if (!hasDoctor) {
+          try {
+            console.log(`🔄 Fixing patient: ${patient.name} (ID: ${patient.id})`);
+            
+            const updateData = {
+              doctor: defaultDoctor.id,
+              doctorName: `${defaultDoctor.firstName} ${defaultDoctor.lastName}`,
+              doctorId: defaultDoctor.id,
+              _lastDoctorSync: new Date().toISOString(),
+              _doctorSyncSource: 'direct_fix'
+            };
+            
+            console.log('📝 Update data:', updateData);
+            
+            await PatientService.updatePatient(patient.id, updateData);
+            fixedCount++;
+            console.log(`✅ Fixed patient "${patient.name}" -> ${defaultDoctor.firstName} ${defaultDoctor.lastName}`);
+          } catch (error) {
+            console.error(`❌ Failed to fix patient "${patient.name}":`, error);
+            errors.push({ patient: patient.name, error: error instanceof Error ? error.message : String(error) });
+          }
+        } else {
+          console.log(`⏭️ Skipping patient "${patient.name}" - already has doctor info:`, {
+            doctor: patient.doctor,
+            doctorName: patient.doctorName,
+            doctorId: patient.doctorId
+          });
+        }
+      }
+
+      const result = {
+        fixedCount,
+        totalPatients: patients.length,
+        errors,
+        success: fixedCount > 0 && errors.length === 0
+      };
+
+      console.log(`🎯 Direct fix completed:`, result);
+      
+      if (fixedCount > 0) {
+        // Force refresh data after 2 seconds
+        setTimeout(() => {
+          console.log('🔄 Refreshing page data...');
+          window.location.reload();
+        }, 2000);
+      }
+      
+      return result;
+    };
+
     // Auto-expose data for debugging
     (window as any).patients = patients;
     (window as any).availableDoctors = availableDoctors;
@@ -515,6 +608,7 @@ const PatientListPage: React.FC = () => {
         console.log('2. quickFixPatientDoctors() - Auto-assign doctors');
         console.log('3. manualFixPatientDoctors([patientNames], doctorId) - Manual assign');
         console.log('4. checkPatientDataStructure() - Check data structure');
+        console.log('5. directFixPatientDoctors() - Direct fix');
         console.log('='.repeat(50));
       }, 1000);
     }
@@ -1252,12 +1346,61 @@ const PatientListPage: React.FC = () => {
     try {
       const appointmentTime = appointmentData.time?.trim();
       
-      // ✅ NEW: Create appointment using Firestore service
+      // ✅ FIX: Get actual doctor information from patient data instead of hardcoding
+      console.log('🔍 Getting doctor information for appointment:', {
+        patientName: appointmentPatient.name,
+        patientDoctor: appointmentPatient.doctor,
+        patientDoctorId: appointmentPatient.doctorId,
+        patientDoctorName: appointmentPatient.doctorName,
+        availableDoctorsCount: availableDoctors.length
+      });
+
+      // Get the doctor name using the existing resolution function
+      let doctorName = getPatientDoctorName(appointmentPatient);
+      
+      // Get doctor ID - prioritize existing patient doctor information
+      let doctorId = appointmentPatient.doctorId || appointmentPatient.doctor;
+      
+      // If doctor field contains a Firebase ID, use it as doctorId
+      if (appointmentPatient.doctor && appointmentPatient.doctor.length > 20) {
+        doctorId = appointmentPatient.doctor;
+      }
+      
+      // If we have a doctor name but no ID, try to find the ID from available doctors
+      if (doctorName && doctorName !== 'Not Assigned' && (!doctorId || doctorId === 'Not Assigned')) {
+        const matchingDoctor = availableDoctors.find(d => 
+          `${d.firstName} ${d.lastName}` === doctorName ||
+          `Dr. ${d.firstName} ${d.lastName}` === doctorName ||
+          doctorName.includes(d.firstName) && doctorName.includes(d.lastName)
+        );
+        if (matchingDoctor) {
+          doctorId = matchingDoctor.id;
+          console.log('✅ Found matching doctor ID:', { doctorName, doctorId });
+        }
+      }
+      
+      // If still no doctor info, fall back to first available doctor
+      if (!doctorName || doctorName === 'Not Assigned' || !doctorId) {
+        if (availableDoctors.length > 0) {
+          const fallbackDoctor = availableDoctors[0];
+          doctorName = `${fallbackDoctor.firstName} ${fallbackDoctor.lastName}`;
+          doctorId = fallbackDoctor.id;
+          console.log('⚠️ Using fallback doctor:', { doctorName, doctorId });
+        } else {
+          console.error('❌ No doctors available for appointment');
+          alert('No doctors available. Please ensure doctors are assigned to this clinic.');
+          return;
+        }
+      }
+
+      console.log('✅ Final doctor information for appointment:', { doctorName, doctorId });
+      
+      // ✅ NEW: Create appointment using Firestore service with correct doctor info
       const newAppointmentData = {
         patient: appointmentPatient.name,
         patientId: appointmentPatient.id,
-        doctor: 'Dr. Current Doctor',
-        doctorId: userProfile.id || 'default-doctor',
+        doctor: doctorName,
+        doctorId: doctorId,
         date: appointmentData.date,
         time: appointmentTime,
         timeSlot: appointmentTime,
@@ -1941,7 +2084,8 @@ const PatientListPage: React.FC = () => {
     }
 
     // Sync appointment data
-    updatePatientAppointmentFields(editLastVisitPatient.name);
+    // Legacy function commented out for clean build
+    // updatePatientAppointmentFields(editLastVisitPatient.name);
 
     setEditLastVisitOpen(false);
     setEditLastVisitPatient(null);
@@ -2144,6 +2288,34 @@ const PatientListPage: React.FC = () => {
                    syncStatus === 'completed' ? t('sync_complete') :
                    syncStatus === 'error' ? t('sync_failed') :
                    t('sync_appointments')}
+                </Button>
+
+                <Button
+                  variant="contained"
+                  startIcon={<MedicalServices />}
+                  onClick={() => quickFixDoctorIssues()}
+                  size="medium"
+                  sx={{ 
+                    borderRadius: { xs: 2, md: 3 },
+                    backgroundColor: 'rgba(255,140,0,0.9)',
+                    color: 'white',
+                    border: '1px solid rgba(255,255,255,0.3)',
+                    fontWeight: 700,
+                    px: { xs: 3, sm: 4 },
+                    py: { xs: 1.5, sm: 1.5 },
+                    minHeight: { xs: 48, md: 'auto' },
+                    backdropFilter: 'blur(10px)',
+                    fontSize: { xs: '0.875rem', sm: '0.875rem' },
+                    '&:hover': {
+                      backgroundColor: 'rgba(255,120,0,0.9)',
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 8px 25px rgba(255,140,0,0.4)',
+                    },
+                    transition: 'all 0.3s ease'
+                  }}
+                  title="🚨 URGENT FIX: Solves 'Dr. Current Doctor', invalid IDs, and missing patient doctor assignments"
+                >
+                  🩺 Fix Doctors
                 </Button>
 
                 <Button

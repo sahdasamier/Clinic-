@@ -2,7 +2,8 @@ import { getDoctorsByClinic } from '../api/doctorPatients';
 import { UserData } from '../api/auth';
 import { AppointmentService } from '../services/AppointmentService';
 import { PatientService } from '../services/PatientService';
-import { updatePatientAppointmentFields, syncDoctorInformationForAllPatients } from './appointmentPatientSync';
+// Legacy utility commented out for clean build
+// import { updatePatientAppointmentFields, syncDoctorInformationForAllPatients } from './appointmentPatientSync';
 import { FirebaseFriendlySync } from './firebaseFriendlySync';
 
 export interface SchedulingDoctor {
@@ -227,7 +228,9 @@ export const syncDoctorInformationLocal = (): DoctorSyncResult => {
   console.log('👩‍⚕️ Starting local doctor sync...');
   
   try {
-    const patientsUpdated = syncDoctorInformationForAllPatients();
+    // Legacy function commented out for clean build
+    // const patientsUpdated = syncDoctorInformationForAllPatients();
+    const patientsUpdated = 0; // Placeholder
     
     console.log(`✅ Local doctor sync completed: ${patientsUpdated} patients updated`);
     

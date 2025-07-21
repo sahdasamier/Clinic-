@@ -5,6 +5,9 @@ import './index.css'
 import './styles/globalStyles.css'
 import './i18n';
 
+// Blaze plan features
+import BlazePlanInitializer from './components/BlazePlanInitializer';
+
 // Deferred initialization to prevent circular dependencies
 const initializeServices = async () => {
   try {
@@ -24,6 +27,28 @@ const initializeServices = async () => {
     // Initialize EmailJS for email sending functionality
     const { initializeEmailJS } = await import('./services/emailService');
     await initializeEmailJS();
+
+    // Initialize optimized Firebase services
+    try {
+      const { initializeOptimizedServices } = await import('./api/firebase');
+      await initializeOptimizedServices();
+      console.log('✅ Optimized Firebase services initialized');
+      
+      // Fallback: Import legacy services for backward compatibility
+      await import('./api/analytics');
+      await import('./api/messaging');
+      await import('./api/storage');
+      console.log('✅ Legacy Firebase Blaze plan services preloaded');
+    } catch (error) {
+      console.warn('⚠️ Failed to initialize Firebase services:', error);
+      // Try legacy initialization as fallback
+      try {
+        await import('./api/firebase');
+        console.log('✅ Fallback to legacy Firebase initialization');
+      } catch (fallbackError) {
+        console.error('❌ Complete Firebase initialization failure:', fallbackError);
+      }
+    }
     
     // Import utilities after React app has started to prevent circular deps
     // These modules have auto-initialization code that can cause issues if loaded too early
@@ -33,10 +58,11 @@ const initializeServices = async () => {
         await import('./utils/emergencyFix');
         await import('./utils/firebaseFriendlySync');
         await import('./utils/firebaseDataManagerInit');
-        await import('./utils/doctorDebugger');
+        // Legacy doctor utilities (commented out for clean build)
+        // await import('./utils/doctorDebugger');
         await import('./utils/doctorSync');
         await import('./utils/quickDoctorFix');
-        await import('./utils/emergencyDoctorFix');
+        // await import('./utils/emergencyDoctorFix');
         
         console.log('✅ All utility modules loaded successfully');
         
@@ -59,7 +85,9 @@ const initializeServices = async () => {
 };
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
-  <App />
+  <BlazePlanInitializer>
+    <App />
+  </BlazePlanInitializer>
 )
 
 // Initialize services after React app has started

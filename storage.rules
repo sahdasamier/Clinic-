@@ -1,0 +1,170 @@
+rules_version = '2';
+
+// Craft rules based on data in your Firestore database
+// allow write: if firestore.get(resource).data.isOwner == true;
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return request.auth != null && request.auth.token.admin == true;
+    }
+    
+    function hasRole(role) {
+      return request.auth != null && request.auth.token.role == role;
+    }
+    
+    function isSameClinic(clinicId) {
+      return request.auth != null && request.auth.token.clinicId == clinicId;
+    }
+    
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+    
+    function isValidImageFile() {
+      return request.resource.contentType.matches('image/.*');
+    }
+    
+    function isValidDocumentFile() {
+      return request.resource.contentType.matches('application/pdf') ||
+             request.resource.contentType.matches('application/msword') ||
+             request.resource.contentType.matches('application/vnd.openxmlformats-officedocument.*') ||
+             request.resource.contentType.matches('text/plain');
+    }
+    
+    function isValidMedicalFile() {
+      return isValidImageFile() || isValidDocumentFile();
+    }
+    
+    function isValidFileSize(maxSizeMB) {
+      return request.resource.size <= maxSizeMB * 1024 * 1024;
+    }
+    
+    // Patient documents - only authenticated users from same clinic
+    match /patients/{patientId}/documents/{category}/{fileName} {
+      allow read, write: if isAuthenticated() && 
+        (isAdmin() || hasRole('doctor') || hasRole('receptionist')) &&
+        isValidMedicalFile() && isValidFileSize(15);
+      allow delete: if isAuthenticated() && 
+        (isAdmin() || hasRole('doctor'));
+    }
+    
+    // Patient images - medical staff and admins
+    match /patients/{patientId}/images/{fileName} {
+      allow read, write: if isAuthenticated() && 
+        (isAdmin() || hasRole('doctor') || hasRole('receptionist')) &&
+        isValidImageFile() && isValidFileSize(5);
+      allow delete: if isAuthenticated() && 
+        (isAdmin() || hasRole('doctor'));
+    }
+    
+    // Patient avatars - can be read by clinic staff, written by medical staff
+    match /patients/{patientId}/avatar/{fileName} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && 
+        (isAdmin() || hasRole('doctor') || hasRole('receptionist')) &&
+        isValidImageFile() && isValidFileSize(2);
+      allow delete: if isAuthenticated() && 
+        (isAdmin() || hasRole('doctor') || hasRole('receptionist'));
+    }
+    
+    // Prescription documents - doctors and admins only
+    match /prescriptions/{appointmentId}/{fileName} {
+      allow read: if isAuthenticated() && 
+        (isAdmin() || hasRole('doctor') || hasRole('receptionist'));
+      allow write: if isAuthenticated() && 
+        (isAdmin() || hasRole('doctor')) &&
+        (isValidDocumentFile() || isValidImageFile()) && isValidFileSize(10);
+      allow delete: if isAuthenticated() && 
+        (isAdmin() || hasRole('doctor'));
+    }
+    
+    // Clinic documents - admin and management only
+    match /clinics/{clinicId}/{type}/{fileName} {
+      allow read: if isAuthenticated() && 
+        (isAdmin() || isSameClinic(clinicId));
+      allow write: if isAuthenticated() && 
+        (isAdmin() || (hasRole('management') && isSameClinic(clinicId))) &&
+        isValidMedicalFile() && isValidFileSize(20);
+      allow delete: if isAuthenticated() && 
+        (isAdmin() || (hasRole('management') && isSameClinic(clinicId)));
+    }
+    
+    // Clinic branding (logos, etc.) - management and admin
+    match /clinics/{clinicId}/branding/{fileName} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && 
+        (isAdmin() || (hasRole('management') && isSameClinic(clinicId))) &&
+        isValidImageFile() && isValidFileSize(5);
+      allow delete: if isAuthenticated() && 
+        (isAdmin() || (hasRole('management') && isSameClinic(clinicId)));
+    }
+    
+    // Lab results - doctors, management and admins
+    match /lab_results/{patientId}/{fileName} {
+      allow read, write: if isAuthenticated() && 
+        (isAdmin() || hasRole('doctor') || hasRole('management')) &&
+        isValidMedicalFile() && isValidFileSize(10);
+      allow delete: if isAuthenticated() && 
+        (isAdmin() || hasRole('doctor'));
+    }
+    
+    // Insurance documents - management, doctors and admins
+    match /insurance/{patientId}/{fileName} {
+      allow read, write: if isAuthenticated() && 
+        (isAdmin() || hasRole('doctor') || hasRole('management') || hasRole('receptionist')) &&
+        isValidMedicalFile() && isValidFileSize(5);
+      allow delete: if isAuthenticated() && 
+        (isAdmin() || hasRole('management'));
+    }
+    
+    // Medical records - doctors and admins only
+    match /medical_records/{patientId}/{fileName} {
+      allow read, write: if isAuthenticated() && 
+        (isAdmin() || hasRole('doctor')) &&
+        isValidMedicalFile() && isValidFileSize(20);
+      allow delete: if isAuthenticated() && 
+        (isAdmin() || hasRole('doctor'));
+    }
+    
+    // Inventory item images - staff members
+    match /inventory/{clinicId}/{itemId}/{fileName} {
+      allow read: if isAuthenticated() && 
+        (isAdmin() || isSameClinic(clinicId));
+      allow write: if isAuthenticated() && 
+        (isAdmin() || (isSameClinic(clinicId) && (hasRole('management') || hasRole('doctor') || hasRole('receptionist')))) &&
+        isValidImageFile() && isValidFileSize(5);
+      allow delete: if isAuthenticated() && 
+        (isAdmin() || (hasRole('management') && isSameClinic(clinicId)));
+    }
+    
+    // Backup files - admins only
+    match /backups/{fileName} {
+      allow read, write, delete: if isAuthenticated() && isAdmin();
+    }
+    
+    // Temporary uploads - authenticated users only, auto-expire
+    match /temp/{userId}/{fileName} {
+      allow read, write: if isAuthenticated() && isOwner(userId) &&
+        isValidMedicalFile() && isValidFileSize(50);
+      allow delete: if isAuthenticated() && 
+        (isOwner(userId) || isAdmin());
+    }
+    
+    // Public assets (clinic logos for public display)
+    match /public/{fileName} {
+      allow read: if true;
+      allow write, delete: if isAuthenticated() && isAdmin();
+    }
+    
+    // Default deny rule for any other paths
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+} 

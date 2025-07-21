@@ -37,23 +37,23 @@ export const SUBSCRIPTION_LIMITS = {
 };
 
 // Check if a feature is available for a subscription plan
-export const hasFeatureAccess = (plan: string, feature: string): boolean => {
+export function hasFeatureAccess(plan: string, feature: string): boolean {
   const planFeatures = SUBSCRIPTION_FEATURES[plan as keyof typeof SUBSCRIPTION_FEATURES];
   return planFeatures ? planFeatures.includes(feature) : false;
-};
+}
 
 // Check if clinic can add more users
-export const canAddUser = (clinic: Clinic, currentUserCount: number): boolean => {
+export function canAddUser(clinic: Clinic, currentUserCount: number): boolean {
   return currentUserCount < clinic.settings.maxUsers;
-};
+}
 
 // Get remaining user slots
-export const getRemainingUserSlots = (clinic: Clinic, currentUserCount: number): number => {
+export function getRemainingUserSlots(clinic: Clinic, currentUserCount: number): number {
   return Math.max(0, clinic.settings.maxUsers - currentUserCount);
-};
+}
 
 // Get plan display information
-export const getPlanInfo = (plan: string) => {
+export function getPlanInfo(plan: string) {
   const planKey = plan as keyof typeof SUBSCRIPTION_FEATURES;
   
   switch (planKey) {
@@ -90,7 +90,7 @@ export const getPlanInfo = (plan: string) => {
         description: 'Unknown plan'
       };
   }
-};
+}
 
 // Validate if user count is within plan limits
 export const validateUserLimit = (plan: string, customMaxUsers: number, currentUserCount: number): {

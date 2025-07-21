@@ -22,11 +22,11 @@ const Modal: React.FC<ModalProps> = ({
 }) => {
   // Handle escape key
   useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
+    function handleEscape(e: KeyboardEvent) {
       if (e.key === 'Escape' && isOpen) {
         onClose();
       }
-    };
+    }
 
     if (isOpen) {
       document.addEventListener('keydown', handleEscape);
@@ -52,11 +52,11 @@ const Modal: React.FC<ModalProps> = ({
     fullscreen: 'max-w-full w-full h-full m-0 rounded-none sm:max-w-6xl sm:w-auto sm:h-auto sm:m-4 sm:rounded-xl'
   };
 
-  const handleOverlayClick = (e: React.MouseEvent) => {
+  function handleOverlayClick(e: React.MouseEvent) {
     if (e.target === e.currentTarget && closeOnOverlayClick) {
       onClose();
     }
-  };
+  }
 
   const modalContent = (
     <div 

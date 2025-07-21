@@ -27,6 +27,7 @@ import { validateUserLimit, getPlanInfo, canAddUser } from '../../utils/subscrip
 import { formatDateForTable, formatDateTime, formatDateForInput, timestampToDate, getRelativeTime } from '../../utils/dateUtils';
 import { UserPermissions } from '../../types/permissions';
 import PermissionsManager from '../../components/PermissionsManager';
+import { comprehensiveDoctorFix, diagnoseDoctorIssues } from '../../utils/comprehensiveDoctorFix';
 import {
   Box,
   Container,
@@ -129,6 +130,11 @@ const AdminPanelPage: React.FC = () => {
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [generatedPasswords, setGeneratedPasswords] = useState<{[userId: string]: string}>({});
   const [passwordVisibility, setPasswordVisibility] = useState<{[userId: string]: boolean}>({});
+  
+  // Doctor fix state
+  const [doctorFixLoading, setDoctorFixLoading] = useState(false);
+  const [doctorFixDialogOpen, setDoctorFixDialogOpen] = useState(false);
+  const [doctorFixResult, setDoctorFixResult] = useState<any>(null);
   
   // Form states
   const [newClinic, setNewClinic] = useState({
@@ -788,6 +794,69 @@ const AdminPanelPage: React.FC = () => {
     }
   };
 
+  const handleDoctorFix = async () => {
+    try {
+      setDoctorFixLoading(true);
+      showSnackbar('🩺 Running comprehensive doctor fix...');
+      
+      console.log('🩺 Starting comprehensive doctor assignment fix...');
+      const result = await comprehensiveDoctorFix('demo-clinic');
+      
+      setDoctorFixResult(result);
+      setDoctorFixDialogOpen(true);
+      
+      if (result.success) {
+        showSnackbar(`✅ Doctor fix completed! Fixed ${result.appointmentsFixed} appointments and ${result.patientsFixed} patients.`);
+      } else {
+        showSnackbar(`❌ Doctor fix failed: ${result.message}`);
+      }
+    } catch (error) {
+      console.error('Error running doctor fix:', error);
+      showSnackbar('❌ Error running doctor fix');
+      setDoctorFixResult({
+        success: false,
+        message: `Error: ${error instanceof Error ? error.message : String(error)}`,
+        appointmentsFixed: 0,
+        patientsFixed: 0,
+        details: {
+          appointmentIssues: [],
+          patientIssues: [],
+          fixedAppointments: [],
+          fixedPatients: []
+        }
+      });
+      setDoctorFixDialogOpen(true);
+    } finally {
+      setDoctorFixLoading(false);
+    }
+  };
+
+  const handleDiagnoseDoctorIssues = async () => {
+    try {
+      showSnackbar('🔍 Diagnosing doctor issues...');
+      const diagnosis = await diagnoseDoctorIssues('demo-clinic');
+      console.log('🩺 DOCTOR DIAGNOSIS RESULTS:', diagnosis);
+      
+      if (diagnosis) {
+        const totalIssues = 
+          diagnosis.appointmentIssues.drCurrentDoctor.length +
+          diagnosis.appointmentIssues.invalidDoctorId.length +
+          diagnosis.appointmentIssues.missingDoctor.length +
+          diagnosis.appointmentIssues.missingDoctorId.length +
+          diagnosis.patientIssues.missingDoctor.length +
+          diagnosis.patientIssues.invalidDoctorId.length +
+          diagnosis.patientIssues.missingDoctorId.length;
+        
+        showSnackbar(`🔍 Diagnosis complete! Found ${totalIssues} doctor issues. Check console for details.`);
+      } else {
+        showSnackbar('❌ Failed to diagnose doctor issues');
+      }
+    } catch (error) {
+      console.error('Error diagnosing doctor issues:', error);
+      showSnackbar('❌ Error diagnosing doctor issues');
+    }
+  };
+
   // Debug function to check for common orphaned accounts
   const handleCheckOrphanedAccounts = async () => {
     try {
@@ -872,6 +941,25 @@ const AdminPanelPage: React.FC = () => {
             title="Fix clinic access issues (if users can't login)"
           >
             Fix Access
+          </Button>
+          <Button 
+            color="inherit" 
+            onClick={handleDiagnoseDoctorIssues}
+            startIcon={<AdminPanelSettings />}
+            sx={{ mr: 1, backgroundColor: 'rgba(255,255,255,0.1)' }}
+            title="Diagnose doctor assignment issues"
+          >
+            Diagnose Doctors
+          </Button>
+          <Button 
+            color="inherit" 
+            onClick={handleDoctorFix}
+            startIcon={<AutorenewRounded />}
+            sx={{ mr: 1, backgroundColor: 'rgba(255,165,0,0.8)' }}
+            title="Fix all doctor assignment issues"
+            disabled={doctorFixLoading}
+          >
+            {doctorFixLoading ? 'Fixing...' : 'Fix Doctors'}
           </Button>
           <Button 
             color="inherit" 
@@ -1844,6 +1932,164 @@ const AdminPanelPage: React.FC = () => {
             startIcon={<ExitToApp />}
           >
             Open Firebase Console
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Doctor Fix Results Dialog */}
+      <Dialog 
+        open={doctorFixDialogOpen} 
+        onClose={() => setDoctorFixDialogOpen(false)}
+        maxWidth="lg"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <AutorenewRounded color={doctorFixResult?.success ? "success" : "error"} />
+          Doctor Fix Results
+        </DialogTitle>
+        <DialogContent>
+          {doctorFixResult && (
+            <Box>
+              <Alert severity={doctorFixResult.success ? "success" : "error"} sx={{ mb: 2 }}>
+                <Typography variant="h6">
+                  {doctorFixResult.success ? '✅ Fix Completed' : '❌ Fix Failed'}
+                </Typography>
+                <Typography variant="body2">
+                  {doctorFixResult.message}
+                </Typography>
+              </Alert>
+
+              {doctorFixResult.success && (
+                <Grid container spacing={2} sx={{ mb: 3 }}>
+                  <Grid item xs={6}>
+                    <Card>
+                      <CardContent>
+                        <Typography color="textSecondary" gutterBottom>
+                          Appointments Fixed
+                        </Typography>
+                        <Typography variant="h4" color="primary">
+                          {doctorFixResult.appointmentsFixed}
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Card>
+                      <CardContent>
+                        <Typography color="textSecondary" gutterBottom>
+                          Patients Fixed
+                        </Typography>
+                        <Typography variant="h4" color="primary">
+                          {doctorFixResult.patientsFixed}
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                </Grid>
+              )}
+
+              {doctorFixResult.details && (
+                <Box>
+                  {doctorFixResult.details.appointmentIssues.length > 0 && (
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="h6" sx={{ mb: 1 }}>
+                        📅 Appointment Issues Fixed:
+                      </Typography>
+                      <Box sx={{ maxHeight: 200, overflow: 'auto', backgroundColor: '#f5f5f5', p: 1, borderRadius: 1 }}>
+                        {doctorFixResult.details.appointmentIssues.map((issue: string, index: number) => (
+                          <Typography key={index} variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
+                            • {issue}
+                          </Typography>
+                        ))}
+                      </Box>
+                    </Box>
+                  )}
+
+                  {doctorFixResult.details.patientIssues.length > 0 && (
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="h6" sx={{ mb: 1 }}>
+                        👥 Patient Issues Fixed:
+                      </Typography>
+                      <Box sx={{ maxHeight: 200, overflow: 'auto', backgroundColor: '#f5f5f5', p: 1, borderRadius: 1 }}>
+                        {doctorFixResult.details.patientIssues.map((issue: string, index: number) => (
+                          <Typography key={index} variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
+                            • {issue}
+                          </Typography>
+                        ))}
+                      </Box>
+                    </Box>
+                  )}
+
+                  {doctorFixResult.details.fixedAppointments.length > 0 && (
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="h6" sx={{ mb: 1 }}>
+                        📋 Fixed Appointments Details:
+                      </Typography>
+                      <TableContainer component={Paper} sx={{ maxHeight: 300 }}>
+                        <Table size="small">
+                          <TableHead>
+                            <TableRow>
+                              <TableCell>Patient</TableCell>
+                              <TableCell>Original Doctor</TableCell>
+                              <TableCell>New Doctor</TableCell>
+                              <TableCell>Issues</TableCell>
+                            </TableRow>
+                          </TableHead>
+                          <TableBody>
+                            {doctorFixResult.details.fixedAppointments.map((apt: any, index: number) => (
+                              <TableRow key={index}>
+                                <TableCell>{apt.patient}</TableCell>
+                                <TableCell>{apt.originalDoctor || 'None'}</TableCell>
+                                <TableCell>{apt.newDoctor}</TableCell>
+                                <TableCell>{apt.issues.join(', ')}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </TableContainer>
+                    </Box>
+                  )}
+
+                  {doctorFixResult.details.fixedPatients.length > 0 && (
+                    <Box>
+                      <Typography variant="h6" sx={{ mb: 1 }}>
+                        👤 Fixed Patients Details:
+                      </Typography>
+                      <TableContainer component={Paper} sx={{ maxHeight: 300 }}>
+                        <Table size="small">
+                          <TableHead>
+                            <TableRow>
+                              <TableCell>Patient Name</TableCell>
+                              <TableCell>Original Doctor</TableCell>
+                              <TableCell>New Doctor</TableCell>
+                              <TableCell>Issues</TableCell>
+                            </TableRow>
+                          </TableHead>
+                          <TableBody>
+                            {doctorFixResult.details.fixedPatients.map((patient: any, index: number) => (
+                              <TableRow key={index}>
+                                <TableCell>{patient.name}</TableCell>
+                                <TableCell>{patient.originalDoctor || 'None'}</TableCell>
+                                <TableCell>{patient.newDoctor}</TableCell>
+                                <TableCell>{patient.issues.join(', ')}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </TableContainer>
+                    </Box>
+                  )}
+                </Box>
+              )}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={() => setDoctorFixDialogOpen(false)}
+            variant="contained"
+          >
+            Close
           </Button>
         </DialogActions>
       </Dialog>

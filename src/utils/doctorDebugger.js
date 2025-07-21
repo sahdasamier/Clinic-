@@ -368,10 +368,3 @@ if (typeof window !== 'undefined') {
   (window as any).completeDoctorAssignmentSolution = completeDoctorAssignmentSolution;
 }
 
-export {
-  debugPatientDoctorAssignment,
-  quickFixDoctorAssignment,
-  manualAssignDoctor,
-  checkAppointmentDoctorData,
-  completeDoctorAssignmentSolution
-}; 

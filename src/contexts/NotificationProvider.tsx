@@ -41,13 +41,13 @@ interface NotificationOptions {
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
-export const useNotification = () => {
+export function useNotification() {
   const context = useContext(NotificationContext);
   if (context === undefined) {
     throw new Error('useNotification must be used within a NotificationProvider');
   }
   return context;
-};
+}
 
 // Slide transition component
 function SlideTransition(props: SlideProps) {
@@ -228,10 +228,10 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
 };
 
 // Compatibility alias for existing SnackbarContext usage
-export const useSnackbar = () => {
+export function useSnackbar() {
   const { showNotification, hideNotification } = useNotification();
   return {
     showSnackbar: showNotification,
     hideSnackbar: hideNotification
   };
-}; 
+} 

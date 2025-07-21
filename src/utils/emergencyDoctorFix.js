@@ -305,4 +305,3 @@ if (typeof window !== 'undefined') {
   };
 }
 
-export { emergencyFixDoctorAssignment, emergencyFixAllPatientsWithoutDoctors }; 

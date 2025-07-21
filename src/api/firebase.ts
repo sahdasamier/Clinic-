@@ -1,4 +1,6 @@
-// Import the functions you need from the SDKs you need
+// ⚠️ LEGACY FIREBASE CONFIG - USE firebaseOptimized.ts FOR NEW CODE
+// This file is kept for backward compatibility only
+
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { 
   initializeFirestore,
@@ -11,6 +13,19 @@ import {
   createUserWithEmailAndPassword,
   signOut as firebaseSignOut
 } from "firebase/auth";
+import { getStorage } from "firebase/storage";
+import { getAnalytics } from "firebase/analytics";
+import { getMessaging, isSupported } from "firebase/messaging";
+import { getFunctions, connectFunctionsEmulator } from "firebase/functions";
+
+// Import optimized Firebase for new implementations
+import { 
+  firebaseManager,
+  initializeOptimizedFirebase,
+  getOptimizedFirestore,
+  getOptimizedAuth,
+  getOptimizedStorage
+} from './firebaseOptimized';
 
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
@@ -66,6 +81,34 @@ try {
 
 const auth = getAuth(app);
 
+// Initialize other Firebase services
+const storage = getStorage(app);
+const analytics = getAnalytics(app);
+const functions = getFunctions(app);
+
+// Initialize messaging (only if supported)
+let messaging: any = null;
+if (typeof window !== 'undefined') {
+  isSupported().then((supported) => {
+    if (supported) {
+      messaging = getMessaging(app);
+      console.log('✅ Firebase Cloud Messaging initialized');
+    } else {
+      console.log('⚠️ Firebase Cloud Messaging not supported in this browser');
+    }
+  });
+}
+
+// Connect to emulators in development
+if ((import.meta as any).env?.MODE === 'development') {
+  try {
+    // connectFunctionsEmulator(functions, 'localhost', 5001);
+    console.log('🔧 Development mode - Functions emulator connection available');
+  } catch (error) {
+    console.log('Functions emulator not running');
+  }
+}
+
 // Auth helpers for AuthContext
 export const authHelpers = {
   signIn: async (email: string, password: string) => {
@@ -82,7 +125,16 @@ export const authHelpers = {
 };
 
 // Export for use in other files
-export { auth, firestore, firebaseConfig };
+export { 
+  auth, 
+  firestore, 
+  storage, 
+  analytics, 
+  messaging, 
+  functions, 
+  firebaseConfig, 
+  app 
+};
 
 // Export firestore as db for backward compatibility
 export const db = firestore;
@@ -122,3 +174,34 @@ export const firestoreUtils = {
     timestamp: new Date().toISOString()
   })
 };
+
+// ✅ OPTIMIZED FIREBASE CONVENIENCE FUNCTIONS
+// Use these instead of the legacy exports above
+
+// Initialize optimized Firebase (call this in main.tsx or App.tsx)
+export async function initializeOptimizedServices(): Promise<void> {
+  try {
+    await initializeOptimizedFirebase();
+    console.log('🚀 Optimized Firebase services initialized');
+  } catch (error) {
+    console.error('❌ Failed to initialize optimized Firebase:', error);
+    throw error;
+  }
+}
+
+// Get optimized services (preferred over legacy exports)
+export function getOptimizedServices() {
+  return {
+    firestore: getOptimizedFirestore(),
+    auth: getOptimizedAuth(),
+    storage: getOptimizedStorage(),
+    isReady: firebaseManager.isReady()
+  };
+}
+
+// Migration helper: Check if optimized Firebase is ready
+export function isOptimizedFirebaseReady(): boolean {
+  return firebaseManager.isReady();
+}
+
+// Legacy export aliases for backward compatibility - removed duplicate exports

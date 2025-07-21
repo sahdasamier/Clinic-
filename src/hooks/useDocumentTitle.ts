@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useClinicSettings } from './useClinicSettings';
 
-export const useDocumentTitle = (pageTitle?: string) => {
+export function useDocumentTitle(pageTitle?: string) {
   const { getClinicDisplayName, isBrandingConfigured } = useClinicSettings();
 
   useEffect(() => {
@@ -29,4 +29,4 @@ export const useDocumentTitle = (pageTitle?: string) => {
     
     console.log('📄 Document title updated:', title);
   }, [pageTitle, getClinicDisplayName, isBrandingConfigured]);
-}; 
+} 

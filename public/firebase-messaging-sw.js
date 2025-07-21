@@ -1,0 +1,148 @@
+// Import Firebase scripts for service worker
+importScripts('https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/9.0.0/firebase-messaging-compat.js');
+
+// Initialize the Firebase app in the service worker
+// Note: Replace these with your actual Firebase config values
+firebase.initializeApp({
+  apiKey: process.env.VITE_FIREBASE_API_KEY || "your-api-key",
+  authDomain: process.env.VITE_FIREBASE_AUTH_DOMAIN || "your-auth-domain", 
+  projectId: process.env.VITE_FIREBASE_PROJECT_ID || "your-project-id",
+  storageBucket: process.env.VITE_FIREBASE_STORAGE_BUCKET || "your-storage-bucket",
+  messagingSenderId: process.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "your-messaging-sender-id",
+  appId: process.env.VITE_FIREBASE_APP_ID || "your-app-id"
+});
+
+// Retrieve an instance of Firebase Messaging
+const messaging = firebase.messaging();
+
+// Handle background messages
+messaging.onBackgroundMessage((payload) => {
+  console.log('[firebase-messaging-sw.js] Received background message ', payload);
+  
+  const notificationTitle = payload.notification?.title || 'Clinic Notification';
+  const notificationOptions = {
+    body: payload.notification?.body || 'You have a new notification',
+    icon: payload.notification?.icon || '/favicon.png',
+    badge: '/favicon.png',
+    tag: payload.data?.type || 'general',
+    data: payload.data,
+    actions: [
+      {
+        action: 'view',
+        title: 'View',
+        icon: '/icons/view.png'
+      },
+      {
+        action: 'dismiss',
+        title: 'Dismiss',
+        icon: '/icons/dismiss.png'
+      }
+    ],
+    requireInteraction: true,
+    silent: false
+  };
+
+  // Show the notification
+  self.registration.showNotification(notificationTitle, notificationOptions);
+});
+
+// Handle notification click events
+self.addEventListener('notificationclick', (event) => {
+  console.log('[firebase-messaging-sw.js] Notification click received.');
+  
+  event.notification.close();
+  
+  const clickAction = event.action;
+  const notificationData = event.notification.data;
+  
+  if (clickAction === 'dismiss') {
+    // User dismissed the notification
+    return;
+  }
+  
+  // Default action or 'view' action
+  let urlToOpen = '/';
+  
+  // Determine the URL based on notification type
+  if (notificationData) {
+    switch (notificationData.type) {
+      case 'appointment_reminder':
+      case 'appointment_confirmation':
+      case 'appointment_cancelled':
+        urlToOpen = `/appointments/${notificationData.appointmentId}`;
+        break;
+      case 'new_patient':
+        urlToOpen = `/patients/${notificationData.patientId}`;
+        break;
+      case 'payment_reminder':
+        urlToOpen = `/payments/${notificationData.paymentId}`;
+        break;
+      case 'inventory_low_stock':
+        urlToOpen = `/inventory/${notificationData.itemId}`;
+        break;
+      default:
+        urlToOpen = '/dashboard';
+    }
+  }
+  
+  // Open the URL in a new window/tab or focus existing one
+  event.waitUntil(
+    clients.matchAll({ type: 'window' }).then((clientList) => {
+      // Check if there's already a window/tab open with the target URL
+      for (const client of clientList) {
+        if (client.url === urlToOpen && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      
+      // If no window/tab is open, open a new one
+      if (clients.openWindow) {
+        return clients.openWindow(urlToOpen);
+      }
+    })
+  );
+});
+
+// Handle notification close events
+self.addEventListener('notificationclose', (event) => {
+  console.log('[firebase-messaging-sw.js] Notification closed.', event.notification);
+  
+  // Optional: Track notification dismissal analytics
+  const notificationData = event.notification.data;
+  if (notificationData && notificationData.type) {
+    // You could send analytics data here
+    console.log('Notification dismissed:', notificationData.type);
+  }
+});
+
+// Handle push events (for custom processing)
+self.addEventListener('push', (event) => {
+  console.log('[firebase-messaging-sw.js] Push received.', event);
+  
+  // This is handled by Firebase Messaging, but you can add custom logic here
+  // if needed for specific notification types
+});
+
+// Service worker installation
+self.addEventListener('install', (event) => {
+  console.log('[firebase-messaging-sw.js] Service worker installing.');
+  // Force the waiting service worker to become the active service worker
+  self.skipWaiting();
+});
+
+// Service worker activation
+self.addEventListener('activate', (event) => {
+  console.log('[firebase-messaging-sw.js] Service worker activating.');
+  // Take control of all open clients
+  event.waitUntil(self.clients.claim());
+});
+
+// Handle messages from the main thread
+self.addEventListener('message', (event) => {
+  console.log('[firebase-messaging-sw.js] Message received from main thread:', event.data);
+  
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+}); 

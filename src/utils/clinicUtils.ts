@@ -4,7 +4,7 @@ import { isSuperAdmin } from './adminConfig';
 import { ensureDemoClinicActive } from '../scripts/initFirestore';
 
 // Get clinic-specific query for a collection
-export const getClinicQuery = (collectionName: string, userEmail: string, clinicId?: string) => {
+export function getClinicQuery(collectionName: string, userEmail: string, clinicId?: string) {
   const baseCollection = collection(db, collectionName);
   
   // Super admins can see all data
@@ -19,18 +19,18 @@ export const getClinicQuery = (collectionName: string, userEmail: string, clinic
   
   // Fallback to empty query if no clinic ID
   return query(baseCollection, where('clinicId', '==', 'no-clinic'));
-};
+}
 
 // Add clinic ID to new documents
-export const addClinicId = (data: any, clinicId: string) => {
+export function addClinicId(data: any, clinicId: string) {
   return {
     ...data,
     clinicId,
   };
-};
+}
 
 // Check if current user can access a specific clinic's data
-export const canAccessClinic = (userEmail: string, userClinicId: string, targetClinicId: string): boolean => {
+export function canAccessClinic(userEmail: string, userClinicId: string, targetClinicId: string): boolean {
   // Super admins can access any clinic
   if (isSuperAdmin(userEmail)) {
     return true;
@@ -38,10 +38,10 @@ export const canAccessClinic = (userEmail: string, userClinicId: string, targetC
   
   // Regular users can only access their own clinic
   return userClinicId === targetClinicId;
-};
+}
 
 // Check if a clinic is active
-export const isClinicActive = async (clinicId: string): Promise<boolean> => {
+export async function isClinicActive(clinicId: string): Promise<boolean> {
   try {
     console.log(`🔍 Checking clinic status for ID: ${clinicId}`);
     const clinicDoc = await getDoc(doc(db, 'clinics', clinicId));
@@ -77,10 +77,10 @@ export const isClinicActive = async (clinicId: string): Promise<boolean> => {
     console.error(`❌ Error checking clinic status for ${clinicId}:`, error);
     return false;
   }
-};
+}
 
 // Check if user's clinic is active and they should have access
-export const hasActiveClinicAccess = async (userEmail: string, clinicId?: string): Promise<boolean> => {
+export async function hasActiveClinicAccess(userEmail: string, clinicId?: string): Promise<boolean> {
   console.log(`🔐 Checking clinic access for user: ${userEmail}, clinicId: ${clinicId}`);
   
   // Super admins always have access
@@ -116,10 +116,10 @@ export const hasActiveClinicAccess = async (userEmail: string, clinicId?: string
   }
   
   return isActive;
-};
+}
 
 // Manual function to fix clinic access issues (for debugging)
-export const fixClinicAccess = async (clinicId: string = 'demo-clinic'): Promise<boolean> => {
+export async function fixClinicAccess(clinicId: string = 'demo-clinic'): Promise<boolean> {
   console.log(`🔧 Manually fixing clinic access for: ${clinicId}`);
   
   try {
@@ -137,14 +137,14 @@ export const fixClinicAccess = async (clinicId: string = 'demo-clinic'): Promise
     console.error(`❌ Error fixing clinic access for ${clinicId}:`, error);
     return false;
   }
-};
+}
 
 // Filter array data by clinic (for when we can't use Firestore queries)
-export const filterByClinic = <T extends { clinicId: string }>(
+export function filterByClinic<T extends { clinicId: string }>(
   data: T[], 
   userEmail: string, 
   userClinicId?: string
-): T[] => {
+): T[] {
   // Super admins see all data
   if (isSuperAdmin(userEmail)) {
     return data;
@@ -156,4 +156,4 @@ export const filterByClinic = <T extends { clinicId: string }>(
   }
   
   return [];
-}; 
+} 
