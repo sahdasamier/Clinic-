@@ -9,13 +9,20 @@ import {
   getDocs,
   orderBy,
   serverTimestamp,
-  writeBatch,
-  Timestamp
+  writeBatch
 } from 'firebase/firestore';
-import { db } from '../api/firebase';
+import { getOptimizedFirestore, firebaseManager } from '../api/firebaseOptimized';
 
 const COLLECTION_NAME = 'payments';
-const paymentsCollection = collection(db, COLLECTION_NAME);
+
+// Safe collection reference that waits for Firebase to be ready
+const getPaymentsCollection = () => {
+  if (!firebaseManager.isReady()) {
+    throw new Error('Firebase not ready - please wait for initialization');
+  }
+  const db = getOptimizedFirestore();
+  return collection(db, COLLECTION_NAME);
+};
 
 export interface Payment {
   id: string;
@@ -70,14 +77,14 @@ export class PaymentService {
       updatedAt: serverTimestamp(),
     };
 
-    await setDoc(doc(paymentsCollection, id), payment);
+    await setDoc(doc(getPaymentsCollection(), id), payment);
     console.log('✅ Payment created:', id);
     return id;
   }
 
   // Update an existing payment
   static async updatePayment(paymentId: string, updates: Partial<Payment>): Promise<Payment> {
-    const paymentRef = doc(paymentsCollection, paymentId);
+    const paymentRef = doc(getPaymentsCollection(), paymentId);
     
     const updateData = {
       ...updates,
@@ -112,14 +119,14 @@ export class PaymentService {
 
   // Hard delete a payment
   static async hardDeletePayment(paymentId: string): Promise<void> {
-    await deleteDoc(doc(paymentsCollection, paymentId));
+    await deleteDoc(doc(getPaymentsCollection(), paymentId));
     console.log('✅ Payment permanently deleted:', paymentId);
   }
 
   // Listen to payments for a specific clinic
   static listenPayments(clinicId: string, callback: (payments: Payment[]) => void): () => void {
     const q = query(
-      paymentsCollection,
+      getPaymentsCollection(),
       where('clinicId', '==', clinicId),
       where('isActive', '==', true),
       orderBy('createdAt', 'desc')
@@ -142,7 +149,7 @@ export class PaymentService {
   // Get all payments for a clinic
   static async getPayments(clinicId: string): Promise<Payment[]> {
     const q = query(
-      paymentsCollection,
+      getPaymentsCollection(),
       where('clinicId', '==', clinicId),
       where('isActive', '==', true),
       orderBy('createdAt', 'desc')
@@ -161,7 +168,7 @@ export class PaymentService {
   // Listen to payments by status
   static listenPaymentsByStatus(clinicId: string, status: Payment['status'], callback: (payments: Payment[]) => void): () => void {
     const q = query(
-      paymentsCollection,
+      getPaymentsCollection(),
       where('clinicId', '==', clinicId),
       where('status', '==', status),
       where('isActive', '==', true),
@@ -181,7 +188,7 @@ export class PaymentService {
   // Listen to payments for a specific patient
   static listenPaymentsByPatient(clinicId: string, patientId: string, callback: (payments: Payment[]) => void): () => void {
     const q = query(
-      paymentsCollection,
+      getPaymentsCollection(),
       where('clinicId', '==', clinicId),
       where('patientId', '==', patientId),
       where('isActive', '==', true),
@@ -236,7 +243,7 @@ export class PaymentService {
   // Get payments for a specific appointment
   static async getPaymentsByAppointment(clinicId: string, appointmentId: string): Promise<Payment[]> {
     const q = query(
-      paymentsCollection,
+      getPaymentsCollection(),
       where('clinicId', '==', clinicId),
       where('appointmentId', '==', appointmentId),
       where('isActive', '==', true)
@@ -264,11 +271,11 @@ export class PaymentService {
 
   // Batch create payments
   static async batchCreatePayments(clinicId: string, payments: Array<Omit<Payment, 'id' | 'createdAt' | 'updatedAt' | 'clinicId'>>): Promise<void> {
-    const batch = writeBatch(db);
+    const batch = writeBatch(getOptimizedFirestore());
     
     payments.forEach(paymentData => {
       const id = crypto.randomUUID();
-      const paymentRef = doc(paymentsCollection, id);
+      const paymentRef = doc(getPaymentsCollection(), id);
       const payment: Payment = {
         ...paymentData,
         id,

@@ -53,6 +53,16 @@ import {
 } from 'firebase/firestore';
 import { useAuth } from '../../contexts/AuthContext';
 import { useUser } from '../../contexts/UserContext';
+
+// ✅ NEW: Use the new real-time data hooks instead of legacy systems
+import {
+  useGlobalData,
+  usePatients,
+  useAppointments,
+  useRealtimeUpdates,
+  useDashboardStats
+} from '../../hooks/useGlobalData';
+
 import DoctorPatientAssignment from '../../components/DoctorPatientAssignment';
 import { getPatientsByDoctor } from '../../api/doctorPatients';
 import {
@@ -160,13 +170,38 @@ function TabPanel(props: TabPanelProps) {
 
 const PatientListPage: React.FC = () => {
   const { t } = useTranslation();
-  const { user, loading, initialized } = useAuth();
+  const { user, loading: authLoading, initialized } = useAuth();
   const { userProfile } = useUser();
+
+  // ✅ NEW: Use real-time data hooks
+  const {
+    patients,
+    loading: patientsLoading,
+    error: patientsError,
+    addPatient,
+    updatePatient,
+    deletePatient,
+    stats: patientStats
+  } = usePatients();
+
+  const {
+    appointments,
+    loading: appointmentsLoading,
+    error: appointmentsError
+  } = useAppointments();
+
+  const dashboardStats = useDashboardStats();
+  const { onDataUpdate, onConnectionChange } = useRealtimeUpdates();
+
+  // ✅ NEW: Real-time update notifications
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+  const [updateCount, setUpdateCount] = useState(0);
 
   // Helper function to translate patient status and conditions
   const translatePatientData = (text: string) => {
     return t(text.toLowerCase()) || text;
   };
+
   const [tabValue, setTabValue] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterAnchor, setFilterAnchor] = useState<null | HTMLElement>(null);
@@ -189,9 +224,7 @@ const PatientListPage: React.FC = () => {
   const [editingMedication, setEditingMedication] = useState<any>(null);
   const [editNoteOpen, setEditNoteOpen] = useState(false);
   const [editingNote, setEditingNote] = useState<any>(null);
-  // ✅ Firebase real-time data states
-  const [patients, setPatients] = useState<Patient[]>([]);
-  const [appointments, setAppointments] = useState<any[]>([]);
+  // ✅ Firebase real-time data states (now handled by hooks)
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [patientOrganizationMode, setPatientOrganizationMode] = useState<'reservation' | 'completion' | 'all'>('all');
   
@@ -671,40 +704,42 @@ const PatientListPage: React.FC = () => {
     
     // Run direct test
     testFirebaseConnection();
-  }, [initialized, loading, user, userProfile]);
+  }, []);
 
-  // ✅ Firebase Data Bridge (keep as backup)
-  React.useEffect(() => {
-    if (!initialized || loading || !user || !userProfile) return;
-
-    console.log('💚 Setting up Firebase Data Bridge as backup...');
-
-    // Subscribe to real-time data changes
-    const unsubscribe = FirebaseDataBridge.subscribe((data) => {
-      console.log('💚 Data Bridge Update:', {
-        appointments: data.appointments?.length || 0,
-        patients: data.patients?.length || 0
-      });
-
-      if (data.appointments && data.appointments.length > 0) {
-        setAppointments(data.appointments);
-        console.log('💚 Data Bridge: Appointments updated');
-      }
-      
-      if (data.patients && data.patients.length > 0) {
-        setPatients(data.patients);
-        console.log('💚 Data Bridge: Patients updated');
-      }
-      
-      setIsDataLoaded(true);
+  // ✅ NEW: Listen for real-time updates
+  useEffect(() => {
+    const unsubscribeDataUpdate = onDataUpdate((collection, data) => {
+      setLastUpdate(new Date());
+      setUpdateCount(prev => prev + 1);
+      console.log(`👥 Patients: Real-time update - ${collection} (${data.length} items)`);
     });
 
-    // Force refresh data for this page
-    setTimeout(() => {
-      FirebaseDataBridge.refreshAll(userProfile.clinicId || 'demo-clinic');
-    }, 3000);
+    const unsubscribeConnection = onConnectionChange((status) => {
+      console.log(`🔄 Patients: Connection status - ${status}`);
+    });
 
-    // ✅ NEW: Listen for appointment payment status changes from appointment page
+    return () => {
+      unsubscribeDataUpdate();
+      unsubscribeConnection();
+    };
+  }, [onDataUpdate, onConnectionChange]);
+
+  // ✅ NEW: Debug logging for new system
+  useEffect(() => {
+    console.log('👥 PATIENTS (NEW SYSTEM): Data state', {
+      user: !!user,
+      userProfile: !!userProfile,
+      patientsCount: patients.length,
+      appointmentsCount: appointments.length,
+      connectionStatus: dashboardStats.connectionStatus,
+      isOnline: dashboardStats.isOnline,
+      lastUpdate: lastUpdate?.toLocaleTimeString(),
+      updateCount
+    });
+  }, [user, userProfile, patients.length, appointments.length, dashboardStats, lastUpdate, updateCount]);
+
+  // ✅ NEW: Listen for appointment payment status changes from appointment page
+  useEffect(() => {
     const handleAppointmentPaymentStatusChange = (event: CustomEvent) => {
       console.log('💚 Patient page: Appointment payment status changed:', event.detail);
       
@@ -764,7 +799,7 @@ const PatientListPage: React.FC = () => {
       window.removeEventListener('paymentStatusChanged', handlePaymentStatusChange as EventListener);
       window.removeEventListener('appointmentPaymentStatusSynced', handleAppointmentPaymentStatusSync as EventListener);
     };
-  }, [initialized, loading, user, userProfile]);
+  }, []);
 
   // ✅ Listen for global events and cleanup
   React.useEffect(() => {

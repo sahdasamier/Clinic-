@@ -1,5 +1,30 @@
 import { AppointmentService } from '../services/AppointmentService';
 import { PatientService } from '../services/PatientService';
+import { auth } from '../api/firebase';
+import { firebaseManager } from '../api/firebaseOptimized';
+
+// Helper function to check if Firebase is ready
+const isFirebaseReady = (): boolean => {
+  try {
+    return firebaseManager.isReady() && auth && typeof auth.currentUser !== 'undefined';
+  } catch (error) {
+    console.log('Firebase not yet ready:', error);
+    return false;
+  }
+};
+
+// Helper function to safely get current user
+const getCurrentUser = () => {
+  try {
+    if (!isFirebaseReady()) {
+      return null;
+    }
+    return auth.currentUser;
+  } catch (error) {
+    console.log('Error getting current user:', error);
+    return null;
+  }
+};
 
 /**
  * Firebase Free Tier Friendly Sync WITH Real-Time Page Communication
@@ -70,23 +95,50 @@ export class FirebaseFriendlySync {
   }
 
   /**
+   * Check if Firebase is ready before proceeding
+   */
+  static async waitForFirebaseReady(maxWaitMs: number = 10000): Promise<boolean> {
+    const startTime = Date.now();
+    
+    while (Date.now() - startTime < maxWaitMs) {
+      if (firebaseManager.isReady()) {
+        return true;
+      }
+      
+      // Wait 500ms before checking again
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    
+    console.warn('⚠️ Firebase not ready after waiting', maxWaitMs, 'ms');
+    return false;
+  }
+
+  /**
    * ✅ NEW: Refresh all pages data from Firebase (minimal reads)
    */
   static async refreshAllPagesData(clinicId = 'demo-clinic') {
+    // Wait for Firebase to be ready
+    const isFirebaseReady = await this.waitForFirebaseReady(5000);
+    if (!isFirebaseReady) {
+      console.warn('⚠️ FirebaseFriendlySync: Firebase not ready, skipping refresh');
+      return null;
+    }
+
     // Check authentication before proceeding
-    try {
-      const { auth } = await import('../api/firebase');
-      if (!auth.currentUser) {
-        console.log('💚 FirebaseFriendlySync: No authenticated user, cannot refresh data');
-        return null;
-      }
-    } catch (error) {
-      console.warn('⚠️ FirebaseFriendlySync: Auth check failed during refresh:', error);
+    const currentUser = getCurrentUser();
+    if (!currentUser) {
+      console.log('💚 FirebaseFriendlySync: No authenticated user, cannot refresh data');
       return null;
     }
     
     try {
       console.log('💚 Refreshing data for all pages...');
+      
+      // Wait a bit more to ensure services are ready
+      if (!firebaseManager.isReady()) {
+        console.log('💚 Waiting for Firebase services to be fully ready...');
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
       
       // Get fresh data from Firebase
       const appointments = await AppointmentService.getAllAppointments(clinicId);
@@ -135,14 +187,27 @@ export class FirebaseFriendlySync {
    */
   static async waitForAuthAndInit() {
     try {
-      const { auth } = await import('../api/firebase');
+      // Wait for Firebase to be ready first
+      if (!isFirebaseReady()) {
+        console.log('💚 FirebaseFriendlySync: Waiting for Firebase to be ready...');
+        const firebaseReady = await this.waitForFirebaseReady(10000);
+        if (!firebaseReady) {
+          console.warn('⚠️ Firebase not ready for auth initialization');
+          return;
+        }
+      }
       
       // Wait for auth state to be determined
       const waitForAuth = new Promise((resolve) => {
-        const unsubscribe = auth.onAuthStateChanged((user) => {
-          unsubscribe();
-          resolve(user);
-        });
+        try {
+          const unsubscribe = auth.onAuthStateChanged((user) => {
+            unsubscribe();
+            resolve(user);
+          });
+        } catch (error) {
+          console.error('Error setting up auth state listener:', error);
+          resolve(null);
+        }
       });
       
       const user = await waitForAuth;
@@ -196,8 +261,8 @@ export class FirebaseFriendlySync {
   static async gentleCheck() {
     try {
       // Check if user is authenticated first
-      const { auth } = await import('../api/firebase');
-      if (!auth.currentUser) {
+      const currentUser = getCurrentUser();
+      if (!currentUser) {
         console.log('💚 FirebaseFriendlySync: No authenticated user, skipping gentle check');
         return;
       }
@@ -233,15 +298,17 @@ export class FirebaseFriendlySync {
   static async checkAndSyncIfNeeded(clinicId = 'demo-clinic') {
     if (this.isRunning) return null;
     
+    // Wait for Firebase to be ready
+    const isFirebaseReady = await this.waitForFirebaseReady(5000);
+    if (!isFirebaseReady) {
+      console.warn('⚠️ FirebaseFriendlySync: Firebase not ready, skipping check');
+      return null;
+    }
+
     // Check authentication before proceeding
-    try {
-      const { auth } = await import('../api/firebase');
-      if (!auth.currentUser) {
-        console.log('💚 FirebaseFriendlySync: No authenticated user, cannot proceed with sync');
-        return null;
-      }
-    } catch (error) {
-      console.warn('⚠️ FirebaseFriendlySync: Auth check failed:', error);
+    const currentUser = getCurrentUser();
+    if (!currentUser) {
+      console.log('💚 FirebaseFriendlySync: No authenticated user, cannot proceed with sync');
       return null;
     }
     
@@ -256,6 +323,12 @@ export class FirebaseFriendlySync {
       
       // Get counts efficiently (minimal reads)
       console.log('💚 FirebaseFriendlySync: Checking data (minimal reads)...');
+      
+      // Wait a bit more to ensure services are ready
+      if (!firebaseManager.isReady()) {
+        console.log('💚 Waiting for Firebase services to be fully ready...');
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
       
       const appointments = await AppointmentService.getAllAppointments(clinicId);
       const patients = await PatientService.searchPatients(clinicId, '');
@@ -654,17 +727,18 @@ export const testFirebaseSync = async () => {
   console.log('🧪 Running comprehensive Firebase sync test...');
   
   // Check authentication first
-  try {
-    const { auth } = await import('../api/firebase');
-    if (!auth.currentUser) {
-      const message = '❌ Authentication Required:\n\nPlease log in to run Firebase sync tests.\nTests require authenticated access to Firebase.';
-      console.error(message);
-      if (typeof window !== 'undefined') {
-        alert(message);
-      }
-      return { error: 'Not authenticated' };
+  const currentUser = getCurrentUser();
+  if (!currentUser) {
+    const message = '❌ Authentication Required:\n\nPlease log in to run Firebase sync tests.\nTests require authenticated access to Firebase.';
+    console.error(message);
+    if (typeof window !== 'undefined') {
+      alert(message);
     }
-    console.log('✅ User authenticated:', auth.currentUser.email);
+    return { error: 'Not authenticated' };
+  }
+  
+  try {
+    console.log('✅ User authenticated:', currentUser.email);
   } catch (authError) {
     console.error('❌ Auth check failed:', authError);
     if (typeof window !== 'undefined') {
@@ -777,17 +851,18 @@ export const debugAndForceRefresh = async () => {
   console.log('🔍 DEBUG: Testing Firebase connection and forcing data refresh...');
   
   // Check authentication first
-  try {
-    const { auth } = await import('../api/firebase');
-    if (!auth.currentUser) {
-      const message = '❌ Authentication Required:\n\nPlease log in to access Firebase data.\nYou need to be authenticated to view appointments and patients.';
-      console.error(message);
-      if (typeof window !== 'undefined') {
-        alert(message);
-      }
-      return false;
+  const currentUser = getCurrentUser();
+  if (!currentUser) {
+    const message = '❌ Authentication Required:\n\nPlease log in to access Firebase data.\nYou need to be authenticated to view appointments and patients.';
+    console.error(message);
+    if (typeof window !== 'undefined') {
+      alert(message);
     }
-    console.log('✅ User authenticated:', auth.currentUser.email);
+    return false;
+  }
+  
+  try {
+    console.log('✅ User authenticated:', currentUser.email);
   } catch (authError) {
     console.error('❌ Auth check failed:', authError);
     if (typeof window !== 'undefined') {
@@ -853,15 +928,15 @@ export const debugAndForceRefresh = async () => {
 // ✅ NEW: Authentication helper for users
 export const checkAuthAndShowInstructions = async () => {
   try {
-    const { auth } = await import('../api/firebase');
+    const currentUser = getCurrentUser();
     
-    if (auth.currentUser) {
+    if (currentUser) {
       console.log('✅ Authentication Status: LOGGED IN');
-      console.log('📧 Email:', auth.currentUser.email);
-      console.log('🆔 UID:', auth.currentUser.uid);
+      console.log('📧 Email:', currentUser.email);
+      console.log('🆔 UID:', currentUser.uid);
       
       if (typeof window !== 'undefined') {
-        alert(`✅ Authentication Status: LOGGED IN\n\n📧 Email: ${auth.currentUser.email}\n🆔 UID: ${auth.currentUser.uid}\n\n🎉 Firebase operations should work correctly!`);
+        alert(`✅ Authentication Status: LOGGED IN\n\n📧 Email: ${currentUser.email}\n🆔 UID: ${currentUser.uid}\n\n🎉 Firebase operations should work correctly!`);
       }
       return true;
     } else {
@@ -908,16 +983,25 @@ console.log('   fbImprovement() - Show optimization results');
 // Only initialize if we're in a browser environment and not during bundling
 if (typeof window !== 'undefined' && typeof document !== 'undefined') {
   // Add safety check to prevent initialization during module bundling
-  setTimeout(() => {
+  setTimeout(async () => {
     try {
       // Double-check we're in a real browser environment
       if (window.location && document.readyState) {
-        FirebaseFriendlySync.init();
+        // Wait for Firebase to be ready before initializing
+        console.log('⏳ Waiting for Firebase to be ready before starting FirebaseFriendlySync...');
+        const isReady = await FirebaseFriendlySync.waitForFirebaseReady(15000); // Wait up to 15 seconds
+        
+        if (isReady) {
+          console.log('✅ Firebase ready, starting FirebaseFriendlySync...');
+          FirebaseFriendlySync.init();
+        } else {
+          console.warn('⚠️ Firebase not ready after 15s, FirebaseFriendlySync initialization skipped');
+        }
       }
     } catch (error) {
       console.warn('⚠️ FirebaseFriendlySync auto-init failed (this is safe during bundling):', error);
     }
-  }, 3000);
+  }, 1000); // Reduced initial delay since we're now waiting for Firebase
 }
 
 export default FirebaseFriendlySync; 

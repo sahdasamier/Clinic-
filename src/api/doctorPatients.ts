@@ -3,13 +3,21 @@ import {
   query, 
   where, 
   getDocs, 
-  doc, 
-  updateDoc, 
-  addDoc,
-  serverTimestamp 
+  addDoc, 
+  serverTimestamp,
+  doc,
+  updateDoc,
+  deleteDoc
 } from 'firebase/firestore';
-import { db } from './firebase';
-import { UserData } from './auth';
+import { getOptimizedFirestore, firebaseManager } from './firebaseOptimized';
+
+// Helper to get safe database reference
+const getDb = () => {
+  if (!firebaseManager.isReady()) {
+    throw new Error('Firebase not ready - please wait for initialization');
+  }
+  return getOptimizedFirestore();
+};
 
 export interface DoctorPatientAssignment {
   id?: string;
@@ -30,7 +38,7 @@ export const getPatientsByDoctor = async (doctorId: string, clinicId: string): P
   try {
     // Query patients assigned to this doctor
     const patientsQuery = query(
-      collection(db, 'patients'),
+      collection(getDb(), 'patients'),
       where('doctorId', '==', doctorId),
       where('clinicId', '==', clinicId),
       where('isActive', '==', true)
@@ -51,10 +59,10 @@ export const getPatientsByDoctor = async (doctorId: string, clinicId: string): P
 /**
  * Get all doctors in a clinic
  */
-export const getDoctorsByClinic = async (clinicId: string): Promise<UserData[]> => {
+export const getDoctorsByClinic = async (clinicId: string): Promise<any[]> => {
   try {
     const doctorsQuery = query(
-      collection(db, 'users'),
+      collection(getDb(), 'users'),
       where('role', '==', 'doctor'),
       where('clinicId', '==', clinicId),
       where('isActive', '==', true)
@@ -65,7 +73,7 @@ export const getDoctorsByClinic = async (clinicId: string): Promise<UserData[]> 
     return querySnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
-    })) as UserData[];
+    })) as any[];
   } catch (error) {
     console.error('Error fetching doctors:', error);
     return [];
@@ -83,7 +91,7 @@ export const assignPatientToDoctor = async (
 ): Promise<{ success: boolean; error?: string }> => {
   try {
     // Update patient document with doctorId
-    const patientRef = doc(db, 'patients', patientId);
+    const patientRef = doc(getDb(), 'patients', patientId);
     await updateDoc(patientRef, {
       doctorId: doctorId,
       updatedAt: serverTimestamp(),
@@ -102,7 +110,7 @@ export const assignPatientToDoctor = async (
       isActive: true
     };
 
-    await addDoc(collection(db, 'doctor_patient_assignments'), assignmentData);
+    await addDoc(collection(getDb(), 'doctor_patient_assignments'), assignmentData);
 
     console.log(`✅ Patient ${patientId} assigned to doctor ${doctorId}`);
     return { success: true };
@@ -121,7 +129,7 @@ export const unassignPatientFromDoctor = async (
 ): Promise<{ success: boolean; error?: string }> => {
   try {
     // Remove doctorId from patient document
-    const patientRef = doc(db, 'patients', patientId);
+    const patientRef = doc(getDb(), 'patients', patientId);
     await updateDoc(patientRef, {
       doctorId: '', // Clear assignment
       updatedAt: serverTimestamp(),
@@ -142,7 +150,7 @@ export const unassignPatientFromDoctor = async (
 export const getPatientAssignmentHistory = async (patientId: string): Promise<DoctorPatientAssignment[]> => {
   try {
     const assignmentsQuery = query(
-      collection(db, 'doctor_patient_assignments'),
+      collection(getDb(), 'doctor_patient_assignments'),
       where('patientId', '==', patientId)
     );
     
@@ -176,7 +184,7 @@ export const canAccessPatient = async (
     if (userRole === 'doctor') {
       // Get patient document to check doctorId
       const patientQuery = query(
-        collection(db, 'patients'),
+        collection(getDb(), 'patients'),
         where('doctorId', '==', userId)
       );
       

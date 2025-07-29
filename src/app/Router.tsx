@@ -21,8 +21,12 @@ import AppointmentCalendarPage from "../features/appointments/AppointmentCalenda
 import PaymentListPage from "../features/payments/PaymentListPage";
 import InventoryPage from "../features/inventory/InventoryPage";
 import NotificationsPage from "../features/notifications/NotificationsPage";
-
 import SettingsPage from "../features/settings/SettingsPage";
+
+// Test Components
+import SystemIntegrationTest from "../components/SystemIntegrationTest";
+import CrossPageTestComponent from "../components/CrossPageTestComponent";
+import RealtimeDataDashboard from "../components/RealtimeDataDashboard";
 // Legacy component commented out for clean build
 // import AppointmentSchedulingPage from "../features/DoctorScheduling";
 
@@ -198,6 +202,37 @@ const Router: React.FC = () => {
                 <EnhancedRouteGuard feature="settings" level="read">
                   <SettingsPage />
                 </EnhancedRouteGuard>
+              </Layout>
+            </ClinicAccessGuard>
+          </ProtectedRoute>
+        } />
+
+        {/* Development/Testing Routes */}
+        <Route path="/test/integration" element={
+          <ProtectedRoute>
+            <ClinicAccessGuard>
+              <Layout>
+                <SystemIntegrationTest />
+              </Layout>
+            </ClinicAccessGuard>
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/test/cross-page" element={
+          <ProtectedRoute>
+            <ClinicAccessGuard>
+              <Layout>
+                <CrossPageTestComponent />
+              </Layout>
+            </ClinicAccessGuard>
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/test/realtime-dashboard" element={
+          <ProtectedRoute>
+            <ClinicAccessGuard>
+              <Layout>
+                <RealtimeDataDashboard />
               </Layout>
             </ClinicAccessGuard>
           </ProtectedRoute>

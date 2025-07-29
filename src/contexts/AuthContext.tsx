@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { User, onAuthStateChanged } from 'firebase/auth';
-import { auth, authHelpers } from '../api/firebase';
+import { User, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut as firebaseSignOut } from 'firebase/auth';
+import { getOptimizedAuth, firebaseManager } from '../api/firebaseOptimized';
 import { CircularProgress, Box, Typography } from '@mui/material';
 
 interface AuthContextType {
@@ -34,40 +34,79 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [initialized, setInitialized] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [firebaseReady, setFirebaseReady] = useState(false);
 
+  // Wait for Firebase to be ready
   useEffect(() => {
+    const checkFirebaseReady = async () => {
+      console.log('🔄 AuthProvider: Waiting for Firebase to be ready...');
+      
+      // Wait for Firebase manager to be ready
+      const maxWait = 10000; // 10 seconds max wait
+      const startTime = Date.now();
+      
+      while (!firebaseManager.isReady() && (Date.now() - startTime) < maxWait) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      
+      if (firebaseManager.isReady()) {
+        console.log('✅ AuthProvider: Firebase is ready, setting up auth');
+        setFirebaseReady(true);
+      } else {
+        console.error('❌ AuthProvider: Firebase failed to initialize within timeout');
+        setError('Firebase failed to initialize');
+        setLoading(false);
+        setInitialized(true);
+      }
+    };
+    
+    checkFirebaseReady();
+  }, []);
+
+  // Set up auth state listener once Firebase is ready
+  useEffect(() => {
+    if (!firebaseReady) return;
+    
     console.log('🔄 AuthProvider: Initializing auth state listener...');
     
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      console.log('🔄 AuthProvider: Auth state changed:', user ? `${user.email} (${user.uid})` : 'No user');
-      
-      setUser(user);
-      setLoading(false);
-      setInitialized(true);
-      setError(null);
-      
-      // Debug logging for development
-      if (process.env.NODE_ENV === 'development') {
-        console.log('✅ AuthProvider: Auth state fully initialized', {
-          authenticated: !!user,
-          email: user?.email,
-          uid: user?.uid,
-          loading: false,
-          initialized: true
-        });
-      }
-    }, (error) => {
-      console.error('❌ AuthProvider: Auth state error:', error);
-      setError(error.message);
-      setLoading(false);
-      setInitialized(true);
-    });
+    try {
+      const auth = getOptimizedAuth();
+      const unsubscribe = onAuthStateChanged(auth, (user) => {
+        console.log('🔄 AuthProvider: Auth state changed:', user ? `${user.email} (${user.uid})` : 'No user');
+        
+        setUser(user);
+        setLoading(false);
+        setInitialized(true);
+        setError(null);
+        
+        // Debug logging for development
+        if (process.env.NODE_ENV === 'development') {
+          console.log('✅ AuthProvider: Auth state fully initialized', {
+            authenticated: !!user,
+            email: user?.email,
+            uid: user?.uid,
+            loading: false,
+            initialized: true
+          });
+        }
+      }, (error) => {
+        console.error('❌ AuthProvider: Auth state error:', error);
+        setError(error.message);
+        setLoading(false);
+        setInitialized(true);
+      });
 
-    return () => {
-      console.log('🔄 AuthProvider: Cleaning up auth listener');
-      unsubscribe();
-    };
-  }, []);
+      return () => {
+        console.log('🔄 AuthProvider: Cleaning up auth listener');
+        unsubscribe();
+      };
+    } catch (error) {
+      console.error('❌ AuthProvider: Failed to set up auth listener:', error);
+      setError('Failed to initialize authentication');
+      setLoading(false);
+      setInitialized(true);
+    }
+  }, [firebaseReady]);
 
   const signIn = async (email: string, password: string) => {
     try {
@@ -75,7 +114,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setLoading(true);
       console.log('🔄 AuthProvider: Attempting sign in for:', email);
       
-      await authHelpers.signIn(email, password);
+      if (!firebaseManager.isReady()) {
+        throw new Error('Firebase not ready');
+      }
+      
+      const auth = getOptimizedAuth();
+      await signInWithEmailAndPassword(auth, email, password);
       console.log('✅ AuthProvider: Sign in successful');
     } catch (error: any) {
       console.error('❌ AuthProvider: Sign in error:', error);
@@ -92,7 +136,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setLoading(true);
       console.log('🔄 AuthProvider: Attempting sign up for:', email);
       
-      await authHelpers.signUp(email, password);
+      if (!firebaseManager.isReady()) {
+        throw new Error('Firebase not ready');
+      }
+      
+      const auth = getOptimizedAuth();
+      await createUserWithEmailAndPassword(auth, email, password);
       console.log('✅ AuthProvider: Sign up successful');
     } catch (error: any) {
       console.error('❌ AuthProvider: Sign up error:', error);
@@ -108,7 +157,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setError(null);
       console.log('🔄 AuthProvider: Attempting sign out');
       
-      await authHelpers.signOut();
+      if (!firebaseManager.isReady()) {
+        throw new Error('Firebase not ready');
+      }
+      
+      const auth = getOptimizedAuth();
+      await firebaseSignOut(auth);
       console.log('✅ AuthProvider: Sign out successful');
     } catch (error: any) {
       console.error('❌ AuthProvider: Sign out error:', error);
@@ -130,6 +184,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Show loading spinner while initializing auth state
   if (!initialized) {
+    const loadingMessage = !firebaseReady ? 
+      'Initializing Firebase...' : 
+      'Initializing authentication...';
+    
+    const subMessage = !firebaseReady ?
+      'Setting up Firebase services' :
+      'Please wait while we restore your session';
+    
     return (
       <Box
         sx={{
@@ -144,11 +206,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       >
         <CircularProgress size={60} />
         <Typography variant="h6" color="textSecondary">
-          Initializing authentication...
+          {loadingMessage}
         </Typography>
         <Typography variant="body2" color="textSecondary">
-          Please wait while we restore your session
+          {subMessage}
         </Typography>
+        {error && (
+          <Typography variant="body2" color="error" sx={{ mt: 2 }}>
+            Error: {error}
+          </Typography>
+        )}
       </Box>
     );
   }

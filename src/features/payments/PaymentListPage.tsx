@@ -134,7 +134,16 @@ import VATAdjustmentModal from './components/VATAdjustmentModal';
 import ExpenseManagementModal from './components/ExpenseManagementModal';
 import FirebaseFriendlySync, { FirebaseDataBridge } from '../../utils/firebaseFriendlySync';
 import { firebaseDataManager, type Payment as FirebasePayment } from '../../utils/firebaseDataManager';
-import { useAuth } from '../../hooks/useAuth';
+
+// ✅ NEW: Use the new real-time data hooks instead of legacy systems
+import {
+  useGlobalData,
+  usePayments,
+  useAppointments,
+  usePatients,
+  useRealtimeUpdates,
+  useDashboardStats
+} from '../../hooks/useGlobalData';
 
 // Doctor interface for Firestore data
 interface Doctor {
@@ -344,6 +353,36 @@ const PaymentListPage: React.FC = () => {
   const { user, loading: authLoading, initialized } = useAuth();
   const { userProfile } = useUser();
   const isRTL = i18n.language === 'ar';
+
+  // ✅ NEW: Use real-time data hooks
+  const {
+    payments,
+    loading: paymentsLoading,
+    error: paymentsError,
+    addPayment,
+    updatePayment,
+    deletePayment,
+    stats: paymentStats
+  } = usePayments();
+
+  const {
+    appointments,
+    loading: appointmentsLoading,
+    error: appointmentsError
+  } = useAppointments();
+
+  const {
+    patients,
+    loading: patientsLoading,
+    error: patientsError
+  } = usePatients();
+
+  const dashboardStats = useDashboardStats();
+  const { onDataUpdate, onConnectionChange } = useRealtimeUpdates();
+
+  // ✅ NEW: Real-time update notifications
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+  const [updateCount, setUpdateCount] = useState(0);
   
   // State management
   const [tabValue, setTabValue] = useState(0);
@@ -397,9 +436,7 @@ const PaymentListPage: React.FC = () => {
     }
   });
   
-  // ✅ Firebase real-time data states
-  const [appointments, setAppointments] = useState<any[]>([]);
-  const [payments, setPayments] = useState<PaymentData[]>([]);
+    // ✅ Firebase real-time data states (now handled by hooks)
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
   const [firebasePayments, setFirebasePayments] = useState<FirebasePayment[]>([]);

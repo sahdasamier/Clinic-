@@ -1,16 +1,24 @@
 import { 
   collection, 
   addDoc, 
+  query, 
+  where, 
   getDocs, 
   doc, 
   updateDoc, 
   deleteDoc, 
-  query, 
-  where, 
-  orderBy, 
-  Timestamp 
+  serverTimestamp,
+  orderBy
 } from 'firebase/firestore';
-import { db } from './firebase';
+import { getOptimizedFirestore, firebaseManager } from './firebaseOptimized';
+
+// Helper to get safe database reference
+const getDb = () => {
+  if (!firebaseManager.isReady()) {
+    throw new Error('Firebase not ready - please wait for initialization');
+  }
+  return getOptimizedFirestore();
+};
 
 export interface Appointment {
   id?: string;
@@ -72,10 +80,10 @@ export const createAppointment = async (appointmentData: AppointmentFormData): P
       updatedAt: new Date()
     };
 
-    const docRef = await addDoc(collection(db, APPOINTMENTS_COLLECTION), {
+    const docRef = await addDoc(collection(getDb(), APPOINTMENTS_COLLECTION), {
       ...appointment,
-      createdAt: Timestamp.fromDate(appointment.createdAt),
-      updatedAt: Timestamp.fromDate(appointment.updatedAt)
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
     });
 
     return { ...appointment, id: docRef.id };
@@ -88,7 +96,7 @@ export const createAppointment = async (appointmentData: AppointmentFormData): P
 // Get all appointments
 export const getAppointments = async (): Promise<Appointment[]> => {
   try {
-    const appointmentsRef = collection(db, APPOINTMENTS_COLLECTION);
+    const appointmentsRef = collection(getDb(), APPOINTMENTS_COLLECTION);
     const q = query(appointmentsRef, orderBy('date', 'desc'), orderBy('timeSlot', 'asc'));
     const querySnapshot = await getDocs(q);
     
@@ -107,7 +115,7 @@ export const getAppointments = async (): Promise<Appointment[]> => {
 // Get appointments by date
 export const getAppointmentsByDate = async (date: string): Promise<Appointment[]> => {
   try {
-    const appointmentsRef = collection(db, APPOINTMENTS_COLLECTION);
+    const appointmentsRef = collection(getDb(), APPOINTMENTS_COLLECTION);
     const q = query(
       appointmentsRef, 
       where('date', '==', date),
@@ -130,7 +138,7 @@ export const getAppointmentsByDate = async (date: string): Promise<Appointment[]
 // Get appointments by doctor
 export const getAppointmentsByDoctor = async (doctorId: string): Promise<Appointment[]> => {
   try {
-    const appointmentsRef = collection(db, APPOINTMENTS_COLLECTION);
+    const appointmentsRef = collection(getDb(), APPOINTMENTS_COLLECTION);
     const q = query(
       appointmentsRef, 
       where('doctorId', '==', doctorId),
@@ -154,10 +162,10 @@ export const getAppointmentsByDoctor = async (doctorId: string): Promise<Appoint
 // Update appointment
 export const updateAppointment = async (appointmentId: string, updates: Partial<Appointment>): Promise<void> => {
   try {
-    const appointmentRef = doc(db, APPOINTMENTS_COLLECTION, appointmentId);
+    const appointmentRef = doc(getDb(), APPOINTMENTS_COLLECTION, appointmentId);
     await updateDoc(appointmentRef, {
       ...updates,
-      updatedAt: Timestamp.fromDate(new Date())
+      updatedAt: serverTimestamp()
     });
   } catch (error) {
     console.error('Error updating appointment:', error);
@@ -168,10 +176,10 @@ export const updateAppointment = async (appointmentId: string, updates: Partial<
 // Update appointment status
 export const updateAppointmentStatus = async (appointmentId: string, status: Appointment['status']): Promise<void> => {
   try {
-    const appointmentRef = doc(db, APPOINTMENTS_COLLECTION, appointmentId);
+    const appointmentRef = doc(getDb(), APPOINTMENTS_COLLECTION, appointmentId);
     await updateDoc(appointmentRef, {
       status,
-      updatedAt: Timestamp.fromDate(new Date())
+      updatedAt: serverTimestamp()
     });
   } catch (error) {
     console.error('Error updating appointment status:', error);
@@ -182,10 +190,10 @@ export const updateAppointmentStatus = async (appointmentId: string, status: App
 // Update appointment payment status
 export const updateAppointmentPaymentStatus = async (appointmentId: string, paymentStatus: Appointment['paymentStatus']): Promise<void> => {
   try {
-    const appointmentRef = doc(db, APPOINTMENTS_COLLECTION, appointmentId);
+    const appointmentRef = doc(getDb(), APPOINTMENTS_COLLECTION, appointmentId);
     await updateDoc(appointmentRef, {
       paymentStatus,
-      updatedAt: Timestamp.fromDate(new Date())
+      updatedAt: serverTimestamp()
     });
   } catch (error) {
     console.error('Error updating appointment payment status:', error);
@@ -196,7 +204,7 @@ export const updateAppointmentPaymentStatus = async (appointmentId: string, paym
 // Delete appointment
 export const deleteAppointment = async (appointmentId: string): Promise<void> => {
   try {
-    const appointmentRef = doc(db, APPOINTMENTS_COLLECTION, appointmentId);
+    const appointmentRef = doc(getDb(), APPOINTMENTS_COLLECTION, appointmentId);
     await deleteDoc(appointmentRef);
   } catch (error) {
     console.error('Error deleting appointment:', error);
@@ -207,11 +215,11 @@ export const deleteAppointment = async (appointmentId: string): Promise<void> =>
 // Cancel appointment
 export const cancelAppointment = async (appointmentId: string, reason?: string): Promise<void> => {
   try {
-    const appointmentRef = doc(db, APPOINTMENTS_COLLECTION, appointmentId);
+    const appointmentRef = doc(getDb(), APPOINTMENTS_COLLECTION, appointmentId);
     await updateDoc(appointmentRef, {
       status: 'cancelled',
       notes: reason ? `Cancelled: ${reason}` : 'Cancelled',
-      updatedAt: Timestamp.fromDate(new Date())
+      updatedAt: serverTimestamp()
     });
   } catch (error) {
     console.error('Error cancelling appointment:', error);
@@ -266,7 +274,7 @@ const convertTimeToSlot = (time: string): string => {
 // Check if time slot is available
 export const isTimeSlotAvailable = async (date: string, timeSlot: string, doctorId?: string): Promise<boolean> => {
   try {
-    const appointmentsRef = collection(db, APPOINTMENTS_COLLECTION);
+    const appointmentsRef = collection(getDb(), APPOINTMENTS_COLLECTION);
     let q = query(
       appointmentsRef,
       where('date', '==', date),

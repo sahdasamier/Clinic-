@@ -1,13 +1,35 @@
 import { doc, setDoc, collection, addDoc } from 'firebase/firestore';
-import { db } from '../api/firebase';
+import { getOptimizedFirestore, getOptimizedAuth, firebaseManager } from '../api/firebaseOptimized';
 import { createUserAccount } from '../api/auth';
+
+// Helper to get safe database reference
+const getDb = () => {
+  if (!firebaseManager.isReady()) {
+    throw new Error('Firebase not ready - please wait for initialization');
+  }
+  return getOptimizedFirestore();
+};
+
+// Helper to get safe auth reference
+const getAuth = () => {
+  if (!firebaseManager.isReady()) {
+    throw new Error('Firebase not ready - please wait for initialization');
+  }
+  return getOptimizedAuth();
+};
 
 export const initializeFirestore = async () => {
   try {
     console.log('🚀 Initializing Firestore with demo data...');
 
+    // Check if Firebase is ready
+    if (!firebaseManager.isReady()) {
+      console.log('⚠️ Firebase not ready - skipping Firestore initialization');
+      return false;
+    }
+
     // Check if user is authenticated before trying to write
-    const { auth } = await import('../api/firebase');
+    const auth = getAuth();
     if (!auth.currentUser) {
       console.log('⚠️ No authenticated user - skipping Firestore initialization');
       return false;
@@ -29,7 +51,7 @@ export const initializeFirestore = async () => {
     };
 
     // Use setDoc with specific ID
-    await setDoc(doc(db, 'clinics', 'demo-clinic'), demoClinicData);
+    await setDoc(doc(getDb(), 'clinics', 'demo-clinic'), demoClinicData);
 
     console.log('✅ Demo clinic created successfully');
 
@@ -39,7 +61,7 @@ export const initializeFirestore = async () => {
     for (const collectionName of collections) {
       try {
         // Create a dummy document to initialize the collection
-        await addDoc(collection(db, collectionName), {
+        await addDoc(collection(getDb(), collectionName), {
           _initialized: true,
           createdAt: new Date(),
           clinicId: 'demo-clinic',
@@ -61,7 +83,7 @@ export const initializeFirestore = async () => {
 // Function to check if demo clinic exists and is active
 export const checkDemoClinicExists = async (): Promise<{ exists: boolean; isActive?: boolean }> => {
   try {
-    const demoClinicRef = doc(db, 'clinics', 'demo-clinic');
+    const demoClinicRef = doc(getDb(), 'clinics', 'demo-clinic');
     const docSnap = await import('firebase/firestore').then(({ getDoc }) => getDoc(demoClinicRef));
     
     if (docSnap.exists()) {
@@ -116,8 +138,14 @@ export const ensureDemoClinicActive = async (): Promise<boolean> => {
   try {
     console.log('🔧 Ensuring demo clinic is active...');
     
+    // Check if Firebase is ready
+    if (!firebaseManager.isReady()) {
+      console.log('⚠️ Firebase not ready - skipping demo clinic activation');
+      return false;
+    }
+
     // Check if user is authenticated before trying to write
-    const { auth } = await import('../api/firebase');
+    const auth = getAuth();
     if (!auth.currentUser) {
       console.log('⚠️ No authenticated user - skipping demo clinic activation');
       return false;
@@ -138,7 +166,7 @@ export const ensureDemoClinicActive = async (): Promise<boolean> => {
       createdBy: auth.currentUser.email || 'system',
     };
 
-    await setDoc(doc(db, 'clinics', 'demo-clinic'), demoClinicData);
+    await setDoc(doc(getDb(), 'clinics', 'demo-clinic'), demoClinicData);
     console.log('✅ Demo clinic created/updated and set to active');
     return true;
   } catch (error) {

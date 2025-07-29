@@ -1,7 +1,20 @@
 import { getMessaging, getToken, onMessage, MessagePayload } from 'firebase/messaging';
-import { app } from './firebase';
+import { firebaseManager } from './firebaseOptimized';
 
-const messaging = getMessaging(app);
+// Lazy initialization of messaging
+let messaging: any = null;
+
+const getMessagingInstance = () => {
+  if (!messaging && firebaseManager.isReady()) {
+    try {
+      messaging = firebaseManager.getMessaging();
+    } catch (error) {
+      console.warn('Messaging not available:', error);
+      return null;
+    }
+  }
+  return messaging;
+};
 
 export interface NotificationPayload {
   title: string;
@@ -22,6 +35,12 @@ export const MessagingService = {
   // Initialize push notifications and get FCM token
   initializeMessaging: async (): Promise<string | null> => {
     try {
+      const messagingInstance = getMessagingInstance();
+      if (!messagingInstance) {
+        console.warn('Messaging service not available');
+        return null;
+      }
+
       // Check if notifications are supported
       if (!('Notification' in window)) {
         console.warn('This browser does not support notifications');
@@ -36,7 +55,7 @@ export const MessagingService = {
       }
 
       // Get FCM token
-      const token = await getToken(messaging, {
+      const token = await getToken(messagingInstance, {
         vapidKey: (import.meta as any).env.VITE_FIREBASE_VAPID_KEY
       });
 
@@ -75,7 +94,13 @@ export const MessagingService = {
   // Listen for foreground messages
   onMessageListener: (): Promise<MessagePayload> => {
     return new Promise((resolve) => {
-      onMessage(messaging, (payload) => {
+      const messagingInstance = getMessagingInstance();
+      if (!messagingInstance) {
+        console.warn('Messaging service not available for message listener');
+        return;
+      }
+
+      onMessage(messagingInstance, (payload) => {
         console.log('Foreground message received:', payload);
         
         // Show browser notification if the app is in focus

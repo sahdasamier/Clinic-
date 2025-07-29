@@ -11,10 +11,18 @@ import {
   serverTimestamp,
   writeBatch
 } from 'firebase/firestore';
-import { db } from '../api/firebase';
+import { getOptimizedFirestore, firebaseManager } from '../api/firebaseOptimized';
 
 const COLLECTION_NAME = 'patients';
-const patientsCollection = collection(db, COLLECTION_NAME);
+
+// Safe collection reference that waits for Firebase to be ready
+const getPatientsCollection = () => {
+  if (!firebaseManager.isReady()) {
+    throw new Error('Firebase not ready - please wait for initialization');
+  }
+  const db = getOptimizedFirestore();
+  return collection(db, COLLECTION_NAME);
+};
 
 export interface Patient {
   id: string;
@@ -115,14 +123,14 @@ export const PatientService = {
       updatedAt: serverTimestamp(),
     };
 
-    await setDoc(doc(patientsCollection, id), patient);
+    await setDoc(doc(getPatientsCollection(), id), patient);
     console.log('✅ Patient created:', id);
     return id;
   },
 
   // Update an existing patient
   async updatePatient(patientId: string, updates: Partial<Patient>): Promise<void> {
-    const patientRef = doc(patientsCollection, patientId);
+    const patientRef = doc(getPatientsCollection(), patientId);
     await setDoc(patientRef, {
       ...updates,
       updatedAt: serverTimestamp(),
@@ -138,14 +146,14 @@ export const PatientService = {
 
   // Hard delete a patient (permanent deletion)
   async hardDeletePatient(patientId: string): Promise<void> {
-    await deleteDoc(doc(patientsCollection, patientId));
+    await deleteDoc(doc(getPatientsCollection(), patientId));
     console.log('✅ Patient permanently deleted:', patientId);
   },
 
   // Listen to patients for a specific clinic
   listenPatients(clinicId: string, callback: (patients: Patient[]) => void): () => void {
     const q = query(
-      patientsCollection,
+      getPatientsCollection(),
       where('clinicId', '==', clinicId),
       where('isActive', '==', true),
       orderBy('createdAt', 'desc')
@@ -168,7 +176,7 @@ export const PatientService = {
   // Get patients by status
   listenPatientsByStatus(clinicId: string, status: Patient['status'], callback: (patients: Patient[]) => void): () => void {
     const q = query(
-      patientsCollection,
+      getPatientsCollection(),
       where('clinicId', '==', clinicId),
       where('status', '==', status),
       where('isActive', '==', true),
@@ -190,7 +198,7 @@ export const PatientService = {
     // Note: Firestore doesn't support full-text search natively
     // This is a basic implementation - consider using Algolia or similar for better search
     const q = query(
-      patientsCollection,
+      getPatientsCollection(),
       where('clinicId', '==', clinicId),
       where('isActive', '==', true)
     );
@@ -219,10 +227,10 @@ export const PatientService = {
     doctor: string;
     notes?: string;
   }): Promise<void> {
-    const patientRef = doc(patientsCollection, patientId);
+    const patientRef = doc(getPatientsCollection(), patientId);
     
     // Get current patient data
-    const patientSnapshot = await getDocs(query(patientsCollection, where('__name__', '==', patientId)));
+    const patientSnapshot = await getDocs(query(getPatientsCollection(), where('__name__', '==', patientId)));
     if (patientSnapshot.empty) {
       throw new Error('Patient not found');
     }
@@ -244,9 +252,9 @@ export const PatientService = {
     dateStarted: string;
     status: 'Active' | 'Discontinued';
   }): Promise<void> {
-    const patientRef = doc(patientsCollection, patientId);
+    const patientRef = doc(getPatientsCollection(), patientId);
     
-    const patientSnapshot = await getDocs(query(patientsCollection, where('__name__', '==', patientId)));
+    const patientSnapshot = await getDocs(query(getPatientsCollection(), where('__name__', '==', patientId)));
     if (patientSnapshot.empty) {
       throw new Error('Patient not found');
     }
@@ -259,11 +267,11 @@ export const PatientService = {
 
   // Batch operations for data migration
   async batchCreatePatients(clinicId: string, patients: Array<Omit<Patient, 'id' | 'createdAt' | 'updatedAt' | 'clinicId'>>): Promise<void> {
-    const batch = writeBatch(db);
+    const batch = writeBatch(getOptimizedFirestore());
     
     patients.forEach(patientData => {
       const id = crypto.randomUUID();
-      const patientRef = doc(patientsCollection, id);
+      const patientRef = doc(getPatientsCollection(), id);
       const patient: Patient = {
         ...patientData,
         id,
@@ -288,7 +296,7 @@ export const PatientService = {
     admitted: number;
   }> {
     const q = query(
-      patientsCollection,
+      getPatientsCollection(),
       where('clinicId', '==', clinicId),
       where('isActive', '==', true)
     );

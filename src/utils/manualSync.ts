@@ -1,7 +1,15 @@
 import { AppointmentService } from '../services/AppointmentService';
 import { PatientService } from '../services/PatientService';
 import { getDocs, query, where, collection } from 'firebase/firestore';
-import { db } from '../api/firebase';
+import { getOptimizedFirestore, firebaseManager } from '../api/firebaseOptimized';
+
+// Helper to get safe database reference
+const getDb = () => {
+  if (!firebaseManager.isReady()) {
+    throw new Error('Firebase not ready - please wait for initialization');
+  }
+  return getOptimizedFirestore();
+};
 
 // ✅ Add proper types for the data
 interface AppointmentData {
@@ -45,7 +53,7 @@ export class ManualSyncUtility {
       // Step 1: Get all appointments
       console.log('📋 Step 1: Fetching all appointments...');
       const appointmentsQuery = query(
-        collection(db, 'appointments'),
+        collection(getDb(), 'appointments'),
         where('clinicId', '==', clinicId),
         where('isActive', '==', true)
       );
@@ -66,7 +74,7 @@ export class ManualSyncUtility {
       // Step 2: Get existing patients
       console.log('👥 Step 2: Fetching existing patients...');
       const patientsQuery = query(
-        collection(db, 'patients'),
+        collection(getDb(), 'patients'),
         where('clinicId', '==', clinicId),
         where('isActive', '==', true)
       );
@@ -233,7 +241,7 @@ export class ManualSyncUtility {
     try {
       // Check appointments
       const appointmentsQuery = query(
-        collection(db, 'appointments'),
+        collection(getDb(), 'appointments'),
         where('clinicId', '==', clinicId)
       );
       const appointmentsSnapshot = await getDocs(appointmentsQuery);
@@ -244,7 +252,7 @@ export class ManualSyncUtility {
       
       // Check patients  
       const patientsQuery = query(
-        collection(db, 'patients'),
+        collection(getDb(), 'patients'),
         where('clinicId', '==', clinicId)
       );
       const patientsSnapshot = await getDocs(patientsQuery);

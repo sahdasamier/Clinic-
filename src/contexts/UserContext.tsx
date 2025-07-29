@@ -1,10 +1,18 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { useAuth } from './AuthContext';
-import { db } from '../api/firebase';
+import { getOptimizedFirestore, firebaseManager } from '../api/firebaseOptimized';
 import { User, Clinic } from '../types/models';
 import { isSuperAdmin } from '../utils/adminConfig';
 import { initializeGlobalDataSync, cleanupGlobalDataSync } from '../utils/globalDataSync';
+
+// Helper to get safe database reference
+const getDb = () => {
+  if (!firebaseManager.isReady()) {
+    throw new Error('Firebase not ready - please wait for initialization');
+  }
+  return getOptimizedFirestore();
+};
 
 interface UserContextType {
   userProfile: User | null;
@@ -71,7 +79,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // If collections don't exist yet or user doesn't have profile, handle gracefully
       try {
         console.log('🔄 UserProvider: Fetching user profile from Firestore');
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        const userDoc = await getDoc(doc(getDb(), 'users', user.uid));
         if (userDoc.exists()) {
           const userData = { id: userDoc.id, ...userDoc.data() } as User;
           setUserProfile(userData);
@@ -81,7 +89,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (userData.clinicId) {
             try {
               console.log('🔄 UserProvider: Fetching clinic data');
-              const clinicDoc = await getDoc(doc(db, 'clinics', userData.clinicId));
+              const clinicDoc = await getDoc(doc(getDb(), 'clinics', userData.clinicId));
               if (clinicDoc.exists()) {
                 const clinicData = { id: clinicDoc.id, ...clinicDoc.data() } as Clinic;
                 setUserClinic(clinicData);

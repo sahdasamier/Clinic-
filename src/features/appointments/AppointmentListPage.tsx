@@ -60,6 +60,14 @@ import {
 } from '@mui/material';
 import { useAuth } from '../../contexts/AuthContext';
 import { useUser } from '../../contexts/UserContext';
+// ✅ NEW: Use the new real-time data hooks instead of legacy systems
+import {
+  useGlobalData,
+  useAppointments,
+  usePatients,
+  useRealtimeUpdates,
+  useDashboardStats
+} from '../../hooks/useGlobalData';
 import {
   CalendarToday,
   Schedule,
@@ -291,18 +299,38 @@ const AppointmentListPage: React.FC = () => {
   const { t } = useTranslation();
   const { user, loading: authLoading, initialized } = useAuth();
   const { userProfile } = useUser();
+
+  // ✅ NEW: Use real-time data hooks
+  const {
+    appointments,
+    loading: appointmentsLoading,
+    error: appointmentsError,
+    addAppointment,
+    updateAppointment,
+    deleteAppointment,
+    stats: appointmentStats
+  } = useAppointments();
+
+  const {
+    patients,
+    loading: patientsLoading,
+    error: patientsError
+  } = usePatients();
+
+  const dashboardStats = useDashboardStats();
+  const { onDataUpdate, onConnectionChange } = useRealtimeUpdates();
+
+  // ✅ NEW: Real-time update notifications
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+  const [updateCount, setUpdateCount] = useState(0);
   
-  // State Management
+  // Local UI state
   const [tabValue, setTabValue] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterAnchor, setFilterAnchor] = useState<null | HTMLElement>(null);
   const [addAppointmentOpen, setAddAppointmentOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'table' | 'cards' | 'calendar'>('table');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  // ✅ Firebase real-time data states
-  const [appointmentList, setAppointmentList] = useState<FirestoreAppointment[]>([]);
-  const [availablePatients, setAvailablePatients] = useState<any[]>([]);
-  const [dataLoading, setDataLoading] = useState(true);
   const [doctorStartTime] = useState('15:00');
   const [activeFilters, setActiveFilters] = useState<FilterState>({
     status: '',
@@ -335,49 +363,41 @@ const AppointmentListPage: React.FC = () => {
     phone: '',
     paymentStatus: 'pending'
   });
-  const [availableDoctors, setAvailableDoctors] = useState<Doctor[]>([]);
-  const [firebaseConnected, setFirebaseConnected] = useState(false);
-  const [firebaseAppointments, setFirebaseAppointments] = useState<FirebaseAppointment[]>([]);
 
-  // ✅ NEW: Real-time Firebase data bridge (like localStorage events)
+  // ✅ NEW: Listen for real-time updates
   useEffect(() => {
-    if (!initialized || authLoading || !user || !userProfile) return;
-
-    console.log('💚 AppointmentListPage: Setting up Firebase data bridge...');
-
-    // Subscribe to real-time data changes
-    const unsubscribe = FirebaseDataBridge.subscribe((data) => {
-      console.log('💚 AppointmentListPage: Received real-time data update:', {
-        appointments: data.appointments?.length || 0,
-        patients: data.patients?.length || 0
-      });
-
-      if (data.appointments) {
-        setAppointmentList(data.appointments);
-      }
-      
-      if (data.patients) {
-        setAvailablePatients(data.patients);
-      }
-      
-      setDataLoading(false);
+    const unsubscribeDataUpdate = onDataUpdate((collection, data) => {
+      setLastUpdate(new Date());
+      setUpdateCount(prev => prev + 1);
+      console.log(`📅 Appointments: Real-time update - ${collection} (${data.length} items)`);
     });
 
-    // Force refresh data for this page
-    FirebaseDataBridge.refreshAll(userProfile.clinicId || 'demo-clinic');
+    const unsubscribeConnection = onConnectionChange((status) => {
+      console.log(`🔄 Appointments: Connection status - ${status}`);
+    });
 
-    // ✅ NEW: Listen for payment status changes from payment page
-    const handlePaymentStatusChange = (event: CustomEvent) => {
-      console.log('💚 Appointment page: Payment status changed:', event.detail);
-      
-      // Force refresh to get updated appointment data (in case payment affects appointment status)
-      FirebaseDataBridge.refreshAll(userProfile.clinicId || 'demo-clinic');
-      
-      const { patient, oldStatus, newStatus, invoiceId } = event.detail;
-      console.log(`💰 Appointment page synced: ${patient}'s payment ${invoiceId} status ${oldStatus} → ${newStatus}`);
+    return () => {
+      unsubscribeDataUpdate();
+      unsubscribeConnection();
     };
+  }, [onDataUpdate, onConnectionChange]);
 
-    // ✅ NEW: Listen for appointment payment status sync events
+  // ✅ NEW: Debug logging for new system
+  useEffect(() => {
+    console.log('📅 APPOINTMENTS (NEW SYSTEM): Data state', {
+      user: !!user,
+      userProfile: !!userProfile,
+      appointmentsCount: appointments.length,
+      patientsCount: patients.length,
+      connectionStatus: dashboardStats.connectionStatus,
+      isOnline: dashboardStats.isOnline,
+      lastUpdate: lastUpdate?.toLocaleTimeString(),
+      updateCount
+    });
+  }, [user, userProfile, appointments.length, patients.length, dashboardStats, lastUpdate, updateCount]);
+
+  // ✅ NEW: Listen for appointment payment status sync events
+  useEffect(() => {
     const handleAppointmentPaymentStatusSync = (event: CustomEvent) => {
       console.log('💚 Appointment page: Payment status synced from payment page:', event.detail);
       
@@ -399,7 +419,7 @@ const AppointmentListPage: React.FC = () => {
       window.removeEventListener('paymentStatusChanged', handlePaymentStatusChange as EventListener);
       window.removeEventListener('appointmentPaymentStatusSynced', handleAppointmentPaymentStatusSync as EventListener);
     };
-  }, [initialized, authLoading, user, userProfile]);
+  }, []);
 
   // ✅ FIREBASE DATA MANAGER - Real-time synchronization
   useEffect(() => {
@@ -1208,7 +1228,7 @@ const AppointmentListPage: React.FC = () => {
   };
 
   const getFilteredAppointments = () => {
-    let filtered = appointmentList.filter(appointment => {
+    let filtered = appointments.filter(appointment => {
       const matchesSearch = searchQuery === '' || 
         appointment.patient.toLowerCase().includes(searchQuery.toLowerCase()) ||
         appointment.doctor.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -1267,16 +1287,16 @@ const AppointmentListPage: React.FC = () => {
   };
 
   const filteredAppointments = getFilteredAppointments();
-  const todayAppointments = appointmentList
+  const todayAppointments = appointments
     .filter(apt => apt.date === selectedDate)
     .sort((a, b) => a.timeSlot.localeCompare(b.timeSlot));
   
-  const upcomingAppointments = appointmentList.filter(apt => new Date(apt.date) > new Date(selectedDate));
+  const upcomingAppointments = appointments.filter(apt => new Date(apt.date) > new Date(selectedDate));
   const completedToday = todayAppointments.filter(apt => apt.completed).length;
   const pendingToday = todayAppointments.filter(apt => !apt.completed).length;
 
   // Show loading spinner while data is loading
-  if (dataLoading) {
+  if (appointmentsLoading || patientsLoading) {
     return (
       <Container maxWidth="xl" sx={{ mt: 4, mb: 4, flex: 1, overflow: 'auto' }}>
         <Box
@@ -1300,6 +1320,9 @@ const AppointmentListPage: React.FC = () => {
       </Container>
     );
   }
+
+  // Show error alerts if there are data loading errors
+  const hasErrors = appointmentsError || patientsError;
 
   // ✅ Helper function to get doctor name from appointment
   const getDoctorName = (appointment: any): string => {
@@ -1957,7 +1980,7 @@ const AppointmentListPage: React.FC = () => {
                    <Typography variant="body1" sx={{ fontWeight: 600, color: 'text.primary' }}>
                      {t('showing_appointments', { 
                        showing: filteredAppointments.length, 
-                       total: appointmentList.length 
+                       total: appointments.length 
                      })}
                      {getActiveFilterCount() > 0 && ` ${t('with_filters_applied', { count: getActiveFilterCount() })}`}
                    </Typography>
@@ -2007,7 +2030,7 @@ const AppointmentListPage: React.FC = () => {
                        <CalendarToday fontSize="small" />
                        <span>{t('all')}</span>
                        <Chip 
-                         label={appointmentList.length} 
+                                                   label={appointments.length} 
                          size="small" 
                          color="primary"
                          sx={{ height: 20, fontSize: '0.75rem' }}
@@ -2021,7 +2044,7 @@ const AppointmentListPage: React.FC = () => {
                        <Today fontSize="small" />
                        <span>{t('today')}</span>
                        <Chip 
-                         label={appointmentList.filter(apt => apt.date === selectedDate).length} 
+                         label={appointments.filter(apt => apt.date === selectedDate).length} 
                          size="small" 
                          color="info"
                          sx={{ height: 20, fontSize: '0.75rem' }}
@@ -2035,7 +2058,7 @@ const AppointmentListPage: React.FC = () => {
                        <AccessTime fontSize="small" />
                        <span>{t('pending')}</span>
                        <Chip 
-                         label={appointmentList.filter(apt => !apt.completed).length} 
+                         label={appointments.filter(apt => !apt.completed).length} 
                          size="small" 
                          color="warning"
                          sx={{ height: 20, fontSize: '0.75rem' }}
@@ -2049,7 +2072,7 @@ const AppointmentListPage: React.FC = () => {
                        <CheckCircle fontSize="small" />
                        <span>{t('completed')}</span>
                        <Chip 
-                         label={appointmentList.filter(apt => apt.completed).length} 
+                         label={appointments.filter(apt => apt.completed).length} 
                          size="small" 
                          color="success"
                          sx={{ height: 20, fontSize: '0.75rem' }}

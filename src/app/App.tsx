@@ -3,12 +3,12 @@ import { useTranslation } from 'react-i18next';
 import { ThemeProvider } from "./ThemeProvider";
 import { AuthProvider } from "../contexts/AuthContext";
 import { UserProvider } from "../contexts/UserContext";
-import { NotificationProvider as LegacyNotificationProvider } from "../contexts/NotificationContext";
+import { GlobalDataProvider } from "../contexts/GlobalDataContext";
 import { SidebarProvider } from "../contexts/SidebarContext";
 import { NotificationProvider } from "../contexts/NotificationProvider";
+import { NotificationProvider as NotificationDataProvider } from "../contexts/NotificationContext";
 import { ensureDemoClinicExists } from "../scripts/initFirestore";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
-import { initializeGlobalDataSync, cleanupGlobalDataSync } from "../utils/globalDataSync";
 import { updateDocumentDirection } from "../utils/i18nUtils";
 import Router from "./Router";
 
@@ -44,13 +44,15 @@ const App: React.FC = () => (
   <ThemeProvider>
     <AuthProvider>
       <UserProvider>
-        <LegacyNotificationProvider>
+        <GlobalDataProvider>
           <SidebarProvider>
             <NotificationProvider>
-              <AppContent />
+              <NotificationDataProvider>
+                <AppContent />
+              </NotificationDataProvider>
             </NotificationProvider>
           </SidebarProvider>
-        </LegacyNotificationProvider>
+        </GlobalDataProvider>
       </UserProvider>
     </AuthProvider>
   </ThemeProvider>

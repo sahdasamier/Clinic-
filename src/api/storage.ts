@@ -1,16 +1,21 @@
 import { 
-  getStorage, 
   ref, 
   uploadBytes, 
   getDownloadURL, 
-  deleteObject,
+  deleteObject, 
   listAll,
   getMetadata,
-  StorageReference
+  updateMetadata 
 } from 'firebase/storage';
-import { app } from './firebase';
+import { getOptimizedStorage, firebaseManager } from './firebaseOptimized';
 
-const storage = getStorage(app);
+// Helper to get safe storage reference
+const getStorageInstance = () => {
+  if (!firebaseManager.isReady()) {
+    throw new Error('Firebase not ready - please wait for initialization');
+  }
+  return getOptimizedStorage();
+};
 
 export interface UploadResult {
   url: string;
@@ -29,7 +34,7 @@ export const StorageService = {
   ): Promise<UploadResult> => {
     const timestamp = Date.now();
     const fileName = `${timestamp}_${file.name}`;
-    const fileRef = ref(storage, `patients/${patientId}/documents/${category}/${fileName}`);
+    const fileRef = ref(getStorageInstance(), `patients/${patientId}/documents/${category}/${fileName}`);
     
     const snapshot = await uploadBytes(fileRef, file);
     const url = await getDownloadURL(snapshot.ref);
@@ -48,7 +53,7 @@ export const StorageService = {
   uploadMedicalImage: async (patientId: string, file: File): Promise<UploadResult> => {
     const timestamp = Date.now();
     const fileName = `${timestamp}_${file.name}`;
-    const fileRef = ref(storage, `patients/${patientId}/images/${fileName}`);
+    const fileRef = ref(getStorageInstance(), `patients/${patientId}/images/${fileName}`);
     
     const snapshot = await uploadBytes(fileRef, file);
     const url = await getDownloadURL(snapshot.ref);
@@ -67,7 +72,7 @@ export const StorageService = {
   uploadPrescription: async (appointmentId: string, file: File): Promise<UploadResult> => {
     const timestamp = Date.now();
     const fileName = `prescription_${timestamp}_${file.name}`;
-    const fileRef = ref(storage, `prescriptions/${appointmentId}/${fileName}`);
+    const fileRef = ref(getStorageInstance(), `prescriptions/${appointmentId}/${fileName}`);
     
     const snapshot = await uploadBytes(fileRef, file);
     const url = await getDownloadURL(snapshot.ref);
@@ -90,7 +95,7 @@ export const StorageService = {
   ): Promise<UploadResult> => {
     const timestamp = Date.now();
     const fileName = `${type}_${timestamp}_${file.name}`;
-    const fileRef = ref(storage, `clinics/${clinicId}/${type}/${fileName}`);
+    const fileRef = ref(getStorageInstance(), `clinics/${clinicId}/${type}/${fileName}`);
     
     const snapshot = await uploadBytes(fileRef, file);
     const url = await getDownloadURL(snapshot.ref);
@@ -108,7 +113,7 @@ export const StorageService = {
   // Upload clinic profile images/logos
   uploadClinicLogo: async (clinicId: string, file: File): Promise<UploadResult> => {
     const fileName = `logo_${Date.now()}_${file.name}`;
-    const fileRef = ref(storage, `clinics/${clinicId}/branding/${fileName}`);
+    const fileRef = ref(getStorageInstance(), `clinics/${clinicId}/branding/${fileName}`);
     
     const snapshot = await uploadBytes(fileRef, file);
     const url = await getDownloadURL(snapshot.ref);
@@ -126,7 +131,7 @@ export const StorageService = {
   // Upload patient profile pictures
   uploadPatientAvatar: async (patientId: string, file: File): Promise<UploadResult> => {
     const fileName = `avatar_${Date.now()}_${file.name}`;
-    const fileRef = ref(storage, `patients/${patientId}/avatar/${fileName}`);
+    const fileRef = ref(getStorageInstance(), `patients/${patientId}/avatar/${fileName}`);
     
     const snapshot = await uploadBytes(fileRef, file);
     const url = await getDownloadURL(snapshot.ref);
@@ -142,30 +147,30 @@ export const StorageService = {
   },
 
   // List all files for a patient
-  listPatientFiles: async (patientId: string, category?: string): Promise<StorageReference[]> => {
+  listPatientFiles: async (patientId: string, category?: string): Promise<any[]> => { // Changed StorageReference to any[] as StorageReference is no longer imported
     const basePath = category 
       ? `patients/${patientId}/documents/${category}/`
       : `patients/${patientId}/`;
-    const listRef = ref(storage, basePath);
+    const listRef = ref(getStorageInstance(), basePath);
     const result = await listAll(listRef);
     return result.items;
   },
 
   // Delete a file
   deleteFile: async (fullPath: string): Promise<void> => {
-    const fileRef = ref(storage, fullPath);
+    const fileRef = ref(getStorageInstance(), fullPath);
     await deleteObject(fileRef);
   },
 
   // Get file metadata
   getFileMetadata: async (fullPath: string) => {
-    const fileRef = ref(storage, fullPath);
+    const fileRef = ref(getStorageInstance(), fullPath);
     return await getMetadata(fileRef);
   },
 
   // Generate download URL for existing file
   getDownloadUrl: async (fullPath: string): Promise<string> => {
-    const fileRef = ref(storage, fullPath);
+    const fileRef = ref(getStorageInstance(), fullPath);
     return await getDownloadURL(fileRef);
   },
 

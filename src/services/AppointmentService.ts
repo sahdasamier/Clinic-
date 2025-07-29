@@ -13,10 +13,18 @@ import {
   Timestamp,
   limit
 } from 'firebase/firestore';
-import { db } from '../api/firebase';
+import { getOptimizedFirestore, firebaseManager } from '../api/firebaseOptimized';
 
 const COLLECTION_NAME = 'appointments';
-const appointmentsCollection = collection(db, COLLECTION_NAME);
+
+// Safe collection reference that waits for Firebase to be ready
+const getAppointmentsCollection = () => {
+  if (!firebaseManager.isReady()) {
+    throw new Error('Firebase not ready - please wait for initialization');
+  }
+  const db = getOptimizedFirestore();
+  return collection(db, COLLECTION_NAME);
+};
 
 export interface Appointment {
   id: string;
@@ -127,14 +135,14 @@ export const AppointmentService = {
       updatedAt: serverTimestamp(),
     };
 
-    await setDoc(doc(appointmentsCollection, id), appointment);
+    await setDoc(doc(getAppointmentsCollection(), id), appointment);
     console.log('✅ Appointment created:', id, patientId ? `with linked patient: ${patientId}` : 'without patient link');
     return id;
   },
 
   // Update an existing appointment
   async updateAppointment(appointmentId: string, updates: Partial<Appointment>): Promise<void> {
-    const appointmentRef = doc(appointmentsCollection, appointmentId);
+    const appointmentRef = doc(getAppointmentsCollection(), appointmentId);
     
     // Handle backward compatibility for completed field
     const updateData = {
@@ -160,14 +168,14 @@ export const AppointmentService = {
 
   // Hard delete an appointment
   async hardDeleteAppointment(appointmentId: string): Promise<void> {
-    await deleteDoc(doc(appointmentsCollection, appointmentId));
+    await deleteDoc(doc(getAppointmentsCollection(), appointmentId));
     console.log('✅ Appointment permanently deleted:', appointmentId);
   },
 
   // Listen to appointments for a specific clinic
   listenAppointments(clinicId: string, callback: (appointments: Appointment[]) => void): () => void {
     const q = query(
-      appointmentsCollection,
+      getAppointmentsCollection(),
       where('clinicId', '==', clinicId),
       where('isActive', '==', true),
       orderBy('date', 'desc'),
@@ -191,7 +199,7 @@ export const AppointmentService = {
   // Listen to appointments for a specific date
   listenAppointmentsByDate(clinicId: string, date: string, callback: (appointments: Appointment[]) => void): () => void {
     const q = query(
-      appointmentsCollection,
+      getAppointmentsCollection(),
       where('clinicId', '==', clinicId),
       where('date', '==', date),
       where('isActive', '==', true),
@@ -211,7 +219,7 @@ export const AppointmentService = {
   // Listen to appointments for a specific doctor
   listenAppointmentsByDoctor(clinicId: string, doctorId: string, callback: (appointments: Appointment[]) => void): () => void {
     const q = query(
-      appointmentsCollection,
+      getAppointmentsCollection(),
       where('clinicId', '==', clinicId),
       where('doctorId', '==', doctorId),
       where('isActive', '==', true),
@@ -232,7 +240,7 @@ export const AppointmentService = {
   // Listen to appointments for a specific patient
   listenAppointmentsByPatient(clinicId: string, patientId: string, callback: (appointments: Appointment[]) => void): () => void {
     const q = query(
-      appointmentsCollection,
+      getAppointmentsCollection(),
       where('clinicId', '==', clinicId),
       where('patientId', '==', patientId),
       where('isActive', '==', true),
@@ -252,7 +260,7 @@ export const AppointmentService = {
   // Get appointments by status
   listenAppointmentsByStatus(clinicId: string, status: Appointment['status'], callback: (appointments: Appointment[]) => void): () => void {
     const q = query(
-      appointmentsCollection,
+      getAppointmentsCollection(),
       where('clinicId', '==', clinicId),
       where('status', '==', status),
       where('isActive', '==', true),
@@ -274,7 +282,7 @@ export const AppointmentService = {
     const today = new Date().toISOString().split('T')[0];
     
     const q = query(
-      appointmentsCollection,
+      getAppointmentsCollection(),
       where('clinicId', '==', clinicId),
       where('date', '>=', today),
       where('isActive', '==', true),
@@ -297,7 +305,7 @@ export const AppointmentService = {
     const today = new Date().toISOString().split('T')[0];
     
     const q = query(
-      appointmentsCollection,
+      getAppointmentsCollection(),
       where('clinicId', '==', clinicId),
       where('date', '==', today),
       where('isActive', '==', true),
@@ -314,7 +322,7 @@ export const AppointmentService = {
   // Search appointments by patient name or phone
   async searchAppointments(clinicId: string, searchTerm: string): Promise<Appointment[]> {
     const q = query(
-      appointmentsCollection,
+      getAppointmentsCollection(),
       where('clinicId', '==', clinicId),
       where('isActive', '==', true)
     );
@@ -380,11 +388,11 @@ export const AppointmentService = {
 
   // Batch create appointments (for scheduling)
   async batchCreateAppointments(clinicId: string, appointments: Array<Omit<Appointment, 'id' | 'createdAt' | 'updatedAt' | 'clinicId'>>): Promise<void> {
-    const batch = writeBatch(db);
+    const batch = writeBatch(getOptimizedFirestore());
     
     appointments.forEach(appointmentData => {
       const id = crypto.randomUUID();
-      const appointmentRef = doc(appointmentsCollection, id);
+      const appointmentRef = doc(getAppointmentsCollection(), id);
       const appointment: Appointment = {
         ...appointmentData,
         id,
@@ -416,7 +424,7 @@ export const AppointmentService = {
     const today = new Date().toISOString().split('T')[0];
     
     const q = query(
-      appointmentsCollection,
+      getAppointmentsCollection(),
       where('clinicId', '==', clinicId),
       where('isActive', '==', true)
     );
@@ -437,7 +445,7 @@ export const AppointmentService = {
   // Get recent appointments (last 10)
   async getRecentAppointments(clinicId: string, limitCount: number = 10): Promise<Appointment[]> {
     const q = query(
-      appointmentsCollection,
+      getAppointmentsCollection(),
       where('clinicId', '==', clinicId),
       where('isActive', '==', true),
       orderBy('createdAt', 'desc'),
@@ -463,7 +471,7 @@ export const AppointmentService = {
     try {
       // Get all active appointments for the clinic
       const q = query(
-        appointmentsCollection,
+        getAppointmentsCollection(),
         where('clinicId', '==', clinicId),
         where('isActive', '==', true)
       );
@@ -479,7 +487,7 @@ export const AppointmentService = {
       let patientsCreated = 0;
       let patientsLinked = 0;
       const errors: string[] = [];
-      const batch = writeBatch(db);
+      const batch = writeBatch(getOptimizedFirestore());
 
       // Process each appointment
       for (const appointment of appointments) {
@@ -503,7 +511,7 @@ export const AppointmentService = {
 
           if (patientId) {
             // Update appointment with patientId
-            const appointmentRef = doc(appointmentsCollection, appointment.id);
+            const appointmentRef = doc(getAppointmentsCollection(), appointment.id);
             batch.update(appointmentRef, { 
               patientId: patientId,
               updatedAt: serverTimestamp()
@@ -586,7 +594,7 @@ export const AppointmentService = {
   // ✅ NEW: Helper to get all appointments (used by sync function)
   async getAllAppointments(clinicId: string): Promise<Appointment[]> {
     const q = query(
-      appointmentsCollection,
+      getAppointmentsCollection(),
       where('clinicId', '==', clinicId),
       where('isActive', '==', true)
     );

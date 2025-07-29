@@ -4,6 +4,7 @@
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
 import { 
   initializeFirestore,
+  getFirestore,
   persistentLocalCache,
   persistentSingleTabManager,
   enableMultiTabIndexedDbPersistence,
@@ -112,6 +113,15 @@ class OptimizedFirebaseManager {
     if (!this.app) throw new Error("Firebase app not initialized");
 
     try {
+      // Check if Firestore is already initialized
+      try {
+        this.firestore = getFirestore(this.app);
+        console.log("✅ Using existing Firestore instance");
+        return;
+      } catch (error) {
+        // Firestore not yet initialized, proceed with initialization
+      }
+
       // Try enhanced offline persistence first
       this.firestore = initializeFirestore(this.app, {
         localCache: persistentLocalCache({
@@ -124,7 +134,16 @@ class OptimizedFirebaseManager {
       console.log("✅ Firestore with enhanced offline persistence initialized");
       
     } catch (error) {
-      console.warn("⚠️ Enhanced persistence failed, trying multi-tab persistence:", error);
+      console.warn("⚠️ Enhanced persistence failed, trying fallbacks:", error);
+      
+      try {
+        // Check if Firestore is already initialized (could happen during error)
+        this.firestore = getFirestore(this.app);
+        console.log("✅ Using existing Firestore instance after error");
+        return;
+      } catch (getError) {
+        // Continue with fallback initialization
+      }
       
       try {
         // Fallback to multi-tab persistence
@@ -133,11 +152,17 @@ class OptimizedFirebaseManager {
         console.log("✅ Firestore with multi-tab persistence initialized");
         
       } catch (fallbackError) {
-        console.warn("⚠️ Multi-tab persistence failed, using memory cache:", fallbackError);
+        console.warn("⚠️ Multi-tab persistence failed, trying final fallback:", fallbackError);
         
-        // Final fallback to memory cache
-        this.firestore = initializeFirestore(this.app, {});
-        console.log("✅ Firestore with memory cache initialized");
+        try {
+          // Check one more time if Firestore exists
+          this.firestore = getFirestore(this.app);
+          console.log("✅ Using existing Firestore instance as final fallback");
+        } catch (finalGetError) {
+          // Final fallback to memory cache
+          this.firestore = initializeFirestore(this.app, {});
+          console.log("✅ Firestore with memory cache initialized");
+        }
       }
     }
 

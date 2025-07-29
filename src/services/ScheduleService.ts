@@ -11,10 +11,18 @@ import {
   serverTimestamp,
   writeBatch
 } from 'firebase/firestore';
-import { db } from '../api/firebase';
+import { getOptimizedFirestore, firebaseManager } from '../api/firebaseOptimized';
 
-const COLLECTION_NAME = 'doctor_schedules';
-const schedulesCollection = collection(db, COLLECTION_NAME);
+const COLLECTION_NAME = 'schedules';
+
+// Safe collection reference that waits for Firebase to be ready
+const getSchedulesCollection = () => {
+  if (!firebaseManager.isReady()) {
+    throw new Error('Firebase not ready - please wait for initialization');
+  }
+  const db = getOptimizedFirestore();
+  return collection(db, COLLECTION_NAME);
+};
 
 export interface DoctorSchedule {
   id: string; // doctorId
@@ -78,13 +86,13 @@ export const ScheduleService = {
       updatedAt: serverTimestamp(),
     };
 
-    await setDoc(doc(schedulesCollection, doctorId), schedule, { merge: true });
+    await setDoc(doc(getSchedulesCollection(), doctorId), schedule, { merge: true });
     console.log('✅ Doctor schedule saved:', doctorId);
   },
 
   // Update doctor schedule
   async updateDoctorSchedule(doctorId: string, updates: Partial<DoctorSchedule>): Promise<void> {
-    const scheduleRef = doc(schedulesCollection, doctorId);
+    const scheduleRef = doc(getSchedulesCollection(), doctorId);
     await setDoc(scheduleRef, {
       ...updates,
       updatedAt: serverTimestamp(),
@@ -190,7 +198,7 @@ export const ScheduleService = {
 
   // Get doctor schedule
   async getDoctorSchedule(doctorId: string): Promise<DoctorSchedule | null> {
-    const q = query(schedulesCollection, where('doctorId', '==', doctorId));
+    const q = query(getSchedulesCollection(), where('doctorId', '==', doctorId));
     const snapshot = await getDocs(q);
     
     if (snapshot.empty) {
@@ -205,7 +213,7 @@ export const ScheduleService = {
 
   // Listen to doctor schedule
   listenDoctorSchedule(doctorId: string, callback: (schedule: DoctorSchedule | null) => void): () => void {
-    const q = query(schedulesCollection, where('doctorId', '==', doctorId));
+    const q = query(getSchedulesCollection(), where('doctorId', '==', doctorId));
 
     return onSnapshot(q, (snapshot) => {
       if (snapshot.empty) {
@@ -228,7 +236,7 @@ export const ScheduleService = {
   // Listen to all clinic schedules
   listenClinicSchedules(clinicId: string, callback: (schedules: DoctorSchedule[]) => void): () => void {
     const q = query(
-      schedulesCollection,
+      getSchedulesCollection(),
       where('clinicId', '==', clinicId),
       where('isActive', '==', true),
       orderBy('doctorName', 'asc')
@@ -365,7 +373,7 @@ export const ScheduleService = {
 
   // Hard delete doctor schedule
   async hardDeleteDoctorSchedule(doctorId: string): Promise<void> {
-    await deleteDoc(doc(schedulesCollection, doctorId));
+    await deleteDoc(doc(getSchedulesCollection(), doctorId));
     console.log('✅ Doctor schedule permanently deleted:', doctorId);
   },
 
@@ -379,7 +387,7 @@ export const ScheduleService = {
     const today = new Date().toISOString().split('T')[0];
     
     const q = query(
-      schedulesCollection,
+      getSchedulesCollection(),
       where('clinicId', '==', clinicId),
       where('isActive', '==', true)
     );

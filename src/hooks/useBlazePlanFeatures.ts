@@ -1,9 +1,25 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useUser } from '../contexts/UserContext';
 import { AnalyticsService, globalPageTimer } from '../api/analytics';
 import { MessagingService } from '../api/messaging';
 import { StorageService } from '../api/storage';
+import { httpsCallable } from 'firebase/functions';
+import { getOptimizedFunctions, firebaseManager } from '../api/firebaseOptimized';
+
+// Helper to get safe functions reference
+const getFunctionsInstance = () => {
+  if (!firebaseManager.isReady()) {
+    console.warn('Firebase not ready - functions not available');
+    return null;
+  }
+  try {
+    return getOptimizedFunctions();
+  } catch (error) {
+    console.warn('Functions not available:', error);
+    return null;
+  }
+};
 
 export interface BlazePlanFeatures {
   analytics: {
@@ -210,9 +226,7 @@ export const useBlazePlanFeatures = (): BlazePlanFeatures => {
           initialized: true,
           callFunction: async (name: string, data: any) => {
             try {
-              const { httpsCallable } = await import('firebase/functions');
-              const { functions } = await import('../api/firebase');
-              const callable = httpsCallable(functions, name);
+              const callable = httpsCallable(getFunctionsInstance(), name);
               const result = await callable(data);
               return result.data;
             } catch (error) {

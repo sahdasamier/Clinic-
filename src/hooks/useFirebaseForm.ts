@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { doc, getDoc, setDoc, onSnapshot, serverTimestamp, Timestamp } from 'firebase/firestore';
-import { db } from '../api/firebase';
+import { getOptimizedFirestore, firebaseManager } from '../api/firebaseOptimized';
 import { useAuth } from '../contexts/AuthContext';
 import { 
   FirebaseFormOptions, 
@@ -9,6 +9,14 @@ import {
   FirebaseError,
   SyncStatus
 } from '../types/firebase';
+
+// Helper to get safe database reference
+const getDb = () => {
+  if (!firebaseManager.isReady()) {
+    throw new Error('Firebase not ready - please wait for initialization');
+  }
+  return getOptimizedFirestore();
+};
 
 /**
  * Reusable Firebase form hook
@@ -149,7 +157,7 @@ export const useFirebaseForm = <T extends Record<string, any>>(
 
     setIsLoading(true);
     try {
-      const docRef = doc(db, collection, getDocumentId());
+      const docRef = doc(getDb(), collection, getDocumentId());
       const docSnap = await getDoc(docRef);
       
       if (docSnap.exists()) {
@@ -193,7 +201,7 @@ export const useFirebaseForm = <T extends Record<string, any>>(
     setIsSaving(true);
     
     try {
-      const docRef = doc(db, collection, getDocumentId());
+      const docRef = doc(getDb(), collection, getDocumentId());
       const saveData = {
         ...data,
         updatedAt: serverTimestamp(),
@@ -320,7 +328,7 @@ export const useFirebaseForm = <T extends Record<string, any>>(
   useEffect(() => {
     if (!enableRealTimeSync || !user) return;
 
-    const docRef = doc(db, collection, getDocumentId());
+    const docRef = doc(getDb(), collection, getDocumentId());
     
     const unsubscribe = onSnapshot(
       docRef,

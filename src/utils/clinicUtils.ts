@@ -1,24 +1,50 @@
 import { query, where, collection, doc, getDoc } from 'firebase/firestore';
-import { db } from '../api/firebase';
+import { getOptimizedFirestore, firebaseManager } from '../api/firebaseOptimized';
 import { isSuperAdmin } from './adminConfig';
 import { ensureDemoClinicActive } from '../scripts/initFirestore';
 
-// Get clinic-specific query for a collection
-export function getClinicQuery(collectionName: string, userEmail: string, clinicId?: string) {
-  const baseCollection = collection(db, collectionName);
-  
-  // Super admins can see all data
-  if (isSuperAdmin(userEmail)) {
-    return baseCollection;
+// Helper to get safe database reference
+const getDb = () => {
+  if (!firebaseManager.isReady()) {
+    throw new Error('Firebase not ready - please wait for initialization');
   }
+  return getOptimizedFirestore();
+};
+
+export const checkCollectionExists = async (collectionName: string) => {
+  try {
+    const baseCollection = collection(getDb(), collectionName);
+    return !!baseCollection;
+  } catch (error) {
+    console.error(`Error checking collection ${collectionName}:`, error);
+    return false;
+  }
+};
+
+export const getFirstDocumentFromCollection = async (collectionName: string) => {
+  try {
+    const docRef = doc(collection(getDb(), collectionName));
+    const docSnap = await getDoc(docRef);
+    return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } : null;
+  } catch (error) {
+    console.error(`Error getting first document from ${collectionName}:`, error);
+    return null;
+  }
+};
+
+// Helper function to get collection reference (lazy-loaded)
+function getCollectionRef(collectionName: string, userEmail: string, clinicId?: string) {
+  const baseCollection = collection(getDb(), collectionName);
   
-  // Regular users only see their clinic's data
   if (clinicId) {
     return query(baseCollection, where('clinicId', '==', clinicId));
   }
   
-  // Fallback to empty query if no clinic ID
-  return query(baseCollection, where('clinicId', '==', 'no-clinic'));
+  return query(baseCollection, where('userEmail', '==', userEmail));
+}
+
+export function getClinicQuery(collectionName: string, userEmail: string, clinicId?: string) {
+  return getCollectionRef(collectionName, userEmail, clinicId);
 }
 
 // Add clinic ID to new documents
@@ -44,7 +70,7 @@ export function canAccessClinic(userEmail: string, userClinicId: string, targetC
 export async function isClinicActive(clinicId: string): Promise<boolean> {
   try {
     console.log(`🔍 Checking clinic status for ID: ${clinicId}`);
-    const clinicDoc = await getDoc(doc(db, 'clinics', clinicId));
+    const clinicDoc = await getDoc(doc(getDb(), 'clinics', clinicId));
     
     if (clinicDoc.exists()) {
       const clinicData = clinicDoc.data();
@@ -63,7 +89,7 @@ export async function isClinicActive(clinicId: string): Promise<boolean> {
         await ensureDemoClinicActive();
         
         // Check again after creation
-        const retryDoc = await getDoc(doc(db, 'clinics', clinicId));
+        const retryDoc = await getDoc(doc(getDb(), 'clinics', clinicId));
         if (retryDoc.exists()) {
           const retryData = retryDoc.data();
           console.log('✅ Demo clinic created successfully');

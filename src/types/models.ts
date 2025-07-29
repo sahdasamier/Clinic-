@@ -51,6 +51,7 @@ export interface Patient {
   email?: string;
   phone?: string;
   age?: number;
+  dateOfBirth?: string;
   gender?: 'male' | 'female' | 'other';
   address?: string;
   bloodType?: string;

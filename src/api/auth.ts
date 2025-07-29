@@ -1,26 +1,47 @@
 import { 
+  signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
-  signInWithEmailAndPassword,
-  signOut,
-  updateProfile,
-  fetchSignInMethodsForEmail,
+  signOut, 
+  onAuthStateChanged, 
   User as FirebaseUser,
-  getAuth
+  updateProfile,
+  sendPasswordResetEmail,
+  deleteUser,
+  getAuth,
+  fetchSignInMethodsForEmail,
+  type Auth
 } from 'firebase/auth';
-import { initializeApp, deleteApp } from 'firebase/app'; // Added for secondary app
+import { initializeApp, deleteApp } from 'firebase/app';
 import { 
   doc, 
   setDoc, 
   getDoc, 
-  updateDoc, 
+  addDoc, 
   collection, 
-  addDoc,
-  serverTimestamp,
-  query,
-  where,
-  getDocs
+  query, 
+  where, 
+  getDocs, 
+  serverTimestamp, 
+  deleteDoc,
+  updateDoc 
 } from 'firebase/firestore';
-import { auth, db } from './firebase';
+import { getOptimizedAuth, getOptimizedFirestore, firebaseManager, validateFirebaseConfig } from './firebaseOptimized';
+
+// Helper to get safe database reference
+const getDb = () => {
+  if (!firebaseManager.isReady()) {
+    throw new Error('Firebase not ready - please wait for initialization');
+  }
+  return getOptimizedFirestore();
+};
+
+// Helper to get safe auth reference
+const getAuthInstance = () => {
+  if (!firebaseManager.isReady()) {
+    throw new Error('Firebase not ready - please wait for initialization');
+  }
+  return getOptimizedAuth();
+};
 
 export interface UserData {
   id: string;
@@ -66,9 +87,9 @@ export async function checkEmailExists(email: string): Promise<boolean> {
     console.log(`🔍 Checking if email exists: ${email}`);
     const normalizedEmail = email.trim().toLowerCase();
     
-    // Use only fetchSignInMethodsForEmail - don't do secondary checks that sign users out
-    const signInMethods = await fetchSignInMethodsForEmail(auth, normalizedEmail);
-    const exists = signInMethods.length > 0;
+          // Use only fetchSignInMethodsForEmail - don't do secondary checks that sign users out
+      const signInMethods = await fetchSignInMethodsForEmail(getAuthInstance(), normalizedEmail);
+      const exists = signInMethods.length > 0;
     
     console.log(`📧 Email ${normalizedEmail} exists: ${exists}`, { signInMethods });
     return exists;
@@ -97,8 +118,8 @@ export async function doubleCheckEmailBeforeCreation(email: string): Promise<{ c
     console.log(`🔍 Double-checking email before creation: ${email}`);
     const normalizedEmail = email.trim().toLowerCase();
     
-    // Try to check sign-in methods again
-    const signInMethods = await fetchSignInMethodsForEmail(auth, normalizedEmail);
+          // Try to check sign-in methods again
+      const signInMethods = await fetchSignInMethodsForEmail(getAuthInstance(), normalizedEmail);
     
     if (signInMethods.length > 0) {
       console.log(`❌ Double-check failed - email exists: ${normalizedEmail}`);
@@ -208,7 +229,7 @@ export const createUserInvitation = async (userData: {
       token: invitationToken,
     };
 
-    await addDoc(collection(db, 'invitations'), invitation);
+    await addDoc(collection(getDb(), 'invitations'), invitation);
     
     console.log('✅ Invitation created successfully');
     return { success: true, invitationToken };
@@ -222,7 +243,7 @@ export const createUserInvitation = async (userData: {
 export async function acceptInvitation(token: string, password: string): Promise<{ success: boolean; error?: string }> {
   try {
     // Find the invitation
-    const invitationsRef = collection(db, 'invitations');
+    const invitationsRef = collection(getDb(), 'invitations');
     const snapshot = await getDoc(doc(invitationsRef, token)); // Simplified - in real app you'd query by token
     
     // For now, let's implement a simpler approach - we'll pass the invitation data directly
@@ -260,9 +281,10 @@ export async function createUserAccount(userData: {
   try {
     console.log(`🔧 Creating user account for: ${userData.email} using secondary app`);
 
-    // Initialize secondary Firebase app
-    tempApp = initializeApp(firebaseConfig, tempAppName);
-    const tempAuth = getAuth(tempApp); // Use getAuth from the main 'firebase/auth'
+          // Initialize secondary Firebase app
+      const firebaseConfig = validateFirebaseConfig();
+      tempApp = initializeApp(firebaseConfig, tempAppName);
+      const tempAuth = getAuth(tempApp); // Use getAuth from the main 'firebase/auth'
 
     // Normalize email early
     const normalizedEmail = userData.email.trim().toLowerCase();
@@ -327,7 +349,7 @@ export async function createUserAccount(userData: {
     };
     
     // The main 'db' instance uses the admin's (primary) auth context
-    await setDoc(doc(db, 'users', user.uid), userDoc);
+    await setDoc(doc(getDb(), 'users', user.uid), userDoc);
     console.log('✅ User document created in Firestore using admin context');
     
     console.log('🎉 User account created successfully');
@@ -417,8 +439,8 @@ export async function createUserAccount(userData: {
           await signOut(tempAuthInstance); // Sign out from secondary app's auth
           console.log('👋 User signed out from secondary app');
         }
-        await deleteApp(tempApp); // Delete the secondary app
-        console.log('🧹 Secondary Firebase app deleted');
+                  await deleteApp(tempApp); // Delete the secondary app
+          console.log('🧹 Secondary Firebase app deleted');
       } catch (cleanupError) {
         console.error('🧹❌ Error during secondary app cleanup:', cleanupError);
       }
@@ -429,11 +451,11 @@ export async function createUserAccount(userData: {
 // Login function
 export async function loginUser(email: string, password: string): Promise<{ success: boolean; userData?: UserData; error?: string }> {
   try {
-    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    const userCredential = await signInWithEmailAndPassword(getAuthInstance(), email, password);
     const user = userCredential.user;
     
     // Get user data from Firestore
-    const userDoc = await getDoc(doc(db, 'users', user.uid));
+    const userDoc = await getDoc(doc(getDb(), 'users', user.uid));
     
     if (userDoc.exists()) {
       const userData = { id: userDoc.id, ...userDoc.data() } as UserData;
@@ -441,7 +463,7 @@ export async function loginUser(email: string, password: string): Promise<{ succ
       if (userData.isActive) {
         return { success: true, userData };
       } else {
-        await signOut(auth); // Sign out if account is inactive
+        await signOut(getAuthInstance()); // Sign out if account is inactive
         return { success: false, error: 'Account is inactive' };
       }
     } else {
@@ -471,10 +493,10 @@ export async function loginWithInvitationCheck(email: string, password: string):
     
     // First, try regular login (for existing users)
     try {
-      const result = await signInWithEmailAndPassword(auth, email, password);
+      const result = await signInWithEmailAndPassword(getAuthInstance(), email, password);
       
       // Get user data from Firestore
-      const userDoc = await getDoc(doc(db, 'users', result.user.uid));
+      const userDoc = await getDoc(doc(getDb(), 'users', result.user.uid));
       
       if (userDoc.exists()) {
         const userData = { id: userDoc.id, ...userDoc.data() } as UserData;
@@ -483,7 +505,7 @@ export async function loginWithInvitationCheck(email: string, password: string):
           console.log('✅ Existing user login successful');
           return { success: true, userData };
         } else {
-          await signOut(auth);
+          await signOut(getAuthInstance());
           return { success: false, error: 'Account is inactive' };
         }
       }
@@ -495,7 +517,7 @@ export async function loginWithInvitationCheck(email: string, password: string):
         
         // Check if there's a pending invitation
         const invitationsQuery = query(
-          collection(db, 'user_invitations'),
+          collection(getDb(), 'user_invitations'),
           where('email', '==', email),
           where('tempPassword', '==', password),
           where('status', '==', 'pending')
@@ -509,7 +531,7 @@ export async function loginWithInvitationCheck(email: string, password: string):
           const invitationData = invitationSnapshot.docs[0].data();
           
           // Create the actual Firebase Auth account
-          const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+          const userCredential = await createUserWithEmailAndPassword(getAuthInstance(), email, password);
           const user = userCredential.user;
           
           // Update display name
@@ -530,7 +552,7 @@ export async function loginWithInvitationCheck(email: string, password: string):
             updatedAt: serverTimestamp(),
           };
           
-          await setDoc(doc(db, 'users', user.uid), userDoc);
+          await setDoc(doc(getDb(), 'users', user.uid), userDoc);
           
           // Mark invitation as accepted
           await updateDoc(invitationSnapshot.docs[0].ref, {
@@ -569,7 +591,7 @@ export async function loginWithInvitationCheck(email: string, password: string):
 // Logout function
 export async function logoutUser(): Promise<void> {
   try {
-    await signOut(auth);
+    await signOut(getAuthInstance());
   } catch (error) {
     console.error('❌ Logout error:', error);
     throw error;
@@ -579,10 +601,10 @@ export async function logoutUser(): Promise<void> {
 // Get current user data
 export async function getCurrentUserData(): Promise<UserData | null> {
   try {
-    const user = auth.currentUser;
+    const user = getAuthInstance().currentUser;
     if (!user) return null;
     
-    const userDoc = await getDoc(doc(db, 'users', user.uid));
+    const userDoc = await getDoc(doc(getDb(), 'users', user.uid));
     if (userDoc.exists()) {
       return { id: userDoc.id, ...userDoc.data() } as UserData;
     }

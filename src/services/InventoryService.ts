@@ -11,10 +11,18 @@ import {
   serverTimestamp,
   writeBatch
 } from 'firebase/firestore';
-import { db } from '../api/firebase';
+import { getOptimizedFirestore, firebaseManager } from '../api/firebaseOptimized';
 
 const COLLECTION_NAME = 'inventory';
-const inventoryCollection = collection(db, COLLECTION_NAME);
+
+// Safe collection reference that waits for Firebase to be ready
+const getInventoryCollection = () => {
+  if (!firebaseManager.isReady()) {
+    throw new Error('Firebase not ready - please wait for initialization');
+  }
+  const db = getOptimizedFirestore();
+  return collection(db, COLLECTION_NAME);
+};
 
 export interface InventoryItem {
   id: string;
@@ -118,14 +126,14 @@ export const InventoryService = {
       updatedAt: serverTimestamp(),
     };
 
-    await setDoc(doc(inventoryCollection, id), item);
+    await setDoc(doc(getInventoryCollection(), id), item);
     console.log('✅ Inventory item created:', id);
     return id;
   },
 
   // Update an inventory item
   async updateItem(itemId: string, updates: Partial<InventoryItem>): Promise<void> {
-    const itemRef = doc(inventoryCollection, itemId);
+    const itemRef = doc(getInventoryCollection(), itemId);
     
     const updateData = { ...updates };
     
@@ -157,7 +165,7 @@ export const InventoryService = {
 
   // Get a single inventory item
   async getItem(itemId: string): Promise<InventoryItem | null> {
-    const q = query(inventoryCollection, where('__name__', '==', itemId));
+    const q = query(getInventoryCollection(), where('__name__', '==', itemId));
     const snapshot = await getDocs(q);
     
     if (snapshot.empty) {
@@ -179,7 +187,7 @@ export const InventoryService = {
   // Listen to inventory for a specific clinic
   listenInventory(clinicId: string, callback: (items: InventoryItem[]) => void): () => void {
     const q = query(
-      inventoryCollection,
+      getInventoryCollection(),
       where('clinicId', '==', clinicId),
       where('isActive', '==', true),
       orderBy('name', 'asc')
@@ -202,7 +210,7 @@ export const InventoryService = {
   // Listen to low stock items
   listenLowStockItems(clinicId: string, callback: (items: InventoryItem[]) => void): () => void {
     const q = query(
-      inventoryCollection,
+      getInventoryCollection(),
       where('clinicId', '==', clinicId),
       where('status', 'in', ['low_stock', 'out_of_stock']),
       where('isActive', '==', true),
@@ -222,7 +230,7 @@ export const InventoryService = {
   // Listen to items by category
   listenItemsByCategory(clinicId: string, category: InventoryItem['category'], callback: (items: InventoryItem[]) => void): () => void {
     const q = query(
-      inventoryCollection,
+      getInventoryCollection(),
       where('clinicId', '==', clinicId),
       where('category', '==', category),
       where('isActive', '==', true),
@@ -327,7 +335,7 @@ export const InventoryService = {
     const futureDateStr = futureDate.toISOString().split('T')[0];
 
     const q = query(
-      inventoryCollection,
+      getInventoryCollection(),
       where('clinicId', '==', clinicId),
       where('expiryDate', '<=', futureDateStr),
       where('isActive', '==', true),
@@ -344,7 +352,7 @@ export const InventoryService = {
   // Search inventory items
   async searchItems(clinicId: string, searchTerm: string): Promise<InventoryItem[]> {
     const q = query(
-      inventoryCollection,
+      getInventoryCollection(),
       where('clinicId', '==', clinicId),
       where('isActive', '==', true)
     );
@@ -376,7 +384,7 @@ export const InventoryService = {
     categoryBreakdown: Record<InventoryItem['category'], number>;
   }> {
     const q = query(
-      inventoryCollection,
+      getInventoryCollection(),
       where('clinicId', '==', clinicId),
       where('isActive', '==', true)
     );
@@ -422,7 +430,7 @@ export const InventoryService = {
     const today = new Date().toISOString().split('T')[0];
     
     const q = query(
-      inventoryCollection,
+      getInventoryCollection(),
       where('clinicId', '==', clinicId),
       where('expiryDate', '<', today),
       where('status', '!=', 'expired'),
@@ -430,7 +438,7 @@ export const InventoryService = {
     );
 
     const snapshot = await getDocs(q);
-    const batch = writeBatch(db);
+    const batch = writeBatch(getOptimizedFirestore());
     
     snapshot.docs.forEach(doc => {
       batch.update(doc.ref, { 

@@ -8,6 +8,10 @@ import './i18n';
 // Blaze plan features
 import BlazePlanInitializer from './components/BlazePlanInitializer';
 
+// Initialize optimized Firebase first
+import { initializeOptimizedServices } from './api/firebase';
+import { initializeEmailJS } from './services/emailService';
+
 // Deferred initialization to prevent circular dependencies
 const initializeServices = async () => {
   try {
@@ -25,58 +29,49 @@ const initializeServices = async () => {
     }
     
     // Initialize EmailJS for email sending functionality
-    const { initializeEmailJS } = await import('./services/emailService');
     await initializeEmailJS();
 
-    // Initialize optimized Firebase services
+    // Initialize optimized Firebase services first
     try {
-      const { initializeOptimizedServices } = await import('./api/firebase');
       await initializeOptimizedServices();
       console.log('✅ Optimized Firebase services initialized');
       
-      // Fallback: Import legacy services for backward compatibility
-      await import('./api/analytics');
-      await import('./api/messaging');
-      await import('./api/storage');
+      // Now that Firebase is ready, dynamically import the modules that depend on it
+      await Promise.all([
+        import('./api/analytics'),
+        import('./api/messaging'),
+        import('./api/storage'),
+        import('./utils/manualSync'),
+        import('./utils/emergencyFix'),
+        import('./utils/firebaseFriendlySync'),
+        import('./utils/firebaseDataManagerInit'),
+        import('./utils/doctorSync'),
+        import('./utils/quickDoctorFix'),
+        import('./utils/instantDoctorFix'),
+        import('./utils/enableRealtimeListeners')
+      ]);
+      
+      console.log('✅ All Firebase-dependent modules loaded successfully');
       console.log('✅ Legacy Firebase Blaze plan services preloaded');
     } catch (error) {
       console.warn('⚠️ Failed to initialize Firebase services:', error);
-      // Try legacy initialization as fallback
-      try {
-        await import('./api/firebase');
-        console.log('✅ Fallback to legacy Firebase initialization');
-      } catch (fallbackError) {
-        console.error('❌ Complete Firebase initialization failure:', fallbackError);
-      }
     }
     
-    // Import utilities after React app has started to prevent circular deps
-    // These modules have auto-initialization code that can cause issues if loaded too early
-    setTimeout(async () => {
-      try {
-        await import('./utils/manualSync');
-        await import('./utils/emergencyFix');
-        await import('./utils/firebaseFriendlySync');
-        await import('./utils/firebaseDataManagerInit');
-        // Legacy doctor utilities (commented out for clean build)
-        // await import('./utils/doctorDebugger');
-        await import('./utils/doctorSync');
-        await import('./utils/quickDoctorFix');
-        // await import('./utils/emergencyDoctorFix');
-        
-        console.log('✅ All utility modules loaded successfully');
-        
-        // Show doctor debugging availability message
-        console.log('👩‍⚕️ Doctor debugging tools are now available!');
-        console.log('   ⚡ Run fixDoctors() - EMERGENCY FIX (NEW - NO IMPORTS)');
-        console.log('   🚀 Run runInstantDoctorFix() - INSTANT FIX');
-        console.log('   📋 Run completeDoctorAssignmentSolution() - Complete solution');
-        console.log('   🔧 Run quickFixDoctorAssignment() - Quick fix');
-        console.log('   🔍 Run debugPatientDoctorAssignment() - Detailed analysis');
-        
-      } catch (error) {
-        console.warn('⚠️ Some utility modules failed to load:', error);
-      }
+    // Show doctor debugging availability message after a delay
+    setTimeout(() => {
+      console.log('✅ All utility modules loaded successfully');
+      
+      // Show doctor debugging availability message
+      console.log('👩‍⚕️ Doctor debugging tools are now available!');
+      console.log('   ⚡ Run fixDoctors() - EMERGENCY FIX (NEW - NO IMPORTS)');
+      console.log('   🚀 Run runInstantDoctorFix() - INSTANT FIX');
+      console.log('   📋 Run completeDoctorAssignmentSolution() - Complete solution');
+      console.log('   🔧 Run quickFixDoctorAssignment() - Quick fix');
+      console.log('   🔍 Run debugPatientDoctorAssignment() - Detailed analysis');
+      console.log('');
+      console.log('🔥 Firebase management tools:');
+      console.log('   📋 Run checkFirebaseIndexes() - Check if indexes are ready');
+      console.log('   🔄 Run enableAllRealtimeListeners() - Re-enable after indexes are ready');
     }, 1000);
     
   } catch (error) {

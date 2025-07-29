@@ -1,16 +1,26 @@
 import { 
   collection, 
-  addDoc, 
-  getDocs, 
   doc, 
-  updateDoc, 
+  setDoc, 
+  getDoc, 
+  deleteDoc, 
   query, 
   where, 
+  getDocs, 
+  serverTimestamp,
   orderBy 
 } from 'firebase/firestore';
-import { db } from './firebase';
+import { getOptimizedFirestore, firebaseManager } from './firebaseOptimized';
 import { getAppointmentsByDate, getAppointmentsByDoctor } from './appointments';
 import { getDefaultDoctorSchedulesData, type DoctorScheduleData } from '../data/mockData';
+
+// Helper to get safe database reference
+const getDb = () => {
+  if (!firebaseManager.isReady()) {
+    throw new Error('Firebase not ready - please wait for initialization');
+  }
+  return getOptimizedFirestore();
+};
 
 // TODO: Implement doctor scheduling API functions (e.g., get doctor schedules, book appointments, update availability)
 
@@ -52,7 +62,7 @@ const SCHEDULES_COLLECTION = 'doctor_schedules';
 // Get all doctor schedules
 export const getDoctorSchedules = async (): Promise<DoctorSchedule[]> => {
   try {
-    const schedulesRef = collection(db, SCHEDULES_COLLECTION);
+    const schedulesRef = collection(getDb(), SCHEDULES_COLLECTION);
     const querySnapshot = await getDocs(schedulesRef);
     
     return querySnapshot.docs.map(doc => ({
@@ -206,8 +216,8 @@ export const bookAppointment = async (appointmentData: Omit<Appointment, 'id'>):
 // Update doctor availability (admin function)
 export const updateDoctorSchedule = async (doctorId: string, schedule: Partial<DoctorSchedule>): Promise<void> => {
   try {
-    const doctorRef = doc(db, SCHEDULES_COLLECTION, doctorId);
-    await updateDoc(doctorRef, schedule);
+    const doctorRef = doc(getDb(), SCHEDULES_COLLECTION, doctorId);
+    await setDoc(doctorRef, schedule);
   } catch (error) {
     console.error('Error updating doctor schedule:', error);
     throw new Error('Failed to update doctor schedule');
@@ -273,10 +283,10 @@ export const initializeDefaultSchedules = async (): Promise<void> => {
     const existingSchedules = await getDoctorSchedules();
     if (existingSchedules.length === 0) {
       const defaultSchedules = getDefaultDoctorSchedules();
-      const schedulesRef = collection(db, SCHEDULES_COLLECTION);
+      const schedulesRef = collection(getDb(), SCHEDULES_COLLECTION);
       
       for (const schedule of defaultSchedules) {
-        await addDoc(schedulesRef, schedule);
+        await setDoc(doc(schedulesRef, schedule.id), schedule);
       }
       
       console.log('Default doctor schedules initialized');
