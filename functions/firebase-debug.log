@@ -1,0 +1,2026 @@
+[debug] [2025-07-25T13:15:32.371Z] ----------------------------------------------------------------------
+[debug] [2025-07-25T13:15:32.373Z] Command:       /Users/sahdasamier/.nvm/versions/node/v20.18.3/bin/node /Users/sahdasamier/.yarn/bin/firebase emulators:start --only functions
+[debug] [2025-07-25T13:15:32.373Z] CLI Version:   13.35.1
+[debug] [2025-07-25T13:15:32.373Z] Platform:      darwin
+[debug] [2025-07-25T13:15:32.373Z] Node Version:  v20.18.3
+[debug] [2025-07-25T13:15:32.373Z] Time:          Fri Jul 25 2025 16:15:32 GMT+0300 (Eastern European Summer Time)
+[debug] [2025-07-25T13:15:32.373Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2025-07-25T13:15:32.374Z] >>> [apiv2][query] GET https://firebase-public.firebaseio.com/cli.json [none]
+[debug] [2025-07-25T13:15:32.497Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-07-25T13:15:32.497Z] > authorizing via signed-in user (sahdasamier@gmail.com)
+[info] i  emulators: Starting emulators: functions {"metadata":{"emulator":{"name":"hub"},"message":"Starting emulators: functions"}}
+[debug] [2025-07-25T13:15:32.611Z] [logging] Logging Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2025-07-25T13:15:32.611Z] assigned listening specs for emulators {"user":{"hub":[{"address":"127.0.0.1","family":"IPv4","port":4400},{"address":"::1","family":"IPv6","port":4400}],"ui":[{"address":"127.0.0.1","family":"IPv4","port":4000},{"address":"::1","family":"IPv6","port":4000}],"logging":[{"address":"127.0.0.1","family":"IPv4","port":4500}]},"metadata":{"message":"assigned listening specs for emulators"}}
+[debug] [2025-07-25T13:15:32.614Z] [hub] writing locator at /var/folders/k1/5zyk6__j7_927hv4yvrpn5fc0000gn/T/hub-clinic-d9c0a.json
+[debug] [2025-07-25T13:15:32.721Z] [functions] Functions Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2025-07-25T13:15:32.721Z] [eventarc] Eventarc Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2025-07-25T13:15:32.721Z] [tasks] Cloud Tasks Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2025-07-25T13:15:32.721Z] late-assigned ports for functions and eventarc emulators {"user":{"hub":[{"address":"127.0.0.1","family":"IPv4","port":4400},{"address":"::1","family":"IPv6","port":4400}],"ui":[{"address":"127.0.0.1","family":"IPv4","port":4000},{"address":"::1","family":"IPv6","port":4000}],"logging":[{"address":"127.0.0.1","family":"IPv4","port":4500}],"functions":[{"address":"127.0.0.1","family":"IPv4","port":5001}],"eventarc":[{"address":"127.0.0.1","family":"IPv4","port":9299}],"tasks":[{"address":"127.0.0.1","family":"IPv4","port":9499}]},"metadata":{"message":"late-assigned ports for functions and eventarc emulators"}}
+[warn] ⚠  functions: The following emulators are not running, calls to these services from the Functions emulator will affect production: apphosting, auth, firestore, database, hosting, pubsub, storage, dataconnect {"metadata":{"emulator":{"name":"functions"},"message":"The following emulators are not running, calls to these services from the Functions emulator will affect production: \u001b[1mapphosting, auth, firestore, database, hosting, pubsub, storage, dataconnect\u001b[22m"}}
+[debug] [2025-07-25T13:15:32.726Z] defaultcredentials: writing to file /Users/sahdasamier/.config/firebase/sahdasamier_gmail_com_application_default_credentials.json
+[debug] [2025-07-25T13:15:32.726Z] Setting GAC to /Users/sahdasamier/.config/firebase/sahdasamier_gmail_com_application_default_credentials.json {"metadata":{"emulator":{"name":"functions"},"message":"Setting GAC to /Users/sahdasamier/.config/firebase/sahdasamier_gmail_com_application_default_credentials.json"}}
+[debug] [2025-07-25T13:15:32.727Z] Checked if tokens are valid: false, expires at: 1752788454640
+[debug] [2025-07-25T13:15:32.727Z] Checked if tokens are valid: false, expires at: 1752788454640
+[debug] [2025-07-25T13:15:32.727Z] > refreshing access token with scopes: []
+[debug] [2025-07-25T13:15:32.727Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-07-25T13:15:32.727Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-07-25T13:15:33.302Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2025-07-25T13:15:33.303Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-07-25T13:15:33.318Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/clinic-d9c0a/adminSdkConfig [none]
+[debug] [2025-07-25T13:15:33.461Z] <<< [apiv2][status] GET https://firebase-public.firebaseio.com/cli.json 200
+[debug] [2025-07-25T13:15:33.462Z] <<< [apiv2][body] GET https://firebase-public.firebaseio.com/cli.json {"cloudBuildErrorAfter":1594252800000,"cloudBuildWarnAfter":1590019200000,"defaultNode10After":1594252800000,"minVersion":"3.0.5","node8DeploysDisabledAfter":1613390400000,"node8RuntimeDisabledAfter":1615809600000,"node8WarnAfter":1600128000000}
+[debug] [2025-07-25T13:15:34.082Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/clinic-d9c0a/adminSdkConfig 200
+[debug] [2025-07-25T13:15:34.082Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/clinic-d9c0a/adminSdkConfig {"projectId":"clinic-d9c0a","storageBucket":"clinic-d9c0a.firebasestorage.app"}
+[info] i  functions: Watching "/Users/sahdasamier/Desktop/untitled folder 2/Clinic-/functions" for Cloud Functions... {"metadata":{"emulator":{"name":"functions"},"message":"Watching \"/Users/sahdasamier/Desktop/untitled folder 2/Clinic-/functions\" for Cloud Functions..."}}
+[debug] [2025-07-25T13:15:34.105Z] Validating nodejs source
+[warn] ⚠  functions: package.json indicates an outdated version of firebase-functions. Please upgrade using npm install --save firebase-functions@latest in your functions directory. 
+[warn] ⚠  functions: Please note that there will be breaking changes when you upgrade. 
+[debug] [2025-07-25T13:15:34.849Z] > [functions] package.json contents: {
+  "name": "clinic-functions",
+  "description": "Secure Cloud Functions for Clinic Management System",
+  "scripts": {
+    "serve": "firebase emulators:start --only functions",
+    "shell": "firebase functions:shell",
+    "start": "npm run shell",
+    "deploy": "firebase deploy --only functions",
+    "logs": "firebase functions:log",
+    "lint": "echo 'Linting skipped'",
+    "build": "echo 'Build completed'"
+  },
+  "engines": {
+    "node": "18"
+  },
+  "main": "index.js",
+  "dependencies": {
+    "firebase-admin": "^11.8.0",
+    "firebase-functions": "^4.3.1",
+    "nodemailer": "^6.9.0",
+    "twilio": "^4.19.0",
+    "@sendgrid/mail": "^7.7.0"
+  },
+  "devDependencies": {
+    "firebase-functions-test": "^3.1.0"
+  },
+  "private": true
+}
+[debug] [2025-07-25T13:15:34.849Z] Building nodejs source
+[debug] [2025-07-25T13:15:34.849Z] Failed to find version of module node: reached end of search path /Users/sahdasamier/Desktop/untitled folder 2/Clinic-/functions/node_modules
+[warn] ⚠  functions: Your requested "node" version "18" doesn't match your global version "20". Using node@20 from host. 
+[info] i  functions: You are using a version of firebase-functions SDK (4.9.0) that does not have support for the newest Firebase Extensions features. Please update firebase-functions SDK to >=5.1.0 to use them correctly 
+[debug] [2025-07-25T13:15:34.852Z] Could not find functions.yaml. Must use http discovery
+[debug] [2025-07-25T13:15:34.858Z] Found firebase-functions binary at '/Users/sahdasamier/Desktop/untitled folder 2/Clinic-/functions/node_modules/.bin/firebase-functions'
+[info] Serving at port 8168
+
+[debug] [2025-07-25T13:15:35.173Z] Got response from /__/functions.yaml {"endpoints":{"onAppointmentCreated":{"platform":"gcfv1","labels":{},"availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"serviceAccountEmail":null,"vpc":null,"callableTrigger":{},"entryPoint":"onAppointmentCreated"},"onAppointmentUpdated":{"platform":"gcfv1","labels":{},"availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"serviceAccountEmail":null,"vpc":null,"callableTrigger":{},"entryPoint":"onAppointmentUpdated"},"onPatientDeleted":{"platform":"gcfv1","labels":{},"availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"serviceAccountEmail":null,"vpc":null,"callableTrigger":{},"entryPoint":"onPatientDeleted"},"checkLowStock":{"platform":"gcfv1","availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"serviceAccountEmail":null,"vpc":null,"scheduleTrigger":{"schedule":"every 6 hours","retryConfig":{"retryCount":null,"maxDoublings":null,"maxRetryDuration":null,"maxBackoffDuration":null,"minBackoffDuration":null},"timeZone":null},"labels":{},"entryPoint":"checkLowStock"},"onPaymentProcessed":{"platform":"gcfv1","availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"serviceAccountEmail":null,"vpc":null,"eventTrigger":{"eventType":"providers/cloud.firestore/eventTypes/document.write","eventFilters":{"resource":"projects/clinic-d9c0a/databases/(default)/documents/payments/{paymentId}"},"retry":false},"labels":{},"entryPoint":"onPaymentProcessed"},"processAppointmentReminders":{"platform":"gcfv1","availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"serviceAccountEmail":null,"vpc":null,"scheduleTrigger":{"schedule":"every 1 hours","retryConfig":{"retryCount":null,"maxDoublings":null,"maxRetryDuration":null,"maxBackoffDuration":null,"minBackoffDuration":null},"timeZone":null},"labels":{},"entryPoint":"processAppointmentReminders"},"cleanupOldNotifications":{"platform":"gcfv1","availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"serviceAccountEmail":null,"vpc":null,"scheduleTrigger":{"schedule":"every 24 hours","retryConfig":{"retryCount":null,"maxDoublings":null,"maxRetryDuration":null,"maxBackoffDuration":null,"minBackoffDuration":null},"timeZone":null},"labels":{},"entryPoint":"cleanupOldNotifications"},"healthCheck":{"platform":"gcfv1","availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"serviceAccountEmail":null,"vpc":null,"httpsTrigger":{},"entryPoint":"healthCheck"}},"specVersion":"v1alpha1","requiredAPIs":[{"api":"cloudscheduler.googleapis.com","reason":"Needed for scheduled functions."}]}
+[info] ✔  functions: Loaded functions definitions from source: onAppointmentCreated, onAppointmentUpdated, onPatientDeleted, checkLowStock, onPaymentProcessed, processAppointmentReminders, cleanupOldNotifications, healthCheck. {"metadata":{"emulator":{"name":"functions"},"message":"Loaded functions definitions from source: onAppointmentCreated, onAppointmentUpdated, onPatientDeleted, checkLowStock, onPaymentProcessed, processAppointmentReminders, cleanupOldNotifications, healthCheck."}}
+[info] ✔  functions[us-central1-onAppointmentCreated]: http function initialized (http://127.0.0.1:5001/clinic-d9c0a/us-central1/onAppointmentCreated). {"metadata":{"emulator":{"name":"functions"},"message":"\u001b[1mhttp\u001b[22m function initialized (http://127.0.0.1:5001/clinic-d9c0a/us-central1/onAppointmentCreated)."}}
+[info] ✔  functions[us-central1-onAppointmentUpdated]: http function initialized (http://127.0.0.1:5001/clinic-d9c0a/us-central1/onAppointmentUpdated). {"metadata":{"emulator":{"name":"functions"},"message":"\u001b[1mhttp\u001b[22m function initialized (http://127.0.0.1:5001/clinic-d9c0a/us-central1/onAppointmentUpdated)."}}
+[info] ✔  functions[us-central1-onPatientDeleted]: http function initialized (http://127.0.0.1:5001/clinic-d9c0a/us-central1/onPatientDeleted). {"metadata":{"emulator":{"name":"functions"},"message":"\u001b[1mhttp\u001b[22m function initialized (http://127.0.0.1:5001/clinic-d9c0a/us-central1/onPatientDeleted)."}}
+[info] i  functions[us-central1-checkLowStock]: function ignored because the pubsub emulator does not exist or is not running. {"metadata":{"emulator":{"name":"functions"},"message":"function ignored because the pubsub emulator does not exist or is not running."}}
+[info] i  functions[us-central1-onPaymentProcessed]: function ignored because the firestore emulator does not exist or is not running. {"metadata":{"emulator":{"name":"functions"},"message":"function ignored because the firestore emulator does not exist or is not running."}}
+[info] i  functions[us-central1-processAppointmentReminders]: function ignored because the pubsub emulator does not exist or is not running. {"metadata":{"emulator":{"name":"functions"},"message":"function ignored because the pubsub emulator does not exist or is not running."}}
+[info] i  functions[us-central1-cleanupOldNotifications]: function ignored because the pubsub emulator does not exist or is not running. {"metadata":{"emulator":{"name":"functions"},"message":"function ignored because the pubsub emulator does not exist or is not running."}}
+[info] ✔  functions[us-central1-healthCheck]: http function initialized (http://127.0.0.1:5001/clinic-d9c0a/us-central1/healthCheck). {"metadata":{"emulator":{"name":"functions"},"message":"\u001b[1mhttp\u001b[22m function initialized (http://127.0.0.1:5001/clinic-d9c0a/us-central1/healthCheck)."}}
+[debug] [2025-07-25T13:15:35.195Z] Could not find VSCode notification endpoint: FetchError: request to http://localhost:40001/vscode/notify failed, reason: . If you are not running the Firebase Data Connect VSCode extension, this is expected and not an issue.
+[info] 
+┌─────────────────────────────────────────────────────────────┐
+│ ✔  All emulators ready! It is now safe to connect your app. │
+│ i  View Emulator UI at http://127.0.0.1:4000/               │
+└─────────────────────────────────────────────────────────────┘
+
+┌───────────┬────────────────┬─────────────────────────────────┐
+│ Emulator  │ Host:Port      │ View in Emulator UI             │
+├───────────┼────────────────┼─────────────────────────────────┤
+│ Functions │ 127.0.0.1:5001 │ http://127.0.0.1:4000/functions │
+└───────────┴────────────────┴─────────────────────────────────┘
+  Emulator Hub host: 127.0.0.1 port: 4400
+  Other reserved ports: 4500
+
+Issues? Report them at https://github.com/firebase/firebase-tools/issues and attach the *-debug.log files.
+ 
+[debug] [2025-07-25T19:08:02.586Z] Received signal SIGHUP 1
+[info]  
+[info] i  emulators: Received SIGHUP for the first time. Starting a clean shutdown. 
+[info] i  emulators: Please wait for a clean shutdown or send the SIGHUP signal again to stop right now. 
+[debug] [2025-07-25T19:08:02.763Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.765Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.765Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.765Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.765Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.765Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.766Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.770Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.770Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.770Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.770Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.771Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.771Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.771Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.771Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.786Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.786Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.787Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.788Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.788Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.788Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.789Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.789Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.789Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.789Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.789Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.789Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.789Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.789Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.790Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.790Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.790Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.790Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.790Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.790Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.790Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.790Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.790Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.791Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.791Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.791Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.792Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.793Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.793Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.793Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.794Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.794Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.794Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.794Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.794Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.795Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.795Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.795Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.795Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.795Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.795Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.795Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.795Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-25T19:08:02.795Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[debug] [2025-07-26T08:47:26.231Z] ----------------------------------------------------------------------
+[debug] [2025-07-26T08:47:26.232Z] Command:       /Users/sahdasamier/.nvm/versions/node/v20.18.3/bin/node /Users/sahdasamier/.yarn/bin/firebase emulators:start --only functions
+[debug] [2025-07-26T08:47:26.232Z] CLI Version:   13.35.1
+[debug] [2025-07-26T08:47:26.232Z] Platform:      darwin
+[debug] [2025-07-26T08:47:26.233Z] Node Version:  v20.18.3
+[debug] [2025-07-26T08:47:26.233Z] Time:          Sat Jul 26 2025 11:47:26 GMT+0300 (Eastern European Summer Time)
+[debug] [2025-07-26T08:47:26.233Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2025-07-26T08:47:26.325Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-07-26T08:47:26.325Z] > authorizing via signed-in user (sahdasamier@gmail.com)
+[info] i  emulators: Starting emulators: functions {"metadata":{"emulator":{"name":"hub"},"message":"Starting emulators: functions"}}
+[debug] [2025-07-26T08:47:26.438Z] [logging] Logging Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2025-07-26T08:47:26.438Z] assigned listening specs for emulators {"user":{"hub":[{"address":"127.0.0.1","family":"IPv4","port":4400},{"address":"::1","family":"IPv6","port":4400}],"ui":[{"address":"127.0.0.1","family":"IPv4","port":4000},{"address":"::1","family":"IPv6","port":4000}],"logging":[{"address":"127.0.0.1","family":"IPv4","port":4500}]},"metadata":{"message":"assigned listening specs for emulators"}}
+[debug] [2025-07-26T08:47:26.441Z] [hub] writing locator at /var/folders/k1/5zyk6__j7_927hv4yvrpn5fc0000gn/T/hub-clinic-d9c0a.json
+[debug] [2025-07-26T08:47:26.544Z] [functions] Functions Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2025-07-26T08:47:26.544Z] [eventarc] Eventarc Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2025-07-26T08:47:26.544Z] [tasks] Cloud Tasks Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2025-07-26T08:47:26.544Z] late-assigned ports for functions and eventarc emulators {"user":{"hub":[{"address":"127.0.0.1","family":"IPv4","port":4400},{"address":"::1","family":"IPv6","port":4400}],"ui":[{"address":"127.0.0.1","family":"IPv4","port":4000},{"address":"::1","family":"IPv6","port":4000}],"logging":[{"address":"127.0.0.1","family":"IPv4","port":4500}],"functions":[{"address":"127.0.0.1","family":"IPv4","port":5001}],"eventarc":[{"address":"127.0.0.1","family":"IPv4","port":9299}],"tasks":[{"address":"127.0.0.1","family":"IPv4","port":9499}]},"metadata":{"message":"late-assigned ports for functions and eventarc emulators"}}
+[warn] ⚠  functions: The following emulators are not running, calls to these services from the Functions emulator will affect production: apphosting, auth, firestore, database, hosting, pubsub, storage, dataconnect {"metadata":{"emulator":{"name":"functions"},"message":"The following emulators are not running, calls to these services from the Functions emulator will affect production: \u001b[1mapphosting, auth, firestore, database, hosting, pubsub, storage, dataconnect\u001b[22m"}}
+[debug] [2025-07-26T08:47:26.559Z] defaultcredentials: writing to file /Users/sahdasamier/.config/firebase/sahdasamier_gmail_com_application_default_credentials.json
+[debug] [2025-07-26T08:47:26.560Z] Setting GAC to /Users/sahdasamier/.config/firebase/sahdasamier_gmail_com_application_default_credentials.json {"metadata":{"emulator":{"name":"functions"},"message":"Setting GAC to /Users/sahdasamier/.config/firebase/sahdasamier_gmail_com_application_default_credentials.json"}}
+[debug] [2025-07-26T08:47:26.560Z] Checked if tokens are valid: false, expires at: 1753452932303
+[debug] [2025-07-26T08:47:26.560Z] Checked if tokens are valid: false, expires at: 1753452932303
+[debug] [2025-07-26T08:47:26.560Z] > refreshing access token with scopes: []
+[debug] [2025-07-26T08:47:26.561Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-07-26T08:47:26.561Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-07-26T08:47:26.898Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2025-07-26T08:47:26.898Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-07-26T08:47:26.924Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/clinic-d9c0a/adminSdkConfig [none]
+[debug] [2025-07-26T08:47:27.691Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/clinic-d9c0a/adminSdkConfig 200
+[debug] [2025-07-26T08:47:27.691Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/clinic-d9c0a/adminSdkConfig {"projectId":"clinic-d9c0a","storageBucket":"clinic-d9c0a.firebasestorage.app"}
+[info] i  functions: Watching "/Users/sahdasamier/Desktop/untitled folder 2/Clinic-/functions" for Cloud Functions... {"metadata":{"emulator":{"name":"functions"},"message":"Watching \"/Users/sahdasamier/Desktop/untitled folder 2/Clinic-/functions\" for Cloud Functions..."}}
+[debug] [2025-07-26T08:47:27.717Z] Validating nodejs source
+[warn] ⚠  functions: package.json indicates an outdated version of firebase-functions. Please upgrade using npm install --save firebase-functions@latest in your functions directory. 
+[warn] ⚠  functions: Please note that there will be breaking changes when you upgrade. 
+[debug] [2025-07-26T08:47:28.461Z] > [functions] package.json contents: {
+  "name": "clinic-functions",
+  "description": "Secure Cloud Functions for Clinic Management System",
+  "scripts": {
+    "serve": "firebase emulators:start --only functions",
+    "shell": "firebase functions:shell",
+    "start": "npm run shell",
+    "deploy": "firebase deploy --only functions",
+    "logs": "firebase functions:log",
+    "lint": "echo 'Linting skipped'",
+    "build": "echo 'Build completed'"
+  },
+  "engines": {
+    "node": "18"
+  },
+  "main": "index.js",
+  "dependencies": {
+    "firebase-admin": "^11.8.0",
+    "firebase-functions": "^4.3.1",
+    "nodemailer": "^6.9.0",
+    "twilio": "^4.19.0",
+    "@sendgrid/mail": "^7.7.0"
+  },
+  "devDependencies": {
+    "firebase-functions-test": "^3.1.0"
+  },
+  "private": true
+}
+[debug] [2025-07-26T08:47:28.462Z] Building nodejs source
+[debug] [2025-07-26T08:47:28.462Z] Failed to find version of module node: reached end of search path /Users/sahdasamier/Desktop/untitled folder 2/Clinic-/functions/node_modules
+[warn] ⚠  functions: Your requested "node" version "18" doesn't match your global version "20". Using node@20 from host. 
+[info] i  functions: You are using a version of firebase-functions SDK (4.9.0) that does not have support for the newest Firebase Extensions features. Please update firebase-functions SDK to >=5.1.0 to use them correctly 
+[debug] [2025-07-26T08:47:28.464Z] Could not find functions.yaml. Must use http discovery
+[debug] [2025-07-26T08:47:28.469Z] Found firebase-functions binary at '/Users/sahdasamier/Desktop/untitled folder 2/Clinic-/functions/node_modules/.bin/firebase-functions'
+[info] Serving at port 8404
+
+[debug] [2025-07-26T08:47:28.772Z] Got response from /__/functions.yaml {"endpoints":{"onAppointmentCreated":{"platform":"gcfv1","labels":{},"availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"serviceAccountEmail":null,"vpc":null,"callableTrigger":{},"entryPoint":"onAppointmentCreated"},"onAppointmentUpdated":{"platform":"gcfv1","labels":{},"availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"serviceAccountEmail":null,"vpc":null,"callableTrigger":{},"entryPoint":"onAppointmentUpdated"},"onPatientDeleted":{"platform":"gcfv1","labels":{},"availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"serviceAccountEmail":null,"vpc":null,"callableTrigger":{},"entryPoint":"onPatientDeleted"},"checkLowStock":{"platform":"gcfv1","availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"serviceAccountEmail":null,"vpc":null,"scheduleTrigger":{"schedule":"every 6 hours","retryConfig":{"retryCount":null,"maxDoublings":null,"maxRetryDuration":null,"maxBackoffDuration":null,"minBackoffDuration":null},"timeZone":null},"labels":{},"entryPoint":"checkLowStock"},"onPaymentProcessed":{"platform":"gcfv1","availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"serviceAccountEmail":null,"vpc":null,"eventTrigger":{"eventType":"providers/cloud.firestore/eventTypes/document.write","eventFilters":{"resource":"projects/clinic-d9c0a/databases/(default)/documents/payments/{paymentId}"},"retry":false},"labels":{},"entryPoint":"onPaymentProcessed"},"processAppointmentReminders":{"platform":"gcfv1","availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"serviceAccountEmail":null,"vpc":null,"scheduleTrigger":{"schedule":"every 1 hours","retryConfig":{"retryCount":null,"maxDoublings":null,"maxRetryDuration":null,"maxBackoffDuration":null,"minBackoffDuration":null},"timeZone":null},"labels":{},"entryPoint":"processAppointmentReminders"},"cleanupOldNotifications":{"platform":"gcfv1","availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"serviceAccountEmail":null,"vpc":null,"scheduleTrigger":{"schedule":"every 24 hours","retryConfig":{"retryCount":null,"maxDoublings":null,"maxRetryDuration":null,"maxBackoffDuration":null,"minBackoffDuration":null},"timeZone":null},"labels":{},"entryPoint":"cleanupOldNotifications"},"healthCheck":{"platform":"gcfv1","availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"serviceAccountEmail":null,"vpc":null,"httpsTrigger":{},"entryPoint":"healthCheck"}},"specVersion":"v1alpha1","requiredAPIs":[{"api":"cloudscheduler.googleapis.com","reason":"Needed for scheduled functions."}]}
+[info] ✔  functions: Loaded functions definitions from source: onAppointmentCreated, onAppointmentUpdated, onPatientDeleted, checkLowStock, onPaymentProcessed, processAppointmentReminders, cleanupOldNotifications, healthCheck. {"metadata":{"emulator":{"name":"functions"},"message":"Loaded functions definitions from source: onAppointmentCreated, onAppointmentUpdated, onPatientDeleted, checkLowStock, onPaymentProcessed, processAppointmentReminders, cleanupOldNotifications, healthCheck."}}
+[info] ✔  functions[us-central1-onAppointmentCreated]: http function initialized (http://127.0.0.1:5001/clinic-d9c0a/us-central1/onAppointmentCreated). {"metadata":{"emulator":{"name":"functions"},"message":"\u001b[1mhttp\u001b[22m function initialized (http://127.0.0.1:5001/clinic-d9c0a/us-central1/onAppointmentCreated)."}}
+[info] ✔  functions[us-central1-onAppointmentUpdated]: http function initialized (http://127.0.0.1:5001/clinic-d9c0a/us-central1/onAppointmentUpdated). {"metadata":{"emulator":{"name":"functions"},"message":"\u001b[1mhttp\u001b[22m function initialized (http://127.0.0.1:5001/clinic-d9c0a/us-central1/onAppointmentUpdated)."}}
+[info] ✔  functions[us-central1-onPatientDeleted]: http function initialized (http://127.0.0.1:5001/clinic-d9c0a/us-central1/onPatientDeleted). {"metadata":{"emulator":{"name":"functions"},"message":"\u001b[1mhttp\u001b[22m function initialized (http://127.0.0.1:5001/clinic-d9c0a/us-central1/onPatientDeleted)."}}
+[info] i  functions[us-central1-checkLowStock]: function ignored because the pubsub emulator does not exist or is not running. {"metadata":{"emulator":{"name":"functions"},"message":"function ignored because the pubsub emulator does not exist or is not running."}}
+[info] i  functions[us-central1-onPaymentProcessed]: function ignored because the firestore emulator does not exist or is not running. {"metadata":{"emulator":{"name":"functions"},"message":"function ignored because the firestore emulator does not exist or is not running."}}
+[info] i  functions[us-central1-processAppointmentReminders]: function ignored because the pubsub emulator does not exist or is not running. {"metadata":{"emulator":{"name":"functions"},"message":"function ignored because the pubsub emulator does not exist or is not running."}}
+[info] i  functions[us-central1-cleanupOldNotifications]: function ignored because the pubsub emulator does not exist or is not running. {"metadata":{"emulator":{"name":"functions"},"message":"function ignored because the pubsub emulator does not exist or is not running."}}
+[info] ✔  functions[us-central1-healthCheck]: http function initialized (http://127.0.0.1:5001/clinic-d9c0a/us-central1/healthCheck). {"metadata":{"emulator":{"name":"functions"},"message":"\u001b[1mhttp\u001b[22m function initialized (http://127.0.0.1:5001/clinic-d9c0a/us-central1/healthCheck)."}}
+[debug] [2025-07-26T08:47:28.789Z] Could not find VSCode notification endpoint: FetchError: request to http://localhost:40001/vscode/notify failed, reason: . If you are not running the Firebase Data Connect VSCode extension, this is expected and not an issue.
+[info] 
+┌─────────────────────────────────────────────────────────────┐
+│ ✔  All emulators ready! It is now safe to connect your app. │
+│ i  View Emulator UI at http://127.0.0.1:4000/               │
+└─────────────────────────────────────────────────────────────┘
+
+┌───────────┬────────────────┬─────────────────────────────────┐
+│ Emulator  │ Host:Port      │ View in Emulator UI             │
+├───────────┼────────────────┼─────────────────────────────────┤
+│ Functions │ 127.0.0.1:5001 │ http://127.0.0.1:4000/functions │
+└───────────┴────────────────┴─────────────────────────────────┘
+  Emulator Hub host: 127.0.0.1 port: 4400
+  Other reserved ports: 4500
+
+Issues? Report them at https://github.com/firebase/firebase-tools/issues and attach the *-debug.log files.
+ 
+[debug] [2025-07-26T08:52:22.438Z] [work-queue] {"queuedWork":["/clinic-d9c0a/us-central1/healthCheck-2025-07-26T08:52:22.437Z"],"queueLength":1,"runningWork":[],"workRunningCount":0}
+[debug] [2025-07-26T08:52:22.438Z] [work-queue] {"queuedWork":[],"queueLength":0,"runningWork":["/clinic-d9c0a/us-central1/healthCheck-2025-07-26T08:52:22.437Z"],"workRunningCount":1}
+[debug] [2025-07-26T08:52:22.439Z] Accepted request GET /clinic-d9c0a/us-central1/healthCheck --> us-central1-healthCheck
+[debug] [2025-07-26T08:52:22.439Z] [functions] Runtime ready! Sending request! {"metadata":{"emulator":{"name":"functions"},"message":"[functions] Runtime ready! Sending request!"}}
+[debug] [2025-07-26T08:52:22.440Z] [functions] Got req.url=/clinic-d9c0a/us-central1/healthCheck, mapping to path=/ {"metadata":{"emulator":{"name":"functions"},"message":"[functions] Got req.url=/clinic-d9c0a/us-central1/healthCheck, mapping to path=/"}}
+[debug] [2025-07-26T08:52:22.443Z] [worker-pool] addWorker(us-central1-healthCheck) {"metadata":{"emulator":{"name":"functions"},"message":"[worker-pool] addWorker(us-central1-healthCheck)"}}
+[debug] [2025-07-26T08:52:22.444Z] [worker-pool] Adding worker with key us-central1-healthCheck, total=1 {"metadata":{"emulator":{"name":"functions"},"message":"[worker-pool] Adding worker with key us-central1-healthCheck, total=1"}}
+[debug] [2025-07-26T08:52:23.133Z] [runtime-status] [6575] Resolved module firebase-admin {"declared":true,"installed":true,"version":"11.11.1","resolution":"/Users/sahdasamier/Desktop/untitled folder 2/Clinic-/functions/node_modules/firebase-admin/lib/index.js"} {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-healthCheck"},"extension":{},"message":"[runtime-status] [6575] Resolved module firebase-admin {\"declared\":true,\"installed\":true,\"version\":\"11.11.1\",\"resolution\":\"/Users/sahdasamier/Desktop/untitled folder 2/Clinic-/functions/node_modules/firebase-admin/lib/index.js\"}"}}
+[debug] [2025-07-26T08:52:23.133Z] [runtime-status] [6575] Resolved module firebase-functions {"declared":true,"installed":true,"version":"4.9.0","resolution":"/Users/sahdasamier/Desktop/untitled folder 2/Clinic-/functions/node_modules/firebase-functions/lib/v1/index.js"} {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-healthCheck"},"extension":{},"message":"[runtime-status] [6575] Resolved module firebase-functions {\"declared\":true,\"installed\":true,\"version\":\"4.9.0\",\"resolution\":\"/Users/sahdasamier/Desktop/untitled folder 2/Clinic-/functions/node_modules/firebase-functions/lib/v1/index.js\"}"}}
+[debug] [2025-07-26T08:52:23.134Z] [runtime-status] [6575] Outgoing network have been stubbed. [{"name":"http","status":"mocked"},{"name":"http","status":"mocked"},{"name":"https","status":"mocked"},{"name":"https","status":"mocked"},{"name":"net","status":"mocked"}] {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-healthCheck"},"extension":{},"message":"[runtime-status] [6575] Outgoing network have been stubbed. [{\"name\":\"http\",\"status\":\"mocked\"},{\"name\":\"http\",\"status\":\"mocked\"},{\"name\":\"https\",\"status\":\"mocked\"},{\"name\":\"https\",\"status\":\"mocked\"},{\"name\":\"net\",\"status\":\"mocked\"}]"}}
+[debug] [2025-07-26T08:52:23.134Z] [runtime-status] [6575] Resolved module firebase-functions {"declared":true,"installed":true,"version":"4.9.0","resolution":"/Users/sahdasamier/Desktop/untitled folder 2/Clinic-/functions/node_modules/firebase-functions/lib/v1/index.js"} {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-healthCheck"},"extension":{},"message":"[runtime-status] [6575] Resolved module firebase-functions {\"declared\":true,\"installed\":true,\"version\":\"4.9.0\",\"resolution\":\"/Users/sahdasamier/Desktop/untitled folder 2/Clinic-/functions/node_modules/firebase-functions/lib/v1/index.js\"}"}}
+[debug] [2025-07-26T08:52:23.273Z] [runtime-status] [6575] Checked functions.config() {"config":{}} {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-healthCheck"},"extension":{},"message":"[runtime-status] [6575] Checked functions.config() {\"config\":{}}"}}
+[debug] [2025-07-26T08:52:23.273Z] [runtime-status] [6575] firebase-functions has been stubbed. {"functionsResolution":{"declared":true,"installed":true,"version":"4.9.0","resolution":"/Users/sahdasamier/Desktop/untitled folder 2/Clinic-/functions/node_modules/firebase-functions/lib/v1/index.js"}} {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-healthCheck"},"extension":{},"message":"[runtime-status] [6575] firebase-functions has been stubbed. {\"functionsResolution\":{\"declared\":true,\"installed\":true,\"version\":\"4.9.0\",\"resolution\":\"/Users/sahdasamier/Desktop/untitled folder 2/Clinic-/functions/node_modules/firebase-functions/lib/v1/index.js\"}}"}}
+[debug] [2025-07-26T08:52:23.273Z] [runtime-status] [6575] Resolved module firebase-functions {"declared":true,"installed":true,"version":"4.9.0","resolution":"/Users/sahdasamier/Desktop/untitled folder 2/Clinic-/functions/node_modules/firebase-functions/lib/v1/index.js"} {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-healthCheck"},"extension":{},"message":"[runtime-status] [6575] Resolved module firebase-functions {\"declared\":true,\"installed\":true,\"version\":\"4.9.0\",\"resolution\":\"/Users/sahdasamier/Desktop/untitled folder 2/Clinic-/functions/node_modules/firebase-functions/lib/v1/index.js\"}"}}
+[debug] [2025-07-26T08:52:23.274Z] [runtime-status] [6575] Resolved module firebase-admin {"declared":true,"installed":true,"version":"11.11.1","resolution":"/Users/sahdasamier/Desktop/untitled folder 2/Clinic-/functions/node_modules/firebase-admin/lib/index.js"} {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-healthCheck"},"extension":{},"message":"[runtime-status] [6575] Resolved module firebase-admin {\"declared\":true,\"installed\":true,\"version\":\"11.11.1\",\"resolution\":\"/Users/sahdasamier/Desktop/untitled folder 2/Clinic-/functions/node_modules/firebase-admin/lib/index.js\"}"}}
+[debug] [2025-07-26T08:52:23.274Z] [runtime-status] [6575] Resolved module firebase-functions {"declared":true,"installed":true,"version":"4.9.0","resolution":"/Users/sahdasamier/Desktop/untitled folder 2/Clinic-/functions/node_modules/firebase-functions/lib/v1/index.js"} {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-healthCheck"},"extension":{},"message":"[runtime-status] [6575] Resolved module firebase-functions {\"declared\":true,\"installed\":true,\"version\":\"4.9.0\",\"resolution\":\"/Users/sahdasamier/Desktop/untitled folder 2/Clinic-/functions/node_modules/firebase-functions/lib/v1/index.js\"}"}}
+[debug] [2025-07-26T08:52:23.275Z] [runtime-status] [6575] firebase-admin has been stubbed. {"adminResolution":{"declared":true,"installed":true,"version":"11.11.1","resolution":"/Users/sahdasamier/Desktop/untitled folder 2/Clinic-/functions/node_modules/firebase-admin/lib/index.js"}} {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-healthCheck"},"extension":{},"message":"[runtime-status] [6575] firebase-admin has been stubbed. {\"adminResolution\":{\"declared\":true,\"installed\":true,\"version\":\"11.11.1\",\"resolution\":\"/Users/sahdasamier/Desktop/untitled folder 2/Clinic-/functions/node_modules/firebase-admin/lib/index.js\"}}"}}
+[debug] [2025-07-26T08:52:23.276Z] [runtime-status] [6575] initializeApp(DEFAULT) {"storageBucket":"clinic-d9c0a.firebasestorage.app","projectId":"clinic-d9c0a"} {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-healthCheck"},"extension":{},"message":"[runtime-status] [6575] initializeApp(DEFAULT) {\"storageBucket\":\"clinic-d9c0a.firebasestorage.app\",\"projectId\":\"clinic-d9c0a\"}"}}
+[warn] ⚠  functions: The Cloud Firestore emulator is not running, so calls to Firestore will affect production. {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-healthCheck"},"extension":{},"message":"The Cloud Firestore emulator is not running, so calls to Firestore will affect production."}}
+[debug] [2025-07-26T08:52:23.282Z] [runtime-status] [6575] Functions runtime initialized. {"cwd":"/Users/sahdasamier/Desktop/untitled folder 2/Clinic-/functions","node_version":"20.18.3"} {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-healthCheck"},"extension":{},"message":"[runtime-status] [6575] Functions runtime initialized. {\"cwd\":\"/Users/sahdasamier/Desktop/untitled folder 2/Clinic-/functions\",\"node_version\":\"20.18.3\"}"}}
+[debug] [2025-07-26T08:52:23.283Z] [runtime-status] [6575] Listening to port: /var/folders/k1/5zyk6__j7_927hv4yvrpn5fc0000gn/T/fire_emu_410e1d8b23eb1aa7.sock {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-healthCheck"},"extension":{},"message":"[runtime-status] [6575] Listening to port: /var/folders/k1/5zyk6__j7_927hv4yvrpn5fc0000gn/T/fire_emu_410e1d8b23eb1aa7.sock"}}
+[debug] [2025-07-26T08:52:23.360Z] [worker-us-central1-healthCheck-38fc68f8-4958-47ed-8b68-fcc09914c60c]: IDLE {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-healthCheck"},"extension":{},"message":"[worker-us-central1-healthCheck-38fc68f8-4958-47ed-8b68-fcc09914c60c]: IDLE"}}
+[debug] [2025-07-26T08:52:23.360Z] [worker-pool] submitRequest(triggerId=us-central1-healthCheck) {"metadata":{"emulator":{"name":"functions"},"message":"[worker-pool] submitRequest(triggerId=us-central1-healthCheck)"}}
+[info] i  functions: Beginning execution of "us-central1-healthCheck" {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-healthCheck"},"extension":{},"message":"Beginning execution of \"us-central1-healthCheck\""}}
+[debug] [2025-07-26T08:52:23.360Z] [worker-us-central1-healthCheck-38fc68f8-4958-47ed-8b68-fcc09914c60c]: BUSY {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-healthCheck"},"extension":{},"message":"[worker-us-central1-healthCheck-38fc68f8-4958-47ed-8b68-fcc09914c60c]: BUSY"}}
+[warn] ⚠  Google API requested!
+   - URL: "https://oauth2.googleapis.com/token"
+   - Be careful, this may be a production service. {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-healthCheck"},"extension":{},"message":"Google API requested!\n   - URL: \"https://oauth2.googleapis.com/token\"\n   - Be careful, this may be a production service."}}
+[debug] [2025-07-26T08:52:24.566Z] Finishing up request with event=pause {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-healthCheck"},"extension":{},"message":"Finishing up request with event=pause"}}
+[info] i  functions: Finished "us-central1-healthCheck" in 1206.370041ms {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-healthCheck"},"extension":{},"message":"Finished \"us-central1-healthCheck\" in 1206.370041ms"}}
+[debug] [2025-07-26T08:52:24.567Z] [worker-us-central1-healthCheck-38fc68f8-4958-47ed-8b68-fcc09914c60c]: IDLE {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-healthCheck"},"extension":{},"message":"[worker-us-central1-healthCheck-38fc68f8-4958-47ed-8b68-fcc09914c60c]: IDLE"}}
+[debug] [2025-07-26T08:52:24.567Z] Finishing up request with event=finish {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-healthCheck"},"extension":{},"message":"Finishing up request with event=finish"}}
+[debug] [2025-07-26T08:52:24.567Z] Finishing up request with event=close {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-healthCheck"},"extension":{},"message":"Finishing up request with event=close"}}
+[debug] [2025-07-26T08:52:24.567Z] [work-queue] {"queuedWork":[],"queueLength":0,"runningWork":[],"workRunningCount":0}
+[debug] [2025-07-26T21:55:31.936Z] [worker-us-central1-healthCheck-38fc68f8-4958-47ed-8b68-fcc09914c60c]: exited {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-healthCheck"},"extension":{},"message":"[worker-us-central1-healthCheck-38fc68f8-4958-47ed-8b68-fcc09914c60c]: exited"}}
+[debug] [2025-07-26T21:55:31.972Z] [worker-us-central1-healthCheck-38fc68f8-4958-47ed-8b68-fcc09914c60c]: FINISHED {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-healthCheck"},"extension":{},"message":"[worker-us-central1-healthCheck-38fc68f8-4958-47ed-8b68-fcc09914c60c]: FINISHED"}}
+[debug] [2025-07-26T21:55:31.981Z] Received signal SIGHUP 1
+[info]  
+[info] i  emulators: Received SIGHUP for the first time. Starting a clean shutdown. 
+[info] i  emulators: Please wait for a clean shutdown or send the SIGHUP signal again to stop right now. 
+[debug] [2025-07-26T21:55:32.017Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.019Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.019Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.019Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.019Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.042Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.043Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.043Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.043Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.044Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.044Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.044Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.044Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.044Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.045Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.045Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.045Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.045Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.046Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.047Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.048Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.048Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.049Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.049Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.049Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.049Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.049Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.050Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.050Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.051Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.051Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.052Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.052Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.052Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.053Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.053Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.054Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.054Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.054Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.055Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.055Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.055Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.056Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.056Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.056Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.057Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.057Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.057Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.058Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.058Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.059Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.059Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.059Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.059Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.059Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.059Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.059Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.059Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.060Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.060Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.060Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.060Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.060Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.061Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[info] i  emulators: Shutting down emulators. {"metadata":{"emulator":{"name":"hub"},"message":"Shutting down emulators."}}
+[info] i  ui: Stopping Emulator UI {"metadata":{"emulator":{"name":"ui"},"message":"Stopping Emulator UI"}}
+[info] i  functions: Stopping Functions Emulator {"metadata":{"emulator":{"name":"functions"},"message":"Stopping Functions Emulator"}}
+[info] i  eventarc: Stopping Eventarc Emulator {"metadata":{"emulator":{"name":"eventarc"},"message":"Stopping Eventarc Emulator"}}
+[info] i  tasks: Stopping Cloud Tasks Emulator {"metadata":{"emulator":{"name":"tasks"},"message":"Stopping Cloud Tasks Emulator"}}
+[info] i  hub: Stopping emulator hub {"metadata":{"emulator":{"name":"hub"},"message":"Stopping emulator hub"}}
+[debug] [2025-07-26T21:55:32.071Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.071Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.071Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.071Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.071Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.071Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.071Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.071Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.072Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.072Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.072Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.072Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.072Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-07-26T21:55:32.072Z] Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Console.log (/Users/sahdasamier/.config/yarn/global/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/Users/sahdasamier/.config/yarn/global/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/Users/sahdasamier/.config/yarn/global/node_modules/readable-stream/lib/_stream_writable.js:390:139)
