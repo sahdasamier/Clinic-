@@ -155,31 +155,50 @@ export const GlobalDataProvider: React.FC<GlobalDataProviderProps> = ({ children
       try {
         console.log('🚀 Initializing Firebase Realtime Manager for user:', user.email);
         
-        // Import Firebase initialization function
+        // ✅ FIXED: Import optimized Firebase components directly
         const { initializeOptimizedFirebase, firebaseManager } = await import('../api/firebaseOptimized');
         
-        // Ensure Firebase is initialized with multiple retries
+        // ✅ ENHANCED: Ensure Firebase is initialized with better error handling
         let retries = 0;
-        const maxRetries = 5;
+        const maxRetries = 8; // Reduced from 5 since we have better initialization
         
         while (!firebaseManager.isReady() && retries < maxRetries) {
-          console.log(`⏳ Waiting for Firebase to initialize... (attempt ${retries + 1}/${maxRetries})`);
-          await initializeOptimizedFirebase();
+          console.log(`⏳ Waiting for optimized Firebase to initialize... (attempt ${retries + 1}/${maxRetries})`);
+          
+          try {
+            await initializeOptimizedFirebase();
+          } catch (initError) {
+            console.warn(`⚠️ Firebase initialization attempt ${retries + 1} failed:`, initError);
+          }
           
           if (!firebaseManager.isReady()) {
             retries++;
             if (retries < maxRetries) {
-              // Wait with exponential backoff
-              await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, retries)));
+              // Wait with exponential backoff, but cap at 2 seconds
+              const waitTime = Math.min(500 * Math.pow(1.8, retries), 2000);
+              await new Promise(resolve => setTimeout(resolve, waitTime));
             }
           }
         }
         
         if (!firebaseManager.isReady()) {
-          throw new Error('Firebase failed to initialize after multiple attempts');
+          throw new Error(`Firebase failed to initialize after ${maxRetries} attempts. Please check your network connection and Firebase configuration.`);
         }
         
-        console.log('✅ Firebase confirmed ready, proceeding with manager creation');
+        console.log('✅ Optimized Firebase confirmed ready, proceeding with manager creation');
+        
+        // ✅ ADDITIONAL CHECK: Verify we can access Firebase services
+        try {
+          const { getOptimizedFirestore } = await import('../api/firebaseOptimized');
+          const testDb = getOptimizedFirestore();
+          if (!testDb) {
+            throw new Error('Firestore instance is null');
+          }
+          console.log('✅ Firestore access verified');
+        } catch (testError) {
+          console.error('❌ Failed to verify Firestore access:', testError);
+          throw new Error('Firestore verification failed: ' + testError.message);
+        }
         
         const manager = new FirebaseRealtimeManager({
           userId: user.uid,
@@ -232,16 +251,20 @@ export const GlobalDataProvider: React.FC<GlobalDataProviderProps> = ({ children
         
       } catch (error) {
         console.error('❌ Failed to initialize Firebase Realtime Manager:', error);
+        
+        // ✅ IMPROVED: Provide more specific error messages
+        const errorMessage = error instanceof Error ? error.message : 'Unknown Firebase initialization error';
+        
         setState(prev => ({
           ...prev,
           errors: {
             ...prev.errors,
-            appointments: 'Firebase initialization failed',
-            patients: 'Firebase initialization failed',
-            payments: 'Firebase initialization failed',
-            inventory: 'Firebase initialization failed',
-            notifications: 'Firebase initialization failed',
-            clinics: 'Firebase initialization failed',
+            appointments: `Firebase initialization failed: ${errorMessage}`,
+            patients: `Firebase initialization failed: ${errorMessage}`,
+            payments: `Firebase initialization failed: ${errorMessage}`,
+            inventory: `Firebase initialization failed: ${errorMessage}`,
+            notifications: `Firebase initialization failed: ${errorMessage}`,
+            clinics: `Firebase initialization failed: ${errorMessage}`,
           },
           loading: {
             appointments: false,
@@ -252,6 +275,13 @@ export const GlobalDataProvider: React.FC<GlobalDataProviderProps> = ({ children
             clinics: false,
           }
         }));
+        
+        // ✅ NEW: Dispatch a global error event for debugging
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('firebaseInitializationError', {
+            detail: { error: errorMessage, timestamp: new Date() }
+          }));
+        }
       }
     };
 

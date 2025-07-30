@@ -9,11 +9,11 @@ interface AdminProtectedRouteProps {
 }
 
 const AdminProtectedRoute: React.FC<AdminProtectedRouteProps> = ({ children }) => {
-  const { user, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const location = useLocation();
 
   // Show loading spinner while checking auth state
-  if (loading) {
+  if (authLoading) {
     return (
       <Box
         sx={{

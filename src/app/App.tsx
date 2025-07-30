@@ -10,6 +10,7 @@ import { NotificationProvider as NotificationDataProvider } from "../contexts/No
 import { ensureDemoClinicExists } from "../scripts/initFirestore";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { updateDocumentDirection } from "../utils/i18nUtils";
+import ErrorBoundary from "../components/ErrorBoundary";
 import Router from "./Router";
 
 const AppContent: React.FC = () => {
@@ -48,7 +49,9 @@ const App: React.FC = () => (
           <SidebarProvider>
             <NotificationProvider>
               <NotificationDataProvider>
-                <AppContent />
+                <ErrorBoundary>
+                  <AppContent />
+                </ErrorBoundary>
               </NotificationDataProvider>
             </NotificationProvider>
           </SidebarProvider>

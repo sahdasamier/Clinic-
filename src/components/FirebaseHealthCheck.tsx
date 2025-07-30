@@ -24,7 +24,8 @@ import {
   ExpandLess,
   Refresh,
 } from '@mui/icons-material';
-import { auth, db, firebaseConfig } from '../api/firebase';
+import { auth, firebaseConfig } from '../api/firebase';
+import { getOptimizedFirestore, firebaseManager } from '../api/firebaseOptimized';
 import { initializeApp, deleteApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { collection, getDocs, limit, query, doc, setDoc } from 'firebase/firestore';
@@ -107,6 +108,10 @@ const FirebaseHealthCheck: React.FC = () => {
 
       // Test 3: Firestore Connection
       try {
+        if (!firebaseManager.isReady()) {
+          throw new Error('Firebase not ready yet');
+        }
+        const db = getOptimizedFirestore();
         const clinicsQuery = query(collection(db, 'clinics'), limit(1));
         const snapshot = await getDocs(clinicsQuery);
         addResult(
@@ -167,6 +172,10 @@ const FirebaseHealthCheck: React.FC = () => {
 
       // Test 6: Network Performance
       try {
+        if (!firebaseManager.isReady()) {
+          throw new Error('Firebase not ready yet');
+        }
+        const db = getOptimizedFirestore();
         const startTime = performance.now();
         await getDocs(query(collection(db, 'clinics'), limit(1)));
         const responseTime = performance.now() - startTime;

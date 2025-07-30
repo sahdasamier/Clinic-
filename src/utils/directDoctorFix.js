@@ -8,9 +8,14 @@ window.directDoctorFix = async function() {
   
   try {
     // Import Firebase functions
-    const { getFirestore, collection, getDocs, query, where, writeBatch, doc } = await import('firebase/firestore');
+    const { collection, getDocs, query, where, writeBatch, doc } = await import('firebase/firestore');
+    const { getOptimizedFirestore, firebaseManager } = await import('../api/firebaseOptimized');
     
-    const db = getFirestore();
+    if (!firebaseManager.isReady()) {
+      throw new Error('Firebase not ready - please wait for initialization');
+    }
+    
+    const db = getOptimizedFirestore();
     const batch = writeBatch(db);
     const clinicId = 'demo-clinic';
     

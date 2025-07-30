@@ -4,14 +4,19 @@
  * This utility fixes doctor assignment issues without using dynamic imports
  */
 
-import { getFirestore, collection, getDocs, query, where, updateDoc, doc } from 'firebase/firestore';
+import { collection, getDocs, query, where, updateDoc, doc } from 'firebase/firestore';
+import { getOptimizedFirestore, firebaseManager } from '../api/firebaseOptimized';
 
 // Direct Firebase operations for doctor assignment
 export const emergencyFixDoctorAssignment = async (clinicId: string = 'demo-clinic') => {
   console.log('🚀 Emergency doctor assignment fix starting...');
   
   try {
-    const db = getFirestore();
+    if (!firebaseManager.isReady()) {
+      throw new Error('Firebase not ready - please wait for initialization');
+    }
+    
+    const db = getOptimizedFirestore();
     
     // Get appointments
     console.log('📅 Fetching appointments...');

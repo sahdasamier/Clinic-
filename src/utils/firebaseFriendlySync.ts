@@ -1,12 +1,11 @@
 import { AppointmentService } from '../services/AppointmentService';
 import { PatientService } from '../services/PatientService';
-import { auth } from '../api/firebase';
-import { firebaseManager } from '../api/firebaseOptimized';
+import { getOptimizedAuth, firebaseManager } from '../api/firebaseOptimized';
 
 // Helper function to check if Firebase is ready
 const isFirebaseReady = (): boolean => {
   try {
-    return firebaseManager.isReady() && auth && typeof auth.currentUser !== 'undefined';
+    return firebaseManager.isReady() && getOptimizedAuth && typeof getOptimizedAuth().currentUser !== 'undefined';
   } catch (error) {
     console.log('Firebase not yet ready:', error);
     return false;
@@ -19,7 +18,11 @@ const getCurrentUser = () => {
     if (!isFirebaseReady()) {
       return null;
     }
-    return auth.currentUser;
+    try {
+      return getOptimizedAuth().currentUser;
+    } catch {
+      return null;
+    }
   } catch (error) {
     console.log('Error getting current user:', error);
     return null;
@@ -200,6 +203,7 @@ export class FirebaseFriendlySync {
       // Wait for auth state to be determined
       const waitForAuth = new Promise((resolve) => {
         try {
+          const auth = getOptimizedAuth();
           const unsubscribe = auth.onAuthStateChanged((user) => {
             unsubscribe();
             resolve(user);

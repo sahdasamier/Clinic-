@@ -12,11 +12,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children, 
   redirectTo = '/login' 
 }) => {
-  const { user, loading, initialized } = useAuth();
+  const { user, loading: authLoading, initialized } = useAuth();
   const location = useLocation();
 
   // Show loading spinner while auth is being initialized
-  if (!initialized || loading) {
+  if (!initialized || authLoading) {
     return (
       <Box
         sx={{

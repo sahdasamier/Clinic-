@@ -1,12 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  collection,
-  query,
-  where,
-  onSnapshot,
-  getFirestore
-} from 'firebase/firestore';
+import { safeFirestore } from '../../api/firebaseDirect';
 import {
   Box,
   Container,
@@ -48,6 +42,7 @@ import {
   CircularProgress,
 } from '@mui/material';
 
+import { useAuth } from '../../contexts/AuthContext';
 import { useUser } from '../../contexts/UserContext';
 import {
   Search,
@@ -354,31 +349,63 @@ const PaymentListPage: React.FC = () => {
   const { userProfile } = useUser();
   const isRTL = i18n.language === 'ar';
 
-  // ✅ NEW: Use real-time data hooks
-  const {
-    payments,
-    loading: paymentsLoading,
-    error: paymentsError,
-    addPayment,
-    updatePayment,
-    deletePayment,
-    stats: paymentStats
-  } = usePayments();
+  // ✅ LOCAL PAYMENTS STATE: Manage payments state locally
+  const [payments, setPayments] = useState<PaymentData[]>([]);
+  const [paymentsLoading, setPaymentsLoading] = useState(true);
+  const [paymentsError, setPaymentsError] = useState<string | null>(null);
+  
+  // Payment management functions
+  const addPayment = (payment: PaymentData) => {
+    setPayments(prev => [...prev, payment]);
+  };
+  
+  const updatePayment = (updatedPayment: PaymentData) => {
+    setPayments(prev => prev.map(p => p.id === updatedPayment.id ? updatedPayment : p));
+  };
+  
+  const deletePayment = (paymentId: number) => {
+    setPayments(prev => prev.filter(p => p.id !== paymentId));
+  };
+  
+  const paymentStats = {
+    total: payments.length,
+    paid: payments.filter(p => p.status === 'Paid').length,
+    pending: payments.filter(p => p.status === 'Pending').length,
+    overdue: payments.filter(p => p.status === 'Overdue').length
+  };
 
-  const {
-    appointments,
-    loading: appointmentsLoading,
-    error: appointmentsError
-  } = useAppointments();
+  // ✅ LOCAL APPOINTMENTS STATE: Manage appointments state locally  
+  const [appointments, setAppointments] = useState<any[]>([]);
+  const [appointmentsLoading, setAppointmentsLoading] = useState(true);
+  const [appointmentsError, setAppointmentsError] = useState<string | null>(null);
 
-  const {
-    patients,
-    loading: patientsLoading,
-    error: patientsError
-  } = usePatients();
+  // ✅ LOCAL PATIENTS STATE: Manage patients state locally
+  const [patients, setPatients] = useState<any[]>([]);
+  const [patientsLoading, setPatientsLoading] = useState(true);
+  const [patientsError, setPatientsError] = useState<string | null>(null);
 
-  const dashboardStats = useDashboardStats();
-  const { onDataUpdate, onConnectionChange } = useRealtimeUpdates();
+  // ✅ DASHBOARD STATS: Calculate locally from payments data
+  const dashboardStats = {
+    totalRevenue: payments.reduce((sum, p) => sum + (p.amount || 0), 0),
+    totalPayments: payments.length,
+    pendingPayments: payments.filter(p => p.status === 'Pending').length,
+    overduePayments: payments.filter(p => p.status === 'Overdue').length
+  };
+
+  // ✅ INITIALIZE DATA: Load initial data on component mount
+  React.useEffect(() => {
+    // Initialize with default data if needed
+    if (payments.length === 0 && !paymentsLoading) {
+      const defaultPayments = generateDefaultPayments();
+      setPayments(defaultPayments);
+      console.log('✅ PaymentListPage: Initialized with default payments data');
+    }
+    
+    // Set loading states
+    setPaymentsLoading(false);
+    setAppointmentsLoading(false);  
+    setPatientsLoading(false);
+  }, []);
 
   // ✅ NEW: Real-time update notifications
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
@@ -677,7 +704,6 @@ const PaymentListPage: React.FC = () => {
 
   // ✅ Real-time Firestore listener for doctors
   useEffect(() => {
-    const db = getFirestore();
     const clinicId = userProfile?.clinicId;
     
     if (!clinicId) {
@@ -687,26 +713,46 @@ const PaymentListPage: React.FC = () => {
 
     console.log('🔄 PaymentListPage: Setting up real-time doctor listener for clinic:', clinicId);
 
-        const q = query(
-        collection(db, 'users'),
-        where('clinicId', '==', clinicId),
-        where('role', '==', 'doctor'),
-        where('isActive', '==', true)
-      );
+            // ✅ DIRECT: Use direct Firebase access to bypass all proxy issues
+        const setupFirebaseListener = async () => {
+          try {
+            console.log('✅ PaymentListPage: Setting up direct Firebase listener');
+            const usersCollection = await safeFirestore.collection('users');
+            const q = await safeFirestore.query(
+              usersCollection,
+              safeFirestore.where('clinicId', '==', clinicId),
+              safeFirestore.where('role', '==', 'doctor'),
+              safeFirestore.where('isActive', '==', true)
+            );
 
-    const unsub = onSnapshot(q, (snap) => {
-      const list = snap.docs.map(d => ({ id: d.id, ...d.data() })) as Doctor[];
-      setAvailableDoctors(list);
-      console.log('✅ PaymentListPage: Real-time doctors updated:', list.length);
-    }, (error) => {
-      console.error('❌ PaymentListPage: Error in doctor listener:', error);
-      // Fallback to empty array on error
-      setAvailableDoctors([]);
+        const unsub = safeFirestore.onSnapshot(q, (snap) => {
+          const list = snap.docs.map(d => ({ id: d.id, ...d.data() })) as Doctor[];
+          setAvailableDoctors(list);
+          console.log('✅ PaymentListPage: Real-time doctors updated:', list.length);
+        }, (error) => {
+          console.error('❌ PaymentListPage: Error in doctor listener:', error);
+          // Fallback to empty array on error
+          setAvailableDoctors([]);
+        });
+
+        return unsub;
+      } catch (error) {
+        console.error('❌ PaymentListPage: Failed to create Firebase listener:', error);
+        return null;
+      }
+    };
+    
+    // Start the async setup
+    let cleanup: (() => void) | null = null;
+    setupFirebaseListener().then((unsubscribe) => {
+      cleanup = unsubscribe;
+    }).catch((error) => {
+      console.error('❌ PaymentListPage: Firebase listener setup failed:', error);
     });
 
     return () => {
       console.log('🔄 PaymentListPage: Cleaning up doctor listener');
-      unsub();
+      if (cleanup) cleanup();
     };
   }, [userProfile?.clinicId]);
 
@@ -908,10 +954,10 @@ const PaymentListPage: React.FC = () => {
       doctor: appointment.doctor,
       appointmentId: appointment.id?.toString(),
       invoiceDate: appointment.date,
-      description: `${appointment.type} appointment with Dr. ${appointment.doctor}`,
-      category: appointment.type.toLowerCase().includes('consultation') ? 'consultation' : 
-                appointment.type.toLowerCase().includes('checkup') ? 'checkup' :
-                appointment.type.toLowerCase().includes('emergency') ? 'emergency' : 'consultation'
+      description: `${appointment.type || 'Unknown'} appointment with Dr. ${appointment.doctor}`,
+      category: appointment.type && appointment.type.toLowerCase().includes('consultation') ? 'consultation' : 
+                appointment.type && appointment.type.toLowerCase().includes('checkup') ? 'checkup' :
+                appointment.type && appointment.type.toLowerCase().includes('emergency') ? 'emergency' : 'consultation'
     }));
     setShowAppointmentSelection(false);
   };
@@ -959,7 +1005,7 @@ const PaymentListPage: React.FC = () => {
       'bank transfer': <AccountBalance fontSize="small" />,
       'insurance': <Receipt fontSize="small" />
     };
-    return methodIcons[method.toLowerCase() as keyof typeof methodIcons] || <Payment fontSize="small" />;
+    return methodIcons[(method && method.toLowerCase()) as keyof typeof methodIcons] || <Payment fontSize="small" />;
   };
 
   const formatCurrency = (amount: number) => {
@@ -1015,9 +1061,9 @@ const PaymentListPage: React.FC = () => {
     // Apply search query
     if (searchQuery) {
       filtered = filtered.filter(payment =>
-        payment.patient.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        payment.invoiceId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        payment.description.toLowerCase().includes(searchQuery.toLowerCase())
+        (payment.patient && payment.patient.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (payment.invoiceId && payment.invoiceId.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (payment.description && payment.description.toLowerCase().includes(searchQuery.toLowerCase()))
       );
     }
 

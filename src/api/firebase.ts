@@ -23,55 +23,51 @@ const firebaseReady = initializeOptimizedFirebase().then(() => {
   throw error;
 });
 
-// Create services that wait for Firebase to be ready
-const createLazyService = (getService: () => any, serviceName: string) => {
-  let service: any = null;
-  let isInitialized = false;
+// ✅ SIMPLIFIED: Wait for Firebase to be ready, then export actual services
+let servicesReady = false;
+let _internalApp: any = null;
+let _internalFirestore: any = null;
+let _internalAuth: any = null;
+let _internalStorage: any = null;
+let _internalFunctions: any = null;
+
+// Wait for Firebase to be ready and then initialize services
+const initializeServices = async () => {
+  if (servicesReady) return;
   
-  const initializeService = () => {
-    if (!isInitialized && firebaseManager.isReady()) {
-      try {
-        service = getService();
-        isInitialized = true;
-      } catch (error) {
-        console.error(`Failed to initialize ${serviceName}:`, error);
-        throw error;
-      }
-    }
-    return service;
-  };
+  // Wait for Firebase to be ready
+  let retries = 0;
+  const maxRetries = 50; // 5 seconds max wait
   
-  return new Proxy({}, {
-    get(target, prop) {
-      // Try to initialize if not already done
-      if (!isInitialized) {
-        try {
-          initializeService();
-        } catch (error) {
-          // If Firebase isn't ready and this is a critical function call
-          if (prop === 'collection' || prop === 'doc') {
-            console.warn(`⚠️ ${serviceName} not ready for ${String(prop)}() call. This should not happen at module load time.`);
-          }
-          throw new Error(`${serviceName} not ready yet. Firebase is still initializing. Avoid calling ${String(prop)} at module load time.`);
-        }
-      }
-      
-      if (!service) {
-        throw new Error(`${serviceName} failed to initialize`);
-      }
-      
-      const value = service[prop];
-      return typeof value === 'function' ? value.bind(service) : value;
+  while (!firebaseManager.isReady() && retries < maxRetries) {
+    await new Promise(resolve => setTimeout(resolve, 100));
+    retries++;
+  }
+  
+  if (!firebaseManager.isReady()) {
+    throw new Error('Firebase initialization timeout after 5 seconds');
+  }
+  
+  // Now initialize all services
+  try {
+    _internalApp = firebaseManager.getApp();
+    _internalFirestore = getOptimizedFirestore();
+    _internalAuth = getOptimizedAuth();
+    _internalStorage = getOptimizedStorage();
+    _internalFunctions = getOptimizedFunctions();
+    
+    servicesReady = true;
+    console.log('✅ All Firebase services initialized and ready');
+  } catch (error) {
+    console.error('❌ Failed to initialize Firebase services:', error);
+    throw error;
     }
-  });
 };
 
-// Create service proxies
-const app = createLazyService(() => firebaseManager.getApp(), 'Firebase App');
-const firestore = createLazyService(() => getOptimizedFirestore(), 'Firestore');
-const auth = createLazyService(() => getOptimizedAuth(), 'Auth');
-const storage = createLazyService(() => getOptimizedStorage(), 'Storage');
-const functions = createLazyService(() => getOptimizedFunctions(), 'Functions');
+// Initialize services immediately
+initializeServices().catch(error => {
+  console.error('❌ Critical: Firebase services failed to initialize:', error);
+});
 
 // Optional services (can be null)
 let analytics: any = null;
@@ -103,15 +99,24 @@ import {
 
 export const authHelpers = {
   signIn: async (email: string, password: string) => {
-    return await signInWithEmailAndPassword(auth, email, password);
+    if (!servicesReady || !_internalAuth) {
+      throw new Error('🔥 Auth not ready for signIn');
+    }
+    return await signInWithEmailAndPassword(_internalAuth, email, password);
   },
   
   signUp: async (email: string, password: string) => {
-    return await createUserWithEmailAndPassword(auth, email, password);
+    if (!servicesReady || !_internalAuth) {
+      throw new Error('🔥 Auth not ready for signUp');
+    }
+    return await createUserWithEmailAndPassword(_internalAuth, email, password);
   },
   
   signOut: async () => {
-    return await firebaseSignOut(auth);
+    if (!servicesReady || !_internalAuth) {
+      throw new Error('🔥 Auth not ready for signOut');
+    }
+    return await firebaseSignOut(_internalAuth);
   }
 };
 
@@ -126,20 +131,126 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
-// Export for use in other files
-export { 
-  auth, 
-  firestore, 
-  storage, 
-  analytics, 
-  messaging, 
-  functions,
-  firebaseConfig,
-  app 
+// ✅ SAFE EXPORTS: Function-based exports that ensure services are ready
+export const getFirestore = () => {
+  if (!servicesReady || !_internalFirestore) {
+    throw new Error('🔥 Firestore not ready - please wait for Firebase initialization');
+  }
+  return _internalFirestore;
 };
 
-// Export firestore as db for backward compatibility
-export const db = firestore;
+export const getAuth = () => {
+  if (!servicesReady || !_internalAuth) {
+    throw new Error('🔥 Auth not ready - please wait for Firebase initialization');
+  }
+  return _internalAuth;
+};
+
+export const getStorage = () => {
+  if (!servicesReady || !_internalStorage) {
+    throw new Error('🔥 Storage not ready - please wait for Firebase initialization');
+  }
+  return _internalStorage;
+};
+
+export const getApp = () => {
+  if (!servicesReady || !_internalApp) {
+    throw new Error('🔥 App not ready - please wait for Firebase initialization');
+  }
+  return _internalApp;
+};
+
+export const getFunctions = () => {
+  if (!servicesReady || !_internalFunctions) {
+    throw new Error('🔥 Functions not ready - please wait for Firebase initialization');
+  }
+  return _internalFunctions;
+};
+
+// ✅ BACKWARD COMPATIBILITY: Direct exports that wait for services
+export { analytics, messaging, firebaseConfig };
+
+// ✅ SIMPLE AND RELIABLE: Direct function that returns actual Firestore instance
+export const getDb = () => {
+  if (!servicesReady || !_internalFirestore) {
+    throw new Error('🔥 Firestore not ready - please wait for Firebase initialization to complete');
+  }
+  return _internalFirestore;
+};
+
+// ✅ ES6 MODULE COMPATIBILITY: Export as const with Proxy
+export const db = new Proxy({}, {
+  get(target, prop) {
+    const instance = getDb();
+    const value = instance[prop];
+    if (typeof value === 'function') {
+      return value.bind(instance);
+    }
+    return value;
+  },
+  has(target, prop) {
+    try {
+      const instance = getDb();
+      return prop in instance;
+    } catch {
+      return false;
+    }
+  },
+  ownKeys(target) {
+    try {
+      const instance = getDb();
+      return Reflect.ownKeys(instance);
+    } catch {
+      return [];
+    }
+  },
+  getOwnPropertyDescriptor(target, prop) {
+    try {
+      const instance = getDb();
+      return Object.getOwnPropertyDescriptor(instance, prop);
+    } catch {
+      return undefined;
+    }
+  }
+});
+
+// ✅ SAFE BACKWARD COMPATIBILITY: Proxy-based exports for individual services
+// Rename internal variables to avoid conflicts
+let _app: any = null;
+let _firestore: any = null;
+let _auth: any = null;
+let _storage: any = null;
+let _functions: any = null;
+
+
+
+// Create safe proxies for the services
+const createServiceProxy = (serviceName: string, getServiceValue: () => any) => {
+  return new Proxy({}, {
+    get(target, prop) {
+      if (!servicesReady) {
+        throw new Error(`🔥 ${serviceName} not ready - please wait for Firebase initialization to complete`);
+      }
+      
+      const service = getServiceValue();
+      if (!service) {
+        throw new Error(`🔥 ${serviceName} failed to initialize`);
+      }
+      
+      const value = service[prop];
+      if (typeof value === 'function') {
+        return value.bind(service);
+      }
+      return value;
+    }
+  });
+};
+
+export const auth = createServiceProxy('Auth', () => _auth);
+export const firestore = db; // Use the same proxy as db
+export const storage = createServiceProxy('Storage', () => _storage);
+export const app = createServiceProxy('App', () => _app);
+export const functions = createServiceProxy('Functions', () => _functions);
 
 // Utility functions for offline persistence monitoring
 export const firestoreUtils = {

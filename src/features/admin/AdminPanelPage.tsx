@@ -425,7 +425,7 @@ const AdminPanelPage: React.FC = () => {
     }
     
     try {
-      const db = getFirestore();
+      const db = getOptimizedFirestore();
       await addDoc(collection(db, 'clinics'), {
         name: newClinic.name,
         isActive: true,

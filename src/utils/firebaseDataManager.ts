@@ -13,7 +13,7 @@ import {
   serverTimestamp,
   type Unsubscribe 
 } from 'firebase/firestore';
-import { db } from '../api/firebase';
+import { getOptimizedFirestore, firebaseManager } from '../api/firebaseOptimized';
 
 // ✅ COMPREHENSIVE FIREBASE DATA MANAGER
 // Handles real-time synchronization across all pages
@@ -85,6 +85,14 @@ class FirebaseDataManager {
   // Collections
   private paymentsCollection = 'payments';
   private appointmentsCollection = 'appointments';
+
+  // ✅ Helper method to get Firebase database instance
+  private getDb() {
+    if (!firebaseManager.isReady()) {
+      throw new Error('Firebase not ready - please wait for initialization');
+    }
+    return getOptimizedFirestore();
+  }
   private settingsCollection = 'clinicSettings';
 
   private constructor() {}
@@ -112,7 +120,7 @@ class FirebaseDataManager {
   public startPaymentListener(): void {
     if (!this.config?.clinicId) return;
 
-    const paymentsRef = collection(db, this.paymentsCollection);
+    const paymentsRef = collection(this.getDb(), this.paymentsCollection);
     const q = query(
       paymentsRef, 
       where('clinicId', '==', this.config.clinicId),
@@ -152,7 +160,7 @@ class FirebaseDataManager {
     if (!this.config?.clinicId) throw new Error('Firebase Data Manager not initialized');
 
     try {
-      const paymentsRef = collection(db, this.paymentsCollection);
+      const paymentsRef = collection(this.getDb(), this.paymentsCollection);
       const docRef = await addDoc(paymentsRef, {
         ...paymentData,
         clinicId: this.config.clinicId,
@@ -226,7 +234,7 @@ class FirebaseDataManager {
   public startAppointmentListener(): void {
     if (!this.config?.clinicId) return;
 
-    const appointmentsRef = collection(db, this.appointmentsCollection);
+    const appointmentsRef = collection(this.getDb(), this.appointmentsCollection);
     const q = query(
       appointmentsRef, 
       where('clinicId', '==', this.config.clinicId),
@@ -266,7 +274,7 @@ class FirebaseDataManager {
     if (!this.config?.clinicId) throw new Error('Firebase Data Manager not initialized');
 
     try {
-      const appointmentsRef = collection(db, this.appointmentsCollection);
+      const appointmentsRef = collection(this.getDb(), this.appointmentsCollection);
       const docRef = await addDoc(appointmentsRef, {
         ...appointmentData,
         clinicId: this.config.clinicId,
@@ -320,7 +328,7 @@ class FirebaseDataManager {
       await this.updateAppointment(appointmentId, { paymentStatus: paymentStatus as any });
       
       // Find and update related payments
-      const paymentsRef = collection(db, this.paymentsCollection);
+      const paymentsRef = collection(this.getDb(), this.paymentsCollection);
       const q = query(
         paymentsRef,
         where('appointmentId', '==', appointmentId),
@@ -410,7 +418,7 @@ class FirebaseDataManager {
     if (!this.config?.clinicId) return [];
 
     try {
-      const paymentsRef = collection(db, this.paymentsCollection);
+      const paymentsRef = collection(this.getDb(), this.paymentsCollection);
       const q = query(
         paymentsRef,
         where('clinicId', '==', this.config.clinicId),
@@ -439,7 +447,7 @@ class FirebaseDataManager {
     if (!this.config?.clinicId) return [];
 
     try {
-      const appointmentsRef = collection(db, this.appointmentsCollection);
+      const appointmentsRef = collection(this.getDb(), this.appointmentsCollection);
       const q = query(
         appointmentsRef,
         where('clinicId', '==', this.config.clinicId),

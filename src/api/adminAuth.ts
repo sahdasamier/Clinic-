@@ -1,4 +1,5 @@
-import React from 'react';
+
+import * as React from 'react';
 import { User } from 'firebase/auth';
 import { initializeApp, getApp, deleteApp, FirebaseApp } from 'firebase/app';
 import { 
@@ -13,7 +14,7 @@ import {
   setDoc, 
   serverTimestamp 
 } from 'firebase/firestore';
-import { firebaseConfig, db, auth } from './firebase';
+import { getOptimizedAuth, getOptimizedFirestore, firebaseManager } from './firebaseOptimized';
 import { SUPER_ADMIN_EMAILS } from '../utils/adminConfig';
 
 /**
@@ -52,6 +53,7 @@ export interface CreateUserResult {
 export const verifyAdminAuthentication = async (): Promise<{ isAdmin: boolean; error?: string }> => {
   try {
     // Check if user is authenticated
+    const auth = getOptimizedAuth();
     if (!auth.currentUser) {
       return { isAdmin: false, error: 'User not authenticated' };
     }
@@ -102,7 +104,9 @@ const createSecondaryApp = async (): Promise<{ app: FirebaseApp; auth: FirebaseA
   }
   
   // Create fresh secondary app
-  const secApp = initializeApp(firebaseConfig, secondaryAppName);
+  // Get Firebase config from optimized Firebase
+  const config = await import('./firebaseOptimized').then(m => m.validateFirebaseConfig());
+  const secApp = initializeApp(config as any, secondaryAppName);
   const secAuth = getAuth(secApp);
   
   console.log('🔧 Created secondary Firebase app');
@@ -115,6 +119,7 @@ const createSecondaryApp = async (): Promise<{ app: FirebaseApp; auth: FirebaseA
 const cleanupSecondaryApp = async (app: FirebaseApp, auth: FirebaseAuth): Promise<void> => {
   try {
     // Sign out any user from secondary auth
+    const auth = getOptimizedAuth();
     if (auth.currentUser) {
       await firebaseSignOut(auth);
     }
@@ -171,6 +176,7 @@ export const createUserWithSecondaryApp = async (userData: CreateUserData): Prom
     // ⚠️ IMPORTANT: Use PRIMARY app for Firestore operations (admin context)
     // This ensures the write operation uses the admin's credentials/claims
     // so that Firestore security rules recognize the admin privileges
+    const auth = getOptimizedAuth();
     const currentUser = auth.currentUser;
     if (!currentUser) {
       throw new Error('Admin session expired during user creation');
@@ -190,6 +196,7 @@ export const createUserWithSecondaryApp = async (userData: CreateUserData): Prom
       createdBy: currentUser.email || currentUser.uid
     };
 
+    const db = getOptimizedFirestore();
     await setDoc(doc(db, 'users', newUser.uid), userDoc);
     console.log('✅ Firestore user document created');
 
@@ -254,6 +261,7 @@ export const useAdminVerification = () => {
     checkAdminStatus();
 
     // Check when auth state changes
+    const auth = getOptimizedAuth();
     const unsubscribe = auth.onAuthStateChanged(() => {
       checkAdminStatus();
     });

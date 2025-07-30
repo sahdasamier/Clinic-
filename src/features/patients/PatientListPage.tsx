@@ -44,13 +44,7 @@ import {
   Alert,
   CircularProgress,
 } from '@mui/material';
-import {
-  collection,
-  query,
-  where,
-  onSnapshot,
-  getFirestore
-} from 'firebase/firestore';
+import { safeFirestore } from '../../api/firebaseDirect';
 import { useAuth } from '../../contexts/AuthContext';
 import { useUser } from '../../contexts/UserContext';
 
@@ -308,7 +302,6 @@ const PatientListPage: React.FC = () => {
 
   // ✅ Real-time Firestore listener for doctors (same as dashboard)
   useEffect(() => {
-    const db = getFirestore();
     const clinicId = userProfile?.clinicId;
     
     if (!clinicId) {
@@ -318,14 +311,18 @@ const PatientListPage: React.FC = () => {
 
     console.log('🔄 PatientList: Setting up real-time doctor listener for clinic:', clinicId);
 
-    const q = query(
-      collection(db, 'users'),
-      where('clinicId', '==', clinicId),
-      where('role', '==', 'doctor'),
-      where('isActive', '==', true)
-    );
+        // ✅ Use direct Firebase access
+    const setupListener = async () => {
+      try {
+        const usersCollection = await safeFirestore.collection('users');
+        const q = await safeFirestore.query(
+          usersCollection,
+          safeFirestore.where('clinicId', '==', clinicId),
+          safeFirestore.where('role', '==', 'doctor'),
+          safeFirestore.where('isActive', '==', true)
+        );
 
-    const unsub = onSnapshot(q, (snap) => {
+          const unsub = safeFirestore.onSnapshot(q, (snap) => {
       const list = snap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
       setAvailableDoctors(list);
       console.log('✅ PatientList: Real-time doctors updated:', {
@@ -343,10 +340,18 @@ const PatientListPage: React.FC = () => {
       setAvailableDoctors([]);
     });
 
-    return () => {
-      console.log('🔄 PatientList: Cleaning up doctor listener');
-      unsub();
+        return () => {
+          console.log('🔄 PatientList: Cleaning up doctor listener');
+          unsub();
+        };
+      } catch (error) {
+        console.error('❌ PatientList: Failed to setup Firebase listener:', error);
+        setAvailableDoctors([]);
+        return () => {}; // Return empty cleanup function
+      }
     };
+    
+    setupListener();
   }, [userProfile?.clinicId]);
 
   // ✅ Enhanced Debug and Fix Functions
@@ -651,7 +656,7 @@ const PatientListPage: React.FC = () => {
 
   // ✅ NEW: Direct Firebase connection test with fallback
   React.useEffect(() => {
-    if (!initialized || loading || !user || !userProfile) return;
+    if (!initialized || authLoading || !user || !userProfile) return;
 
     console.log('🔄 DIRECT TEST: Fetching Firebase data directly...');
     
@@ -792,8 +797,7 @@ const PatientListPage: React.FC = () => {
 
     // Cleanup on unmount
     return () => {
-      console.log('💚 Cleaning up Firebase Data Bridge...');
-      unsubscribe();
+      console.log('💚 Cleaning up event listeners...');
       window.removeEventListener('appointmentPaymentStatusChanged', handleAppointmentPaymentStatusChange as EventListener);
       window.removeEventListener('appointmentCompletedWithPayment', handleAppointmentCompletion as EventListener);
       window.removeEventListener('paymentStatusChanged', handlePaymentStatusChange as EventListener);
@@ -967,7 +971,7 @@ const PatientListPage: React.FC = () => {
 
   // ✅ FIREBASE-FRIENDLY AUTO-SYNC: Only run once when needed
   React.useEffect(() => {
-    if (!initialized || loading || !user || !userProfile) return;
+    if (!initialized || authLoading || !user || !userProfile) return;
     
     // Only run sync once when we clearly have the issue and page is loaded
     if (isDataLoaded && appointments.length > 0 && patients.length === 0 && syncStatus === 'idle') {
@@ -984,7 +988,7 @@ const PatientListPage: React.FC = () => {
         }
       }, 8000); // Wait for auto-service to try first
     }
-  }, [initialized, loading, user, userProfile, isDataLoaded, appointments.length, patients.length, syncStatus]);
+  }, [initialized, authLoading, user, userProfile, isDataLoaded, appointments.length, patients.length, syncStatus]);
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
@@ -1272,7 +1276,7 @@ const PatientListPage: React.FC = () => {
       const patientData = {
         name: newPatientData.name,
         phone: newPatientData.phone,
-        email: newPatientData.email || `${newPatientData.name.toLowerCase().replace(/\s+/g, '.')}@example.com`,
+        email: newPatientData.email || `${newPatientData.name ? newPatientData.name.toLowerCase().replace(/\s+/g, '.') : 'patient'}@example.com`,
         age: parseInt(newPatientData.age) || 30,
         gender: (newPatientData.gender as 'male' | 'female' | 'other') || 'other',
         address: newPatientData.address || 'Address not provided',
@@ -1795,14 +1799,14 @@ const PatientListPage: React.FC = () => {
     filtered = filtered.filter(patient => {
       // Search query filter
       const matchesSearch = searchQuery === '' || 
-        patient.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        patient.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        patient.condition?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        patient.phone?.toLowerCase().includes(searchQuery.toLowerCase());
+        (patient.name && patient.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (patient.email && patient.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (patient.condition && patient.condition.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (patient.phone && patient.phone.toLowerCase().includes(searchQuery.toLowerCase()));
 
       // Gender filter
       const matchesGender = activeFilters.gender === '' || 
-        patient.gender?.toLowerCase() === activeFilters.gender.toLowerCase();
+        (patient.gender && patient.gender.toLowerCase() === activeFilters.gender.toLowerCase());
 
       // Age range filter
       const matchesAge = activeFilters.ageRange === '' || (() => {
@@ -1819,7 +1823,7 @@ const PatientListPage: React.FC = () => {
 
       // Condition filter
       const matchesCondition = activeFilters.condition === '' ||
-        patient.condition?.toLowerCase().includes(activeFilters.condition.toLowerCase());
+        (patient.condition && patient.condition.toLowerCase().includes(activeFilters.condition.toLowerCase()));
 
       // Status filter
       const matchesStatus = activeFilters.status === '' ||

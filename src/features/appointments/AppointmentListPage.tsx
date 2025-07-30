@@ -1,12 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  collection,
-  query,
-  where,
-  onSnapshot,
-  getFirestore
-} from 'firebase/firestore';
+import { safeFirestore } from '../../api/firebaseDirect';
 import {
   Box,
   Container,
@@ -323,6 +317,14 @@ const AppointmentListPage: React.FC = () => {
   // ✅ NEW: Real-time update notifications
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [updateCount, setUpdateCount] = useState(0);
+
+  // ✅ Legacy appointment state (for compatibility with existing code)
+  const [appointmentList, setAppointmentList] = useState<Appointment[]>([]);
+  const [firebaseAppointments, setFirebaseAppointments] = useState<any[]>([]);
+  const [dataLoading, setDataLoading] = useState(true);
+  const [firebaseConnected, setFirebaseConnected] = useState(false);
+  const [availableDoctors, setAvailableDoctors] = useState<Doctor[]>([]);
+  const [availablePatients, setAvailablePatients] = useState<any[]>([]);
   
   // Local UI state
   const [tabValue, setTabValue] = useState(0);
@@ -396,6 +398,15 @@ const AppointmentListPage: React.FC = () => {
     });
   }, [user, userProfile, appointments.length, patients.length, dashboardStats, lastUpdate, updateCount]);
 
+  // ✅ Sync hook data with legacy appointmentList state
+  useEffect(() => {
+    if (appointments && appointments.length > 0) {
+      setAppointmentList(appointments);
+      setDataLoading(false);
+      setFirebaseConnected(true);
+    }
+  }, [appointments]);
+
   // ✅ NEW: Listen for appointment payment status sync events
   useEffect(() => {
     const handleAppointmentPaymentStatusSync = (event: CustomEvent) => {
@@ -414,8 +425,7 @@ const AppointmentListPage: React.FC = () => {
 
     // Cleanup on unmount
     return () => {
-      console.log('💚 AppointmentListPage: Cleaning up Firebase data bridge...');
-      unsubscribe();
+      console.log('💚 AppointmentListPage: Cleaning up event listeners...');
       window.removeEventListener('paymentStatusChanged', handlePaymentStatusChange as EventListener);
       window.removeEventListener('appointmentPaymentStatusSynced', handleAppointmentPaymentStatusSync as EventListener);
     };
@@ -585,7 +595,6 @@ const AppointmentListPage: React.FC = () => {
 
   // ✅ Real-time Firestore listener for doctors
   useEffect(() => {
-    const db = getFirestore();
     const clinicId = userProfile?.clinicId;
     
     if (!clinicId) {
@@ -595,14 +604,18 @@ const AppointmentListPage: React.FC = () => {
 
     console.log('🔄 AppointmentListPage: Setting up real-time doctor listener for clinic:', clinicId);
 
-    const q = query(
-      collection(db, 'users'),
-      where('clinicId', '==', clinicId),
-      where('role', '==', 'doctor'),
-      where('isActive', '==', true)
-    );
+        // ✅ Use direct Firebase access
+    const setupListener = async () => {
+      try {
+        const usersCollection = await safeFirestore.collection('users');
+        const q = await safeFirestore.query(
+          usersCollection,
+          safeFirestore.where('clinicId', '==', clinicId),
+          safeFirestore.where('role', '==', 'doctor'),
+          safeFirestore.where('isActive', '==', true)
+        );
 
-    const unsub = onSnapshot(q, (snap) => {
+          const unsub = safeFirestore.onSnapshot(q, (snap) => {
       const list = snap.docs.map(d => ({ id: d.id, ...d.data() })) as Doctor[];
       setAvailableDoctors(list);
       console.log('✅ AppointmentListPage: Real-time doctors updated:', JSON.stringify({
@@ -682,10 +695,18 @@ const AppointmentListPage: React.FC = () => {
       setAvailableDoctors([]);
     });
 
-    return () => {
-      console.log('🔄 AppointmentListPage: Cleaning up doctor listener');
-      unsub();
+        return () => {
+          console.log('🔄 AppointmentListPage: Cleaning up doctor listener');
+          unsub();
+        };
+      } catch (error) {
+        console.error('❌ AppointmentListPage: Failed to setup Firebase listener:', error);
+        setAvailableDoctors([]);
+        return () => {}; // Return empty cleanup function
+      }
     };
+    
+    setupListener();
   }, [userProfile?.clinicId, appointmentList]);
 
   // ✅ Additional setup - placeholder for future enhancements
@@ -1020,8 +1041,8 @@ const AppointmentListPage: React.FC = () => {
         date: new Date().toISOString().split('T')[0],
         dueDate: appointment.date,
         method: 'cash',
-        description: `Payment for completed ${appointment.type} appointment`,
-        category: appointment.type.toLowerCase(),
+        description: `Payment for completed ${appointment.type || 'unknown'} appointment`,
+        category: appointment.type ? appointment.type.toLowerCase() : 'general',
         invoiceId: `INV-${Date.now()}-${appointment.id.slice(-6)}`,
         paidAmount: 200,
         includeVAT: false,
@@ -1230,16 +1251,16 @@ const AppointmentListPage: React.FC = () => {
   const getFilteredAppointments = () => {
     let filtered = appointments.filter(appointment => {
       const matchesSearch = searchQuery === '' || 
-        appointment.patient.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        appointment.doctor.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        appointment.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        appointment.phone?.toLowerCase().includes(searchQuery.toLowerCase());
+        (appointment.patient && appointment.patient.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (appointment.doctor && appointment.doctor.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (appointment.type && appointment.type.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (appointment.phone && appointment.phone.toLowerCase().includes(searchQuery.toLowerCase()));
 
       const matchesStatus = activeFilters.status === '' ||
         appointment.status === activeFilters.status;
 
       const matchesType = activeFilters.type === '' ||
-        appointment.type.toLowerCase().includes(activeFilters.type.toLowerCase());
+        (appointment.type && appointment.type.toLowerCase().includes(activeFilters.type.toLowerCase()));
 
       const matchesPriority = activeFilters.priority === '' ||
         appointment.priority === activeFilters.priority;
@@ -1249,7 +1270,7 @@ const AppointmentListPage: React.FC = () => {
         (activeFilters.completed === 'pending' && !appointment.completed);
 
       const matchesDoctor = activeFilters.doctor === '' ||
-        appointment.doctor.toLowerCase().includes(activeFilters.doctor.toLowerCase());
+        (appointment.doctor && appointment.doctor.toLowerCase().includes(activeFilters.doctor.toLowerCase()));
 
       return matchesSearch && matchesStatus && matchesType && matchesPriority && matchesCompleted && matchesDoctor;
     });
@@ -2450,7 +2471,7 @@ const AppointmentListPage: React.FC = () => {
                              <TableCell>
                                <Tooltip title={t('click_to_change_type')} arrow>
                                  <Chip
-                                   label={t(appointment.type.toLowerCase().replace(/\s+/g, '_'))}
+                                   label={t(appointment.type ? appointment.type.toLowerCase().replace(/\s+/g, '_') : 'unknown')}
                                    size="small"
                                    variant="outlined"
                                    color="primary"
@@ -2687,7 +2708,7 @@ const AppointmentListPage: React.FC = () => {
                                        {appointment.patient}
                                      </Typography>
                                      <Typography variant="body2" color="text.secondary">
-                                       {t(appointment.type.toLowerCase().replace(/\s+/g, '_'))}
+                                       {t(appointment.type ? appointment.type.toLowerCase().replace(/\s+/g, '_') : 'unknown')}
                                      </Typography>
                                    </Box>
                                  </Box>
@@ -2997,7 +3018,7 @@ const AppointmentListPage: React.FC = () => {
                                </Typography>
                              </Box>
                              <Typography variant="caption" sx={{ opacity: 0.9, display: 'block' }}>
-                               {appointment.time} • {t(appointment.type.toLowerCase().replace(/\s+/g, '_'))}
+                               {appointment.time} • {t(appointment.type ? appointment.type.toLowerCase().replace(/\s+/g, '_') : 'unknown')}
                              </Typography>
                              <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                <Chip 

@@ -13,7 +13,14 @@ import {
 } from 'firebase/firestore';
 import { type Auth } from 'firebase/auth';
 import { type Functions } from 'firebase/functions';
-import { getOptimizedFirestore, getOptimizedAuth, getOptimizedFunctions } from '../api/firebaseOptimized';
+
+// ✅ FIXED: Import from the optimized Firebase instead of the proxy
+import { 
+  getOptimizedFirestore, 
+  getOptimizedAuth, 
+  getOptimizedFunctions,
+  firebaseManager 
+} from '../api/firebaseOptimized';
 
 // Configuration interface
 interface FirebaseRealtimeConfig {
@@ -61,24 +68,54 @@ export class FirebaseRealtimeManager {
     { name: 'notifications', enableRealtime: true, cacheDuration: 60000 },
   ];
 
-  // Lazy-loaded getters for Firebase services
+  // ✅ FIXED: Getters now use the actual optimized Firebase services
   private get db(): Firestore {
     if (!this._db) {
-      this._db = getOptimizedFirestore();
+      if (!firebaseManager.isReady()) {
+        throw new Error('Firebase Firestore not ready yet. Please wait for initialization.');
+      }
+      
+      try {
+        this._db = getOptimizedFirestore();
+        console.log('✅ FirebaseRealtimeManager: Got Firestore instance');
+      } catch (error) {
+        console.error('❌ Failed to get Firestore instance:', error);
+        throw new Error('Firebase Firestore failed to initialize');
+      }
     }
     return this._db;
   }
 
   private get auth(): Auth {
     if (!this._auth) {
-      this._auth = getOptimizedAuth();
+      if (!firebaseManager.isReady()) {
+        throw new Error('Firebase Auth not ready yet. Please wait for initialization.');
+      }
+      
+      try {
+        this._auth = getOptimizedAuth();
+        console.log('✅ FirebaseRealtimeManager: Got Auth instance');
+      } catch (error) {
+        console.error('❌ Failed to get Auth instance:', error);
+        throw new Error('Firebase Auth failed to initialize');
+      }
     }
     return this._auth;
   }
 
   private get functions(): Functions {
     if (!this._functions) {
-      this._functions = getOptimizedFunctions();
+      if (!firebaseManager.isReady()) {
+        throw new Error('Firebase Functions not ready yet. Please wait for initialization.');
+      }
+      
+      try {
+        this._functions = getOptimizedFunctions();
+        console.log('✅ FirebaseRealtimeManager: Got Functions instance');
+      } catch (error) {
+        console.error('❌ Failed to get Functions instance:', error);
+        throw new Error('Firebase Functions failed to initialize');
+      }
     }
     return this._functions;
   }
@@ -99,6 +136,10 @@ export class FirebaseRealtimeManager {
 
   private async initialize(): Promise<void> {
     try {
+      // Wait for Firebase services to be ready before proceeding
+      console.log('⏳ Waiting for Firebase services to be ready...');
+      await this.waitForFirebaseReady();
+      
       if (this.EMERGENCY_MODE) {
         console.error('🚨 Initializing Firebase in EMERGENCY MODE (fetch-only)');
         this.connectionStatus = 'disconnected';
@@ -119,6 +160,43 @@ export class FirebaseRealtimeManager {
     } catch (error) {
       console.error('❌ Failed to initialize Firebase:', error);
       this.config.onError('initialization', `Failed: ${error}`);
+    }
+  }
+
+  private async waitForFirebaseReady(): Promise<void> {
+    const maxRetries = 15; // ✅ INCREASED: More retries for better reliability
+    let retries = 0;
+
+    while (retries < maxRetries) {
+      try {
+        // ✅ FIXED: Check if firebaseManager is ready first
+        if (!firebaseManager.isReady()) {
+          throw new Error('Firebase manager not ready yet');
+        }
+        
+        // Try to access the Firebase services - this will throw if not ready
+        const testDb = this.db;
+        const testAuth = this.auth;
+        
+        // ✅ ADDITIONAL CHECK: Verify we got actual Firestore instance
+        if (!testDb || typeof testDb !== 'object') {
+          throw new Error('Invalid Firestore instance received');
+        }
+        
+        console.log('✅ Firebase services confirmed ready and valid');
+        return;
+      } catch (error) {
+        retries++;
+        console.log(`⏳ Firebase not ready yet (attempt ${retries}/${maxRetries}): ${error}`);
+        
+        if (retries >= maxRetries) {
+          throw new Error(`Firebase services failed to initialize after ${maxRetries} retries: ${error}`);
+        }
+        
+        // ✅ IMPROVED: Wait with exponential backoff, but cap the wait time
+        const waitTime = Math.min(500 * Math.pow(1.5, retries), 3000);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      }
     }
   }
 

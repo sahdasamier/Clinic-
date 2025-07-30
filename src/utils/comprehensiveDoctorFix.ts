@@ -5,7 +5,8 @@
  * It handles "Dr. Current Doctor" placeholders, invalid doctor IDs, and missing patient doctor info.
  */
 
-import { getFirestore, collection, getDocs, query, where, updateDoc, doc, writeBatch } from 'firebase/firestore';
+import { collection, getDocs, query, where, updateDoc, doc, writeBatch } from 'firebase/firestore';
+import { getOptimizedFirestore, firebaseManager } from '../api/firebaseOptimized';
 
 export interface FixResult {
   success: boolean;
@@ -27,7 +28,11 @@ export const comprehensiveDoctorFix = async (clinicId: string = 'demo-clinic'): 
   console.log('🚀 Starting comprehensive doctor fix...');
   
   try {
-    const db = getFirestore();
+    if (!firebaseManager.isReady()) {
+      throw new Error('Firebase not ready - please wait for initialization');
+    }
+    
+    const db = getOptimizedFirestore();
     const batch = writeBatch(db);
     
     // 1. Get all available doctors
@@ -328,7 +333,11 @@ export const diagnoseDoctorIssues = async (clinicId: string = 'demo-clinic') => 
   console.log('🔍 Diagnosing doctor issues...');
   
   try {
-    const db = getFirestore();
+    if (!firebaseManager.isReady()) {
+      throw new Error('Firebase not ready - please wait for initialization');
+    }
+    
+    const db = getOptimizedFirestore();
     
     // Get available doctors
     const doctorsQuery = query(

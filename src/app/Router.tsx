@@ -27,8 +27,7 @@ import SettingsPage from "../features/settings/SettingsPage";
 import SystemIntegrationTest from "../components/SystemIntegrationTest";
 import CrossPageTestComponent from "../components/CrossPageTestComponent";
 import RealtimeDataDashboard from "../components/RealtimeDataDashboard";
-// Legacy component commented out for clean build
-// import AppointmentSchedulingPage from "../features/DoctorScheduling";
+import DoctorSchedulingPage from "../features/DoctorScheduling";
 
 const Router: React.FC = () => {
   return (
@@ -185,9 +184,7 @@ const Router: React.FC = () => {
             <ClinicAccessGuard>
               <Layout>
                 <EnhancedRouteGuard feature="doctor_scheduling" level="read">
-                  {/* Legacy component commented out for clean build */}
-                  {/* <AppointmentSchedulingPage /> */}
-                  <div>Doctor Scheduling temporarily disabled</div>
+                  <DoctorSchedulingPage />
                 </EnhancedRouteGuard>
               </Layout>
             </ClinicAccessGuard>

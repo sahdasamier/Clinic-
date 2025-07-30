@@ -3,13 +3,18 @@
  * Fixes the specific issues: "Dr. Current Doctor", invalid IDs, missing patient doctors
  */
 
-import { getFirestore, collection, getDocs, query, where, writeBatch, doc } from 'firebase/firestore';
+import { collection, getDocs, query, where, writeBatch, doc } from 'firebase/firestore';
+import { getOptimizedFirestore, firebaseManager } from '../api/firebaseOptimized';
 
 export const quickFixDoctorIssues = async () => {
   console.log('🚀 Quick Doctor Fix Starting...');
   
   try {
-    const db = getFirestore();
+    if (!firebaseManager.isReady()) {
+      throw new Error('Firebase not ready - please wait for initialization');
+    }
+    
+    const db = getOptimizedFirestore();
     const batch = writeBatch(db);
     const clinicId = 'demo-clinic';
     
