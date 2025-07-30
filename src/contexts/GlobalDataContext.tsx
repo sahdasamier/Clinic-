@@ -2,7 +2,9 @@ import React, { createContext, useContext, useEffect, useState, useCallback, Rea
 import { User } from 'firebase/auth';
 import { useAuth } from './AuthContext';
 import { FirebaseRealtimeManager } from '../services/FirebaseRealtimeManager';
-import { Appointment, Patient, Payment, InventoryItem, Notification, Clinic } from '../types/models';
+import { Appointment, Patient, Notification, Clinic } from '../types/models';
+import { Payment } from '../services/PaymentService';
+import { InventoryItem } from '../services/InventoryService';
 
 // Global data state interface
 interface GlobalDataState {
@@ -211,6 +213,23 @@ export const GlobalDataProvider: React.FC<GlobalDataProviderProps> = ({ children
         setRealtimeManager(manager);
         console.log('✅ Firebase Realtime Manager initialized successfully');
         
+        // Expose debugging functions to window
+        if (typeof window !== 'undefined') {
+          (window as any).restartFirebaseManager = async () => {
+            console.log('🔄 Manual restart triggered via debug console...');
+            await manager.forceRestart();
+          };
+          (window as any).getFirebaseManagerStatus = () => {
+            console.log('📊 Firebase Manager Status:');
+            const status = manager.getManagerStatus();
+            console.table(status);
+            return status;
+          };
+          console.log('🔧 Debug functions available:');
+          console.log('   - window.restartFirebaseManager() - Force restart manager');
+          console.log('   - window.getFirebaseManagerStatus() - Get detailed status');
+        }
+        
       } catch (error) {
         console.error('❌ Failed to initialize Firebase Realtime Manager:', error);
         setState(prev => ({
@@ -242,7 +261,7 @@ export const GlobalDataProvider: React.FC<GlobalDataProviderProps> = ({ children
     return () => {
       if (realtimeManager) {
         console.log('🔄 Cleaning up Firebase Realtime Manager');
-        realtimeManager.cleanup();
+        (realtimeManager as any).cleanup?.();
       }
     };
   }, [user, isAuthenticated, realtimeManager]);
@@ -280,7 +299,7 @@ export const GlobalDataProvider: React.FC<GlobalDataProviderProps> = ({ children
       totalPatients: state.patients.length,
       totalRevenue: state.payments.reduce((sum, payment) => sum + (payment.amount || 0), 0),
       lowStockItems: state.inventory.filter(item => 
-        (item.currentStock || 0) <= (item.minStock || 0)
+        (item.quantity || 0) <= (item.minQuantity || 0)
       ).length,
       unreadNotifications: state.notifications.filter(notif => !notif.read).length,
     };
@@ -444,5 +463,7 @@ export function useGlobalData() {
   }
   return context;
 }
+
+
 
 export default GlobalDataContext; 

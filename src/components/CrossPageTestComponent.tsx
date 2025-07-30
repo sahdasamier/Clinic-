@@ -313,14 +313,18 @@ const CrossPageTestComponent: React.FC = () => {
 
         case 'create-payment':
           result = await addPayment({
-            patientName: 'CrossPage TestPatient',
-            doctorName: 'CrossPage TestDoctor',
+            patient: 'CrossPage TestPatient',
+            doctor: 'CrossPage TestDoctor',
             amount: 250,
             currency: 'USD',
             status: 'pending',
             method: 'credit_card',
             description: 'Cross-page sync test payment',
-            clinicId: 'test-clinic'
+            clinicId: 'test-clinic',
+            date: new Date().toISOString().split('T')[0],
+            isActive: true,
+            createdAt: new Date(),
+            updatedAt: new Date()
           });
           break;
 

@@ -309,12 +309,12 @@ const RevenueProfitTrendWidget: React.FC<RevenueProfitTrendWidgetProps> = ({
         data.paidCount += 1;
         
         if (debugMode && payment.status !== 'paid') {
-          console.log(`🔧 Debug mode: Including ${payment.status} payment of EGP ${payment.amount} from ${payment.doctor} for period ${key}`);
+          console.log(`🔧 Debug mode: Including ${payment.status} payment of EGP ${payment.amount} from ${payment.doctor || 'Unknown Doctor'} for period ${key}`);
         } else if (payment.status === 'paid') {
-          console.log(`💰 Normal mode: Including paid payment of EGP ${payment.amount} from ${payment.doctor} for period ${key}`);
+          console.log(`💰 Normal mode: Including paid payment of EGP ${payment.amount} from ${payment.doctor || 'Unknown Doctor'} for period ${key}`);
         }
       } else {
-        console.log(`❌ Excluding ${payment.status} payment of EGP ${payment.amount} from ${payment.doctor} (not in debug mode)`);
+        console.log(`❌ Excluding ${payment.status} payment of EGP ${payment.amount} from ${payment.doctor || 'Unknown Doctor'} (not in debug mode)`);
       }
     });
 

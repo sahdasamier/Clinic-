@@ -1,26 +1,18 @@
 import {
   collection,
   doc,
-  onSnapshot,
-  addDoc,
-  updateDoc,
-  deleteDoc,
+  getDocs,
   query,
   where,
   orderBy,
-  serverTimestamp,
-  writeBatch,
-  getDocs,
-  enableNetwork,
-  disableNetwork,
-  type Unsubscribe,
-  type DocumentData,
-  type QueryConstraint,
-  type FirestoreError,
+  onSnapshot,
+  runTransaction,
   type Firestore,
+  type Unsubscribe,
+  type Transaction,
 } from 'firebase/firestore';
-import { httpsCallable, type Functions } from 'firebase/functions';
 import { type Auth } from 'firebase/auth';
+import { type Functions } from 'firebase/functions';
 import { getOptimizedFirestore, getOptimizedAuth, getOptimizedFunctions } from '../api/firebaseOptimized';
 
 // Configuration interface
@@ -36,12 +28,8 @@ interface FirebaseRealtimeConfig {
 // Collection configuration
 interface CollectionConfig {
   name: string;
-  filters: QueryConstraint[];
-  orderBy?: { field: string; direction: 'asc' | 'desc' };
   enableRealtime: boolean;
-  cacheDuration: number; // milliseconds
-  retryCount: number;
-  maxRetries: number;
+  cacheDuration: number;
 }
 
 // Cache entry interface
@@ -56,135 +44,54 @@ export class FirebaseRealtimeManager {
   private _auth: Auth | null = null;
   private _functions: Functions | null = null;
   private config: FirebaseRealtimeConfig;
-  private listeners = new Map<string, Unsubscribe>();
   private cache = new Map<string, CacheEntry>();
   private connectionStatus: 'connected' | 'disconnected' | 'reconnecting' = 'disconnected';
   private isInitialized = false;
-  private retryTimeouts = new Map<string, NodeJS.Timeout>();
-  private readonly MAX_RETRIES = 3;
-  private readonly RETRY_DELAY = 5000; // 5 seconds
-  private readonly LISTENER_CLEANUP_DELAY = 1000; // 1 second
+  private unsubscribes = new Map<string, Unsubscribe>();
+
+  // ✅ EMERGENCY MODE DISABLED - Normal operations restored
+  private readonly EMERGENCY_MODE = false;
+
+  // Collections with realtime enabled
+  private collections: CollectionConfig[] = [
+    { name: 'appointments', enableRealtime: true, cacheDuration: 300000 },
+    { name: 'patients', enableRealtime: true, cacheDuration: 600000 },
+    { name: 'payments', enableRealtime: true, cacheDuration: 300000 },
+    { name: 'inventory', enableRealtime: true, cacheDuration: 900000 },
+    { name: 'notifications', enableRealtime: true, cacheDuration: 60000 },
+  ];
 
   // Lazy-loaded getters for Firebase services
   private get db(): Firestore {
     if (!this._db) {
-      try {
-        this._db = getOptimizedFirestore();
-      } catch (error) {
-        console.warn('⚠️ Firestore not yet initialized, retrying...', error);
-        throw new Error('Firestore not initialized');
-      }
+      this._db = getOptimizedFirestore();
     }
     return this._db;
   }
 
   private get auth(): Auth {
     if (!this._auth) {
-      try {
-        this._auth = getOptimizedAuth();
-      } catch (error) {
-        console.warn('⚠️ Auth not yet initialized, retrying...', error);
-        throw new Error('Auth not initialized');
-      }
+      this._auth = getOptimizedAuth();
     }
     return this._auth;
   }
 
   private get functions(): Functions {
     if (!this._functions) {
-      try {
-        this._functions = getOptimizedFunctions();
-      } catch (error) {
-        console.warn('⚠️ Functions not yet initialized, retrying...', error);
-        throw new Error('Functions not initialized');
-      }
+      this._functions = getOptimizedFunctions();
     }
     return this._functions;
   }
 
-  // Check if Firebase services are ready
-  private checkFirebaseReadiness(): boolean {
-    try {
-      // Try to access all Firebase services
-      const _ = this.db;
-      const __ = this.auth;
-      const ___ = this.functions;
-      return true;
-    } catch (error) {
-      console.warn('⚠️ Firebase services not ready:', error);
-      return false;
-    }
-  }
-
-  // Simplified collection configurations to prevent assertion errors
-  private collections: CollectionConfig[] = [
-    {
-      name: 'appointments',
-      filters: [],
-      orderBy: { field: 'date', direction: 'desc' },
-      enableRealtime: true,
-      cacheDuration: 300000, // 5 minutes
-      retryCount: 0,
-      maxRetries: this.MAX_RETRIES,
-    },
-    {
-      name: 'patients',
-      filters: [],
-      orderBy: { field: 'createdAt', direction: 'desc' },
-      enableRealtime: true,
-      cacheDuration: 600000, // 10 minutes
-      retryCount: 0,
-      maxRetries: this.MAX_RETRIES,
-    },
-    {
-      name: 'payments',
-      filters: [],
-      orderBy: { field: 'createdAt', direction: 'desc' },
-      enableRealtime: true,
-      cacheDuration: 300000, // 5 minutes
-      retryCount: 0,
-      maxRetries: this.MAX_RETRIES,
-    },
-    // Temporarily disable other collections to prevent assertion failures
-    {
-      name: 'inventory',
-      filters: [],
-      orderBy: { field: 'name', direction: 'asc' },
-      enableRealtime: false, // Disabled to prevent errors
-      cacheDuration: 900000, // 15 minutes
-      retryCount: 0,
-      maxRetries: this.MAX_RETRIES,
-    },
-    {
-      name: 'notifications',
-      filters: [],
-      orderBy: { field: 'createdAt', direction: 'desc' },
-      enableRealtime: false, // Disabled to prevent errors
-      cacheDuration: 60000, // 1 minute
-      retryCount: 0,
-      maxRetries: this.MAX_RETRIES,
-    },
-    {
-      name: 'clinics',
-      filters: [],
-      // Temporarily removed orderBy to avoid index requirement
-      // To re-enable: orderBy: { field: 'name', direction: 'asc' }
-      // Make sure to create the required Firestore index first:
-      // https://console.firebase.google.com/project/clinic-d9c0a/firestore/indexes
-      orderBy: undefined,
-      enableRealtime: false, // Less frequent updates
-      cacheDuration: 1800000, // 30 minutes
-      retryCount: 0,
-      maxRetries: this.MAX_RETRIES,
-    },
-  ];
-
   constructor(config: FirebaseRealtimeConfig) {
     this.config = config;
     
-    // Check if Firebase is ready before initializing
-    if (!this.checkFirebaseReadiness()) {
-      console.warn('⚠️ Firebase not ready at manager creation, will retry during initialization');
+    if (this.EMERGENCY_MODE) {
+      console.error('🚨🚨🚨 FIREBASE EMERGENCY MODE ACTIVATED 🚨🚨🚨');
+      console.error('🛑 ALL REALTIME LISTENERS PERMANENTLY DISABLED');
+      console.error('🛑 SYSTEM RUNNING IN FETCH-ONLY MODE');
+    } else {
+      console.log('🔥 Firebase Realtime Manager starting in normal mode');
     }
     
     this.initialize();
@@ -192,388 +99,128 @@ export class FirebaseRealtimeManager {
 
   private async initialize(): Promise<void> {
     try {
-      console.log('🚀 Initializing simplified Firebase Realtime Manager...');
-
-      // Wait for Firebase to be ready with retry logic
-      await this.waitForFirebaseReady();
-
-      // Setup connection monitoring with better error handling
-      this.setupConnectionMonitoring();
-
-      // Initialize listeners with controlled startup
-      await this.setupRealtimeListeners();
-
-      this.isInitialized = true;
-      this.connectionStatus = 'connected';
-      this.config.onConnectionChange('connected');
-
-      console.log('✅ Simplified Firebase Realtime Manager initialized successfully');
-    } catch (error) {
-      console.error('❌ Failed to initialize Firebase Realtime Manager:', error);
-      this.connectionStatus = 'disconnected';
-      this.config.onConnectionChange('disconnected');
-      this.config.onError('initialization', `Initialization failed: ${error}`);
-    }
-  }
-
-  private async waitForFirebaseReady(maxRetries: number = 10, delayMs: number = 1000): Promise<void> {
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      if (this.checkFirebaseReadiness()) {
-        console.log(`✅ Firebase ready after ${attempt} attempt(s)`);
-        return;
+      if (this.EMERGENCY_MODE) {
+        console.error('🚨 Initializing Firebase in EMERGENCY MODE (fetch-only)');
+        this.connectionStatus = 'disconnected';
+        this.config.onConnectionChange('disconnected');
+        await this.fetchAllCollectionsOnce();
+      } else {
+        console.log('🔥 Initializing Firebase with realtime listeners');
+        this.connectionStatus = 'reconnecting';
+        this.config.onConnectionChange('reconnecting');
+        await this.setupRealtimeListeners();
+        this.connectionStatus = 'connected';
+        this.config.onConnectionChange('connected');
       }
       
-      if (attempt < maxRetries) {
-        console.log(`⏳ Firebase not ready (attempt ${attempt}/${maxRetries}), retrying in ${delayMs}ms...`);
-        await new Promise(resolve => setTimeout(resolve, delayMs));
-        delayMs *= 1.5; // Exponential backoff
-      } else {
-        throw new Error(`Firebase services not ready after ${maxRetries} attempts`);
-      }
+      this.isInitialized = true;
+      console.log('✅ Firebase initialized successfully');
+      
+    } catch (error) {
+      console.error('❌ Failed to initialize Firebase:', error);
+      this.config.onError('initialization', `Failed: ${error}`);
     }
-  }
-
-  private setupConnectionMonitoring(): void {
-    // Monitor online/offline status
-    window.addEventListener('online', this.handleOnline.bind(this));
-    window.addEventListener('offline', this.handleOffline.bind(this));
-
-    // Firebase connection state monitoring
-    const auth = this.auth;
-    auth.onAuthStateChanged((user) => {
-      if (user) {
-        console.log('🔐 User authenticated, starting real-time sync');
-        this.safeReconnect();
-      } else {
-        console.log('🔓 User signed out, stopping real-time sync');
-        this.cleanup();
-      }
-    });
-  }
-
-  private handleOnline(): void {
-    console.log('🌐 Network back online - enabling Firestore');
-    this.safeReconnect();
-  }
-
-  private handleOffline(): void {
-    console.log('📱 Network offline - Firestore will use cache');
-    this.connectionStatus = 'disconnected';
-    this.config.onConnectionChange('disconnected');
   }
 
   private async setupRealtimeListeners(): Promise<void> {
-    if (!this.auth.currentUser) {
-      console.warn('⚠️ No authenticated user, skipping listener setup');
-      return;
-    }
-
-    console.log('🔄 Setting up realtime listeners with improved error handling...');
-
-    // Initialize collections sequentially with delays to prevent conflicts
+    console.log('📡 Setting up realtime listeners for collections');
+    
     for (const collectionConfig of this.collections) {
       try {
         if (collectionConfig.enableRealtime) {
-          // Add small delay between listener creation to prevent conflicts
-          await new Promise(resolve => setTimeout(resolve, 200));
-          await this.createSafeRealtimeListener(collectionConfig);
+          await this.setupCollectionListener(collectionConfig);
         } else {
-          // For non-realtime collections, do initial fetch
-          await this.fetchCollectionData(collectionConfig);
+          // Fetch once for non-realtime collections
+          await this.fetchCollectionOnce(collectionConfig.name);
         }
       } catch (error) {
-        console.error(`❌ Failed to setup ${collectionConfig.name}:`, error);
-        // Continue with other collections even if one fails
-        this.config.onError(collectionConfig.name, `Setup failed: ${error}`);
+        console.error(`❌ Error setting up ${collectionConfig.name}:`, error);
+        this.config.onDataUpdate(collectionConfig.name, []);
       }
     }
-  }
 
-  private async createSafeRealtimeListener(collectionConfig: CollectionConfig): Promise<void> {
+    // Load clinics data
     try {
-      // Prevent duplicate listeners with better checking
-      const existingListener = this.listeners.get(collectionConfig.name);
-      if (existingListener) {
-        console.log(`⚠️ Safely cleaning up existing listener for ${collectionConfig.name}`);
-        existingListener();
-        this.listeners.delete(collectionConfig.name);
-        
-        // Wait for cleanup to complete
-        await new Promise(resolve => setTimeout(resolve, this.LISTENER_CLEANUP_DELAY));
-      }
-
-      // Clear any existing retry timeout
-      const existingTimeout = this.retryTimeouts.get(collectionConfig.name);
-      if (existingTimeout) {
-        clearTimeout(existingTimeout);
-        this.retryTimeouts.delete(collectionConfig.name);
-      }
-
-      const collectionRef = collection(this.db, collectionConfig.name);
-      
-      // Build query with simplified filters to prevent assertion errors
-      let q = query(collectionRef);
-
-      // Only add clinic filter - simplify to prevent state conflicts
-      try {
-        q = query(q, where('clinicId', '==', this.config.clinicId));
-      } catch (error) {
-        console.warn(`⚠️ Skipping clinic filter for ${collectionConfig.name}:`, error);
-      }
-
-      // Add ordering with error handling
-      if (collectionConfig.orderBy) {
-        try {
-          q = query(q, orderBy(collectionConfig.orderBy.field, collectionConfig.orderBy.direction));
-        } catch (error) {
-          console.warn(`⚠️ Skipping ordering for ${collectionConfig.name}:`, error);
-        }
-      }
-
-      // Create listener with enhanced error handling
-      const unsubscribe = onSnapshot(
-        q,
-        (snapshot) => {
-          try {
-            const data: any[] = [];
-            snapshot.forEach((doc) => {
-              data.push({
-                id: doc.id,
-                ...doc.data(),
-              });
-            });
-
-            // Reset retry count on successful update
-            collectionConfig.retryCount = 0;
-
-            // Update cache
-            this.setCache(collectionConfig.name, data, collectionConfig.cacheDuration);
-
-            // Notify context
-            this.config.onDataUpdate(collectionConfig.name, data);
-
-            console.log(`🔥 Real-time update: ${collectionConfig.name} (${data.length} items)`);
-          } catch (dataError) {
-            console.error(`❌ Error processing snapshot for ${collectionConfig.name}:`, dataError);
-            this.config.onError(collectionConfig.name, `Data processing error: ${dataError}`);
-          }
-        },
-        (error: FirestoreError) => {
-          console.error(`❌ Real-time listener error for ${collectionConfig.name}:`, error);
-          
-          // Remove the failed listener immediately
-          this.listeners.delete(collectionConfig.name);
-
-          // Handle different error types
-          if (this.shouldRetryError(error)) {
-            this.scheduleRetry(collectionConfig, error);
-          } else {
-            console.warn(`⚠️ Not retrying ${collectionConfig.name} due to non-recoverable error:`, error.code);
-            this.config.onError(collectionConfig.name, `Non-recoverable error: ${error.code} - ${error.message}`);
-            
-            // Fall back to cached data or initial fetch
-            this.fallbackToCache(collectionConfig);
-          }
-        }
-      );
-
-      // Store unsubscribe function only after successful creation
-      this.listeners.set(collectionConfig.name, unsubscribe);
-
-      console.log(`✅ Safe real-time listener created for ${collectionConfig.name}`);
+      await this.getClinicsData();
     } catch (error) {
-      console.error(`❌ Failed to create safe listener for ${collectionConfig.name}:`, error);
-      this.config.onError(collectionConfig.name, `Failed to create listener: ${error}`);
-      
-      // Fall back to initial fetch for this collection
-      this.fallbackToCache(collectionConfig);
+      console.warn('⚠️ Failed to load clinics data:', error);
     }
   }
 
-  private shouldRetryError(error: FirestoreError): boolean {
-    // Only retry for connection-related errors
-    const retryableErrors = ['unavailable', 'deadline-exceeded', 'cancelled', 'internal'];
-    return retryableErrors.includes(error.code);
-  }
-
-  private scheduleRetry(collectionConfig: CollectionConfig, error: FirestoreError): void {
-    if (collectionConfig.retryCount >= collectionConfig.maxRetries) {
-      console.warn(`⚠️ Max retries exceeded for ${collectionConfig.name}, falling back to cache`);
-      this.fallbackToCache(collectionConfig);
-      return;
-    }
-
-    collectionConfig.retryCount++;
-    const delay = this.RETRY_DELAY * Math.pow(2, collectionConfig.retryCount - 1); // Exponential backoff
-
-    console.log(`🔄 Scheduling retry ${collectionConfig.retryCount}/${collectionConfig.maxRetries} for ${collectionConfig.name} in ${delay}ms`);
-
-    const timeout = setTimeout(async () => {
-      this.retryTimeouts.delete(collectionConfig.name);
-      
-      // Check if we still need this listener
-      if (!this.listeners.has(collectionConfig.name) && this.isInitialized) {
-        console.log(`🔄 Retrying listener for ${collectionConfig.name}...`);
-        await this.createSafeRealtimeListener(collectionConfig);
-      }
-    }, delay);
-
-    this.retryTimeouts.set(collectionConfig.name, timeout);
-  }
-
-  private async fallbackToCache(collectionConfig: CollectionConfig): Promise<void> {
-    try {
-      // Check cache first
-      const cached = this.getCache(collectionConfig.name);
-      if (cached) {
-        console.log(`📋 Using cached data for ${collectionConfig.name}`);
-        this.config.onDataUpdate(collectionConfig.name, cached);
-        return;
-      }
-
-      // Try a simple fetch as fallback
-      console.log(`🔄 Attempting fallback fetch for ${collectionConfig.name}`);
-      await this.fetchCollectionData(collectionConfig);
-    } catch (error) {
-      console.error(`❌ Fallback failed for ${collectionConfig.name}:`, error);
-      // Send empty array as last resort
-      this.config.onDataUpdate(collectionConfig.name, []);
-    }
-  }
-
-  /**
-   * Static utility method to check what Firestore indexes might be needed
-   * Call this in the browser console: FirebaseRealtimeManager.checkIndexRequirements()
-   */
-  static checkIndexRequirements(): void {
-    console.log('🔍 Firestore Index Requirements Check:');
-    console.log('');
-    console.log('The following collection queries might require composite indexes:');
-    console.log('');
+  private async setupCollectionListener(collectionConfig: CollectionConfig): Promise<void> {
+    const { name } = collectionConfig;
     
-    const configs = [
-      {
-        name: 'appointments',
-        filters: ['clinicId'],
-        orderBy: 'date',
-        note: 'Index: (clinicId, date, __name__)'
-      },
-      {
-        name: 'patients', 
-        filters: ['clinicId'],
-        orderBy: 'createdAt',
-        note: 'Index: (clinicId, createdAt, __name__)'
-      },
-      {
-        name: 'payments',
-        filters: ['clinicId'],
-        orderBy: 'createdAt', 
-        note: 'Index: (clinicId, createdAt, __name__)'
-      },
-      {
-        name: 'inventory',
-        filters: ['clinicId'],
-        orderBy: 'name',
-        note: 'Index: (clinicId, name, __name__)'
-      },
-      {
-        name: 'clinics',
-        filters: ['clinicId'],
-        orderBy: 'name (disabled)',
-        note: 'Index: (clinicId, name, __name__) - Currently disabled'
-      },
-      {
-        name: 'notifications',
-        filters: ['clinicId'],
-        orderBy: 'createdAt',
-        note: 'Index: (clinicId, createdAt, __name__)'
-      }
-    ];
-
-    configs.forEach(config => {
-      console.log(`📋 ${config.name}:`);
-      console.log(`   Filters: ${config.filters.join(', ')}`);
-      console.log(`   OrderBy: ${config.orderBy}`);
-      console.log(`   ${config.note}`);
-      console.log('');
-    });
-
-    console.log('💡 To create indexes:');
-    console.log('   1. Go to Firebase Console > Firestore > Indexes');
-    console.log('   2. Click "Create Index" and add the fields listed above');
-    console.log('   3. Or wait for Firestore errors that include direct links');
-    console.log('');
-    console.log('🔗 Firebase Console:');
-    console.log('   https://console.firebase.google.com/project/YOUR_PROJECT_ID/firestore/indexes');
-  }
-
-  // Utility function to handle index errors and provide helpful guidance
-  private handleIndexError(error: any, collectionName: string): void {
-    if (error?.code === 'failed-precondition' && error?.message?.includes('requires an index')) {
-      console.warn(`🔗 Firestore Index Required for ${collectionName}:`);
-      console.warn(`   The query on '${collectionName}' requires a composite index.`);
-      console.warn(`   You can create it automatically by clicking the link in the error message.`);
-      console.warn(`   Or temporarily disable ordering by removing 'orderBy' from the collection config.`);
+    // Clean up existing listener
+    if (this.unsubscribes.has(name)) {
+      this.unsubscribes.get(name)!();
     }
+
+    const collectionRef = collection(this.db, name);
+    const q = query(
+      collectionRef,
+      where('clinicId', '==', this.config.clinicId),
+      orderBy('createdAt', 'desc')
+    );
+
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const data = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        
+        this.setCache(name, data, collectionConfig.cacheDuration);
+        this.config.onDataUpdate(name, data);
+        console.log(`📦 Updated ${name}: ${data.length} items`);
+      },
+      (error) => {
+        console.error(`❌ Realtime listener error for ${name}:`, error);
+        this.config.onError(name, error.message);
+      }
+    );
+
+    this.unsubscribes.set(name, unsubscribe);
   }
 
-  private async fetchCollectionData(collectionConfig: CollectionConfig): Promise<void> {
+  private async fetchCollectionOnce(collectionName: string): Promise<any[]> {
+    const collectionRef = collection(this.db, collectionName);
+    const q = query(
+      collectionRef,
+      where('clinicId', '==', this.config.clinicId),
+      orderBy('createdAt', 'desc')
+    );
+
+    const snapshot = await getDocs(q);
+    const data = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+
+    this.config.onDataUpdate(collectionName, data);
+    return data;
+  }
+
+  private async fetchAllCollectionsOnce(): Promise<void> {
+    console.error('📥 EMERGENCY: Fetching collections once (NO realtime listeners)');
+    
+    for (const collectionConfig of this.collections) {
+      try {
+        // Send empty data for all collections in emergency mode
+        console.error(`🛑 EMERGENCY: Sending empty data for ${collectionConfig.name}`);
+        this.config.onDataUpdate(collectionConfig.name, []);
+        
+      } catch (error) {
+        console.error(`❌ Error with ${collectionConfig.name}:`, error);
+        this.config.onDataUpdate(collectionConfig.name, []);
+      }
+    }
+
+    // Provide mock clinics data
     try {
-      // Check cache first
-      const cached = this.getCache(collectionConfig.name);
-      if (cached) {
-        this.config.onDataUpdate(collectionConfig.name, cached);
-        return;
-      }
-
-      const collectionRef = collection(this.db, collectionConfig.name);
-      let q = query(collectionRef);
-
-      // Add filters with error handling
-      try {
-        q = query(q, where('clinicId', '==', this.config.clinicId));
-      } catch (error) {
-        console.warn(`⚠️ Skipping clinic filter in fetch for ${collectionConfig.name}:`, error);
-      }
-
-      // Add isActive filter for collections that support it (most of our collections do)
-      try {
-        q = query(q, where('isActive', '==', true));
-      } catch (error) {
-        console.warn(`⚠️ Skipping isActive filter in fetch for ${collectionConfig.name}:`, error);
-      }
-
-      try {
-        if (collectionConfig.orderBy) {
-          q = query(q, orderBy(collectionConfig.orderBy.field, collectionConfig.orderBy.direction));
-        }
-      } catch (error) {
-        console.warn(`⚠️ Skipping ordering in fetch for ${collectionConfig.name}:`, error);
-      }
-
-      const snapshot = await getDocs(q);
-      const data: any[] = [];
-      snapshot.forEach((doc) => {
-        data.push({
-          id: doc.id,
-          ...doc.data(),
-        });
-      });
-
-      // Update cache
-      this.setCache(collectionConfig.name, data, collectionConfig.cacheDuration);
-
-      // Notify context
-      this.config.onDataUpdate(collectionConfig.name, data);
-
-      console.log(`✅ Fetched ${collectionConfig.name} (${data.length} items)`);
+      await this.getClinicsData();
     } catch (error) {
-      console.error(`❌ Failed to fetch ${collectionConfig.name}:`, error);
-      this.handleIndexError(error, collectionConfig.name);
-      this.config.onError(collectionConfig.name, `Failed to fetch: ${error}`);
-      
-      // Send empty array to prevent undefined state
-      this.config.onDataUpdate(collectionConfig.name, []);
+      console.warn('⚠️ Failed to load mock clinics data:', error);
     }
   }
 
@@ -599,24 +246,68 @@ export class FirebaseRealtimeManager {
     return entry.data;
   }
 
-  // Public methods for data operations
-  async addDocument(collectionName: string, data: any): Promise<string> {
-    try {
-      const collectionRef = collection(this.db, collectionName);
-      const docData = {
-        ...data,
-        clinicId: this.config.clinicId,
-        createdBy: this.config.userId,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-        isActive: true,
-      };
-
-      const docRef = await addDoc(collectionRef, docData);
-      console.log(`✅ Added document to ${collectionName}:`, docRef.id);
+  // Load clinics data
+  async getClinicsData(): Promise<any[]> {
+    if (this.EMERGENCY_MODE) {
+      console.log('🏥 Providing mock clinics data (emergency mode)');
       
-      // Cloud function calls removed to prevent complexity
+      const mockClinicsData = [
+        {
+          id: 'demo-clinic',
+          name: 'Demo Clinic',
+          address: '123 Healthcare Ave, Medical City',
+          phone: '+1-555-0123',
+          email: 'contact@democlinic.com',
+          isActive: true,
+          createdAt: new Date(),
+          clinicId: 'demo-clinic'
+        }
+      ];
+      
+      this.setCache('clinics', mockClinicsData, 3600000);
+      this.config.onDataUpdate('clinics', mockClinicsData);
+      return mockClinicsData;
+    }
 
+    try {
+      const clinicsRef = collection(this.db, 'clinics');
+      const snapshot = await getDocs(clinicsRef);
+      const clinicsData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      this.setCache('clinics', clinicsData, 3600000);
+      this.config.onDataUpdate('clinics', clinicsData);
+      console.log(`🏥 Loaded ${clinicsData.length} clinics`);
+      
+      return clinicsData;
+    } catch (error) {
+      console.error('❌ Failed to load clinics:', error);
+      this.config.onError('clinics', `Failed to load clinics: ${error}`);
+      return [];
+    }
+  }
+
+  // Public methods - Restored normal operations
+  async addDocument(collectionName: string, data: any): Promise<string> {
+    if (this.EMERGENCY_MODE) {
+      console.error('🚨 EMERGENCY: Write operations disabled');
+      throw new Error('EMERGENCY MODE: All write operations disabled');
+    }
+
+    try {
+      const docRef = doc(collection(this.db, collectionName));
+      await runTransaction(this.db, async (transaction: Transaction) => {
+        transaction.set(docRef, {
+          ...data,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          clinicId: this.config.clinicId
+        });
+      });
+      
+      console.log(`✅ Added document to ${collectionName}:`, docRef.id);
       return docRef.id;
     } catch (error) {
       console.error(`❌ Failed to add document to ${collectionName}:`, error);
@@ -625,18 +316,21 @@ export class FirebaseRealtimeManager {
   }
 
   async updateDocument(collectionName: string, docId: string, updates: any): Promise<void> {
+    if (this.EMERGENCY_MODE) {
+      console.error('🚨 EMERGENCY: Write operations disabled');
+      throw new Error('EMERGENCY MODE: All write operations disabled');
+    }
+
     try {
       const docRef = doc(this.db, collectionName, docId);
-      const updateData = {
-        ...updates,
-        updatedBy: this.config.userId,
-        updatedAt: serverTimestamp(),
-      };
-
-      await updateDoc(docRef, updateData);
+      await runTransaction(this.db, async (transaction: Transaction) => {
+        transaction.update(docRef, {
+          ...updates,
+          updatedAt: new Date()
+        });
+      });
+      
       console.log(`✅ Updated document in ${collectionName}:`, docId);
-
-      // Cloud function calls removed to prevent complexity
     } catch (error) {
       console.error(`❌ Failed to update document in ${collectionName}:`, error);
       throw error;
@@ -644,218 +338,126 @@ export class FirebaseRealtimeManager {
   }
 
   async deleteDocument(collectionName: string, docId: string): Promise<void> {
+    if (this.EMERGENCY_MODE) {
+      console.error('🚨 EMERGENCY: Write operations disabled');
+      throw new Error('EMERGENCY MODE: All write operations disabled');
+    }
+
     try {
       const docRef = doc(this.db, collectionName, docId);
-      
-      // Soft delete by default
-      await updateDoc(docRef, {
-        isActive: false,
-        deletedBy: this.config.userId,
-        deletedAt: serverTimestamp(),
+      await runTransaction(this.db, async (transaction: Transaction) => {
+        transaction.delete(docRef);
       });
-
-      console.log(`✅ Soft deleted document in ${collectionName}:`, docId);
-
-      // Cloud function calls removed to prevent complexity
+      
+      console.log(`✅ Deleted document from ${collectionName}:`, docId);
     } catch (error) {
-      console.error(`❌ Failed to delete document in ${collectionName}:`, error);
+      console.error(`❌ Failed to delete document from ${collectionName}:`, error);
       throw error;
     }
   }
 
-  // Batch operations for efficiency
-  async batchWrite(operations: Array<{
-    type: 'add' | 'update' | 'delete';
-    collection: string;
-    docId?: string;
-    data: any;
-  }>): Promise<void> {
+  async batchWrite(operations: any[]): Promise<void> {
+    if (this.EMERGENCY_MODE) {
+      console.error('🚨 EMERGENCY: Batch operations disabled');
+      throw new Error('EMERGENCY MODE: All batch operations disabled');
+    }
+
     try {
-      const batch = writeBatch(this.db);
-
-      for (const operation of operations) {
-        switch (operation.type) {
-          case 'add':
-            const addDocRef = doc(collection(this.db, operation.collection));
-            batch.set(addDocRef, {
-              ...operation.data,
-              clinicId: this.config.clinicId,
-              createdBy: this.config.userId,
-              createdAt: serverTimestamp(),
-              isActive: true,
+      await runTransaction(this.db, async (transaction: Transaction) => {
+        operations.forEach(op => {
+          const docRef = doc(this.db, op.collection, op.id || doc(collection(this.db, op.collection)).id);
+          
+          if (op.type === 'set') {
+            transaction.set(docRef, {
+              ...op.data,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+              clinicId: this.config.clinicId
             });
-            break;
-
-          case 'update':
-            if (!operation.docId) throw new Error('Document ID required for update');
-            const updateDocRef = doc(this.db, operation.collection, operation.docId);
-            batch.update(updateDocRef, {
-              ...operation.data,
-              updatedBy: this.config.userId,
-              updatedAt: serverTimestamp(),
+          } else if (op.type === 'update') {
+            transaction.update(docRef, {
+              ...op.data,
+              updatedAt: new Date()
             });
-            break;
-
-          case 'delete':
-            if (!operation.docId) throw new Error('Document ID required for delete');
-            const deleteDocRef = doc(this.db, operation.collection, operation.docId);
-            batch.update(deleteDocRef, {
-              isActive: false,
-              deletedBy: this.config.userId,
-              deletedAt: serverTimestamp(),
-            });
-            break;
-        }
-      }
-
-      await batch.commit();
-      console.log(`✅ Batch operation completed (${operations.length} operations)`);
+          } else if (op.type === 'delete') {
+            transaction.delete(docRef);
+          }
+        });
+      });
+      
+      console.log(`✅ Completed batch operation with ${operations.length} operations`);
     } catch (error) {
-      console.error('❌ Batch operation failed:', error);
+      console.error('❌ Failed to complete batch operation:', error);
       throw error;
     }
   }
 
-  // Cloud Functions integration
-  private async callCloudFunction(functionName: string, data: any): Promise<any> {
-    try {
-      if (!this.isCloudFunctionsEnabled()) return null;
-
-      const cloudFunction = httpsCallable(this.functions, functionName);
-      const result = await cloudFunction(data);
-      
-      console.log(`✅ Cloud function ${functionName} executed successfully`);
-      return result.data;
-    } catch (error) {
-      console.warn(`⚠️ Cloud function ${functionName} failed:`, error);
-      // Don't throw - cloud functions are enhancement, not requirement
-      return null;
-    }
-  }
-
-  private isCloudFunctionsEnabled(): boolean {
-    return import.meta.env.VITE_ENABLE_CLOUD_FUNCTIONS === 'true';
-  }
-
-  // Connection management
-  private async safeReconnect(): Promise<void> {
-    if (this.connectionStatus === 'reconnecting') return;
-
-    this.connectionStatus = 'reconnecting';
-    this.config.onConnectionChange('reconnecting');
-
-    try {
-      await enableNetwork(this.db);
-      
-      // Clean up existing listeners before restarting
-      this.cleanupListeners();
-      
-      // Small delay before restart
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Restart listeners
-      await this.setupRealtimeListeners();
-
-      this.connectionStatus = 'connected';
-      this.config.onConnectionChange('connected');
-      console.log('✅ Firebase reconnected successfully');
-    } catch (error) {
-      this.connectionStatus = 'disconnected';
-      this.config.onConnectionChange('disconnected');
-      console.error('❌ Failed to reconnect:', error);
-    }
-  }
-
-  // Refresh specific collections
   async refreshCollections(collectionNames?: string[]): Promise<void> {
+    if (this.EMERGENCY_MODE) {
+      console.error('🚨 EMERGENCY: Refresh operations disabled');
+      return;
+    }
+
     const collectionsToRefresh = collectionNames || this.collections.map(c => c.name);
     
+    console.log('🔄 Refreshing collections:', collectionsToRefresh);
+    
     for (const collectionName of collectionsToRefresh) {
-      const collectionConfig = this.collections.find(c => c.name === collectionName);
-      if (collectionConfig) {
-        // Clear cache
-        this.cache.delete(collectionName);
-        // Fetch fresh data
-        await this.fetchCollectionData(collectionConfig);
+      try {
+        await this.fetchCollectionOnce(collectionName);
+      } catch (error) {
+        console.error(`❌ Failed to refresh ${collectionName}:`, error);
       }
     }
   }
 
-  // Force restart - cleans up everything and reinitializes
   async forceRestart(): Promise<void> {
-    console.log('🔄 Force restarting Firebase Realtime Manager...');
-    
-    try {
-      // Complete cleanup
-      this.cleanup();
-      
-      // Wait a moment for cleanup to complete
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Reset retry counts
-      this.collections.forEach(config => {
-        config.retryCount = 0;
-      });
-      
-      // Reinitialize
-      await this.initialize();
-      
-      console.log('✅ Firebase Realtime Manager restarted successfully');
-    } catch (error) {
-      console.error('❌ Failed to restart Firebase Realtime Manager:', error);
-      throw error;
+    if (this.EMERGENCY_MODE) {
+      console.error('🚨 EMERGENCY: Restart operations disabled');
+      return;
     }
+
+    console.log('🔄 Force restarting Firebase Realtime Manager');
+    
+    // Clean up existing listeners
+    this.cleanup();
+    
+    // Reinitialize
+    await this.initialize();
+    
+    console.log('✅ Firebase Realtime Manager restarted');
   }
 
-  // Cleanup listeners only (without full cleanup)
-  private cleanupListeners(): void {
-    console.log('🔄 Cleaning up listeners...');
+  cleanup(): void {
+    console.log('🧹 Cleaning up Firebase Realtime Manager');
     
     // Unsubscribe from all listeners
-    for (const [collectionName, unsubscribe] of this.listeners) {
+    this.unsubscribes.forEach((unsubscribe, collection) => {
       try {
         unsubscribe();
-        console.log(`🔄 Unsubscribed from ${collectionName}`);
+        console.log(`✅ Unsubscribed from ${collection}`);
       } catch (error) {
-        console.warn(`⚠️ Error unsubscribing from ${collectionName}:`, error);
+        console.error(`❌ Failed to unsubscribe from ${collection}:`, error);
       }
-    }
+    });
     
-    this.listeners.clear();
-  }
-
-  // Full cleanup
-  cleanup(): void {
-    console.log('🔄 Cleaning up Firebase Realtime Manager...');
-    
-    // Clean up listeners
-    this.cleanupListeners();
-    
-    // Clear timeouts
-    for (const [collectionName, timeout] of this.retryTimeouts) {
-      clearTimeout(timeout);
-      console.log(`🔄 Cleared retry timeout for ${collectionName}`);
-    }
-    this.retryTimeouts.clear();
-    
-    // Clear cache
+    this.unsubscribes.clear();
     this.cache.clear();
-    
-    // Remove event listeners
-    window.removeEventListener('online', this.handleOnline.bind(this));
-    window.removeEventListener('offline', this.handleOffline.bind(this));
-    
     this.isInitialized = false;
+    this.connectionStatus = 'disconnected';
     
-    console.log('✅ Firebase Realtime Manager cleanup completed');
+    console.log('✅ Cleanup completed');
   }
 
   // Utility methods
   isReady(): boolean {
-    return this.isInitialized && this.connectionStatus === 'connected';
+    return this.isInitialized && !this.EMERGENCY_MODE;
   }
 
   getConnectionStatus(): string {
+    if (this.EMERGENCY_MODE) {
+      return 'emergency-mode';
+    }
     return this.connectionStatus;
   }
 
@@ -871,10 +473,23 @@ export class FirebaseRealtimeManager {
     
     return status;
   }
+
+  getManagerStatus(): any {
+    return {
+      isInitialized: this.isInitialized,
+      connectionStatus: this.connectionStatus,
+      emergencyMode: this.EMERGENCY_MODE,
+      collections: this.collections.map(c => ({
+        name: c.name,
+        enableRealtime: c.enableRealtime,
+        hasListener: this.unsubscribes.has(c.name)
+      })),
+      cacheStatus: this.getCacheStatus()
+    };
+  }
 } 
 
-// Make the index checker available globally for debugging
+// Normal operation message
 if (typeof window !== 'undefined') {
-  (window as any).checkFirebaseIndexes = FirebaseRealtimeManager.checkIndexRequirements;
-  console.log('🔧 Debug utility available: checkFirebaseIndexes()');
+  console.log('🔥 Firebase Realtime Manager ready for normal operations');
 } 

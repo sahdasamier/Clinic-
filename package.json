@@ -12,7 +12,9 @@
     "deploy:hosting": "npm run build && firebase deploy --only hosting",
     "deploy:full": "npm run build && firebase deploy --only hosting,firestore:rules",
     "setup-admin": "node setAdmin.js",
-    "health-check": "echo '🏥 Firebase Health Check: Open your admin panel and click \"Run Health Check\" button'"
+    "health-check": "echo '🏥 Firebase Health Check: Open your admin panel and click \"Run Health Check\" button'",
+    "fix-indexes": "./scripts/quick-index-fix.sh",
+    "rebuild-indexes": "./scripts/rebuild-indexes.sh"
   },
   "dependencies": {
     "@emailjs/browser": "^4.4.1",

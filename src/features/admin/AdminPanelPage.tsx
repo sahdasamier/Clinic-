@@ -17,7 +17,8 @@ import {
   serverTimestamp,
   setDoc 
 } from 'firebase/firestore';
-import { auth, db, firebaseConfig } from '../../api/firebase';
+import { auth, firebaseConfig, isOptimizedFirebaseReady, getOptimizedServices } from '../../api/firebase';
+import { getOptimizedFirestore } from '../../api/firebaseOptimized';
 import { createUserAccount, createUserInvitation, isValidEmail, checkEmailExists, doubleCheckEmailBeforeCreation, createUserAccountWithCleanup, suggestAlternativeEmails } from '../../api/auth';
 import { fixClinicAccess } from '../../utils/clinicUtils';
 import { initializeDemoClinicAfterAuth } from '../../scripts/initFirestore';
@@ -86,11 +87,20 @@ const AdminPanelPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   
+  // Helper function to get Firestore instance safely
+  const getFirestore = () => {
+    if (!isOptimizedFirebaseReady()) {
+      throw new Error('Firebase not ready yet. Please wait a moment and try again.');
+    }
+    return getOptimizedFirestore();
+  };
+  
   const [activeTab, setActiveTab] = useState(0);
   const [clinics, setClinics] = useState<Clinic[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [firebaseReady, setFirebaseReady] = useState(false);
   
   // Dialog states
   const [clinicDialogOpen, setClinicDialogOpen] = useState(false);
@@ -218,16 +228,39 @@ const AdminPanelPage: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
+  // Monitor Firebase readiness
   useEffect(() => {
-    fetchData();
+    const checkFirebaseReady = () => {
+      const ready = isOptimizedFirebaseReady();
+      setFirebaseReady(ready);
+    };
     
-    // Initialize demo clinic after admin authentication
-    if (user?.email) {
-      initializeDemoClinicAfterAuth().catch(error => {
-        console.warn('⚠️ Post-auth demo clinic initialization failed:', error);
-      });
+    // Check immediately
+    checkFirebaseReady();
+    
+    // Set up a polling mechanism to check Firebase readiness
+    const interval = setInterval(checkFirebaseReady, 1000); // Check every second
+    
+    // Clear interval once Firebase is ready
+    if (firebaseReady) {
+      clearInterval(interval);
     }
-  }, [user]);
+    
+    return () => clearInterval(interval);
+  }, [firebaseReady]);
+
+  useEffect(() => {
+    if (firebaseReady) {
+      fetchData();
+      
+      // Initialize demo clinic after admin authentication
+      if (user?.email) {
+        initializeDemoClinicAfterAuth().catch(error => {
+          console.warn('⚠️ Post-auth demo clinic initialization failed:', error);
+        });
+      }
+    }
+  }, [user, firebaseReady]);
 
   // Helper functions for password management
   const generateRandomPassword = () => {
@@ -306,28 +339,64 @@ const AdminPanelPage: React.FC = () => {
 
   const fetchData = async () => {
     setLoading(true);
+    setError('');
+    
     try {
+      // Wait for Firebase to be ready before making any calls
+      if (!isOptimizedFirebaseReady()) {
+        console.log('⏳ Waiting for Firebase to initialize...');
+        // Poll for Firebase readiness
+        let attempts = 0;
+        const maxAttempts = 30; // 15 seconds max wait
+        
+        while (!isOptimizedFirebaseReady() && attempts < maxAttempts) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          attempts++;
+        }
+        
+        if (!isOptimizedFirebaseReady()) {
+          throw new Error('Firebase initialization timeout. Please refresh the page.');
+        }
+        
+        console.log('✅ Firebase is ready, proceeding with data fetch...');
+      }
+      
       await Promise.all([fetchClinics(), fetchUsers()]);
     } catch (error) {
       console.error('Error fetching data:', error);
-      setError('Failed to load data');
+      setError(error instanceof Error ? error.message : 'Failed to load data');
     } finally {
       setLoading(false);
     }
   };
 
   const fetchClinics = async () => {
-    const clinicsQuery = query(collection(db, 'clinics'), orderBy('createdAt', 'desc'));
-    const snapshot = await getDocs(clinicsQuery);
-    const clinicsData = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    })) as Clinic[];
-    setClinics(clinicsData);
+    if (!isOptimizedFirebaseReady()) {
+      throw new Error('Firebase not ready for clinics fetch');
+    }
+    
+    try {
+      const db = getOptimizedFirestore();
+      const clinicsQuery = query(collection(db, 'clinics'), orderBy('createdAt', 'desc'));
+      const snapshot = await getDocs(clinicsQuery);
+      const clinicsData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Clinic[];
+      setClinics(clinicsData);
+    } catch (error) {
+      console.error('Error in fetchClinics:', error);
+      throw new Error(`Failed to fetch clinics: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   };
 
   const fetchUsers = async () => {
+    if (!isOptimizedFirebaseReady()) {
+      throw new Error('Firebase not ready for users fetch');
+    }
+    
     try {
+      const db = getOptimizedFirestore();
       const usersQuery = query(collection(db, 'users'), orderBy('createdAt', 'desc'));
       const snapshot = await getDocs(usersQuery);
       const usersData = snapshot.docs.map(doc => ({
@@ -337,6 +406,7 @@ const AdminPanelPage: React.FC = () => {
       setUsers(usersData);
     } catch (error) {
       console.error('Error fetching users:', error);
+      throw new Error(`Failed to fetch users: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -348,6 +418,7 @@ const AdminPanelPage: React.FC = () => {
     }
     
     try {
+      const db = getFirestore();
       await addDoc(collection(db, 'clinics'), {
         name: newClinic.name,
         isActive: true,
@@ -378,7 +449,7 @@ const AdminPanelPage: React.FC = () => {
       setError('Please enter a clinic name');
       return;
     }
-
+    
     // Check if new max users is valid for the plan
     const currentUserCount = users.filter(u => u.clinicId === editingClinic.id && u.isActive).length;
     const validation = validateUserLimit(
@@ -414,6 +485,7 @@ const AdminPanelPage: React.FC = () => {
         updateData.createdAt = new Date(newClinic.createdAt);
       }
 
+      const db = getFirestore();
       await updateDoc(doc(db, 'clinics', editingClinic.id), updateData);
       
       resetClinicForm();
@@ -553,6 +625,7 @@ const AdminPanelPage: React.FC = () => {
         updateData.createdAt = new Date(newUser.createdAt);
       }
 
+      const db = getFirestore();
       await updateDoc(doc(db, 'users', editingUser.id), updateData);
       
       resetUserForm();
@@ -618,6 +691,7 @@ const AdminPanelPage: React.FC = () => {
     if (!userForPermissions) return;
 
     try {
+      const db = getFirestore();
       await updateDoc(doc(db, 'users', userForPermissions.id), {
         permissions,
         updatedAt: serverTimestamp(),
@@ -634,6 +708,7 @@ const AdminPanelPage: React.FC = () => {
 
   const toggleClinicStatus = async (clinicId: string, currentStatus: boolean) => {
     try {
+      const db = getFirestore();
       await updateDoc(doc(db, 'clinics', clinicId), {
         isActive: !currentStatus,
         updatedAt: serverTimestamp(),
@@ -647,6 +722,7 @@ const AdminPanelPage: React.FC = () => {
 
   const toggleUserStatus = async (userId: string, currentStatus: boolean) => {
     try {
+      const db = getFirestore();
       await updateDoc(doc(db, 'users', userId), {
         isActive: !currentStatus,
         updatedAt: serverTimestamp(),
@@ -662,6 +738,7 @@ const AdminPanelPage: React.FC = () => {
     if (!itemToDelete || itemToDelete.type !== 'clinic') return;
     
     try {
+      const db = getFirestore();
       await deleteDoc(doc(db, 'clinics', itemToDelete.id));
       setDeleteConfirmOpen(false);
       setItemToDelete(null);
@@ -686,6 +763,7 @@ const AdminPanelPage: React.FC = () => {
       }
 
       // Delete the Firestore document first
+      const db = getFirestore();
       await deleteDoc(doc(db, 'users', itemToDelete.id));
       
       // Try to delete Firebase Auth account if we have the password
@@ -908,10 +986,16 @@ const AdminPanelPage: React.FC = () => {
     return users.filter(u => u.clinicId === clinicId && u.isActive).length;
   };
 
-  if (loading) {
+  if (loading || !firebaseReady) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh', gap: 2 }}>
         <CircularProgress size={60} />
+        <Typography variant="h6" color="text.secondary">
+          {!firebaseReady ? '🔄 Initializing Firebase services...' : '📊 Loading admin data...'}
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          {!firebaseReady ? 'Please wait while we set up the database connection' : 'Fetching clinics and users'}
+        </Typography>
       </Box>
     );
   }
@@ -993,6 +1077,20 @@ const AdminPanelPage: React.FC = () => {
           <Typography variant="body2">
             <strong>WARNING:</strong> User passwords are stored and displayed in plain text for admin convenience. 
             This is a security risk. Ensure this system is only accessible by authorized administrators and consider implementing password hashing for production use.
+          </Typography>
+        </Alert>
+
+        {/* Firebase Status Panel */}
+        <Alert severity={firebaseReady ? "success" : "warning"} sx={{ mb: 2 }}>
+          <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+            🔥 Firebase Services Status:
+          </Typography>
+          <Typography variant="body2">
+            {firebaseReady ? (
+              <span style={{ color: 'green', fontWeight: 600 }}>✅ All Firebase services are ready and operational</span>
+            ) : (
+              <span style={{ color: 'orange', fontWeight: 600 }}>⏳ Firebase services are still initializing...</span>
+            )}
           </Typography>
         </Alert>
 
