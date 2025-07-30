@@ -184,7 +184,7 @@ export const createUserWithSecondaryApp = async (userData: CreateUserData): Prom
       role: userData.role,
       clinicId: userData.clinicId,
       isActive: true,
-      password: userData.password, // WARNING: Storing for admin visibility - security risk
+      // Password is securely stored in Firebase Authentication - not in Firestore
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
       createdBy: currentUser.email || currentUser.uid

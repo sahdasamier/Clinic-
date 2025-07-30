@@ -25,6 +25,8 @@
     "@mui/system": "^5.16.7",
     "@mui/x-charts": "^6.19.8",
     "@tailwindcss/postcss": "^4.1.8",
+    "@types/bcryptjs": "^2.4.6",
+    "bcryptjs": "^3.0.2",
     "firebase": "^11.9.0",
     "firebase-admin": "^13.4.0",
     "i18next": "^25.2.1",

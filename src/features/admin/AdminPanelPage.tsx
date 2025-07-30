@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { signOut, createUserWithEmailAndPassword, updateProfile, getAuth, signInWithEmailAndPassword, deleteUser } from 'firebase/auth';
+import { signOut, createUserWithEmailAndPassword, updateProfile, getAuth, signInWithEmailAndPassword, deleteUser, sendPasswordResetEmail } from 'firebase/auth';
 import { initializeApp, deleteApp } from 'firebase/app';
 import { createUserWithSecondaryApp, verifyAdminAuthentication, CreateUserData } from '../../api/adminAuth';
 import FirebaseHealthCheck from '../../components/FirebaseHealthCheck';
@@ -80,6 +80,7 @@ import {
   VisibilityOff,
   ContentCopy,
   AutorenewRounded,
+  LockReset,
 } from '@mui/icons-material';
 import { Tooltip } from '@mui/material';
 
@@ -139,7 +140,7 @@ const AdminPanelPage: React.FC = () => {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [generatedPasswords, setGeneratedPasswords] = useState<{[userId: string]: string}>({});
-  const [passwordVisibility, setPasswordVisibility] = useState<{[userId: string]: boolean}>({});
+  // Password visibility state removed - passwords are now securely managed by Firebase Auth
   
   // Doctor fix state
   const [doctorFixLoading, setDoctorFixLoading] = useState(false);
@@ -295,20 +296,26 @@ const AdminPanelPage: React.FC = () => {
     setSnackbarOpen(true);
   };
 
-  const togglePasswordVisibility = (userId: string) => {
-    setPasswordVisibility(prev => ({
-      ...prev,
-      [userId]: !prev[userId]
-    }));
-  };
-
-  const copyPasswordToClipboard = async (password: string, userEmail: string) => {
+  // Password visibility and clipboard functions removed - passwords are securely managed by Firebase Auth
+  
+  // Secure password reset function for admins
+  const sendPasswordReset = async (userEmail: string, userName: string) => {
     try {
-      await navigator.clipboard.writeText(password);
-      showSnackbar(`Password copied for ${userEmail}`);
-    } catch (error) {
-      console.error('Failed to copy password:', error);
-      showSnackbar('Failed to copy password');
+      await sendPasswordResetEmail(auth, userEmail);
+      showSnackbar(`Password reset email sent to ${userName} (${userEmail})`);
+    } catch (error: any) {
+      console.error('Error sending password reset email:', error);
+      let errorMessage = 'Failed to send password reset email';
+      
+      if (error.code === 'auth/user-not-found') {
+        errorMessage = 'User not found in Firebase Authentication';
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = 'Invalid email address';
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = 'Too many requests. Please try again later';
+      }
+      
+      showSnackbar(errorMessage);
     }
   };
 
@@ -1069,14 +1076,14 @@ const AdminPanelPage: React.FC = () => {
           </Alert>
         )}
 
-        {/* Security Warning Panel */}
-        <Alert severity="warning" sx={{ mb: 2 }}>
+        {/* Security Compliance Panel */}
+        <Alert severity="success" sx={{ mb: 2 }}>
           <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
-            ⚠️ Security Notice - Password Visibility:
+            🔒 Security Compliance - Password Protection:
           </Typography>
           <Typography variant="body2">
-            <strong>WARNING:</strong> User passwords are stored and displayed in plain text for admin convenience. 
-            This is a security risk. Ensure this system is only accessible by authorized administrators and consider implementing password hashing for production use.
+            <strong>SECURE:</strong> User passwords are securely managed by Firebase Authentication using industry-standard encryption. 
+            Passwords are never stored in plain text and are not accessible through this interface for enhanced security.
           </Typography>
         </Alert>
 
@@ -1320,7 +1327,6 @@ const AdminPanelPage: React.FC = () => {
                     <TableCell>Email</TableCell>
                     <TableCell>Role</TableCell>
                     <TableCell>Clinic</TableCell>
-                    <TableCell>Password</TableCell>
                     <TableCell>Status</TableCell>
                     <TableCell>Created</TableCell>
                     <TableCell>Actions</TableCell>
@@ -1335,48 +1341,6 @@ const AdminPanelPage: React.FC = () => {
                         <Chip label={user.role} size="small" />
                       </TableCell>
                       <TableCell>{getClinicName(user.clinicId)}</TableCell>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          {user.password ? (
-                            <>
-                              <Typography 
-                                variant="body2" 
-                                sx={{ 
-                                  fontFamily: 'monospace', 
-                                  fontSize: '0.9rem',
-                                  minWidth: '120px',
-                                  padding: '4px 8px',
-                                  backgroundColor: 'rgba(0,0,0,0.05)',
-                                  borderRadius: 1,
-                                  border: '1px solid rgba(0,0,0,0.1)'
-                                }}
-                              >
-                                {passwordVisibility[user.id] ? user.password : '•'.repeat(user.password.length)}
-                              </Typography>
-                              <IconButton
-                                size="small"
-                                onClick={() => togglePasswordVisibility(user.id)}
-                                title={passwordVisibility[user.id] ? 'Hide password' : 'Show password'}
-                                color="primary"
-                              >
-                                {passwordVisibility[user.id] ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
-                              </IconButton>
-                              <IconButton
-                                size="small"
-                                onClick={() => copyPasswordToClipboard(user.password!, user.email)}
-                                title="Copy password"
-                                color="secondary"
-                              >
-                                <ContentCopy fontSize="small" />
-                              </IconButton>
-                            </>
-                          ) : (
-                            <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                              Password not stored
-                            </Typography>
-                          )}
-                        </Box>
-                      </TableCell>
                       <TableCell>
                         <Chip 
                           label={user.isActive ? 'Active' : 'Inactive'} 
@@ -1417,6 +1381,14 @@ const AdminPanelPage: React.FC = () => {
                             title="Edit User"
                           >
                             <Edit />
+                          </IconButton>
+                          <IconButton
+                            color="info"
+                            size="small"
+                            onClick={() => sendPasswordReset(user.email, `${user.firstName} ${user.lastName}`)}
+                            title="Send Password Reset Email"
+                          >
+                            <LockReset />
                           </IconButton>
                           <IconButton
                             color="error"
@@ -1909,7 +1881,7 @@ const AdminPanelPage: React.FC = () => {
                   
                   <Grid item xs={12} md={6}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: 'success.dark' }}>
-                      🔐 Password:
+                      🔐 Secure Access:
                     </Typography>
                     <Box sx={{ 
                       backgroundColor: 'white',
@@ -1918,30 +1890,24 @@ const AdminPanelPage: React.FC = () => {
                       border: '1px solid',
                       borderColor: 'success.main',
                       display: 'flex',
-                      alignItems: 'center',
+                      flexDirection: 'column',
                       gap: 1
                     }}>
                       <Typography 
-                        variant="h6" 
+                        variant="body2" 
                         sx={{ 
-                          fontFamily: 'monospace', 
-                          flexGrow: 1,
-                          fontWeight: 'bold',
-                          letterSpacing: '0.1em'
+                          color: 'success.dark',
+                          fontWeight: 500
                         }}
                       >
-                        {createdUserCredentials.password}
+                        Password securely set in Firebase Authentication
                       </Typography>
-                      <IconButton
-                        size="small"
-                        onClick={() => {
-                          navigator.clipboard.writeText(createdUserCredentials.password);
-                          showSnackbar('Password copied to clipboard');
-                        }}
-                        title="Copy password"
+                      <Typography 
+                        variant="body2" 
+                        color="text.secondary"
                       >
-                        <ContentCopy />
-                      </IconButton>
+                        Use password reset feature to provide secure access to the user
+                      </Typography>
                     </Box>
                   </Grid>
                 </Grid>
@@ -1949,11 +1915,11 @@ const AdminPanelPage: React.FC = () => {
               
               <Alert severity="info" sx={{ mb: 2 }}>
                 <Typography variant="body2">
-                  <strong>📋 Important Notes:</strong>
-                  <br />• Share these credentials securely with the user
-                  <br />• The user can login immediately at /login
-                  <br />• Password is also visible in the Users table for future reference
-                  <br />• Consider asking the user to change their password on first login
+                  <strong>📋 Next Steps:</strong>
+                  <br />• Use the password reset feature to send secure login instructions
+                  <br />• User will receive an email with a secure login link
+                  <br />• Account is active and ready for secure access
+                  <br />• User can set their own password via the reset link
                 </Typography>
               </Alert>
               
@@ -1971,14 +1937,22 @@ const AdminPanelPage: React.FC = () => {
                   variant="outlined"
                   size="small"
                   onClick={() => {
-                    const credentials = `Email: ${createdUserCredentials.email}\nPassword: ${createdUserCredentials.password}`;
-                    navigator.clipboard.writeText(credentials);
-                    showSnackbar('Full credentials copied to clipboard');
+                    const userInfo = `New User Created:\nEmail: ${createdUserCredentials.email}\n\nNext Step: Send password reset email for secure access`;
+                    navigator.clipboard.writeText(userInfo);
+                    showSnackbar('User information copied to clipboard');
                   }}
                   startIcon={<ContentCopy />}
                   sx={{ mt: 1, mr: 1 }}
                 >
-                  Copy Both
+                  Copy User Info
+                </Button>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={() => sendPasswordReset(createdUserCredentials.email, 'the new user')}
+                  sx={{ mt: 1, mr: 1 }}
+                >
+                  Send Password Reset
                 </Button>
                 <Button
                   variant="outlined"
