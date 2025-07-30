@@ -68,8 +68,11 @@ import {
 } from '@mui/icons-material';
 
 import { loadAppointmentsFromStorage, saveAppointmentsToStorage } from './appointments/AppointmentListPage';
-// Legacy utility commented out for clean build
-// import { updatePatientAppointmentFields, syncAllPatientsAppointmentFields } from '../utils/appointmentPatientSync';
+// Patient appointment sync functions (temporary stubs)
+const updatePatientAppointmentFields = (patientName: string) => {
+  console.log('🔄 Updating patient appointment fields for:', patientName);
+  // TODO: Implement patient sync logic if needed
+};
 import { usePersistentForm } from '../hooks/usePersistentForm';
 import {
   baseDoctorSchedules,
