@@ -363,15 +363,27 @@ const DashboardPage: React.FC = () => {
     );
   }
 
-  // Early return for missing user
-  if (!user || !userProfile) {
+  // ✅ ENHANCED: Improved user check - allow if user exists, even without userProfile
+  if (!user) {
     return (
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <Alert severity="warning">
-          {t('dashboard.userRequired')}
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          <Typography variant="h6" gutterBottom>
+            {t('dashboard.userRequired')}
+          </Typography>
+          <Typography variant="body2">
+            Please sign in to access the dashboard. If you're already signed in, please wait a moment for your profile to load.
+          </Typography>
         </Alert>
       </Container>
     );
+  }
+
+  // ✅ ENHANCED: Show dashboard even if userProfile is still loading
+  // This prevents the "userRequired" error for authenticated users
+  if (!userProfile) {
+    console.log('ℹ️ Dashboard: User authenticated but profile still loading, showing dashboard anyway');
+    // Continue to show dashboard - userProfile will load in background
   }
 
   return (

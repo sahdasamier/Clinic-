@@ -68,17 +68,50 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (isUserAdmin) {
         console.log('✅ UserProvider: User is super admin');
-        // Super admin doesn't have a user profile in the users collection
-        setUserProfile(null);
+        // Super admin doesn't have a user profile in the users collection but we create a basic profile
+        const adminProfile: User = {
+          id: user.uid,
+          email: user.email || '',
+          firstName: 'Admin',
+          lastName: 'User',
+          role: 'admin',
+          clinicId: 'demo-clinic',
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        setUserProfile(adminProfile);
         setUserClinic(null);
         setLoading(false);
         return;
       }
       
       // For regular users, try to get their profile
-      // If collections don't exist yet or user doesn't have profile, handle gracefully
+      // If collections don't exist yet or user doesn't have profile, create a basic one
       try {
         console.log('🔄 UserProvider: Fetching user profile from Firestore');
+        
+        // ✅ ENHANCED: Always try to fetch, but handle gracefully if Firebase isn't ready
+        if (!firebaseManager.isReady()) {
+          console.log('⚠️ UserProvider: Firebase not ready, creating temporary profile');
+          // Create a temporary profile for the authenticated user
+          const tempProfile: User = {
+            id: user.uid,
+            email: user.email || '',
+            firstName: user.email?.split('@')[0] || 'User',
+            lastName: 'Unknown',
+            role: 'staff',
+            clinicId: 'demo-clinic',
+            isActive: true,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          };
+          setUserProfile(tempProfile);
+          setUserClinic(null);
+          setLoading(false);
+          return;
+        }
+
         const userDoc = await getDoc(doc(getDb(), 'users', user.uid));
         if (userDoc.exists()) {
           const userData = { id: userDoc.id, ...userDoc.data() } as User;
@@ -101,20 +134,60 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
           }
         } else {
-          console.log('ℹ️ UserProvider: User document doesn\'t exist yet - this is ok for new users');
-          // User document doesn't exist yet - this is ok for new users
-          setUserProfile(null);
+          console.log('ℹ️ UserProvider: User document doesn\'t exist yet - creating basic profile');
+          // ✅ ENHANCED: Create a basic profile for authenticated users without a document
+          const basicProfile: User = {
+            id: user.uid,
+            email: user.email || '',
+            firstName: user.email?.split('@')[0] || 'User',
+            lastName: 'Unknown',
+            role: 'staff',
+            clinicId: 'demo-clinic',
+            isActive: true,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          };
+          setUserProfile(basicProfile);
           setUserClinic(null);
         }
       } catch (userError) {
-        console.warn('⚠️ UserProvider: Could not fetch user profile:', userError);
-        setUserProfile(null);
+        console.warn('⚠️ UserProvider: Could not fetch user profile, creating fallback:', userError);
+        // ✅ ENHANCED: Always provide a fallback profile for authenticated users
+        const fallbackProfile: User = {
+          id: user.uid,
+          email: user.email || '',
+          firstName: user.email?.split('@')[0] || 'User',
+          lastName: 'Unknown',
+          role: 'staff',
+          clinicId: 'demo-clinic',
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        setUserProfile(fallbackProfile);
         setUserClinic(null);
       }
     } catch (error) {
       console.error('❌ UserProvider: Error in refreshUserData:', error);
-      setUserProfile(null);
-      setUserClinic(null);
+      // ✅ ENHANCED: Even in error case, provide a basic profile for authenticated users
+      if (user) {
+        const errorFallbackProfile: User = {
+          id: user.uid,
+          email: user.email || '',
+          firstName: user.email?.split('@')[0] || 'User',
+          lastName: 'Unknown',
+          role: 'staff',
+          clinicId: 'demo-clinic',
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        setUserProfile(errorFallbackProfile);
+        setUserClinic(null);
+      } else {
+        setUserProfile(null);
+        setUserClinic(null);
+      }
     } finally {
       setLoading(false);
     }

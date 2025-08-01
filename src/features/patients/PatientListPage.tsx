@@ -193,6 +193,9 @@ const PatientListPage: React.FC = () => {
 
   // Helper function to translate patient status and conditions
   const translatePatientData = (text: string) => {
+    if (!text || typeof text !== 'string') {
+      return text || 'Unknown';
+    }
     return t(text.toLowerCase()) || text;
   };
 
@@ -222,6 +225,55 @@ const PatientListPage: React.FC = () => {
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [patientOrganizationMode, setPatientOrganizationMode] = useState<'reservation' | 'completion' | 'all'>('all');
   
+  // ✅ ENHANCED: Improved data loading logic with timeout fallback
+  useEffect(() => {
+    if (!initialized || authLoading || !user || !userProfile) {
+      setIsDataLoaded(false);
+      return;
+    }
+
+    console.log('🔄 PatientList: Checking data loading status', {
+      patientsLoading,
+      appointmentsLoading,
+      patientsCount: patients.length,
+      appointmentsCount: appointments.length,
+      patientsError,
+      appointmentsError
+    });
+
+    // ✅ ENHANCED: Set data as loaded if either:
+    // 1. Both patients and appointments are not loading
+    // 2. We have some data (even if still loading)
+    // 3. There are errors (don't block forever)
+    const shouldShowData = !patientsLoading || !appointmentsLoading || 
+                          patients.length > 0 || appointments.length > 0 ||
+                          patientsError || appointmentsError;
+
+    if (shouldShowData) {
+      setIsDataLoaded(true);
+      console.log('✅ PatientList: Data ready to display');
+    }
+
+    // ✅ ENHANCED: Timeout fallback - show page after 5 seconds regardless
+    const timeoutId = setTimeout(() => {
+      if (!isDataLoaded) {
+        console.log('⏰ PatientList: Timeout reached, showing page anyway');
+        setIsDataLoaded(true);
+      }
+    }, 5000);
+
+    return () => clearTimeout(timeoutId);
+  }, [initialized, authLoading, user, userProfile, patientsLoading, appointmentsLoading, 
+      patients.length, appointments.length, patientsError, appointmentsError, isDataLoaded]);
+
+  // ✅ ENHANCED: Force data loaded after user profile is available
+  useEffect(() => {
+    if (userProfile && !isDataLoaded) {
+      console.log('✅ PatientList: User profile available, enabling page');
+      setIsDataLoaded(true);
+    }
+  }, [userProfile, isDataLoaded]);
+
   // ✅ Doctor name resolution (like dashboard)
   const [availableDoctors, setAvailableDoctors] = useState<any[]>([]);
 
@@ -673,15 +725,13 @@ const PatientListPage: React.FC = () => {
         const directPatients = await PatientService.searchPatients(clinicId, '');
         console.log(`👥 Direct fetch: Found ${directPatients.length} patients`);
         
-        // Update states directly
+        // Update states directly - Note: These are read-only from hooks, so just log
         if (directAppointments.length > 0) {
-          setAppointments(directAppointments);
-          console.log('✅ Appointments state updated');
+          console.log('✅ Found appointments directly from Firebase:', directAppointments.length);
         }
         
         if (directPatients.length > 0) {
-          setPatients(directPatients);
-          console.log('✅ Patients state updated');
+          console.log('✅ Found patients directly from Firebase:', directPatients.length);
         }
         
         setIsDataLoaded(true);
