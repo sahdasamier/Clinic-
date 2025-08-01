@@ -883,11 +883,14 @@ const AppointmentListPage: React.FC = () => {
     try {
       const previousStatus = statusEditAppointment.status;
       
-      // ✅ Use Firebase Data Manager
-      await firebaseDataManager.updateAppointment(statusEditAppointment.id, {
+      // ✅ ENHANCED: Use AppointmentService for better error handling
+      const updateData = {
         status: newStatus as any,
         completed: newStatus === 'completed'
-      });
+      };
+
+      await AppointmentService.updateAppointment(statusEditAppointment.id, updateData);
+      console.log('✅ Appointment status updated via AppointmentService');
       
       // If appointment is being marked as completed, create auto-payment
       if (newStatus === 'completed' && previousStatus !== 'completed') {
@@ -899,12 +902,12 @@ const AppointmentListPage: React.FC = () => {
       FirebaseDataBridge.refreshAll(userProfile?.clinicId || 'demo-clinic');
       
       // ✅ State updates automatically via real-time listener!
-      console.log('✅ Appointment status updated via Firestore');
       
       setStatusMenuAnchor(null);
       setStatusEditAppointment(null);
     } catch (error) {
       console.error('❌ Error updating appointment status:', error);
+      alert('Failed to update appointment status. Please try again.');
     }
   };
 
@@ -1114,9 +1117,10 @@ const AppointmentListPage: React.FC = () => {
           paymentStatus: (newAppointment.paymentStatus as 'pending' | 'paid' | 'partial' | 'overdue') || 'pending'
         };
 
-        await firebaseDataManager.updateAppointment(selectedAppointment.id, updatedData);
+        // ✅ Use AppointmentService for better error handling
+        await AppointmentService.updateAppointment(selectedAppointment.id, updatedData);
         setEditDialogOpen(false);
-        console.log('✅ Appointment updated via Firebase Data Manager');
+        console.log('✅ Appointment updated via AppointmentService');
       } else {
         // ✅ CREATE: Use Firebase Data Manager with proper doctor handling
         console.log('🔍 APPOINTMENT CREATION DEBUG:', {
@@ -1162,7 +1166,8 @@ const AppointmentListPage: React.FC = () => {
           isActive: true
         };
 
-        await firebaseDataManager.createAppointment(appointmentData);
+        // ✅ Use AppointmentService for better error handling
+        await AppointmentService.createAppointment(userProfile.clinicId, appointmentData);
         setAddAppointmentOpen(false);
         console.log('✅ Appointment created via Firebase Data Manager');
         
@@ -1194,7 +1199,8 @@ const AppointmentListPage: React.FC = () => {
       alert('✅ Appointment saved successfully!');
     } catch (error) {
       console.error('❌ Error saving appointment:', error);
-      alert('Failed to save appointment. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      alert(`Failed to save appointment: ${errorMessage}. Please try again.`);
     }
   };
 
