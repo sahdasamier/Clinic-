@@ -376,7 +376,38 @@ const DoctorSchedulingPage: React.FC = () => {
   const getDoctorAppointments = (doctorId: number, date: string) => {
     const doctor = doctors.find(d => d.id === doctorId);
     if (!doctor) return [];
-    return appointments.filter((apt: Appointment) => apt.doctor === doctor.name && apt.date === date);
+    
+    // ✅ FIXED: Match both "Dr. Shad Ahmed" and "Shad Ahmed" formats
+    const filteredAppointments = appointments.filter((apt: Appointment) => {
+      if (!apt.doctor || apt.date !== date) return false;
+      
+      // Direct match
+      if (apt.doctor === doctor.name) return true;
+      
+      // Match without "Dr." prefix (for appointments from patient/appointment pages)
+      const doctorNameWithoutDr = doctor.name.replace(/^Dr\.\s*/, '');
+      if (apt.doctor === doctorNameWithoutDr) return true;
+      
+      // Match with "Dr." prefix added (for appointments that don't have it)
+      const appointmentDoctorWithDr = apt.doctor.startsWith('Dr.') ? apt.doctor : `Dr. ${apt.doctor}`;
+      if (appointmentDoctorWithDr === doctor.name) return true;
+      
+      return false;
+    });
+    
+    // Debug logging to help track appointment matching
+    if (filteredAppointments.length > 0) {
+      console.log(`🔍 Found ${filteredAppointments.length} appointments for ${doctor.name} on ${date}:`, 
+        filteredAppointments.map(apt => ({
+          patient: apt.patient,
+          timeSlot: apt.timeSlot,
+          isAvailableSlot: apt.isAvailableSlot,
+          storedDoctorName: apt.doctor
+        }))
+      );
+    }
+    
+    return filteredAppointments;
   };
 
 
@@ -1765,39 +1796,7 @@ const DoctorSchedulingPage: React.FC = () => {
                  📋 Doctor Schedules for {formatDateForDisplay(selectedDate)}
                </Typography>
                
-               {/* Enhanced Helpful Notice */}
-               <Box sx={{ 
-                 mb: 4, 
-                 p: 3, 
-                 background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%)', 
-                 borderRadius: 3, 
-                 border: '1px solid rgba(102, 126, 234, 0.2)',
-                 position: 'relative',
-                 overflow: 'hidden'
-               }}>
-                 <Box sx={{
-                   position: 'absolute',
-                   top: -20,
-                   right: -20,
-                   width: 60,
-                   height: 60,
-                   borderRadius: '50%',
-                   backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                   zIndex: 1,
-                 }} />
-                 <Typography variant="body1" sx={{ fontWeight: 700, color: 'primary.main', mb: 1, position: 'relative', zIndex: 2 }}>
-                   💡 {t('how_to_manage_time_slots')}:
-                 </Typography>
-                 <Typography variant="body2" sx={{ mb: 0.5, color: 'text.secondary', fontWeight: 500, position: 'relative', zIndex: 2 }}>
-                   • {t('click_plus_button_to_add')}
-                 </Typography>
-                 <Typography variant="body2" sx={{ mb: 0.5, color: 'text.secondary', fontWeight: 500, position: 'relative', zIndex: 2 }}>
-                   • {t('add_multiple_time_slots')}
-                 </Typography>
-                 <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 500, position: 'relative', zIndex: 2 }}>
-                   • {t('click_time_slot_chip_to_edit')}
-                 </Typography>
-               </Box>
+
 
                {/* ✨ Enhanced Scheduling Features */}
                <Box sx={{ mb: 4 }}>
