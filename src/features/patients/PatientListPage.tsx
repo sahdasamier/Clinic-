@@ -43,6 +43,7 @@ import {
   FormControlLabel,
   Alert,
   CircularProgress,
+  Snackbar,
 } from '@mui/material';
 import { safeFirestore } from '../../api/firebaseDirect';
 import { useAuth } from '../../contexts/AuthContext';
@@ -89,6 +90,10 @@ import {
   Description,
   CheckCircle,
   Schedule,
+  Science,
+  LocalHospital,
+  Bloodtype,
+  CloudUpload,
 } from '@mui/icons-material';
 
 
@@ -229,6 +234,12 @@ const PatientListPage: React.FC = () => {
   // ✅ Firebase real-time data states (now handled by hooks)
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [patientOrganizationMode, setPatientOrganizationMode] = useState<'reservation' | 'completion' | 'all'>('all');
+  
+  // Document upload related states
+  const [uploadDocumentOpen, setUploadDocumentOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [documentTitle, setDocumentTitle] = useState('');
+  const [shouldNavigateToDocuments, setShouldNavigateToDocuments] = useState(false);
   
   // ✅ ENHANCED: Improved data loading logic with timeout fallback
   useEffect(() => {
@@ -379,12 +390,12 @@ const PatientListPage: React.FC = () => {
           safeFirestore.where('isActive', '==', true)
         );
 
-          const unsub = safeFirestore.onSnapshot(q, (snap) => {
-      const list = snap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
+          const unsub = safeFirestore.onSnapshot(q, (snap: any) => {
+      const list = snap.docs.map((d: any) => ({ id: d.id, ...d.data() })) as any[];
       setAvailableDoctors(list);
       console.log('✅ PatientList: Real-time doctors updated:', {
         count: list.length,
-        doctors: list.map(d => ({
+        doctors: list.map((d: any) => ({
           id: d.id,
           firstName: d.firstName || 'Unknown',
           lastName: d.lastName || 'Doctor',
@@ -392,7 +403,7 @@ const PatientListPage: React.FC = () => {
           email: d.email || 'No email'
         }))
       });
-    }, (error) => {
+    }, (error: any) => {
       console.error('❌ PatientList: Error in doctor listener:', error);
       setAvailableDoctors([]);
     });
@@ -441,9 +452,9 @@ const PatientListPage: React.FC = () => {
           name: patient.name,
           allFields: Object.keys(patient),
           doctorRelatedFields: {
-            doctor: patient.doctor,
-            doctorId: patient.doctorId, 
-            doctorName: patient.doctorName
+            doctor: (patient as any).doctor,
+            doctorId: (patient as any).doctorId, 
+            doctorName: (patient as any).doctorName
           },
           fullPatientObject: patient,
           resolvedName: getPatientDoctorName(patient)
@@ -492,7 +503,7 @@ const PatientListPage: React.FC = () => {
 
       for (const patient of patients) {
         // Only fix patients that have no doctor information
-        if (!patient.doctor && !patient.doctorName && !patient.doctorId) {
+        if (!(patient as any).doctor && !(patient as any).doctorName && !(patient as any).doctorId) {
           try {
             // Assign to first available doctor as default
             const defaultDoctor = availableDoctors[0];
@@ -515,9 +526,9 @@ const PatientListPage: React.FC = () => {
           }
         } else {
           console.log(`⏭️ Skipping patient ${patient.name} - already has doctor info:`, {
-            doctor: patient.doctor,
-            doctorName: patient.doctorName,
-            doctorId: patient.doctorId
+            doctor: (patient as any).doctor,
+            doctorName: (patient as any).doctorName,
+            doctorId: (patient as any).doctorId
           });
         }
       }
@@ -555,7 +566,7 @@ const PatientListPage: React.FC = () => {
 
       const targetPatients = patientNames.length > 0 ? 
         patients.filter(p => patientNames.includes(p.name)) : 
-        patients.filter(p => !p.doctor && !p.doctorName && !p.doctorId);
+        patients.filter(p => !(p as any).doctor && !(p as any).doctorName && !(p as any).doctorId);
 
       console.log('Manual fix targets:', {
         doctor: targetDoctor,
@@ -614,7 +625,7 @@ const PatientListPage: React.FC = () => {
         clinicId: userProfile.clinicId,
         availableDoctors: availableDoctors.length,
         patients: patients.length,
-        patientsWithoutDoctors: patients.filter(p => !p.doctor && !p.doctorName && !p.doctorId).length
+        patientsWithoutDoctors: patients.filter(p => !(p as any).doctor && !(p as any).doctorName && !(p as any).doctorId).length
       });
 
       let fixedCount = 0;
@@ -630,7 +641,7 @@ const PatientListPage: React.FC = () => {
 
       for (const patient of patients) {
         // Only fix patients that have no doctor information
-        const hasDoctor = patient.doctor || patient.doctorName || patient.doctorId;
+        const hasDoctor = (patient as any).doctor || (patient as any).doctorName || (patient as any).doctorId;
         
         if (!hasDoctor) {
           try {
@@ -655,9 +666,9 @@ const PatientListPage: React.FC = () => {
           }
         } else {
           console.log(`⏭️ Skipping patient "${patient.name}" - already has doctor info:`, {
-            doctor: patient.doctor,
-            doctorName: patient.doctorName,
-            doctorId: patient.doctorId
+            doctor: (patient as any).doctor,
+            doctorName: (patient as any).doctorName,
+            doctorId: (patient as any).doctorId
           });
         }
       }
@@ -1043,9 +1054,42 @@ const PatientListPage: React.FC = () => {
     }
   }, [patients.length, appointments.length]);
 
-  const [uploadDocumentOpen, setUploadDocumentOpen] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [documentTitle, setDocumentTitle] = useState('');
+  // ✅ NEW: Handle navigation to Documents tab after upload dialog closes
+  useEffect(() => {
+    if (shouldNavigateToDocuments && !uploadDocumentOpen) {
+      console.log('🔄 Upload dialog closed, navigating to Documents tab');
+      setProfileTab(4); // Navigate to Documents tab
+      setShouldNavigateToDocuments(false); // Reset flag
+      
+      // Show success message after navigation
+      setTimeout(() => {
+        setDocumentUploadSuccess(true);
+        console.log('✅ Successfully navigated to Documents tab and showing success message');
+      }, 200);
+    }
+  }, [shouldNavigateToDocuments, uploadDocumentOpen]);
+
+  // ✅ NEW: Enhanced document type management
+  const [predefinedDocumentTypes, setPredefinedDocumentTypes] = useState([
+    'Lab Report',
+    'X-Ray',
+    'CT Scan',
+    'MRI Scan',
+    'Blood Test',
+    'Prescription',
+    'Medical Certificate',
+    'Insurance Document',
+    'Vaccination Record',
+    'Ultrasound',
+    'ECG Report',
+    'Pathology Report'
+  ]);
+  const [customDocumentType, setCustomDocumentType] = useState('');
+  const [showCustomInput, setShowCustomInput] = useState(false);
+  
+  // ✅ NEW: Success message state
+  const [documentUploadSuccess, setDocumentUploadSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
   const [documentViewerOpen, setDocumentViewerOpen] = useState(false);
   const [viewingDocument, setViewingDocument] = useState<any>(null);
   const [addMedicalHistoryOpen, setAddMedicalHistoryOpen] = useState(false);
@@ -1399,14 +1443,35 @@ const PatientListPage: React.FC = () => {
     }
   };
 
-  const handleUploadDocument = () => {
+  const handleUploadDocument = async () => {
+    console.log('🔄 handleUploadDocument called:', { 
+      hasFile: !!selectedFile, 
+      hasTitle: !!documentTitle.trim(), 
+      hasPatient: !!selectedPatient,
+      title: documentTitle 
+    });
+    
     if (selectedFile && documentTitle.trim() && selectedPatient) {
+      // ✅ ENHANCED: Handle custom document type addition
+      let finalDocumentTitle = documentTitle;
+      
+      // If "Other" was selected and custom type was provided, add it to predefined types
+      if (documentTitle === 'Other' && customDocumentType.trim()) {
+        finalDocumentTitle = customDocumentType.trim();
+        
+        // Add custom type to predefined list if not already present
+        if (!predefinedDocumentTypes.includes(finalDocumentTitle)) {
+          setPredefinedDocumentTypes(prev => [...prev, finalDocumentTitle].sort());
+          console.log(`✅ Added new document type: ${finalDocumentTitle}`);
+        }
+      }
+      
       // Create file URL for viewing
       const fileUrl = URL.createObjectURL(selectedFile);
       
       const newDocument = {
         id: Date.now(),
-        title: documentTitle,
+        title: finalDocumentTitle,
         fileName: selectedFile.name,
         fileSize: selectedFile.size,
         uploadDate: new Date().toISOString().split('T')[0],
@@ -1416,23 +1481,32 @@ const PatientListPage: React.FC = () => {
         fileUrl: fileUrl // Store the blob URL for viewing
       };
 
-      // Update patients array
-      const updatedPatients = patients.map(patient => {
-        if (patient.id === selectedPatient.id) {
-          const updatedPatient = {
-            ...patient,
-            documents: [...(patient.documents || []), newDocument]
-          };
-          setSelectedPatient(updatedPatient);
-          return updatedPatient;
-        }
-        return patient;
-      });
-
-      setPatients(updatedPatients as any);
+      // Update the specific patient with the new document
+      const updatedPatientData = {
+        ...selectedPatient,
+        documents: [...(selectedPatient.documents || []), newDocument]
+      };
+      
+      // Update patient in Firebase through the service
+      await updatePatient(selectedPatient.id, updatedPatientData);
+      setSelectedPatient(updatedPatientData);
+      
+      // ✅ IMPROVED: Set success message
+      setSuccessMessage(`📄 "${finalDocumentTitle}" uploaded successfully! You are now viewing Medical Documents.`);
+      
+      // ✅ IMPROVED: Trigger navigation after dialog closes
+      setShouldNavigateToDocuments(true);
+      
+      // ✅ IMPROVED: Close upload dialog (this will trigger the useEffect for navigation)
       setUploadDocumentOpen(false);
       setSelectedFile(null);
       setDocumentTitle('');
+      setCustomDocumentType('');
+      setShowCustomInput(false);
+      
+      console.log(`📁 Upload completed: ${finalDocumentTitle} for patient ${selectedPatient.name}. Dialog will close and navigate to Documents tab.`);
+      
+      console.log(`✅ Document uploaded: ${finalDocumentTitle} for patient ${selectedPatient.name}`);
     }
   };
 
@@ -2389,6 +2463,7 @@ const PatientListPage: React.FC = () => {
   }
 
   return (
+    <React.Fragment>
         <Container maxWidth="xl" sx={{ mt: 4, mb: 4, flex: 1, overflow: 'auto' }}>
           {/* Enhanced Unified Header Section */}
           <Box sx={{ 
@@ -7281,22 +7356,84 @@ const PatientListPage: React.FC = () => {
           {/* Upload Document Dialog */}
           <Dialog
             open={uploadDocumentOpen}
-            onClose={() => setUploadDocumentOpen(false)}
+            onClose={() => {
+              setUploadDocumentOpen(false);
+              setDocumentTitle('');
+              setCustomDocumentType('');
+              setShowCustomInput(false);
+              setSelectedFile(null);
+            }}
             maxWidth="sm"
             fullWidth
           >
-            <DialogTitle>Upload Document</DialogTitle>
+            <DialogTitle>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <AttachFile color="primary" />
+                Upload Document
+              </Box>
+            </DialogTitle>
             <DialogContent>
               <Grid container spacing={2} sx={{ mt: 1 }}>
+                {/* ✅ NEW: Enhanced Document Type Dropdown */}
                 <Grid item xs={12}>
-                  <TextField 
-                    fullWidth 
-                    label="Document Title" 
-                    value={documentTitle}
-                    onChange={(e) => setDocumentTitle(e.target.value)}
-                    placeholder="e.g., Lab Report, X-Ray, Prescription"
-                  />
+                  <FormControl fullWidth>
+                    <InputLabel>Document Type</InputLabel>
+                    <Select
+                      value={documentTitle}
+                      label="Document Type"
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setDocumentTitle(value);
+                        setShowCustomInput(value === 'Other');
+                        if (value !== 'Other') {
+                          setCustomDocumentType('');
+                        }
+                      }}
+                    >
+                      {predefinedDocumentTypes.map((type) => (
+                        <MenuItem key={type} value={type}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            {type === 'Lab Report' && <Science sx={{ fontSize: 18, color: '#4caf50' }} />}
+                            {type === 'X-Ray' && <LocalHospital sx={{ fontSize: 18, color: '#2196f3' }} />}
+                            {(type === 'CT Scan' || type === 'MRI Scan') && <MedicalServices sx={{ fontSize: 18, color: '#9c27b0' }} />}
+                            {type === 'Blood Test' && <Bloodtype sx={{ fontSize: 18, color: '#f44336' }} />}
+                            {type === 'Prescription' && <LocalPharmacy sx={{ fontSize: 18, color: '#ff9800' }} />}
+                            {type === 'Medical Certificate' && <Description sx={{ fontSize: 18, color: '#795548' }} />}
+                            {!['Lab Report', 'X-Ray', 'CT Scan', 'MRI Scan', 'Blood Test', 'Prescription', 'Medical Certificate'].includes(type) && 
+                             <AttachFile sx={{ fontSize: 18, color: '#607d8b' }} />}
+                            {type}
+                          </Box>
+                        </MenuItem>
+                      ))}
+                      <MenuItem value="Other">
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Add sx={{ fontSize: 18, color: '#00bcd4' }} />
+                          Other (Custom Type)
+                        </Box>
+                      </MenuItem>
+                    </Select>
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                      Select from common document types or choose "Other" to add a custom type
+                    </Typography>
+                  </FormControl>
                 </Grid>
+                
+                {/* ✅ NEW: Custom Document Type Input */}
+                {showCustomInput && (
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      label="Custom Document Type"
+                      value={customDocumentType}
+                      onChange={(e) => setCustomDocumentType(e.target.value)}
+                      placeholder="Enter custom document type name"
+                      helperText="This will be added to the dropdown for future use"
+                      autoFocus
+                    />
+                  </Grid>
+                )}
+                
+                {/* File Upload Section */}
                 <Grid item xs={12}>
                   <Box sx={{ 
                     border: '2px dashed #ccc', 
@@ -7328,6 +7465,8 @@ const PatientListPage: React.FC = () => {
                     </label>
                   </Box>
                 </Grid>
+                
+                {/* File Info Section */}
                 {selectedFile && (
                   <Grid item xs={12}>
                     <Box sx={{ p: 2, backgroundColor: '#f5f5f5', borderRadius: 1 }}>
@@ -7350,13 +7489,20 @@ const PatientListPage: React.FC = () => {
                 setUploadDocumentOpen(false);
                 setSelectedFile(null);
                 setDocumentTitle('');
+                setCustomDocumentType('');
+                setShowCustomInput(false);
               }}>
                 Cancel
               </Button>
               <Button 
                 variant="contained" 
                 onClick={handleUploadDocument}
-                disabled={!selectedFile || !documentTitle.trim()}
+                disabled={
+                  !selectedFile || 
+                  !documentTitle.trim() || 
+                  (documentTitle === 'Other' && !customDocumentType.trim())
+                }
+                startIcon={<CloudUpload />}
               >
                 Upload Document
               </Button>
@@ -8225,7 +8371,39 @@ const PatientListPage: React.FC = () => {
             patient={assignmentPatient}
             onAssignmentChange={handleAssignmentChange}
           />
+
         </Container>
+        
+        {/* ✅ ENHANCED: Document Upload Success Message - Moved outside Container for better visibility */}
+        <Snackbar
+          open={documentUploadSuccess}
+          autoHideDuration={4000}
+          onClose={() => setDocumentUploadSuccess(false)}
+          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+          sx={{ 
+            zIndex: 9999, // Ensure it appears above all dialogs
+            mt: 8 // Top margin to avoid header overlap
+          }}
+        >
+          <Alert 
+            onClose={() => setDocumentUploadSuccess(false)} 
+            severity="success" 
+            variant="filled"
+            sx={{ 
+              width: '100%',
+              fontSize: '1.1rem',
+              fontWeight: 600,
+              '& .MuiAlert-icon': {
+                fontSize: '1.8rem'
+              },
+              boxShadow: '0 8px 32px rgba(76, 175, 80, 0.3)',
+              borderRadius: 2
+            }}
+          >
+            {successMessage}
+          </Alert>
+        </Snackbar>
+    </React.Fragment>
   );
 };
 

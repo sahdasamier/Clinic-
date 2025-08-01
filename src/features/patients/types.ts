@@ -14,6 +14,7 @@ export interface Patient {
   bloodType: string;
   allergies: string[];
   emergencyContact: string;
+  doctor?: string;
   doctorId?: string;
   doctorName?: string;
   medicalHistory: MedicalHistoryRecord[];
