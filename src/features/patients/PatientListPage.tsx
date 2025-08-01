@@ -102,6 +102,7 @@ import {
   type Appointment
 } from '../../services';
 import { globalDataSync } from '../../utils/globalDataSync';
+import AutoSyncIndicator from '../../components/AutoSyncIndicator';
 
 import FirebaseFriendlySync, { FirebaseDataBridge } from '../../utils/firebaseFriendlySync';
 // Legacy utility commented out for clean build
@@ -926,6 +927,57 @@ const PatientListPage: React.FC = () => {
       window.removeEventListener('openAddPatient', handleOpenAddPatient);
     };
   }, []);
+  
+  // ✅ TEMPORARILY DISABLED: Automatic real-time sync listeners to fix hooks error
+  // Automatic sync still works through Firebase real-time listeners and direct triggers
+  // TODO: Re-enable after fixing hooks issue
+  /*
+  useEffect(() => {
+    console.log('🔄 PatientList: Setting up automatic sync listeners');
+
+    const handleAppointmentUpdate = (event: CustomEvent) => {
+      console.log('📋 PatientList: Appointment updated automatically, refreshing patient data');
+    };
+
+    const handlePaymentUpdate = (event: CustomEvent) => {
+      console.log('💰 PatientList: Payment updated automatically, refreshing patient data');
+    };
+
+    const handleForceRefresh = (event: CustomEvent) => {
+      console.log('🔄 PatientList: Force refresh triggered automatically');
+      setIsDataLoaded(true);
+    };
+
+    const handlePatientRefresh = (event: CustomEvent) => {
+      console.log('👥 PatientList: Patient data refresh triggered automatically');
+      setIsDataLoaded(true);
+    };
+
+    window.addEventListener('appointmentUpdated', handleAppointmentUpdate);
+    window.addEventListener('paymentUpdated', handlePaymentUpdate);
+    window.addEventListener('forceDataRefresh', handleForceRefresh);
+    window.addEventListener('refreshPatientData', handlePatientRefresh);
+
+    return () => {
+      window.removeEventListener('appointmentUpdated', handleAppointmentUpdate);
+      window.removeEventListener('paymentUpdated', handlePaymentUpdate);
+      window.removeEventListener('forceDataRefresh', handleForceRefresh);
+      window.removeEventListener('refreshPatientData', handlePatientRefresh);
+    };
+  }, []);
+  */
+
+  // ✅ ENHANCED: Automatic sync when patient data changes
+  useEffect(() => {
+    if (patients.length > 0 && appointments.length > 0) {
+      console.log('🔄 PatientList: Data available, triggering automatic sync check');
+      // Trigger automatic cross-page sync
+      import('../../utils/globalDataSync').then(({ triggerAutomaticSync }) => {
+        triggerAutomaticSync.all();
+      });
+    }
+  }, [patients.length, appointments.length]);
+
   const [uploadDocumentOpen, setUploadDocumentOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [documentTitle, setDocumentTitle] = useState('');
@@ -1176,10 +1228,18 @@ const PatientListPage: React.FC = () => {
       // ✅ NEW: Use Firestore service instead of manual state update
       await PatientService.updatePatient(editingPatient.id, editingPatient);
       
+      // ✅ ENHANCED: Trigger automatic cross-page sync
+      import('../../utils/globalDataSync').then(({ triggerAutomaticSync }) => {
+        triggerAutomaticSync.patient(editingPatient, 'update');
+      });
+      
       // ✅ State updates automatically via real-time listener!
       setEditPatientOpen(false);
       setEditingPatient(null);
       console.log('✅ Patient updated successfully');
+      
+      // ✅ ENHANCED: Show success message
+      alert(`Patient "${editingPatient.name}" updated successfully!`);
     } catch (error) {
       console.error('❌ Error updating patient:', error);
       alert('Failed to update patient. Please try again.');
@@ -1352,8 +1412,10 @@ const PatientListPage: React.FC = () => {
       
       console.log('✅ New patient created successfully');
       
-      // ✅ Trigger global sync to notify other pages
-      globalDataSync.triggerPatientSync(patientData);
+      // ✅ ENHANCED: Trigger automatic cross-page sync
+      import('../../utils/globalDataSync').then(({ triggerAutomaticSync }) => {
+        triggerAutomaticSync.patient(patientData, 'create');
+      });
       
       alert('Patient added successfully!');
     } catch (error) {
@@ -2337,47 +2399,10 @@ const PatientListPage: React.FC = () => {
                 >
                   {t('whatsapp_all')}
                 </Button>
-                <Button
-                  variant="contained"
-                  startIcon={syncStatus === 'syncing' ? <CircularProgress size={16} sx={{ color: 'white' }} /> : <Schedule />}
-                  onClick={syncAppointmentsToPatients}
-                  disabled={syncStatus === 'syncing'}
-                  size="medium"
-                  sx={{ 
-                    borderRadius: 3,
-                    backgroundColor: syncStatus === 'completed' ? 'rgba(76, 175, 80, 0.2)' : 
-                                    syncStatus === 'error' ? 'rgba(244, 67, 54, 0.2)' :
-                                    'rgba(33, 150, 243, 0.2)',
-                    color: 'white',
-                    border: syncStatus === 'completed' ? '1px solid rgba(76, 175, 80, 0.3)' :
-                           syncStatus === 'error' ? '1px solid rgba(244, 67, 54, 0.3)' :
-                           '1px solid rgba(33, 150, 243, 0.3)',
-                    fontWeight: 600,
-                    px: { xs: 2, sm: 3 },
-                    py: { xs: 1, sm: 1.5 },
-                    backdropFilter: 'blur(10px)',
-                    fontSize: { xs: '0.8rem', sm: '0.875rem' },
-                    '&:hover': {
-                      backgroundColor: syncStatus === 'completed' ? 'rgba(76, 175, 80, 0.3)' :
-                                      syncStatus === 'error' ? 'rgba(244, 67, 54, 0.3)' :
-                                      'rgba(33, 150, 243, 0.3)',
-                      transform: 'translateY(-2px)',
-                      boxShadow: syncStatus === 'completed' ? '0 8px 25px rgba(76, 175, 80, 0.25)' :
-                                 syncStatus === 'error' ? '0 8px 25px rgba(244, 67, 54, 0.25)' :
-                                 '0 8px 25px rgba(33, 150, 243, 0.25)',
-                    },
-                    '&:disabled': {
-                      backgroundColor: 'rgba(33, 150, 243, 0.1)',
-                      color: 'rgba(255, 255, 255, 0.7)',
-                    },
-                    transition: 'all 0.3s ease'
-                  }}
-                >
-                  {syncStatus === 'syncing' ? t('syncing') : 
-                   syncStatus === 'completed' ? t('sync_complete') :
-                   syncStatus === 'error' ? t('sync_failed') :
-                   t('sync_appointments')}
-                </Button>
+                <AutoSyncIndicator 
+                  variant="button" 
+                  showDetails={true} 
+                />
 
                 <Button
                   variant="contained"

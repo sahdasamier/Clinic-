@@ -60,56 +60,145 @@ export interface Appointment {
 }
 
 export const AppointmentService = {
-  // ✅ NEW: Helper function to check if patient exists and create if needed
-  async ensurePatientExists(clinicId: string, patientName: string, patientPhone?: string): Promise<string | undefined> {
+  // ✅ ENHANCED: Smart patient management that updates existing patients instead of creating duplicates
+  async ensurePatientExists(clinicId: string, patientName: string, patientPhone?: string, existingPatientId?: string): Promise<string | undefined> {
     try {
       // Dynamic import to avoid circular dependency
       const { PatientService } = await import('./PatientService');
       
-      // Check if patient already exists by name and phone
-      const existingPatients = await PatientService.searchPatients(clinicId, patientName);
-      
-      // Try to find exact match by name (and phone if provided)
-      const exactMatch = existingPatients.find(p => {
-        const nameMatch = p.name?.toLowerCase().trim() === patientName.toLowerCase().trim();
-        const phoneMatch = !patientPhone || !p.phone || p.phone === patientPhone;
-        return nameMatch && phoneMatch;
-      });
-      
-      if (exactMatch) {
-        console.log(`✅ Patient already exists: ${exactMatch.name} (ID: ${exactMatch.id})`);
-        return exactMatch.id;
+      // ✅ PRIORITY 1: If we have an existing patient ID, update that patient instead of searching
+      if (existingPatientId && existingPatientId !== 'legacy-patient' && existingPatientId !== 'unknown-patient') {
+        try {
+          console.log(`🔄 PRIORITY UPDATE: Updating existing patient ${existingPatientId} with new name: ${patientName}`);
+          
+          // First verify the patient exists
+          const allPatients = await PatientService.searchPatients(clinicId, '');
+          const existingPatient = allPatients.find(p => p.id === existingPatientId);
+          
+          if (existingPatient) {
+            // Update the existing patient with new information
+            const updateData: any = { name: patientName };
+            if (patientPhone && patientPhone.trim() !== '') {
+              updateData.phone = patientPhone;
+            }
+            
+            await PatientService.updatePatient(existingPatientId, updateData);
+            console.log(`✅ PRIORITY UPDATE SUCCESS: Patient updated - ${existingPatient.name} → ${patientName} (ID: ${existingPatientId})`);
+            return existingPatientId;
+          } else {
+            console.warn(`⚠️ PRIORITY UPDATE: Patient with ID ${existingPatientId} not found, proceeding with search strategies`);
+          }
+        } catch (updateError) {
+          console.warn(`⚠️ PRIORITY UPDATE FAILED: Could not update patient ${existingPatientId}:`, updateError);
+          // Continue to search logic below if update fails
+        }
       }
       
-      // Create new patient if not found
-      console.log(`🆕 Creating new patient from appointment: ${patientName}`);
+      // ✅ STRATEGY 2: Search for existing patients only if no existing ID was provided
+      if (!existingPatientId || existingPatientId === 'legacy-patient' || existingPatientId === 'unknown-patient') {
+        console.log(`🔍 SEARCHING: No valid existing patient ID, searching for matches for: ${patientName}`);
+        
+        const existingPatients = await PatientService.searchPatients(clinicId, patientName);
+        
+        // Strategy 2A: Exact name and phone match
+        let exactMatch = existingPatients.find(p => {
+          const nameMatch = p.name?.toLowerCase().trim() === patientName.toLowerCase().trim();
+          const phoneMatch = !patientPhone || !p.phone || p.phone === patientPhone;
+          return nameMatch && phoneMatch;
+        });
+        
+        // Strategy 2B: If no exact match and phone provided, try phone-only match
+        if (!exactMatch && patientPhone && patientPhone.trim() !== '') {
+          exactMatch = existingPatients.find(p => p.phone === patientPhone);
+          if (exactMatch) {
+            console.log(`📞 PHONE MATCH: Found patient by phone, updating name: ${exactMatch.name} → ${patientName}`);
+            await PatientService.updatePatient(exactMatch.id, { name: patientName });
+            return exactMatch.id;
+          }
+        }
+        
+        // Strategy 2C: Fuzzy name matching (only if no phone provided to avoid false matches)
+        if (!exactMatch && (!patientPhone || patientPhone.trim() === '')) {
+          exactMatch = existingPatients.find(p => {
+            const similarity = this.calculateNameSimilarity(p.name || '', patientName);
+            return similarity > 0.85; // Higher threshold for safety
+          });
+          
+          if (exactMatch) {
+            console.log(`🎯 FUZZY MATCH: Found similar patient, updating: ${exactMatch.name} → ${patientName}`);
+            const updateData: any = { name: patientName };
+            if (patientPhone) updateData.phone = patientPhone;
+            await PatientService.updatePatient(exactMatch.id, updateData);
+            return exactMatch.id;
+          }
+        }
+        
+        if (exactMatch) {
+          console.log(`✅ SEARCH SUCCESS: Patient found and will be used: ${patientName} (ID: ${exactMatch.id})`);
+          return exactMatch.id;
+        }
+        
+        // Only create new patient if no existing ID was provided and no match found
+        console.log(`🆕 NEW PATIENT: No matches found, creating new patient: ${patientName}`);
+        
+        const newPatientData = {
+          name: patientName,
+          phone: patientPhone || '',
+          email: '',
+          status: 'new' as const,
+          condition: '',
+          isActive: true,
+          medicalHistory: [],
+          medications: [],
+          visitNotes: [],
+          vitalSigns: [],
+          documents: [],
+          allergies: []
+        };
+        
+        const patientId = await PatientService.createPatient(clinicId, newPatientData);
+        console.log(`✅ NEW PATIENT CREATED: ${patientName} (ID: ${patientId})`);
+        return patientId;
+      }
       
-      const newPatientData = {
-        name: patientName,
-        phone: patientPhone || '',
-        email: '',
-        status: 'new' as const,
-        condition: '',
-        isActive: true,
-        // Set default values for required fields
-        medicalHistory: [],
-        medications: [],
-        visitNotes: [],
-        vitalSigns: [],
-        documents: [],
-        allergies: []
-      };
-      
-      const patientId = await PatientService.createPatient(clinicId, newPatientData);
-      console.log(`✅ New patient created: ${patientName} (ID: ${patientId})`);
-      
-      return patientId;
+      // If we reach here, we had an existing ID but couldn't update or find the patient
+      console.warn(`⚠️ FALLBACK: Could not update existing patient ${existingPatientId}, returning as-is`);
+      return existingPatientId;
       
     } catch (error) {
       console.error('❌ Error ensuring patient exists:', error);
-      // Don't fail the appointment creation if patient creation fails
-      return undefined;
+      // Return the existing ID if we had one, to avoid breaking the appointment
+      return existingPatientId || undefined;
     }
+  },
+
+  // ✅ NEW: Helper function to calculate name similarity
+  calculateNameSimilarity(name1: string, name2: string): number {
+    const normalize = (str: string) => str.toLowerCase().trim().replace(/\s+/g, ' ');
+    const n1 = normalize(name1);
+    const n2 = normalize(name2);
+    
+    if (n1 === n2) return 1.0;
+    
+    // Levenshtein distance for similarity
+    const matrix = Array(n2.length + 1).fill(null).map(() => Array(n1.length + 1).fill(null));
+    
+    for (let i = 0; i <= n1.length; i++) matrix[0][i] = i;
+    for (let j = 0; j <= n2.length; j++) matrix[j][0] = j;
+    
+    for (let j = 1; j <= n2.length; j++) {
+      for (let i = 1; i <= n1.length; i++) {
+        const indicator = n1[i - 1] === n2[j - 1] ? 0 : 1;
+        matrix[j][i] = Math.min(
+          matrix[j][i - 1] + 1,
+          matrix[j - 1][i] + 1,
+          matrix[j - 1][i - 1] + indicator
+        );
+      }
+    }
+    
+    const maxLength = Math.max(n1.length, n2.length);
+    return maxLength === 0 ? 1.0 : (maxLength - matrix[n2.length][n1.length]) / maxLength;
   },
 
   // ✅ MODIFIED: Enhanced createAppointment to automatically create patients

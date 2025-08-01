@@ -3,27 +3,22 @@ import { AppointmentService } from '../services/AppointmentService';
 import { PatientService } from '../services/PatientService';
 import { PaymentService } from '../services/PaymentService';
 
-// Global data sync events
-export const GLOBAL_SYNC_EVENTS = {
-  APPOINTMENT_CREATED: 'global:appointmentCreated',
-  APPOINTMENT_UPDATED: 'global:appointmentUpdated',
-  APPOINTMENT_DELETED: 'global:appointmentDeleted',
-  PATIENT_CREATED: 'global:patientCreated',
-  PATIENT_UPDATED: 'global:patientUpdated',
-  PATIENT_DELETED: 'global:patientDeleted',
-  PAYMENT_CREATED: 'global:paymentCreated',
-  PAYMENT_UPDATED: 'global:paymentUpdated',
-  PAYMENT_DELETED: 'global:paymentDeleted',
-  DATA_SYNC_COMPLETE: 'global:dataSyncComplete',
-  NOTIFICATION_UPDATE: 'global:notificationUpdate'
-} as const;
+// ✅ ENHANCED AUTOMATIC REAL-TIME SYNC SYSTEM
+// This system automatically synchronizes data across all pages without user intervention
 
-// Data sync state
+interface SyncEventDetail {
+  type: 'patient' | 'appointment' | 'payment' | 'inventory';
+  action: 'create' | 'update' | 'delete';
+  data: any;
+  source: string;
+  timestamp: number;
+}
+
 class GlobalDataSyncManager {
   private static instance: GlobalDataSyncManager;
   private listeners: Map<string, Set<Function>> = new Map();
-  private unsubscribers: Map<string, Function> = new Map();
-  private currentClinicId: string | null = null;
+  private isInitialized = false;
+  private clinicId: string | null = null;
 
   static getInstance(): GlobalDataSyncManager {
     if (!GlobalDataSyncManager.instance) {
@@ -32,148 +27,339 @@ class GlobalDataSyncManager {
     return GlobalDataSyncManager.instance;
   }
 
-  // Initialize global listeners for a clinic
-  initializeForClinic(clinicId: string) {
-    if (this.currentClinicId === clinicId) {
-      console.log(`🔄 GlobalDataSync: Already initialized for clinic ${clinicId}`);
+  initialize(clinicId: string) {
+    if (this.isInitialized && this.clinicId === clinicId) {
+      console.log('✅ GlobalDataSync: Already initialized for clinic:', clinicId);
       return;
     }
 
-    // Clean up previous listeners
-    this.cleanup();
-    this.currentClinicId = clinicId;
-
-    console.log(`🔄 GlobalDataSync: Initializing for clinic ${clinicId}`);
-
-    // Set up global listeners
-    const appointmentUnsub = AppointmentService.listenAppointments(clinicId, (appointments) => {
-      this.broadcastEvent(GLOBAL_SYNC_EVENTS.DATA_SYNC_COMPLETE, {
-        type: 'appointments',
-        data: appointments,
-        count: appointments.length
-      });
-    });
-
-    const patientUnsub = PatientService.listenPatients(clinicId, (patients) => {
-      this.broadcastEvent(GLOBAL_SYNC_EVENTS.DATA_SYNC_COMPLETE, {
-        type: 'patients',
-        data: patients,
-        count: patients.length
-      });
-    });
-
-    // Store unsubscribers
-    this.unsubscribers.set('appointments', appointmentUnsub);
-    this.unsubscribers.set('patients', patientUnsub);
-
-    console.log(`✅ GlobalDataSync: Initialized for clinic ${clinicId}`);
+    this.clinicId = clinicId;
+    this.setupGlobalEventListeners();
+    this.setupAutoSyncTriggers();
+    this.isInitialized = true;
+    
+    console.log('🔄 GlobalDataSync: Initialized automatic synchronization for clinic:', clinicId);
   }
 
-  // Subscribe to global events
-  subscribe(eventType: string, callback: Function) {
-    if (!this.listeners.has(eventType)) {
-      this.listeners.set(eventType, new Set());
-    }
-    this.listeners.get(eventType)!.add(callback);
+  // ✅ ENHANCED: Set up automatic sync triggers for all data changes
+  private setupAutoSyncTriggers() {
+    // Listen for appointment changes and auto-sync patients
+    this.addEventListener('appointment', (detail: SyncEventDetail) => {
+      console.log('🔄 Auto-sync: Appointment changed, updating related patient data');
+      this.handleAppointmentSync(detail);
+    });
 
-    // Return unsubscribe function
-    return () => {
-      const callbacks = this.listeners.get(eventType);
-      if (callbacks) {
-        callbacks.delete(callback);
+    // Listen for patient changes and auto-sync appointments  
+    this.addEventListener('patient', (detail: SyncEventDetail) => {
+      console.log('🔄 Auto-sync: Patient changed, updating related appointment data');
+      this.handlePatientSync(detail);
+    });
+
+    // Listen for payment changes and auto-sync appointments
+    this.addEventListener('payment', (detail: SyncEventDetail) => {
+      console.log('🔄 Auto-sync: Payment changed, updating related appointment data');
+      this.handlePaymentSync(detail);
+    });
+  }
+
+  // ✅ ENHANCED: Handle appointment changes with automatic patient sync
+  private async handleAppointmentSync(detail: SyncEventDetail) {
+    try {
+      const appointment = detail.data;
+      
+      // If appointment is completed, automatically create patient if doesn't exist
+      if (detail.action === 'update' && appointment.status === 'completed') {
+        await this.ensurePatientExists(appointment);
       }
-    };
+      
+      // Auto-sync appointment data to all pages
+      this.broadcastUpdate('appointment', detail);
+      
+      // Trigger patient data refresh on all pages
+      this.triggerPatientRefresh();
+      
+    } catch (error) {
+      console.error('❌ Error in appointment auto-sync:', error);
+    }
   }
 
-  // Broadcast events to all subscribers
-  private broadcastEvent(eventType: string, data: any) {
-    const callbacks = this.listeners.get(eventType);
-    if (callbacks) {
-      callbacks.forEach(callback => {
-        try {
-          callback(data);
-        } catch (error) {
-          console.error(`❌ GlobalDataSync: Error in callback for ${eventType}:`, error);
+  // ✅ ENHANCED: Handle patient changes with automatic appointment sync
+  private async handlePatientSync(detail: SyncEventDetail) {
+    try {
+      const patient = detail.data;
+      
+      // Auto-sync patient data to all pages
+      this.broadcastUpdate('patient', detail);
+      
+      // Trigger appointment data refresh on all pages
+      this.triggerAppointmentRefresh();
+      
+    } catch (error) {
+      console.error('❌ Error in patient auto-sync:', error);
+    }
+  }
+
+  // ✅ ENHANCED: Handle payment changes with automatic appointment sync
+  private async handlePaymentSync(detail: SyncEventDetail) {
+    try {
+      const payment = detail.data;
+      
+      // If payment is completed, automatically update appointment status
+      if (detail.action === 'update' && payment.status === 'paid') {
+        await this.syncPaymentToAppointment(payment);
+      }
+      
+      // Auto-sync payment data to all pages
+      this.broadcastUpdate('payment', detail);
+      
+      // Trigger appointment data refresh on all pages
+      this.triggerAppointmentRefresh();
+      
+    } catch (error) {
+      console.error('❌ Error in payment auto-sync:', error);
+    }
+  }
+
+  // ✅ ENHANCED: Ensure patient exists for appointments without creating duplicates
+  private async ensurePatientExists(appointment: any) {
+    if (!this.clinicId) return;
+
+    try {
+      // ✅ ENHANCED: Pass existing patient ID to update instead of create
+      const existingPatientId = appointment.patientId;
+      
+      console.log('🔄 Auto-sync: Ensuring patient exists for appointment', {
+        appointmentId: appointment.id,
+        patientName: appointment.patient || appointment.patientName,
+        existingPatientId: existingPatientId,
+        phone: appointment.phone,
+        hasExistingPatientId: !!existingPatientId && existingPatientId !== 'legacy-patient'
+      });
+      
+      // Only process if we have valid patient data
+      if (!appointment.patient && !appointment.patientName) {
+        console.warn('⚠️ Auto-sync: No patient name provided, skipping patient sync');
+        return;
+      }
+      
+      const patientId = await AppointmentService.ensurePatientExists(
+        this.clinicId,
+        appointment.patient || appointment.patientName,
+        appointment.phone,
+        existingPatientId // Pass existing ID to update instead of create new
+      );
+      
+      console.log('✅ Auto-sync: Patient ensure result:', {
+        originalPatientId: existingPatientId,
+        resultPatientId: patientId,
+        patientIdChanged: patientId !== existingPatientId,
+        shouldUpdateAppointment: patientId && appointment.id && patientId !== existingPatientId
+      });
+      
+      if (patientId && appointment.id && patientId !== existingPatientId) {
+        // Only update appointment if patient ID actually changed
+        await AppointmentService.updateAppointment(appointment.id, {
+          patientId: patientId
+        });
+        console.log('✅ Auto-sync: Patient ensured and appointment updated with new patient ID');
+      } else if (patientId) {
+        console.log('✅ Auto-sync: Patient updated successfully, appointment patient ID unchanged');
+      }
+    } catch (error) {
+      console.error('❌ Error ensuring patient exists in auto-sync:', error);
+    }
+  }
+
+  // ✅ ENHANCED: Sync payment status to appointment
+  private async syncPaymentToAppointment(payment: any) {
+    if (!payment.appointmentId) return;
+
+    try {
+      await AppointmentService.updateAppointment(payment.appointmentId, {
+        paymentStatus: 'paid'
+      });
+      console.log('✅ Auto-sync: Appointment payment status updated');
+    } catch (error) {
+      console.error('❌ Error syncing payment to appointment:', error);
+    }
+  }
+
+  // ✅ ENHANCED: Global event broadcasting for real-time updates
+  private setupGlobalEventListeners() {
+    // Listen for Firebase real-time updates and broadcast to all pages
+    if (typeof window !== 'undefined') {
+      // Custom event for cross-page communication
+      window.addEventListener('globalDataUpdate', (event: CustomEvent) => {
+        const detail = event.detail as SyncEventDetail;
+        this.processGlobalUpdate(detail);
+      });
+
+      // Storage event for cross-tab communication
+      window.addEventListener('storage', (event) => {
+        if (event.key === 'globalDataSync' && event.newValue) {
+          const detail = JSON.parse(event.newValue) as SyncEventDetail;
+          this.processGlobalUpdate(detail);
         }
       });
     }
-
-    // Also dispatch browser event for legacy compatibility
-    window.dispatchEvent(new CustomEvent(eventType, { detail: data }));
   }
 
-  // Manual sync triggers
-  triggerAppointmentSync(data: any) {
-    this.broadcastEvent(GLOBAL_SYNC_EVENTS.APPOINTMENT_UPDATED, data);
-    // Trigger notification update
-    this.broadcastEvent(GLOBAL_SYNC_EVENTS.NOTIFICATION_UPDATE, {
-      type: 'appointment',
-      action: 'updated',
-      data
-    });
-  }
-
-  triggerPatientSync(data: any) {
-    this.broadcastEvent(GLOBAL_SYNC_EVENTS.PATIENT_UPDATED, data);
-    this.broadcastEvent(GLOBAL_SYNC_EVENTS.NOTIFICATION_UPDATE, {
-      type: 'patient',
-      action: 'updated',
-      data
-    });
-  }
-
-  triggerPaymentSync(data: any) {
-    this.broadcastEvent(GLOBAL_SYNC_EVENTS.PAYMENT_UPDATED, data);
-    this.broadcastEvent(GLOBAL_SYNC_EVENTS.NOTIFICATION_UPDATE, {
-      type: 'payment',
-      action: 'updated',
-      data
-    });
-  }
-
-  // Force refresh all data
-  forceRefresh() {
-    if (this.currentClinicId) {
-      console.log(`🔄 GlobalDataSync: Force refreshing data for clinic ${this.currentClinicId}`);
-      this.broadcastEvent(GLOBAL_SYNC_EVENTS.DATA_SYNC_COMPLETE, {
-        type: 'force_refresh',
-        clinicId: this.currentClinicId
-      });
+  // ✅ ENHANCED: Process global updates and trigger auto-sync
+  private processGlobalUpdate(detail: SyncEventDetail) {
+    // Trigger appropriate sync handlers
+    if (detail.type === 'appointment') {
+      this.handleAppointmentSync(detail);
+    } else if (detail.type === 'patient') {
+      this.handlePatientSync(detail);
+    } else if (detail.type === 'payment') {
+      this.handlePaymentSync(detail);
     }
   }
 
-  // Cleanup
-  cleanup() {
-    console.log('🧹 GlobalDataSync: Cleaning up listeners');
-    this.unsubscribers.forEach(unsub => unsub());
-    this.unsubscribers.clear();
-    this.listeners.clear();
-    this.currentClinicId = null;
+  // ✅ ENHANCED: Broadcast updates to all pages and tabs
+  private broadcastUpdate(type: string, detail: SyncEventDetail) {
+    if (typeof window !== 'undefined') {
+      // Cross-page event
+      window.dispatchEvent(new CustomEvent('globalDataUpdate', { detail }));
+      
+      // Cross-tab event
+      localStorage.setItem('globalDataSync', JSON.stringify(detail));
+      setTimeout(() => {
+        localStorage.removeItem('globalDataSync');
+      }, 1000);
+      
+      // Trigger specific page updates
+      window.dispatchEvent(new CustomEvent(`${type}Updated`, { detail }));
+    }
   }
 
-  // Get current state
-  getCurrentClinicId() {
-    return this.currentClinicId;
+  // ✅ ENHANCED: Trigger automatic data refreshes
+  private triggerPatientRefresh() {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('refreshPatientData', {
+        detail: { automatic: true, timestamp: Date.now() }
+      }));
+    }
+  }
+
+  private triggerAppointmentRefresh() {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('refreshAppointmentData', {
+        detail: { automatic: true, timestamp: Date.now() }
+      }));
+    }
+  }
+
+  // ✅ ENHANCED: Public methods for triggering automatic sync
+  triggerPatientSync(patientData: any, action: 'create' | 'update' | 'delete' = 'update') {
+    const detail: SyncEventDetail = {
+      type: 'patient',
+      action,
+      data: patientData,
+      source: 'manual',
+      timestamp: Date.now()
+    };
+    
+    this.processGlobalUpdate(detail);
+    console.log('🔄 Auto-sync: Patient sync triggered automatically');
+  }
+
+  triggerAppointmentSync(appointmentData: any, action: 'create' | 'update' | 'delete' = 'update') {
+    const detail: SyncEventDetail = {
+      type: 'appointment',
+      action,
+      data: appointmentData,
+      source: 'manual',
+      timestamp: Date.now()
+    };
+    
+    this.processGlobalUpdate(detail);
+    console.log('🔄 Auto-sync: Appointment sync triggered automatically');
+  }
+
+  triggerPaymentSync(paymentData: any, action: 'create' | 'update' | 'delete' = 'update') {
+    const detail: SyncEventDetail = {
+      type: 'payment',
+      action,
+      data: paymentData,
+      source: 'manual',
+      timestamp: Date.now()
+    };
+    
+    this.processGlobalUpdate(detail);
+    console.log('🔄 Auto-sync: Payment sync triggered automatically');
+  }
+
+  // ✅ ENHANCED: Event listener management
+  addEventListener(type: string, callback: Function) {
+    if (!this.listeners.has(type)) {
+      this.listeners.set(type, new Set());
+    }
+    this.listeners.get(type)!.add(callback);
+  }
+
+  removeEventListener(type: string, callback: Function) {
+    if (this.listeners.has(type)) {
+      this.listeners.get(type)!.delete(callback);
+    }
+  }
+
+  // ✅ ENHANCED: Force sync all data across pages
+  async forceSyncAll() {
+    if (!this.clinicId) {
+      console.warn('⚠️ Cannot force sync: No clinic ID set');
+      return;
+    }
+
+    console.log('🔄 Auto-sync: Forcing complete data synchronization...');
+    
+    try {
+      // Trigger refresh events for all pages
+      this.triggerPatientRefresh();
+      this.triggerAppointmentRefresh();
+      
+      // Broadcast complete refresh
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('forceDataRefresh', {
+          detail: { automatic: true, timestamp: Date.now() }
+        }));
+      }
+      
+      console.log('✅ Auto-sync: Complete data synchronization triggered');
+    } catch (error) {
+      console.error('❌ Error in force sync:', error);
+    }
+  }
+
+  cleanup() {
+    this.listeners.clear();
+    this.isInitialized = false;
+    this.clinicId = null;
+    console.log('🧹 GlobalDataSync: Cleaned up');
   }
 }
 
-// Export singleton instance
+// ✅ ENHANCED: Export singleton instance
 export const globalDataSync = GlobalDataSyncManager.getInstance();
 
-// Convenience hooks for React components
-export const useGlobalDataSync = (eventType: string, callback: Function) => {
-  React.useEffect(() => {
-    const unsubscribe = globalDataSync.subscribe(eventType, callback);
-    return unsubscribe;
-  }, [eventType, callback]);
-};
-
-// Initialize global sync when app starts
+// ✅ ENHANCED: Initialize and cleanup functions
 export const initializeGlobalDataSync = (clinicId: string) => {
-  globalDataSync.initializeForClinic(clinicId);
+  globalDataSync.initialize(clinicId);
 };
 
-// Clean up when user logs out
 export const cleanupGlobalDataSync = () => {
   globalDataSync.cleanup();
-}; 
+};
+
+// ✅ ENHANCED: Convenience methods for triggering automatic sync
+export const triggerAutomaticSync = {
+  patient: (data: any, action?: 'create' | 'update' | 'delete') => 
+    globalDataSync.triggerPatientSync(data, action),
+  appointment: (data: any, action?: 'create' | 'update' | 'delete') => 
+    globalDataSync.triggerAppointmentSync(data, action),
+  payment: (data: any, action?: 'create' | 'update' | 'delete') => 
+    globalDataSync.triggerPaymentSync(data, action),
+  all: () => globalDataSync.forceSyncAll()
+};
+
+console.log('🔄 Enhanced Global Data Sync system loaded - automatic synchronization enabled'); 

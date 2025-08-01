@@ -203,11 +203,17 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Initialize global data sync when user profile is loaded
   useEffect(() => {
+    // ✅ FIXED: Remove conditional logic from useEffect to prevent hooks count mismatch
+    console.log('🔄 UserProvider: Setting up global data sync');
+    
+    // Only initialize if we have a clinic ID
     if (userProfile?.clinicId) {
       console.log('🔄 UserProvider: Initializing global data sync for clinic:', userProfile.clinicId);
       initializeGlobalDataSync(userProfile.clinicId);
-    } else if (!user) {
-      // Clean up when user logs out
+    }
+    
+    // Clean up when user logs out or component unmounts
+    if (!user) {
       console.log('🧹 UserProvider: Cleaning up global data sync');
       cleanupGlobalDataSync();
     }

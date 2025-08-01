@@ -170,10 +170,19 @@ const AppointmentForm: React.FC = () => {
     setError(null);
 
     try {
+      // ✅ ENHANCED: Ensure patient exists before creating appointment
+      const { AppointmentService } = await import('../../services/AppointmentService');
+      const patientId = await AppointmentService.ensurePatientExists(
+        userProfile?.clinicId || 'demo-clinic',
+        formData.patientName,
+        formData.patientPhone
+      );
+
       // Convert form data to API format
       const appointmentData: ApiAppointmentFormData = {
         patientName: formData.patientName,
         patientPhone: formData.patientPhone,
+        patientId: patientId, // ✅ Include the actual patient ID
         doctorName: formData.doctor,
         date: formData.appointmentDate,
         time: formData.appointmentTime,
@@ -186,6 +195,18 @@ const AppointmentForm: React.FC = () => {
 
       const createdAppointment = await createAppointment(appointmentData);
       setSuccess(true);
+      
+      // ✅ ENHANCED: Trigger automatic cross-page sync
+      import('../../utils/globalDataSync').then(({ triggerAutomaticSync }) => {
+        triggerAutomaticSync.appointment(createdAppointment, 'create');
+        if (patientId) {
+          triggerAutomaticSync.patient({ 
+            id: patientId, 
+            name: formData.patientName,
+            phone: formData.patientPhone 
+          }, 'update');
+        }
+      });
       
       console.log('✅ Appointment created successfully');
       

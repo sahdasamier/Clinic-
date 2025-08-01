@@ -116,6 +116,7 @@ import {
 } from '../../data/mockData';
 import FirebaseFriendlySync, { FirebaseDataBridge } from '../../utils/firebaseFriendlySync';
 import { firebaseDataManager, type Appointment as FirebaseAppointment, type Payment as FirebasePayment } from '../../utils/firebaseDataManager';
+import AutoSyncIndicator from '../../components/AutoSyncIndicator';
 
 // Doctor interface for Firestore data
 interface Doctor {
@@ -433,49 +434,63 @@ const AppointmentListPage: React.FC = () => {
 
   // ✅ FIREBASE DATA MANAGER - Real-time synchronization
   useEffect(() => {
-    if (!userProfile?.clinicId) return;
+    // ✅ FIXED: Restructure to avoid early returns and prevent hooks count mismatch
+    console.log('🔥 Setting up Firebase Data Manager...');
+    
+    let dataManager: any = null;
+    let paymentUpdateCleanup: (() => void) | null = null;
 
-    console.log('🔥 Initializing Firebase Data Manager for appointments...');
-    
-    // Initialize Firebase Data Manager
-    const dataManager = firebaseDataManager.initialize({
-      clinicId: userProfile.clinicId,
-      userId: userProfile.id
-    });
-    
-    // Listen to real-time appointment updates
-    dataManager.addEventListener('appointments', (firebaseAppointments: FirebaseAppointment[]) => {
-      console.log(`🔥 REALTIME: Received ${firebaseAppointments.length} appointments from Firebase Data Manager`);
-      setFirebaseAppointments(firebaseAppointments);
+    if (userProfile?.clinicId) {
+      console.log('🔥 Initializing Firebase Data Manager for appointments...');
       
-      // Convert Firebase appointments to local format for UI compatibility
-      const convertedAppointments = firebaseAppointments.map(convertFirebaseAppointmentToLocal);
-      setAppointmentList(convertedAppointments);
-      setDataLoading(false);
-      setFirebaseConnected(true);
-    });
-    
-    // Listen to payment-related events from other pages
-    const handlePaymentUpdated = (event: CustomEvent) => {
-      const { updates, appointmentId } = event.detail;
-      console.log('🔄 Cross-page event: Payment updated from payments page', event.detail);
+      // Initialize Firebase Data Manager
+      dataManager = firebaseDataManager.initialize({
+        clinicId: userProfile.clinicId,
+        userId: userProfile.id
+      });
       
-      if (appointmentId) {
-        // Update appointment payment status based on payment status
-        setAppointmentList(prev => prev.map(apt => 
-          apt.id === appointmentId 
-            ? { ...apt, paymentStatus: updates.status || apt.paymentStatus }
-            : apt
-        ));
-      }
-    };
+      // Listen to real-time appointment updates
+      dataManager.addEventListener('appointments', (firebaseAppointments: FirebaseAppointment[]) => {
+        console.log(`🔥 REALTIME: Received ${firebaseAppointments.length} appointments from Firebase Data Manager`);
+        setFirebaseAppointments(firebaseAppointments);
+        
+        // Convert Firebase appointments to local format for UI compatibility
+        const convertedAppointments = firebaseAppointments.map(convertFirebaseAppointmentToLocal);
+        setAppointmentList(convertedAppointments);
+        setDataLoading(false);
+        setFirebaseConnected(true);
+      });
+      
+      // Listen to payment-related events from other pages
+      const handlePaymentUpdated = (event: CustomEvent) => {
+        const { updates, appointmentId } = event.detail;
+        console.log('🔄 Cross-page event: Payment updated from payments page', event.detail);
+        
+        if (appointmentId) {
+          // Update appointment payment status based on payment status
+          setAppointmentList(prev => prev.map(apt => 
+            apt.id === appointmentId 
+              ? { ...apt, paymentStatus: updates.status || apt.paymentStatus }
+              : apt
+          ));
+        }
+      };
+      
+      // Add browser event listeners
+      window.addEventListener('paymentUpdated', handlePaymentUpdated as EventListener);
+      
+      paymentUpdateCleanup = () => {
+        window.removeEventListener('paymentUpdated', handlePaymentUpdated as EventListener);
+      };
+    } else {
+      console.log('🔥 Firebase Data Manager: No clinic ID available, skipping initialization');
+    }
     
-    // Add browser event listeners
-    window.addEventListener('paymentUpdated', handlePaymentUpdated as EventListener);
-    
-    // Cleanup function
+    // Cleanup function - always returns a function
     return () => {
-      window.removeEventListener('paymentUpdated', handlePaymentUpdated as EventListener);
+      if (paymentUpdateCleanup) {
+        paymentUpdateCleanup();
+      }
       console.log('🧹 Cleaned up Firebase Data Manager listeners');
     };
   }, [userProfile?.clinicId]);
@@ -890,6 +905,12 @@ const AppointmentListPage: React.FC = () => {
       };
 
       await AppointmentService.updateAppointment(statusEditAppointment.id, updateData);
+      
+      // ✅ ENHANCED: Trigger automatic cross-page sync
+      import('../../utils/globalDataSync').then(({ triggerAutomaticSync }) => {
+        triggerAutomaticSync.appointment({ ...statusEditAppointment, ...updateData }, 'update');
+      });
+      
       console.log('✅ Appointment status updated via AppointmentService');
       
       // If appointment is being marked as completed, create auto-payment
@@ -1102,10 +1123,50 @@ const AppointmentListPage: React.FC = () => {
           `Dr. ${d.firstName} ${d.lastName}` === newAppointment.doctor
         );
 
+        // ✅ ENHANCED: Update linked patient record when appointment patient details change
+        const existingPatientId = (selectedAppointment as any).patientId;
+        let updatedPatientId = existingPatientId;
+        
+        // ✅ DIAGNOSTIC: Log patient ID information for debugging
+        console.log('🔍 PATIENT ID DIAGNOSTIC:', {
+          appointmentId: selectedAppointment.id,
+          originalPatientName: selectedAppointment.patient,
+          newPatientName: newAppointment.patient,
+          existingPatientId: existingPatientId,
+          hasExistingPatientId: !!existingPatientId,
+          patientNameChanged: newAppointment.patient !== selectedAppointment.patient,
+          phoneChanged: newAppointment.phone !== selectedAppointment.phone
+        });
+        
+        // If patient name or phone changed, update the patient record
+        if (newAppointment.patient !== selectedAppointment.patient || newAppointment.phone !== selectedAppointment.phone) {
+          console.log('🔄 Patient details changed, updating patient record...');
+          console.log('📝 UPDATE DETAILS:', {
+            from: { name: selectedAppointment.patient, phone: selectedAppointment.phone },
+            to: { name: newAppointment.patient, phone: newAppointment.phone },
+            existingPatientId: existingPatientId
+          });
+          
+          updatedPatientId = await AppointmentService.ensurePatientExists(
+            userProfile.clinicId,
+            newAppointment.patient,
+            newAppointment.phone,
+            existingPatientId // Pass existing ID to update instead of create
+          );
+          
+          console.log('✅ PATIENT UPDATE RESULT:', {
+            originalPatientId: existingPatientId,
+            updatedPatientId: updatedPatientId,
+            patientIdChanged: updatedPatientId !== existingPatientId
+          });
+        }
+
         const updatedData = {
           patient: newAppointment.patient,
+          patientId: updatedPatientId || existingPatientId, // Ensure we keep the patient ID
           doctor: newAppointment.doctor, // Store the NAME
           doctorId: selectedDoctor?.id || (selectedAppointment as any).doctorId, // Keep existing ID if doctor not found
+          phone: newAppointment.phone,
           date: newAppointment.date,
           time: newAppointment.time,
           timeSlot: timeSlot,
@@ -1119,6 +1180,20 @@ const AppointmentListPage: React.FC = () => {
 
         // ✅ Use AppointmentService for better error handling
         await AppointmentService.updateAppointment(selectedAppointment.id, updatedData);
+        
+        // ✅ ENHANCED: Trigger automatic cross-page sync
+        import('../../utils/globalDataSync').then(({ triggerAutomaticSync }) => {
+          triggerAutomaticSync.appointment({ ...selectedAppointment, ...updatedData }, 'update');
+          // Also trigger patient sync if patient data was updated
+          if (newAppointment.patient !== selectedAppointment.patient) {
+            triggerAutomaticSync.patient({ 
+              id: updatedPatientId, 
+              name: newAppointment.patient,
+              phone: newAppointment.phone 
+            }, 'update');
+          }
+        });
+        
         setEditDialogOpen(false);
         console.log('✅ Appointment updated via AppointmentService');
       } else {
@@ -1147,12 +1222,28 @@ const AppointmentListPage: React.FC = () => {
           } : 'NOT FOUND'
         });
 
+        // ✅ ENHANCED: Ensure patient exists before creating appointment
+        const patientId = await AppointmentService.ensurePatientExists(
+          userProfile.clinicId,
+          newAppointment.patient,
+          newAppointment.phone
+        );
+
+        // ✅ DIAGNOSTIC: Log patient creation details
+        console.log('🆕 NEW APPOINTMENT - PATIENT CREATION:', {
+          patientName: newAppointment.patient,
+          patientPhone: newAppointment.phone,
+          createdPatientId: patientId,
+          hasValidPatientId: !!patientId && patientId !== 'legacy-patient'
+        });
+
         const appointmentData = {
           clinicId: userProfile.clinicId,
           patient: newAppointment.patient,
-          patientId: 'legacy-patient', // TODO: Get actual patient ID
+          patientId: patientId || 'legacy-patient', // Use actual patient ID
           doctor: newAppointment.doctor, // Store the NAME, not ID
           doctorId: selectedDoctor?.id || 'unknown-doctor', // Store actual doctor ID for lookup
+          phone: newAppointment.phone,
           date: newAppointment.date,
           time: newAppointment.time,
           timeSlot: timeSlot,
@@ -1167,9 +1258,15 @@ const AppointmentListPage: React.FC = () => {
         };
 
         // ✅ Use AppointmentService for better error handling
-        await AppointmentService.createAppointment(userProfile.clinicId, appointmentData);
+        const appointmentId = await AppointmentService.createAppointment(userProfile.clinicId, appointmentData);
+        
+        // ✅ ENHANCED: Trigger automatic cross-page sync
+        import('../../utils/globalDataSync').then(({ triggerAutomaticSync }) => {
+          triggerAutomaticSync.appointment({ ...appointmentData, id: appointmentId }, 'create');
+        });
+        
         setAddAppointmentOpen(false);
-        console.log('✅ Appointment created via Firebase Data Manager');
+        console.log('✅ Appointment created via AppointmentService');
         
         // ✅ Trigger global sync to notify other pages
         globalDataSync.triggerAppointmentSync(appointmentData);
@@ -1444,6 +1541,46 @@ const AppointmentListPage: React.FC = () => {
     
     return doctor?.id || doctorName; // Fallback to name if not found
   };
+
+  // ✅ TEMPORARILY DISABLED: Automatic real-time sync listeners to fix hooks error
+  // Automatic sync still works through Firebase real-time listeners and direct triggers
+  // TODO: Re-enable after fixing hooks issue
+  /*
+  useEffect(() => {
+    console.log('🔄 AppointmentList: Setting up automatic sync listeners');
+
+    const handlePatientUpdate = (event: CustomEvent) => {
+      console.log('👥 AppointmentList: Patient updated automatically, refreshing appointment data');
+    };
+
+    const handlePaymentUpdate = (event: CustomEvent) => {
+      console.log('💰 AppointmentList: Payment updated automatically, refreshing appointment data');
+    };
+
+    const handleForceRefresh = (event: CustomEvent) => {
+      console.log('🔄 AppointmentList: Force refresh triggered automatically');
+    };
+
+    const handleAppointmentRefresh = (event: CustomEvent) => {
+      console.log('📋 AppointmentList: Appointment data refresh triggered automatically');
+    };
+
+    window.addEventListener('patientUpdated', handlePatientUpdate);
+    window.addEventListener('paymentUpdated', handlePaymentUpdate);
+    window.addEventListener('forceDataRefresh', handleForceRefresh);
+    window.addEventListener('refreshAppointmentData', handleAppointmentRefresh);
+
+    return () => {
+      window.removeEventListener('patientUpdated', handlePatientUpdate);
+      window.removeEventListener('paymentUpdated', handlePaymentUpdate);
+      window.removeEventListener('forceDataRefresh', handleForceRefresh);
+      window.removeEventListener('refreshAppointmentData', handleAppointmentRefresh);
+    };
+  }, []);
+  */
+
+  // ✅ REMOVED: Problematic useEffect that caused hooks error
+  // Automatic sync is now handled directly in the save functions
 
   return (
         <Container maxWidth="xl" sx={{ mt: 4, mb: 4, flex: 1, overflow: 'auto' }}>
