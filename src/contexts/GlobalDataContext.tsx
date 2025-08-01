@@ -79,6 +79,7 @@ interface GlobalDataContextType extends GlobalDataState {
   
   // Emergency management
   forceRestartManager: () => Promise<void>;
+  emergencyReconnect: () => Promise<void>;
 }
 
 const initialState: GlobalDataState = {
@@ -511,6 +512,18 @@ export const GlobalDataProvider: React.FC<GlobalDataProviderProps> = ({ children
         }
       } catch (error) {
         console.error('❌ Failed to restart manager:', error);
+      }
+    },
+
+    // Emergency reconnect for WebChannel connection issues
+    emergencyReconnect: async () => {
+      try {
+        if (realtimeManager) {
+          console.log('🔄 Emergency reconnect for connection issues...');
+          await realtimeManager.emergencyReconnect();
+        }
+      } catch (error) {
+        console.error('❌ Failed to emergency reconnect:', error);
       }
     }
   };

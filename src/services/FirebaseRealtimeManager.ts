@@ -201,12 +201,20 @@ export class FirebaseRealtimeManager {
   }
 
   private async setupRealtimeListeners(): Promise<void> {
-    console.log('📡 Setting up realtime listeners for collections');
+    console.log('📡 Setting up realtime listeners for collections (staggered setup)');
     
-    for (const collectionConfig of this.collections) {
+    // ✅ FIXED: Stagger listener setup to avoid overwhelming Firestore WebChannel
+    for (let i = 0; i < this.collections.length; i++) {
+      const collectionConfig = this.collections[i];
+      
       try {
         if (collectionConfig.enableRealtime) {
           await this.setupCollectionListener(collectionConfig);
+          
+          // Add delay between listener setups to prevent WebChannel overload
+          if (i < this.collections.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 200));
+          }
         } else {
           // Fetch once for non-realtime collections
           await this.fetchCollectionOnce(collectionConfig.name);
@@ -214,6 +222,9 @@ export class FirebaseRealtimeManager {
       } catch (error) {
         console.error(`❌ Error setting up ${collectionConfig.name}:`, error);
         this.config.onDataUpdate(collectionConfig.name, []);
+        
+        // Continue with other listeners even if one fails
+        continue;
       }
     }
 
@@ -225,40 +236,105 @@ export class FirebaseRealtimeManager {
     }
   }
 
-  private async setupCollectionListener(collectionConfig: CollectionConfig): Promise<void> {
+  private async setupCollectionListener(collectionConfig: CollectionConfig, retryCount = 0): Promise<void> {
     const { name } = collectionConfig;
+    const maxRetries = 3;
     
     // Clean up existing listener
     if (this.unsubscribes.has(name)) {
       this.unsubscribes.get(name)!();
+      this.unsubscribes.delete(name);
     }
 
-    const collectionRef = collection(this.db, name);
-    const q = query(
-      collectionRef,
-      where('clinicId', '==', this.config.clinicId),
-      orderBy('createdAt', 'desc')
-    );
+    try {
+      const collectionRef = collection(this.db, name);
+      const q = query(
+        collectionRef,
+        where('clinicId', '==', this.config.clinicId),
+        orderBy('createdAt', 'desc')
+      );
 
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const data = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        
-        this.setCache(name, data, collectionConfig.cacheDuration);
-        this.config.onDataUpdate(name, data);
-        console.log(`📦 Updated ${name}: ${data.length} items`);
-      },
-      (error) => {
-        console.error(`❌ Realtime listener error for ${name}:`, error);
-        this.config.onError(name, error.message);
+      const unsubscribe = onSnapshot(
+        q,
+        (snapshot) => {
+          const data = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+          
+          this.setCache(name, data, collectionConfig.cacheDuration);
+          this.config.onDataUpdate(name, data);
+          console.log(`📦 Updated ${name}: ${data.length} items`);
+          
+          // Reset connection status to connected on successful data
+          if (this.connectionStatus !== 'connected') {
+            this.connectionStatus = 'connected';
+            this.config.onConnectionChange('connected');
+          }
+        },
+        async (error) => {
+          console.error(`❌ Realtime listener error for ${name}:`, error);
+          
+          // Handle specific error types
+          if (error.code === 'permission-denied') {
+            console.error(`❌ Permission denied for ${name}. Check Firestore rules.`);
+            this.config.onError(name, `Permission denied: ${error.message}`);
+            return;
+          }
+          
+          // Handle network errors with retry
+          if (error.code === 'unavailable' || error.message.includes('QUIC') || error.message.includes('WebChannel')) {
+            console.warn(`🔄 Network error for ${name}, attempting retry ${retryCount + 1}/${maxRetries}`);
+            
+            if (retryCount < maxRetries) {
+              this.connectionStatus = 'reconnecting';
+              this.config.onConnectionChange('reconnecting');
+              
+              // Exponential backoff: 1s, 2s, 4s
+              const delay = Math.pow(2, retryCount) * 1000;
+              await new Promise(resolve => setTimeout(resolve, delay));
+              
+              return this.setupCollectionListener(collectionConfig, retryCount + 1);
+            } else {
+              console.error(`❌ Max retries exceeded for ${name}. Falling back to one-time fetch.`);
+              this.connectionStatus = 'disconnected';
+              this.config.onConnectionChange('disconnected');
+              
+              // Fallback to one-time fetch
+              try {
+                await this.fetchCollectionOnce(name);
+              } catch (fetchError) {
+                console.error(`❌ Fallback fetch failed for ${name}:`, fetchError);
+                this.config.onError(name, `Connection failed: ${error.message}`);
+              }
+            }
+          } else {
+            this.config.onError(name, error.message);
+          }
+        }
+      );
+
+      this.unsubscribes.set(name, unsubscribe);
+      console.log(`✅ Successfully set up listener for ${name}`);
+      
+    } catch (error) {
+      console.error(`❌ Failed to create listener for ${name}:`, error);
+      
+      if (retryCount < maxRetries) {
+        console.log(`🔄 Retrying listener setup for ${name} (${retryCount + 1}/${maxRetries})`);
+        const delay = Math.pow(2, retryCount) * 1000;
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return this.setupCollectionListener(collectionConfig, retryCount + 1);
+      } else {
+        // Final fallback to one-time fetch
+        try {
+          await this.fetchCollectionOnce(name);
+        } catch (fetchError) {
+          console.error(`❌ Complete failure for ${name}:`, fetchError);
+          this.config.onError(name, `Setup failed: ${error}`);
+        }
       }
-    );
-
-    this.unsubscribes.set(name, unsubscribe);
+    }
   }
 
   private async fetchCollectionOnce(collectionName: string): Promise<any[]> {
@@ -525,6 +601,33 @@ export class FirebaseRealtimeManager {
     this.connectionStatus = 'disconnected';
     
     console.log('✅ Cleanup completed');
+  }
+
+  // ✅ NEW: Emergency reconnect for WebChannel connection issues
+  async emergencyReconnect(): Promise<void> {
+    console.log('🚨 Emergency reconnect initiated due to connection issues');
+    
+    try {
+      // Update connection status
+      this.connectionStatus = 'reconnecting';
+      this.config.onConnectionChange('reconnecting');
+      
+      // Clean up existing connections
+      this.cleanup();
+      
+      // Wait for connections to fully close
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Reinitialize with current config
+      await this.initialize(this.config);
+      
+      console.log('✅ Emergency reconnect completed successfully');
+    } catch (error) {
+      console.error('❌ Emergency reconnect failed:', error);
+      this.connectionStatus = 'disconnected';
+      this.config.onConnectionChange('disconnected');
+      throw error;
+    }
   }
 
   // Utility methods

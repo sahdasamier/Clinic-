@@ -1377,7 +1377,13 @@ const AppointmentListPage: React.FC = () => {
     } catch (error) {
       console.error('❌ Error saving appointment:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      alert(`Failed to save appointment: ${errorMessage}. Please try again.`);
+      
+      // ✅ Enhanced error handling for conflict scenarios
+      if (errorMessage.includes('Conflict') || errorMessage.includes('conflicts with')) {
+        alert(`🚫 ${t('appointment_conflict_title')}\n\n${errorMessage}\n\n${t('please_select_different_time')}`);
+      } else {
+        alert(`❌ ${t('failed_to_save_appointment')}: ${errorMessage}\n\n${t('please_try_again')}`);
+      }
     }
   };
 

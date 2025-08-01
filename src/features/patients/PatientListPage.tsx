@@ -59,6 +59,7 @@ import {
 } from '../../hooks/useGlobalData';
 
 import DoctorPatientAssignment from '../../components/DoctorPatientAssignment';
+import { usePatientsGuard } from '../../hooks/usePatientGuard';
 import { getPatientsByDoctor } from '../../api/doctorPatients';
 import {
   Search,
@@ -200,6 +201,9 @@ const PatientListPage: React.FC = () => {
 
   // ✅ NEW: Enhanced patients with calculated appointment fields
   const [enhancedPatients, setEnhancedPatients] = useState<any[]>([]);
+
+  // ✅ Patient guard for doctor restrictions
+  const patientsGuardMap = usePatientsGuard(enhancedPatients);
 
   // Helper function to translate patient status and conditions
   const translatePatientData = (text: string) => {
@@ -3290,8 +3294,10 @@ const PatientListPage: React.FC = () => {
                               </TableCell>
                             </TableRow>
                           ) : (
-                            filteredPatients.map((patient) => (
-                            <TableRow key={patient.id} hover>
+                            filteredPatients.map((patient) => {
+                              const patientGuard = patientsGuardMap.get(patient.id);
+                              return (
+                            <TableRow key={patient.id} hover {...(patientGuard?.tableRowProps || {})}>
                               <TableCell>
                                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                   <Avatar
@@ -3523,7 +3529,7 @@ const PatientListPage: React.FC = () => {
                                 </Box>
                               </TableCell>
                             </TableRow>
-                            ))
+                            )})
                           )}
                         </TableBody>
                       </Table>
@@ -3562,8 +3568,10 @@ const PatientListPage: React.FC = () => {
                               </TableCell>
                             </TableRow>
                           ) : (
-                            filteredPatients.map((patient) => (
-                            <TableRow key={patient.id} hover>
+                            filteredPatients.map((patient) => {
+                              const patientGuard = patientsGuardMap.get(patient.id);
+                              return (
+                            <TableRow key={patient.id} hover {...(patientGuard?.tableRowProps || {})}>
                               <TableCell>
                                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                   <Avatar
@@ -3679,7 +3687,7 @@ const PatientListPage: React.FC = () => {
                                 </Box>
                               </TableCell>
                             </TableRow>
-                            ))
+                            )})
                           )}
                         </TableBody>
                       </Table>

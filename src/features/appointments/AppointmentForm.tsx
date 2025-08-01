@@ -216,7 +216,14 @@ const AppointmentForm: React.FC = () => {
       
     } catch (error) {
       console.error('Error saving appointment:', error);
-      setError(error instanceof Error ? error.message : 'Failed to save appointment');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save appointment';
+      
+      // ✅ Enhanced error handling for conflict scenarios
+      if (errorMessage.includes('Conflict') || errorMessage.includes('conflicts with')) {
+        setError(`🚫 Appointment Conflict Detected\n\n${errorMessage}\n\nPlease select a different time slot.`);
+      } else {
+        setError(errorMessage);
+      }
     } finally {
       setLoading(false);
     }

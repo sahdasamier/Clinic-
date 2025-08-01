@@ -201,11 +201,27 @@ export const AppointmentService = {
     return maxLength === 0 ? 1.0 : (maxLength - matrix[n2.length][n1.length]) / maxLength;
   },
 
-  // ✅ MODIFIED: Enhanced createAppointment to automatically create patients
+  // ✅ ENHANCED: Enhanced createAppointment with conflict detection
   async createAppointment(clinicId: string, appointmentData: Omit<Appointment, 'id' | 'createdAt' | 'updatedAt' | 'clinicId'>): Promise<string> {
+    // ✅ STEP 1: Validate appointment data and check for conflicts
+    if (appointmentData.doctorId && appointmentData.date && appointmentData.timeSlot) {
+      const { AppointmentConflictService } = await import('./AppointmentConflictService');
+      
+      const validation = await AppointmentConflictService.validateAppointment({
+        doctorId: appointmentData.doctorId,
+        date: appointmentData.date,
+        timeSlot: appointmentData.timeSlot,
+        duration: appointmentData.duration || 30
+      });
+
+      if (!validation.isValid) {
+        throw new Error(`❌ Appointment Conflict: ${validation.error}`);
+      }
+    }
+
     const id = crypto.randomUUID();
     
-    // ✅ Ensure patient exists and get patientId
+    // ✅ STEP 2: Ensure patient exists and get patientId
     let patientId = appointmentData.patientId;
     if (!patientId && appointmentData.patient) {
       patientId = await this.ensurePatientExists(clinicId, appointmentData.patient, appointmentData.phone);
@@ -226,11 +242,36 @@ export const AppointmentService = {
 
     await setDoc(doc(getAppointmentsCollection(), id), appointment);
     console.log('✅ Appointment created:', id, patientId ? `with linked patient: ${patientId}` : 'without patient link');
+    
+    // ✅ STEP 3: Mark time slot as reserved
+    if (appointmentData.doctorId && appointmentData.date && appointmentData.timeSlot) {
+      console.log(`🔒 Time slot reserved: ${appointmentData.doctorId} at ${appointmentData.date} ${appointmentData.timeSlot}`);
+    }
+    
     return id;
   },
 
-  // Update an existing appointment
+  // Update an existing appointment with conflict detection
   async updateAppointment(appointmentId: string, updates: Partial<Appointment>): Promise<void> {
+    // ✅ Check for conflicts if rescheduling (changing date, time, or doctor)
+    if ((updates.doctorId || updates.date || updates.timeSlot) && 
+        updates.doctorId && updates.date && updates.timeSlot) {
+      
+      const { AppointmentConflictService } = await import('./AppointmentConflictService');
+      
+      const validation = await AppointmentConflictService.validateAppointment({
+        doctorId: updates.doctorId,
+        date: updates.date,
+        timeSlot: updates.timeSlot,
+        duration: updates.duration || 30,
+        appointmentId: appointmentId // Exclude current appointment from conflict check
+      });
+
+      if (!validation.isValid) {
+        throw new Error(`❌ Reschedule Conflict: ${validation.error}`);
+      }
+    }
+
     const appointmentRef = doc(getAppointmentsCollection(), appointmentId);
     
     // Handle backward compatibility for completed field
