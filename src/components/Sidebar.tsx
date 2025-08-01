@@ -112,6 +112,14 @@ const navLinks: NavLink[] = [
     group: 'advanced'
   },
   { 
+    to: '/enhanced-doctor-scheduling', 
+    text: 'enhanced_doctor_scheduling', 
+    icon: <CalendarToday />, 
+    permission: 'doctor_scheduling',
+    minLevel: 'read',
+    group: 'advanced'
+  },
+  { 
     to: '/settings', 
     text: 'settings', 
     icon: <Settings />, 

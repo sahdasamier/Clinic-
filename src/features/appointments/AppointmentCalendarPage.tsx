@@ -105,7 +105,14 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ isOpen, onClose, is
       onClose();
     } catch (error) {
       console.error('❌ Error creating appointment:', error);
-      // Could add snackbar notification here
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create appointment';
+      
+      // ✅ Enhanced error handling for conflict scenarios
+      if (errorMessage.includes('Conflict') || errorMessage.includes('conflicts with')) {
+        alert(`🚫 Appointment Conflict Detected\n\n${errorMessage}\n\nPlease select a different time slot.`);
+      } else {
+        alert(`❌ Failed to create appointment: ${errorMessage}`);
+      }
     }
   };
 

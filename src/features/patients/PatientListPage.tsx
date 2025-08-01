@@ -60,6 +60,7 @@ import {
 
 import DoctorPatientAssignment from '../../components/DoctorPatientAssignment';
 import { usePatientsGuard } from '../../hooks/usePatientGuard';
+import AvailableTimeSlotsSelector from '../../components/AvailableTimeSlotsSelector';
 import { getPatientsByDoctor } from '../../api/doctorPatients';
 import {
   Search,
@@ -1111,6 +1112,13 @@ const PatientListPage: React.FC = () => {
   const [appointmentData, setAppointmentData] = useState(defaultAppointmentData);
   const [statusEditPatient, setStatusEditPatient] = useState<any>(null);
   const [statusMenuAnchor, setStatusMenuAnchor] = useState<null | HTMLElement>(null);
+
+  // Reset appointment time when doctor or date changes
+  useEffect(() => {
+    if (appointmentData.doctor || appointmentData.date) {
+      setAppointmentData(prev => ({ ...prev, time: '' }));
+    }
+  }, [appointmentData.doctor, appointmentData.date]);
   
   // 🆕 Doctor-Patient Assignment State
   const [assignmentDialogOpen, setAssignmentDialogOpen] = useState(false);
@@ -1632,62 +1640,25 @@ const PatientListPage: React.FC = () => {
   };
 
   const handleSaveAppointment = async () => {
-    if (!appointmentData.date || !appointmentData.time || !appointmentPatient || !userProfile?.clinicId) {
-      alert('Please fill in the date and time');
+    if (!appointmentData.date || !appointmentData.time || !appointmentData.doctor || !appointmentPatient || !userProfile?.clinicId) {
+      alert('Please fill in the date, time, and select a doctor');
       return;
     }
 
     try {
       const appointmentTime = appointmentData.time?.trim();
       
-      // ✅ FIX: Get actual doctor information from patient data instead of hardcoding
-      console.log('🔍 Getting doctor information for appointment:', {
-        patientName: appointmentPatient.name,
-        patientDoctor: appointmentPatient.doctor,
-        patientDoctorId: appointmentPatient.doctorId,
-        patientDoctorName: appointmentPatient.doctorName,
-        availableDoctorsCount: availableDoctors.length
-      });
-
-      // Get the doctor name using the existing resolution function
-      let doctorName = getPatientDoctorName(appointmentPatient);
-      
-      // Get doctor ID - prioritize existing patient doctor information
-      let doctorId = appointmentPatient.doctorId || appointmentPatient.doctor;
-      
-      // If doctor field contains a Firebase ID, use it as doctorId
-      if (appointmentPatient.doctor && appointmentPatient.doctor.length > 20) {
-        doctorId = appointmentPatient.doctor;
-      }
-      
-      // If we have a doctor name but no ID, try to find the ID from available doctors
-      if (doctorName && doctorName !== 'Not Assigned' && (!doctorId || doctorId === 'Not Assigned')) {
-        const matchingDoctor = availableDoctors.find(d => 
-          `${d.firstName} ${d.lastName}` === doctorName ||
-          `Dr. ${d.firstName} ${d.lastName}` === doctorName ||
-          doctorName.includes(d.firstName) && doctorName.includes(d.lastName)
-        );
-        if (matchingDoctor) {
-          doctorId = matchingDoctor.id;
-          console.log('✅ Found matching doctor ID:', { doctorName, doctorId });
-        }
-      }
-      
-      // If still no doctor info, fall back to first available doctor
-      if (!doctorName || doctorName === 'Not Assigned' || !doctorId) {
-        if (availableDoctors.length > 0) {
-          const fallbackDoctor = availableDoctors[0];
-          doctorName = `${fallbackDoctor.firstName} ${fallbackDoctor.lastName}`;
-          doctorId = fallbackDoctor.id;
-          console.log('⚠️ Using fallback doctor:', { doctorName, doctorId });
-        } else {
-          console.error('❌ No doctors available for appointment');
-          alert('No doctors available. Please ensure doctors are assigned to this clinic.');
-          return;
-        }
+      // ✅ Use selected doctor from form
+      const selectedDoctor = availableDoctors.find(d => d.id === appointmentData.doctor);
+      if (!selectedDoctor) {
+        alert('Selected doctor not found. Please select a valid doctor.');
+        return;
       }
 
-      console.log('✅ Final doctor information for appointment:', { doctorName, doctorId });
+      const doctorName = `${selectedDoctor.firstName} ${selectedDoctor.lastName}`;
+      const doctorId = selectedDoctor.id;
+
+      console.log('✅ Using selected doctor for appointment:', { doctorName, doctorId });
       
       // ✅ NEW: Create appointment using Firestore service with correct doctor info
       const newAppointmentData = {
@@ -8065,14 +8036,29 @@ const PatientListPage: React.FC = () => {
                   />
                 </Grid>
                 <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Appointment Time"
-                    type="time"
-                    value={appointmentData.time}
-                    onChange={(e) => setAppointmentData({ ...appointmentData, time: e.target.value })}
-                    InputLabelProps={{ shrink: true }}
-                    helperText="Select appointment time"
+                  <FormControl fullWidth>
+                    <InputLabel>Doctor</InputLabel>
+                    <Select
+                      value={appointmentData.doctor || ''}
+                      onChange={(e) => setAppointmentData({ ...appointmentData, doctor: e.target.value, time: '' })}
+                      label="Doctor"
+                    >
+                      {availableDoctors.map((doctor) => (
+                        <MenuItem key={doctor.id} value={doctor.id}>
+                          Dr. {doctor.firstName} {doctor.lastName}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12}>
+                  {/* Available Time Slots Selector */}
+                  <AvailableTimeSlotsSelector
+                    doctorId={appointmentData.doctor}
+                    date={appointmentData.date}
+                    duration={Number(appointmentData.duration) || 30}
+                    selectedTimeSlot={appointmentData.time}
+                    onTimeSlotSelect={(timeSlot) => setAppointmentData({ ...appointmentData, time: timeSlot })}
                   />
                 </Grid>
                 <Grid item xs={12} md={6}>

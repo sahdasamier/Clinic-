@@ -204,6 +204,7 @@ export const defaultMedicationData = {
 export const defaultAppointmentData = {
   date: '',
   time: '',
+  doctor: '',
   type: 'Follow-up',
   duration: '30',
   notes: '',

@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useUser } from '../contexts/UserContext';
+import { useAppointments } from '../hooks/useGlobalData';
 import { 
   autoSyncDoctorsIfNeeded, 
   forceSyncDoctors, 
   SchedulingDoctor,
-  loadSchedulingDoctorsFromStorage,
-  saveSchedulingDoctorsToStorage
+  loadSchedulingDoctorsFromStorage
 } from '../utils/doctorSync';
 import {
   Box,
@@ -67,7 +67,7 @@ import {
   Sync,
 } from '@mui/icons-material';
 
-import { loadAppointmentsFromStorage, saveAppointmentsToStorage } from './appointments/AppointmentListPage';
+// ✅ Removed localStorage imports - using real-time Firebase sync instead
 // Patient appointment sync functions (temporary stubs)
 const updatePatientAppointmentFields = (patientName: string) => {
   console.log('🔄 Updating patient appointment fields for:', patientName);
@@ -121,34 +121,28 @@ const findDoctorByName = (doctorName: string, doctors: any[]) => {
 const DoctorSchedulingPage: React.FC = () => {
   const { t } = useTranslation();
   const { userProfile } = useUser();
+  
+  // ✅ Use real-time appointments hook instead of local state
+  const { 
+    appointments, 
+    loading: appointmentsLoading, 
+    addAppointment, 
+    updateAppointment, 
+    deleteAppointment 
+  } = useAppointments();
+  
   const [tabValue, setTabValue] = useState(0);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
 
-  // Load appointments from shared storage on component mount
+  // ✅ Real-time appointments sync - no manual loading needed
   useEffect(() => {
-    const loadAppointments = () => {
-      const appointmentData = loadAppointmentsFromStorage();
-      setAppointments(appointmentData);
-    };
-
-    // Load initial data
-    loadAppointments();
-
-    // Listen for appointment updates from other components
-    const handleAppointmentUpdate = () => {
-      loadAppointments();
-    };
-
-    // Listen for user data clearing
     // Listen for mobile FAB action
     const handleOpenAddDoctor = () => {
       setAddDoctorDialogOpen(true);
     };
 
     const handleUserDataCleared = () => {
-      // Reset to default state
-      setAppointments([]);
+      // Reset to default state (appointments sync automatically via hook)
       setDoctors([]); // Clear doctors - will be reloaded from Firebase
       setTabValue(0);
       setSelectedDate(new Date().toISOString().split('T')[0]);
@@ -171,13 +165,11 @@ const DoctorSchedulingPage: React.FC = () => {
       console.log('✅ Doctor scheduling reset to default state');
     };
 
-    window.addEventListener('appointmentsUpdated', handleAppointmentUpdate);
     window.addEventListener('userDataCleared', handleUserDataCleared);
     window.addEventListener('openAddDoctor', handleOpenAddDoctor);
     
     // Cleanup
     return () => {
-      window.removeEventListener('appointmentsUpdated', handleAppointmentUpdate);
       window.removeEventListener('userDataCleared', handleUserDataCleared);
       window.removeEventListener('openAddDoctor', handleOpenAddDoctor);
     };
@@ -270,20 +262,17 @@ const DoctorSchedulingPage: React.FC = () => {
     }
   };
 
-   // Save doctors to clinic-specific storage whenever they change
+   // Notify dashboard about doctor schedule updates
    useEffect(() => {
      if (doctors.length > 0 && userProfile?.clinicId) {
        try {
-         saveSchedulingDoctorsToStorage(userProfile.clinicId, doctors);
-         console.log(`💾 Saved ${doctors.length} doctors for clinic ${userProfile.clinicId}`);
-         
          // Notify dashboard about doctor schedule update
          window.dispatchEvent(new CustomEvent('doctorScheduleUpdated', {
            detail: { doctors, clinicId: userProfile.clinicId }
          }));
          console.log('📢 Notified dashboard about doctor schedule update');
        } catch (error) {
-         console.error('❌ DoctorScheduling: Error saving doctors:', error);
+         console.error('❌ DoctorScheduling: Error notifying dashboard:', error);
        }
      }
    }, [doctors, userProfile?.clinicId]);
@@ -440,10 +429,9 @@ const DoctorSchedulingPage: React.FC = () => {
   };
 
   // Handle delete appointment
-  const handleDeleteAppointment = (appointment: Appointment) => {
-    const updatedAppointments = appointments.filter(apt => apt.id !== appointment.id);
-    setAppointments(updatedAppointments);
-    saveAppointmentsToStorage(updatedAppointments); // Save to shared storage
+  const handleDeleteAppointment = async (appointment: Appointment) => {
+    // ✅ Use real-time appointment deletion instead of local state
+    await deleteAppointment(appointment.id);
     
     // Sync patient data if this appointment had a real patient (not just available slot)
     if (appointment.patient && !appointment.isAvailableSlot && appointment.patient !== t('available_slot')) {
@@ -455,7 +443,7 @@ const DoctorSchedulingPage: React.FC = () => {
   };
 
   // Save new appointment - creates available time slot
-  const handleSaveNew = () => {
+  const handleSaveNew = async () => {
     if (!selectedDoctorForAdd || !formData.time) {
       setSnackbar({
         open: true,
@@ -515,14 +503,14 @@ const DoctorSchedulingPage: React.FC = () => {
       completed: false,
       priority: 'normal',
       paymentStatus: 'pending',
+      isAvailableSlot: true, // ✅ FIX: Mark as available slot
       isActive: true,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
 
-    const updatedAppointments = [...appointments, newAppointment];
-    setAppointments(updatedAppointments);
-    saveAppointmentsToStorage(updatedAppointments); // Save to shared storage
+    // ✅ Use real-time appointment creation instead of local state
+    await addAppointment(newAppointment);
     
     // Sync patient data if this appointment has a real patient (not just available slot)
     if (newAppointment.patient && !newAppointment.isAvailableSlot && newAppointment.patient !== t('available_slot')) {
@@ -554,7 +542,7 @@ const DoctorSchedulingPage: React.FC = () => {
   };
 
   // Save edited appointment
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (!formData.time || !selectedAppointment) {
       alert(t('please_fill_all_fields'));
       return;
@@ -580,14 +568,15 @@ const DoctorSchedulingPage: React.FC = () => {
       hour12: true
     });
 
-    const updatedAppointments = appointments.map(apt => 
-      apt.id === selectedAppointment.id 
-        ? { ...apt, time: timeDisplay, timeSlot: formData.time }
-        : apt
-    );
+    // ✅ Use real-time appointment update instead of local state
+    const updatedAppointment = {
+      ...selectedAppointment,
+      time: timeDisplay,
+      timeSlot: formData.time,
+      updatedAt: new Date()
+    };
     
-    setAppointments(updatedAppointments);
-    saveAppointmentsToStorage(updatedAppointments); // Save to shared storage
+    await updateAppointment(selectedAppointment.id, updatedAppointment);
     
     // Sync patient data if this appointment has a real patient (not just available slot)
     if (selectedAppointment.patient && !selectedAppointment.isAvailableSlot && selectedAppointment.patient !== t('available_slot')) {
@@ -737,7 +726,7 @@ const DoctorSchedulingPage: React.FC = () => {
   };
 
   // Handle save time slot edit
-  const handleSaveTimeSlotEdit = () => {
+  const handleSaveTimeSlotEdit = async () => {
     if (!selectedTimeSlot) return;
 
     // If changing to reserved, need patient name
@@ -753,12 +742,16 @@ const DoctorSchedulingPage: React.FC = () => {
     const doctor = doctors.find(d => d.id === selectedTimeSlot.doctorId);
     if (!doctor) return;
     
-    // Remove any existing appointment for this time slot and date
-    const filteredAppointments = appointments.filter(apt => 
-      !(apt.doctor === doctor.name && 
-        apt.date === selectedDate && 
-        apt.timeSlot === selectedTimeSlot.time)
+    // ✅ Remove existing appointment for this time slot and date (real-time)
+    const existingAppointment = appointments.find(apt => 
+      apt.doctor === doctor.name && 
+      apt.date === selectedDate && 
+      apt.timeSlot === selectedTimeSlot.time
     );
+    
+    if (existingAppointment) {
+      await deleteAppointment(existingAppointment.id);
+    }
 
     // Add new appointment based on type (only for available and reserved)
     if (timeSlotFormData.type === 'available' || timeSlotFormData.type === 'reserved') {
@@ -787,18 +780,14 @@ const DoctorSchedulingPage: React.FC = () => {
         completed: false,
         priority: 'normal',
         paymentStatus: 'pending',
+        isAvailableSlot: timeSlotFormData.type === 'available', // ✅ Mark available slots
         isActive: true,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
       
-      const updatedAppointments = [...filteredAppointments, newAppointment];
-      setAppointments(updatedAppointments);
-      saveAppointmentsToStorage(updatedAppointments); // Save to shared storage
-    } else {
-      // Just remove the appointment for 'regular' type
-      setAppointments(filteredAppointments);
-      saveAppointmentsToStorage(filteredAppointments); // Save to shared storage
+      // ✅ Use real-time appointment creation
+      await addAppointment(newAppointment);
     }
     // If type is 'regular', we just remove the appointment (already done above)
 
@@ -863,7 +852,7 @@ const DoctorSchedulingPage: React.FC = () => {
     console.log('✅ Weekly schedule dialog should now be open');
   };
 
-  const handleSaveWeeklySchedule = () => {
+  const handleSaveWeeklySchedule = async () => {
     if (!selectedDoctorForWeekly) return;
 
     // UPDATED: No localStorage persistence for weekly schedules
@@ -881,10 +870,11 @@ const DoctorSchedulingPage: React.FC = () => {
       doc.id === selectedDoctorForWeekly.id ? updatedDoctor : doc
     ));
 
-    // Generate appointments for the entire week
-    const newAppointments: Appointment[] = [];
+    // ✅ Generate appointments for the entire week using real-time Firebase
+    const newAppointmentsToCreate: Appointment[] = [];
     const weekStart = new Date(currentWeekStart);
     
+    // First, collect all appointments that need to be created
     daysOfWeek.forEach((day, index) => {
       if (weeklyScheduleData[day]?.isWorking && weeklyScheduleData[day]?.timeSlots.length > 0) {
         const dayDate = new Date(weekStart);
@@ -907,7 +897,7 @@ const DoctorSchedulingPage: React.FC = () => {
             });
 
             const newAppointment: Appointment = {
-              id: `temp-${Date.now()}-${index}`, // Use string ID for Firestore compatibility
+              id: `temp-${Date.now()}-${index}-${timeSlot}`, // Unique ID
               clinicId: userProfile?.clinicId || 'default-clinic',
               doctor: selectedDoctorForWeekly.name,
               doctorId: `doctor-${selectedDoctorForWeekly.id}`,
@@ -924,36 +914,41 @@ const DoctorSchedulingPage: React.FC = () => {
               completed: false,
               priority: 'normal',
               paymentStatus: 'pending',
+              isAvailableSlot: true, // ✅ Mark weekly slots as available
               isActive: true,
               createdAt: new Date(),
               updatedAt: new Date(),
             };
             
-            newAppointments.push(newAppointment);
+            newAppointmentsToCreate.push(newAppointment);
           }
         });
       }
     });
 
-    // Save all new appointments
-    if (newAppointments.length > 0) {
-      const updatedAppointments = [...appointments, ...newAppointments];
-      setAppointments(updatedAppointments);
-      saveAppointmentsToStorage(updatedAppointments);
-      
-      // Sync patient data for any real patient appointments (not just available slots)
-      const realPatientAppointments = newAppointments.filter(apt => 
-        apt.patient && !apt.isAvailableSlot && apt.patient !== t('available_slot')
-      );
-      realPatientAppointments.forEach(apt => {
-        updatePatientAppointmentFields(apt.patient);
-      });
+    // ✅ Create all appointments using real-time Firebase (batch creation)
+    if (newAppointmentsToCreate.length > 0) {
+      try {
+        // Create appointments one by one (could be optimized with batch later)
+        for (const appointment of newAppointmentsToCreate) {
+          await addAppointment(appointment);
+        }
+        console.log(`✅ Created ${newAppointmentsToCreate.length} weekly appointments via Firebase`);
+      } catch (error) {
+        console.error('❌ Error creating weekly appointments:', error);
+        setSnackbar({
+          open: true,
+          message: `❌ Error creating weekly schedule: ${error.message}`,
+          severity: 'error'
+        });
+        return;
+      }
     }
 
     setWeeklyScheduleDialogOpen(false);
     setSnackbar({
       open: true,
-      message: `✅ ${t('weekly_schedule_saved', { doctor: selectedDoctorForWeekly.name, count: newAppointments.length })}`,
+      message: `✅ ${t('weekly_schedule_saved', { doctor: selectedDoctorForWeekly.name, count: newAppointmentsToCreate.length })}`,
       severity: 'success'
     });
   };
@@ -1130,7 +1125,7 @@ const DoctorSchedulingPage: React.FC = () => {
     setRecurringAppointmentsDialogOpen(true);
   };
 
-  const handleApplyRecurringSchedule = () => {
+  const handleApplyRecurringSchedule = async () => {
     if (!recurringSettings.enabled) return;
 
     const currentWeekAppointments = appointments.filter(apt => {
@@ -1184,18 +1179,23 @@ const DoctorSchedulingPage: React.FC = () => {
       });
     }
 
+    // ✅ Create recurring appointments using real-time Firebase
     if (newRecurringAppointments.length > 0) {
-      const updatedAppointments = [...appointments, ...newRecurringAppointments];
-      setAppointments(updatedAppointments);
-      saveAppointmentsToStorage(updatedAppointments);
-      
-      // Sync patient data for any real patient appointments (not just available slots)
-      const realPatientAppointments = newRecurringAppointments.filter(apt => 
-        apt.patient && !apt.isAvailableSlot && apt.patient !== t('available_slot')
-      );
-      realPatientAppointments.forEach(apt => {
-        updatePatientAppointmentFields(apt.patient);
-      });
+      try {
+        // Create appointments one by one using real-time Firebase
+        for (const appointment of newRecurringAppointments) {
+          await addAppointment(appointment);
+        }
+        console.log(`✅ Created ${newRecurringAppointments.length} recurring appointments via Firebase`);
+      } catch (error) {
+        console.error('❌ Error creating recurring appointments:', error);
+        setSnackbar({
+          open: true,
+          message: `❌ Error creating recurring appointments: ${error.message}`,
+          severity: 'error'
+        });
+        return;
+      }
     }
 
     setRecurringAppointmentsDialogOpen(false);
@@ -1305,30 +1305,7 @@ const DoctorSchedulingPage: React.FC = () => {
                 gap: { xs: 1.5, sm: 2 },
                 width: { xs: '100%', md: 'auto' }
               }}>
-                <Button
-                  variant="contained"
-                  startIcon={<Schedule />}
-                  onClick={() => setSelectedDate(new Date().toISOString().split('T')[0])}
-                  sx={{ 
-                    borderRadius: 3,
-                    backgroundColor: 'rgba(255,255,255,0.2)',
-                    color: 'white',
-                    border: '1px solid rgba(255,255,255,0.3)',
-                    fontWeight: 700,
-                    px: { xs: 2, sm: 3 },
-                    py: { xs: 1, sm: 1.5 },
-                    backdropFilter: 'blur(10px)',
-                    fontSize: { xs: '0.8rem', sm: '0.875rem' },
-                    '&:hover': {
-                      backgroundColor: 'rgba(255,255,255,0.3)',
-                      transform: 'translateY(-2px)',
-                      boxShadow: '0 8px 25px rgba(255,255,255,0.25)',
-                    },
-                    transition: 'all 0.3s ease'
-                  }}
-                >
-                  {t('todays_schedule')}
-                </Button>
+
                 <Button
                   variant="outlined"
                   startIcon={<EventAvailable />}

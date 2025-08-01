@@ -39,6 +39,7 @@ import {
 } from '@mui/icons-material';
 import Header from '../../components/NavBar';
 import Sidebar from '../../components/Sidebar';
+import AvailableTimeSlotsSelector from '../../components/AvailableTimeSlotsSelector';
 import { createAppointment, type AppointmentFormData as ApiAppointmentFormData } from '../../api/appointments';
 import { getDoctorsByClinic } from '../../api/doctorPatients';
 import { UserData } from '../../api/auth';
@@ -111,6 +112,13 @@ const AppointmentForm: React.FC = () => {
     };
     loadDoctors();
   }, [userProfile?.clinicId]);
+
+  // Reset time slot when doctor or date changes
+  useEffect(() => {
+    if (formData.doctor && formData.appointmentDate) {
+      updateFormData('appointmentTime', '');
+    }
+  }, [formData.doctor, formData.appointmentDate]);
 
   const steps = [
     {
@@ -329,30 +337,20 @@ const AppointmentForm: React.FC = () => {
                 }}
               />
             </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label={t('appointment_time')}
-                type="time"
-                value={formData.appointmentTime}
-                onChange={(e) => updateFormData('appointmentTime', e.target.value)}
-                error={!!errors.appointmentTime}
-                helperText={errors.appointmentTime}
-                required
-                InputLabelProps={{ shrink: true }}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <AccessTime sx={{ color: 'primary.main' }} />
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{ 
-                  '& .MuiOutlinedInput-root': { 
-                    borderRadius: 3 
-                  }
-                }}
+            <Grid item xs={12}>
+              {/* Available Time Slots Selector */}
+              <AvailableTimeSlotsSelector
+                doctorId={doctors.find(d => `${d.firstName} ${d.lastName}` === formData.doctor)?.id}
+                date={formData.appointmentDate}
+                duration={formData.duration}
+                selectedTimeSlot={formData.appointmentTime}
+                onTimeSlotSelect={(timeSlot) => updateFormData('appointmentTime', timeSlot)}
               />
+              {errors.appointmentTime && (
+                <Alert severity="error" sx={{ mt: 2 }}>
+                  {errors.appointmentTime}
+                </Alert>
+              )}
             </Grid>
             <Grid item xs={12} md={6}>
               <FormControl 

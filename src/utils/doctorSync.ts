@@ -91,8 +91,8 @@ export const syncFirebaseDoctorsToScheduling = async (clinicId: string): Promise
     const manualDoctors = existingDoctors.filter(d => !d.firebaseId);
     const finalDoctors = [...syncedDoctors, ...manualDoctors];
     
-    // Save back to storage
-    saveSchedulingDoctorsToStorage(clinicId, finalDoctors);
+    // Note: localStorage persistence intentionally disabled
+    // Data is managed through Firebase real-time sync instead
     
     console.log(`🎉 Successfully synced ${syncedDoctors.length} doctors for clinic ${clinicId}`);
     return finalDoctors.filter(d => d.isActive);  // Return only active doctors
@@ -113,9 +113,11 @@ export const loadSchedulingDoctorsFromStorage = (clinicId: string): SchedulingDo
 
 /**
  * Save scheduling doctors - UPDATED: No localStorage persistence
+ * Data is managed through Firebase real-time sync instead
  */
 export const saveSchedulingDoctorsToStorage = (clinicId: string, doctors: SchedulingDoctor[]): void => {
-  console.warn(`⚠️ saveSchedulingDoctorsToStorage: localStorage persistence disabled for clinic ${clinicId} - ${doctors.length} doctors not saved`);
+  // Intentionally disabled - using Firebase real-time sync instead of localStorage
+  // This prevents storage conflicts and ensures data consistency across sessions
 };
 
 /**

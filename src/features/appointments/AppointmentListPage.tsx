@@ -117,6 +117,7 @@ import {
 import FirebaseFriendlySync, { FirebaseDataBridge } from '../../utils/firebaseFriendlySync';
 import { firebaseDataManager, type Appointment as FirebaseAppointment, type Payment as FirebasePayment } from '../../utils/firebaseDataManager';
 import AutoSyncIndicator from '../../components/AutoSyncIndicator';
+import AvailableTimeSlotsSelector from '../../components/AvailableTimeSlotsSelector';
 
 // Doctor interface for Firestore data
 interface Doctor {
@@ -410,6 +411,18 @@ const AppointmentListPage: React.FC = () => {
       setFirebaseConnected(true);
     }
   }, [appointments]);
+
+  // Reset time slot when doctor or date changes in new appointment form
+  useEffect(() => {
+    if (newAppointment.doctor || newAppointment.date) {
+      setNewAppointment(prev => ({
+        ...prev,
+        hour: '',
+        minute: '',
+        time: ''
+      }));
+    }
+  }, [newAppointment.doctor, newAppointment.date]);
 
   // ✅ NEW: Listen for appointment payment status sync events
   useEffect(() => {
@@ -3860,83 +3873,30 @@ const AppointmentListPage: React.FC = () => {
                  />
                </Grid>
 
-               {/* Hour Selection */}
-               <Grid item xs={12} md={3}>
-                 <FormControl fullWidth>
-                   <InputLabel>{t('hour')}</InputLabel>
-                   <Select 
-                     label={t('hour')}
-                     value={newAppointment.hour}
-                     onChange={(e) => {
-                       const hour = e.target.value;
-                       const minute = newAppointment.minute;
-                       let timeDisplay = '';
-                       if (hour && minute) {
-                         const hourNum = parseInt(hour);
-                         const displayHour = hourNum > 12 ? hourNum - 12 : hourNum === 0 ? 12 : hourNum;
-                         const ampm = hourNum >= 12 ? 'PM' : 'AM';
-                         timeDisplay = `${displayHour}:${minute} ${ampm}`;
-                       }
-                       setNewAppointment(prev => ({ 
-                         ...prev, 
-                         hour: e.target.value,
-                         time: timeDisplay
-                       }));
-                     }}
-                   >
-                     {Array.from({length: 24}, (_, i) => (
-                       <MenuItem key={i} value={i.toString().padStart(2, '0')}>
-                         {i.toString().padStart(2, '0')}:00 ({i < 12 ? 'AM' : 'PM'})
-                       </MenuItem>
-                     ))}
-                   </Select>
-                 </FormControl>
+               {/* Available Time Slots Selector */}
+               <Grid item xs={12}>
+                 <AvailableTimeSlotsSelector
+                   doctorId={availableDoctors.find(d => `${d.firstName} ${d.lastName}` === newAppointment.doctor)?.id}
+                   date={newAppointment.date}
+                   duration={newAppointment.duration || 30}
+                   selectedTimeSlot={newAppointment.hour && newAppointment.minute ? `${newAppointment.hour}:${newAppointment.minute}` : ''}
+                   onTimeSlotSelect={(timeSlot) => {
+                     // Parse timeSlot (HH:MM format) and set hour, minute, and time display
+                     const [hour, minute] = timeSlot.split(':');
+                     const hourNum = parseInt(hour);
+                     const displayHour = hourNum > 12 ? hourNum - 12 : hourNum === 0 ? 12 : hourNum;
+                     const ampm = hourNum >= 12 ? 'PM' : 'AM';
+                     const timeDisplay = `${displayHour}:${minute} ${ampm}`;
+                     
+                     setNewAppointment(prev => ({
+                       ...prev,
+                       hour: hour,
+                       minute: minute,
+                       time: timeDisplay
+                     }));
+                   }}
+                 />
                </Grid>
-
-               {/* Minute Selection */}
-               <Grid item xs={12} md={3}>
-                 <FormControl fullWidth>
-                   <InputLabel>{t('minutes')}</InputLabel>
-                   <Select 
-                     label={t('minutes')}
-                     value={newAppointment.minute}
-                     onChange={(e) => {
-                       const hour = newAppointment.hour;
-                       const minute = e.target.value;
-                       let timeDisplay = '';
-                       if (hour && minute) {
-                         const hourNum = parseInt(hour);
-                         const displayHour = hourNum > 12 ? hourNum - 12 : hourNum === 0 ? 12 : hourNum;
-                         const ampm = hourNum >= 12 ? 'PM' : 'AM';
-                         timeDisplay = `${displayHour}:${minute} ${ampm}`;
-                       }
-                       setNewAppointment(prev => ({ 
-                         ...prev, 
-                         minute: e.target.value,
-                         time: timeDisplay
-                       }));
-                     }}
-                   >
-                     {['00', '15', '30', '45'].map((minute) => (
-                       <MenuItem key={minute} value={minute}>
-                         {minute}
-                       </MenuItem>
-                     ))}
-                   </Select>
-                 </FormControl>
-               </Grid>
-
-               {/* Time Display */}
-               {newAppointment.time && (
-                 <Grid item xs={12} md={6}>
-                   <Alert severity="info" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                     <AccessTime fontSize="small" />
-                     <Typography variant="body2">
-                       {t('selected_time')}: <strong>{newAppointment.time}</strong>
-                     </Typography>
-                   </Alert>
-                 </Grid>
-               )}
 
                {/* Appointment Type */}
                <Grid item xs={12} md={6}>
