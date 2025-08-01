@@ -103,6 +103,7 @@ import {
 } from '../../services';
 import { globalDataSync } from '../../utils/globalDataSync';
 import AutoSyncIndicator from '../../components/AutoSyncIndicator';
+import { calculateAllPatientsAppointmentFields } from '../../utils/patientAppointmentCalculator';
 
 import FirebaseFriendlySync, { FirebaseDataBridge } from '../../utils/firebaseFriendlySync';
 // Legacy utility commented out for clean build
@@ -191,6 +192,9 @@ const PatientListPage: React.FC = () => {
   // ✅ NEW: Real-time update notifications
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [updateCount, setUpdateCount] = useState(0);
+
+  // ✅ NEW: Enhanced patients with calculated appointment fields
+  const [enhancedPatients, setEnhancedPatients] = useState<any[]>([]);
 
   // Helper function to translate patient status and conditions
   const translatePatientData = (text: string) => {
@@ -779,6 +783,67 @@ const PatientListPage: React.FC = () => {
       unsubscribeConnection();
     };
   }, [onDataUpdate, onConnectionChange]);
+
+  // ✅ NEW: Calculate appointment fields when patient or appointment data changes
+  useEffect(() => {
+    if (patients.length > 0 && appointments.length >= 0) {
+      console.log('🔄 Calculating patient appointment fields...', {
+        patientsCount: patients.length,
+        appointmentsCount: appointments.length
+      });
+      
+      const patientsWithAppointments = calculateAllPatientsAppointmentFields(patients, appointments);
+      setEnhancedPatients(patientsWithAppointments);
+      
+      console.log('✅ Patient appointment fields calculated:', {
+        enhancedPatientsCount: patientsWithAppointments.length,
+        samplePatient: patientsWithAppointments[0] ? {
+          name: patientsWithAppointments[0].name,
+          todayAppointment: patientsWithAppointments[0].todayAppointment,
+          nextAppointment: patientsWithAppointments[0].nextAppointment,
+          lastVisit: patientsWithAppointments[0].lastVisit,
+          completedVisitsCount: patientsWithAppointments[0].allCompletedVisits?.length || 0
+        } : 'No patients'
+      });
+    } else {
+      setEnhancedPatients(patients);
+    }
+  }, [patients, appointments]);
+
+  // ✅ NEW: Listen for appointment completion events and force recalculation
+  useEffect(() => {
+    const handleAppointmentCompleted = (event: CustomEvent) => {
+      console.log('👥 Patient page: Appointment completed, forcing recalculation...', event.detail);
+      
+      // Force immediate recalculation with current data
+      if (patients.length > 0 && appointments.length >= 0) {
+        const patientsWithAppointments = calculateAllPatientsAppointmentFields(patients, appointments);
+        setEnhancedPatients(patientsWithAppointments);
+        
+        console.log('✅ Patient appointment fields recalculated after completion');
+      }
+    };
+
+    const handleRescheduled = (event: CustomEvent) => {
+      console.log('👥 Patient page: Appointment rescheduled, forcing recalculation...', event.detail);
+      
+      // Force immediate recalculation with current data
+      if (patients.length > 0 && appointments.length >= 0) {
+        const patientsWithAppointments = calculateAllPatientsAppointmentFields(patients, appointments);
+        setEnhancedPatients(patientsWithAppointments);
+        
+        console.log('✅ Patient appointment fields recalculated after rescheduling');
+      }
+    };
+
+    window.addEventListener('appointmentCompleted', handleAppointmentCompleted as EventListener);
+    window.addEventListener('appointmentRescheduled', handleRescheduled as EventListener);
+
+    return () => {
+      window.removeEventListener('appointmentCompleted', handleAppointmentCompleted as EventListener);
+      window.removeEventListener('appointmentRescheduled', handleRescheduled as EventListener);
+    };
+  }, [patients, appointments]);
 
   // ✅ NEW: Debug logging for new system
   useEffect(() => {
@@ -1593,9 +1658,22 @@ const PatientListPage: React.FC = () => {
       setScheduleAppointmentOpen(false);
       setAppointmentPatient(null);
       
+      // ✅ ENHANCED: Trigger automatic cross-page sync to update appointment fields
+      import('../../utils/globalDataSync').then(({ triggerAutomaticSync }) => {
+        triggerAutomaticSync.appointment({ 
+          ...newAppointmentData, 
+          id: newAppointment,
+          createdAt: new Date().toISOString() // Ensure creation date is tracked
+        }, 'create');
+        triggerAutomaticSync.patient({ 
+          ...appointmentPatient, 
+          lastUpdate: new Date().toISOString()
+        }, 'update');
+      });
+      
       // ✅ State updates automatically via real-time listeners!
       alert(`✅ Appointment scheduled successfully for ${appointmentPatient.name}!`);
-      console.log('✅ Appointment created via Firestore service');
+      console.log('✅ Appointment created via Firestore service with tracked input date');
 
     } catch (error) {
       console.error('❌ Error saving appointment:', error);
@@ -1610,27 +1688,40 @@ const PatientListPage: React.FC = () => {
     setStatusMenuAnchor(event.currentTarget as HTMLElement);
   };
 
-  const handleStatusChange = (newStatus: string) => {
+  const handleStatusChange = async (newStatus: string) => {
     if (!statusEditPatient) return;
 
-    const updatedPatients = patients.map(patient => 
-      patient.id === statusEditPatient.id 
-        ? { ...patient, status: newStatus as Patient['status'] }
-        : patient
-    );
+    try {
+      console.log(`🔄 Updating patient status: ${statusEditPatient.name} → ${newStatus}`);
+      
+      // ✅ FIXED: Update patient status in Firebase
+      await updatePatient(statusEditPatient.id, { status: newStatus as Patient['status'] });
+      
+      // Update selectedPatient if it's the same patient
+      if (selectedPatient?.id === statusEditPatient.id) {
+        setSelectedPatient({
+          ...selectedPatient,
+          status: newStatus
+        });
+      }
 
-    setPatients(updatedPatients);
-
-    // Update selectedPatient if it's the same patient
-    if (selectedPatient?.id === statusEditPatient.id) {
-      setSelectedPatient({
-        ...selectedPatient,
-        status: newStatus
+      console.log(`✅ Patient status updated successfully: ${statusEditPatient.name} → ${newStatus}`);
+      
+      // ✅ ENHANCED: Trigger cross-page sync to update appointment and other pages
+      import('../../utils/globalDataSync').then(({ triggerAutomaticSync }) => {
+        triggerAutomaticSync.patient({ 
+          ...statusEditPatient, 
+          status: newStatus 
+        }, 'update');
       });
-    }
 
-    setStatusMenuAnchor(null);
-    setStatusEditPatient(null);
+      setStatusMenuAnchor(null);
+      setStatusEditPatient(null);
+      
+    } catch (error) {
+      console.error('❌ Error updating patient status:', error);
+      alert(`Error updating patient status: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   };
 
   const handleViewDocument = (document: any) => {
@@ -1860,7 +1951,7 @@ const PatientListPage: React.FC = () => {
   };
 
   const getFilteredPatients = () => {
-    let filtered = patients;
+    let filtered = enhancedPatients;
 
     // Apply organization mode filtering first
     if (patientOrganizationMode === 'reservation' && organizedAppointmentData) {
@@ -3224,18 +3315,25 @@ const PatientListPage: React.FC = () => {
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                   {patient.allCompletedVisits && patient.allCompletedVisits.length > 0 ? (
                                     <Box>
-                                      <Typography variant="body2" fontWeight={600}>
-                                        {patient.allCompletedVisits[0].date} (Latest)
+                                      <Typography variant="body2" fontWeight={600} color="primary.main">
+                                        {patient.allCompletedVisits[0].formattedDate} (Latest)
                                       </Typography>
                                       {patient.allCompletedVisits.length > 1 && (
                                         <Typography variant="caption" color="text.secondary">
-                                          +{patient.allCompletedVisits.length - 1} more visits
+                                          +{patient.allCompletedVisits.length - 1} more completed visits
                                         </Typography>
                                       )}
+                                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                        {patient.allCompletedVisits[0].type} with {patient.allCompletedVisits[0].doctor}
+                                      </Typography>
                                     </Box>
+                                  ) : patient.lastVisit ? (
+                                    <Typography variant="body2" color="primary.main" fontWeight={600}>
+                                      {patient.lastVisit}
+                                    </Typography>
                                   ) : (
                                     <Typography variant="body2" color="text.secondary">
-                                      {patient.lastVisit || 'No visits yet'}
+                                      No visits yet
                                     </Typography>
                                   )}
                                   <Tooltip title="Edit Last Visit Date" arrow>
@@ -6033,17 +6131,38 @@ const PatientListPage: React.FC = () => {
                                 <Box sx={{ mb: 2 }}>
                                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                                     <Typography variant="body2" color="text.secondary">Last Visits</Typography>
-
                                   </Box>
-                                  <Typography variant="body1" fontWeight={600} color="text.secondary">
-                                    No completed visits yet
-                                  </Typography>
-                                  <Typography variant="body2" color="text.secondary">
-                                    Completed appointments and past appointments will appear here automatically
-                                  </Typography>
-                                  <Typography variant="caption" color="primary.main" sx={{ display: 'block', mt: 1, fontStyle: 'italic' }}>
-                                    💡 Completed appointments will appear here automatically
-                                  </Typography>
+                                  {selectedPatient.allCompletedVisits && selectedPatient.allCompletedVisits.length > 0 ? (
+                                    <Box>
+                                      <Typography variant="body1" fontWeight={600} color="primary.main">
+                                        {selectedPatient.allCompletedVisits[0].formattedDate}
+                                      </Typography>
+                                      <Typography variant="body2" color="text.secondary">
+                                        {selectedPatient.allCompletedVisits[0].type} with {selectedPatient.allCompletedVisits[0].doctor}
+                                      </Typography>
+                                      {selectedPatient.allCompletedVisits.length > 1 && (
+                                        <Typography variant="caption" color="text.secondary">
+                                          +{selectedPatient.allCompletedVisits.length - 1} more completed visits
+                                        </Typography>
+                                      )}
+                                    </Box>
+                                  ) : selectedPatient.lastVisit ? (
+                                    <Typography variant="body1" fontWeight={600} color="primary.main">
+                                      {selectedPatient.lastVisit}
+                                    </Typography>
+                                  ) : (
+                                    <Box>
+                                      <Typography variant="body1" fontWeight={600} color="text.secondary">
+                                        No completed visits yet
+                                      </Typography>
+                                      <Typography variant="body2" color="text.secondary">
+                                        Completed appointments will appear here automatically
+                                      </Typography>
+                                      <Typography variant="caption" color="primary.main" sx={{ display: 'block', mt: 1, fontStyle: 'italic' }}>
+                                        💡 Complete appointments to update last visit automatically
+                                      </Typography>
+                                    </Box>
+                                  )}
                                 </Box>
                               )}
                               <Box sx={{ mb: 2 }}>

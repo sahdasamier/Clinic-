@@ -351,6 +351,9 @@ const AppointmentListPage: React.FC = () => {
   const [paymentStatusEditAppointment, setPaymentStatusEditAppointment] = useState<Appointment | null>(null);
   const [typeMenuAnchor, setTypeMenuAnchor] = useState<null | HTMLElement>(null);
   const [typeEditAppointment, setTypeEditAppointment] = useState<Appointment | null>(null);
+  const [rescheduleDialogOpen, setRescheduleDialogOpen] = useState(false);
+  const [rescheduleAppointment, setRescheduleAppointment] = useState<Appointment | null>(null);
+  const [rescheduleData, setRescheduleData] = useState({ date: '', time: '' });
   const [newAppointment, setNewAppointment] = useState<NewAppointment>({
     patient: '',
     doctor: '',
@@ -752,6 +755,18 @@ const AppointmentListPage: React.FC = () => {
       // If appointment is being marked as completed, create auto-payment
       if (newStatus === 'completed' && !wasCompleted) {
         await handleAppointmentCompletion(appointment);
+        
+        // ✅ ENHANCED: Explicitly trigger patient appointment field recalculation
+        console.log('✅ Appointment completed - triggering patient field recalculation');
+        window.dispatchEvent(new CustomEvent('appointmentCompleted', {
+          detail: { 
+            appointmentId: appointment.id,
+            patientName: appointment.patient,
+            patientId: appointment.patientId,
+            appointmentDate: appointment.date,
+            completedAt: new Date().toISOString()
+          }
+        }));
       }
       
       // ✅ State updates automatically via real-time listener!
@@ -916,6 +931,18 @@ const AppointmentListPage: React.FC = () => {
       // If appointment is being marked as completed, create auto-payment
       if (newStatus === 'completed' && previousStatus !== 'completed') {
         await handleAppointmentCompletion(statusEditAppointment);
+        
+        // ✅ ENHANCED: Explicitly trigger patient appointment field recalculation
+        console.log('✅ Appointment completed - triggering patient field recalculation');
+        window.dispatchEvent(new CustomEvent('appointmentCompleted', {
+          detail: { 
+            appointmentId: statusEditAppointment.id,
+            patientName: statusEditAppointment.patient,
+            patientId: statusEditAppointment.patientId,
+            appointmentDate: statusEditAppointment.date,
+            completedAt: new Date().toISOString()
+          }
+        }));
       }
       
       // ✅ NEW: Trigger Firebase Data Bridge refresh to sync across all pages
@@ -1024,6 +1051,59 @@ const AppointmentListPage: React.FC = () => {
       setTypeEditAppointment(null);
     } catch (error) {
       console.error('❌ Error updating appointment type:', error);
+    }
+  };
+
+  const handleRescheduleAppointment = (appointment: Appointment) => {
+    setRescheduleAppointment(appointment);
+    setRescheduleData({ 
+      date: appointment.date, 
+      time: appointment.time 
+    });
+    setRescheduleDialogOpen(true);
+  };
+
+  const handleSaveReschedule = async () => {
+    if (!rescheduleAppointment || !rescheduleData.date || !rescheduleData.time) {
+      alert('Please fill in both date and time');
+      return;
+    }
+
+    try {
+      // Generate timeSlot from time
+      const timeSlot = rescheduleData.time.includes(':') 
+        ? rescheduleData.time 
+        : `${rescheduleData.time}:00`;
+
+      await AppointmentService.rescheduleAppointment(
+        rescheduleAppointment.id,
+        rescheduleData.date,
+        rescheduleData.time,
+        timeSlot
+      );
+
+      console.log('✅ Appointment rescheduled successfully');
+      setRescheduleDialogOpen(false);
+      setRescheduleAppointment(null);
+      setRescheduleData({ date: '', time: '' });
+
+      // ✅ ENHANCED: Trigger patient appointment field recalculation
+      window.dispatchEvent(new CustomEvent('appointmentRescheduled', {
+        detail: { 
+          appointmentId: rescheduleAppointment.id,
+          patientName: rescheduleAppointment.patient,
+          patientId: rescheduleAppointment.patientId,
+          oldDate: rescheduleAppointment.date,
+          newDate: rescheduleData.date,
+          newTime: rescheduleData.time
+        }
+      }));
+
+      // ✅ Trigger Firebase Data Bridge refresh to sync across all pages
+      FirebaseDataBridge.refreshAll(userProfile?.clinicId || 'demo-clinic');
+    } catch (error) {
+      console.error('❌ Error rescheduling appointment:', error);
+      alert('Failed to reschedule appointment. Please try again.');
     }
   };
 
@@ -2720,6 +2800,18 @@ const AppointmentListPage: React.FC = () => {
                                      <Edit fontSize="small" />
                                    </IconButton>
                                  </Tooltip>
+                                 <Tooltip title={t('reschedule')}>
+                                   <IconButton 
+                                     size="small" 
+                                     color="warning"
+                                     onClick={(e) => {
+                                       e.stopPropagation();
+                                       handleRescheduleAppointment(appointment);
+                                     }}
+                                   >
+                                     <Schedule fontSize="small" />
+                                   </IconButton>
+                                 </Tooltip>
                                  <Tooltip title={t('whatsapp_patient')}>
                                    <IconButton 
                                      size="small" 
@@ -2894,7 +2986,10 @@ const AppointmentListPage: React.FC = () => {
                                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                                      <Schedule sx={{ fontSize: 16, mr: 1, color: 'text.secondary' }} />
                                      <Typography variant="body2" color="text.secondary">
-                                       {t('received')}: {new Date(appointment.createdAt).toLocaleDateString()}
+                                       {t('received')}: {appointment.createdAt ? 
+                                         new Date(appointment.createdAt.toDate ? appointment.createdAt.toDate() : appointment.createdAt).toLocaleDateString() + 
+                                         ' ' + new Date(appointment.createdAt.toDate ? appointment.createdAt.toDate() : appointment.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                                         : 'N/A'}
                                      </Typography>
                                    </Box>
                                  </Grid>
@@ -4489,6 +4584,47 @@ const AppointmentListPage: React.FC = () => {
            </MenuItem>
          </Menu>
 
+        {/* Reschedule Appointment Dialog */}
+        <Dialog open={rescheduleDialogOpen} onClose={() => setRescheduleDialogOpen(false)}>
+          <DialogTitle>
+            {t('reschedule')} - {rescheduleAppointment?.patient}
+          </DialogTitle>
+          <DialogContent>
+            <Grid container spacing={2} sx={{ mt: 1 }}>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label={t('new_date')}
+                  type="date"
+                  value={rescheduleData.date}
+                  onChange={(e) => setRescheduleData({ ...rescheduleData, date: e.target.value })}
+                  InputLabelProps={{ shrink: true }}
+                  inputProps={{
+                    min: new Date().toISOString().split('T')[0]
+                  }}
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label={t('new_time')}
+                  type="time"
+                  value={rescheduleData.time}
+                  onChange={(e) => setRescheduleData({ ...rescheduleData, time: e.target.value })}
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
+            </Grid>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setRescheduleDialogOpen(false)}>
+              {t('cancel')}
+            </Button>
+            <Button onClick={handleSaveReschedule} variant="contained">
+              {t('reschedule')}
+            </Button>
+          </DialogActions>
+        </Dialog>
 
         </Container>
   );

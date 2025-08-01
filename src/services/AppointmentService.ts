@@ -455,6 +455,19 @@ export const AppointmentService = {
       timeSlot: newTimeSlot,
       status: 'rescheduled'
     });
+    
+    // ✅ NEW: Trigger cross-page sync after rescheduling
+    console.log('✅ Appointment rescheduled, triggering automatic sync');
+    import('../utils/globalDataSync').then(({ triggerAutomaticSync }) => {
+      triggerAutomaticSync.appointment({ 
+        id: appointmentId, 
+        date: newDate, 
+        time: newTime, 
+        timeSlot: newTimeSlot, 
+        status: 'rescheduled',
+        updatedAt: new Date().toISOString()
+      }, 'update');
+    });
   },
 
   // Cancel appointment
