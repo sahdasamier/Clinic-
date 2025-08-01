@@ -107,7 +107,7 @@ import AutoSyncIndicator from '../../components/AutoSyncIndicator';
 import FirebaseFriendlySync, { FirebaseDataBridge } from '../../utils/firebaseFriendlySync';
 // Legacy utility commented out for clean build
 // import { updatePatientAppointmentFields } from '../../utils/appointmentPatientSync';
-import { quickFixDoctorIssues } from '../../utils/quickDoctorFix';
+
 import {
   defaultNewPatientData,
   defaultMedicalHistoryData,
@@ -2404,33 +2404,7 @@ const PatientListPage: React.FC = () => {
                   showDetails={true} 
                 />
 
-                <Button
-                  variant="contained"
-                  startIcon={<MedicalServices />}
-                  onClick={() => quickFixDoctorIssues()}
-                  size="medium"
-                  sx={{ 
-                    borderRadius: { xs: 2, md: 3 },
-                    backgroundColor: 'rgba(255,140,0,0.9)',
-                    color: 'white',
-                    border: '1px solid rgba(255,255,255,0.3)',
-                    fontWeight: 700,
-                    px: { xs: 3, sm: 4 },
-                    py: { xs: 1.5, sm: 1.5 },
-                    minHeight: { xs: 48, md: 'auto' },
-                    backdropFilter: 'blur(10px)',
-                    fontSize: { xs: '0.875rem', sm: '0.875rem' },
-                    '&:hover': {
-                      backgroundColor: 'rgba(255,120,0,0.9)',
-                      transform: 'translateY(-2px)',
-                      boxShadow: '0 8px 25px rgba(255,140,0,0.4)',
-                    },
-                    transition: 'all 0.3s ease'
-                  }}
-                  title="🚨 URGENT FIX: Solves 'Dr. Current Doctor', invalid IDs, and missing patient doctor assignments"
-                >
-                  🩺 Fix Doctors
-                </Button>
+
 
                 <Button
                   variant="contained"
