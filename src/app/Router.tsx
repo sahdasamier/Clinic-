@@ -29,6 +29,7 @@ import CrossPageTestComponent from "../components/CrossPageTestComponent";
 import RealtimeDataDashboard from "../components/RealtimeDataDashboard";
 import DoctorSchedulingPage from "../features/DoctorScheduling";
 import EnhancedDoctorScheduling from "../components/EnhancedDoctorScheduling";
+import SystemImprovementAnalysis from "../components/SystemImprovementAnalysis";
 
 const Router: React.FC = () => {
   return (
@@ -198,6 +199,18 @@ const Router: React.FC = () => {
               <Layout>
                 <EnhancedRouteGuard feature="doctor_scheduling" level="read">
                   <EnhancedDoctorScheduling />
+                </EnhancedRouteGuard>
+              </Layout>
+            </ClinicAccessGuard>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/system-analysis" element={
+          <ProtectedRoute>
+            <ClinicAccessGuard>
+              <Layout>
+                <EnhancedRouteGuard feature="settings" level="read">
+                  <SystemImprovementAnalysis />
                 </EnhancedRouteGuard>
               </Layout>
             </ClinicAccessGuard>

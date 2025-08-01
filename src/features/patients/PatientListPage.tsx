@@ -1674,9 +1674,10 @@ const PatientListPage: React.FC = () => {
         priority: (appointmentData.priority?.toLowerCase() as 'normal' | 'high' | 'urgent') || 'normal',
         location: 'Main Clinic',
         notes: appointmentData.notes || '',
-        status: 'confirmed' as const,
+        status: 'scheduled' as const,
         paymentStatus: 'pending' as const,
-        isActive: true
+        isActive: true,
+        isAvailableSlot: false  // ✅ FIXED: Explicitly mark as reserved appointment
       };
 
       const newAppointment = await AppointmentService.createAppointment(userProfile.clinicId, newAppointmentData);

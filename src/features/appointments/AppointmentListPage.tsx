@@ -1345,9 +1345,10 @@ const AppointmentListPage: React.FC = () => {
           priority: (newAppointment.priority as 'high' | 'normal' | 'urgent') || 'normal',
           location: newAppointment.location || 'TBD',
           notes: newAppointment.notes || '',
-          status: 'confirmed' as const,
+          status: 'scheduled' as const,
           paymentStatus: (newAppointment.paymentStatus as 'pending' | 'paid' | 'partial' | 'overdue') || 'pending',
-          isActive: true
+          isActive: true,
+          isAvailableSlot: false  // ✅ FIXED: Explicitly mark as reserved appointment
         };
 
         // ✅ Use AppointmentService for better error handling

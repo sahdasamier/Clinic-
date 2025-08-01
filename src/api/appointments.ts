@@ -71,14 +71,16 @@ export const createAppointment = async (appointmentData: AppointmentFormData): P
       timeSlot: convertTimeToSlot(appointmentData.time),
       duration: appointmentData.duration,
       type: appointmentData.type,
-      status: 'pending',
+      status: 'scheduled',  // ✅ Changed from 'pending' to 'scheduled'
       location: appointmentData.location,
       priority: appointmentData.priority,
       paymentStatus: appointmentData.paymentStatus || 'pending',
       notes: appointmentData.notes,
       createdAt: new Date(),
-      updatedAt: new Date()
-    };
+      updatedAt: new Date(),
+      isAvailableSlot: false,  // ✅ FIXED: Explicitly mark as reserved appointment
+      isActive: true  // ✅ Added: Mark as active
+    } as any;
 
     const docRef = await addDoc(collection(getDb(), APPOINTMENTS_COLLECTION), {
       ...appointment,

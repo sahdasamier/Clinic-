@@ -8,6 +8,12 @@ import {
   SchedulingDoctor,
   loadSchedulingDoctorsFromStorage
 } from '../utils/doctorSync';
+import { 
+  AppointmentStats, 
+  ConflictDetector, 
+  DoctorAvailabilityIndicator,
+  TimeSlotHealthMonitor 
+} from '../components/SchedulingEnhancements';
 import {
   Box,
   Container,
@@ -132,7 +138,14 @@ const DoctorSchedulingPage: React.FC = () => {
   } = useAppointments();
   
   const [tabValue, setTabValue] = useState(0);
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(() => {
+    // Get current date in local timezone
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  });
 
   // ✅ Real-time appointments sync - no manual loading needed
   useEffect(() => {
@@ -336,6 +349,16 @@ const DoctorSchedulingPage: React.FC = () => {
   const getSelectedDayOfWeek = () => {
     const date = new Date(selectedDate);
     return daysOfWeek[date.getDay()];
+  };
+
+  // Format date for display
+  const formatDateForDisplay = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-GB', { 
+      day: 'numeric', 
+      month: 'long', 
+      year: 'numeric' 
+    });
   };
 
   // Check if doctor is working on selected date
@@ -1739,7 +1762,7 @@ const DoctorSchedulingPage: React.FC = () => {
            <TabPanel value={tabValue} index={0}>
              <Box sx={{ p: 4 }}>
                <Typography variant="h5" sx={{ fontWeight: 700, mb: 3, color: 'text.primary' }}>
-                 📋 {t('doctor_schedules_for_date', { date: new Date(selectedDate).toLocaleDateString() })}
+                 📋 Doctor Schedules for {formatDateForDisplay(selectedDate)}
                </Typography>
                
                {/* Enhanced Helpful Notice */}
@@ -1774,6 +1797,11 @@ const DoctorSchedulingPage: React.FC = () => {
                  <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 500, position: 'relative', zIndex: 2 }}>
                    • {t('click_time_slot_chip_to_edit')}
                  </Typography>
+               </Box>
+
+               {/* ✨ Enhanced Scheduling Features */}
+               <Box sx={{ mb: 4 }}>
+                 <AppointmentStats />
                </Box>
 
                <Grid container spacing={3}>
@@ -1856,6 +1884,14 @@ const DoctorSchedulingPage: React.FC = () => {
                                  }}>
                                    {doctor.workingHours.start} - {doctor.workingHours.end}
                                  </Typography>
+                                 
+                                 {/* ✨ Real-time Availability Indicator */}
+                                 <Box sx={{ mt: 1 }}>
+                                   <DoctorAvailabilityIndicator 
+                                     doctorId={`doctor-${doctor.id}`} 
+                                     doctorName={doctor.name} 
+                                   />
+                                 </Box>
                                </Box>
                              </Box>
                              <Box sx={{ 
