@@ -88,7 +88,7 @@ export interface Appointment {
   notes: string;
   completed: boolean;
   priority: 'normal' | 'high' | 'urgent';
-  paymentStatus: 'pending' | 'completed' | 'partial' | 'failed';
+  paymentStatus: 'pending' | 'paid' | 'partial' | 'overdue' | 'cancelled' | 'failed';
   createdAt: string;
   isAvailableSlot?: boolean; // New field to distinguish available slots from actual appointments
 }

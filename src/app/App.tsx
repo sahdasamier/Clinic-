@@ -38,6 +38,19 @@ const AppContent: React.FC = () => {
     return () => clearTimeout(timer);
   }, []);
 
+  // Initialize payment status checking system
+  useEffect(() => {
+    // Initialize payment status check for overdue detection
+    import('../utils/paymentUtils').then(({ initializePaymentStatusCheck }) => {
+      initializePaymentStatusCheck();
+    });
+    
+    // ✅ NEW: Initialize appointment backup sync system
+    import('../utils/paymentUtils').then(({ initializeAppointmentBackupSync }) => {
+      initializeAppointmentBackupSync();
+    });
+  }, []);
+
   return <Router />;
 };
 

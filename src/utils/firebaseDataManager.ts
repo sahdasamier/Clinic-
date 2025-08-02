@@ -87,9 +87,10 @@ class FirebaseDataManager {
   private appointmentsCollection = 'appointments';
 
   // ✅ Helper method to get Firebase database instance
-  private getDb() {
+  private async getDb() {
     if (!firebaseManager.isReady()) {
-      throw new Error('Firebase not ready - please wait for initialization');
+      console.log('🔄 Firebase not ready, initializing...');
+      await firebaseManager.initialize();
     }
     return getOptimizedFirestore();
   }
@@ -109,18 +110,19 @@ class FirebaseDataManager {
     this.config = config;
     console.log('🔥 Firebase Data Manager initialized for clinic:', config.clinicId);
     
-    // Start real-time listeners
-    this.startPaymentListener();
-    this.startAppointmentListener();
+    // Start real-time listeners asynchronously
+    this.startPaymentListener().catch(console.error);
+    this.startAppointmentListener().catch(console.error);
     
     return this;
   }
 
   // ✅ PAYMENTS - Real-time Firebase management
-  public startPaymentListener(): void {
+  public async startPaymentListener(): Promise<void> {
     if (!this.config?.clinicId) return;
 
-    const paymentsRef = collection(this.getDb(), this.paymentsCollection);
+    const db = await this.getDb();
+    const paymentsRef = collection(db, this.paymentsCollection);
     const q = query(
       paymentsRef, 
       where('clinicId', '==', this.config.clinicId),
@@ -160,7 +162,8 @@ class FirebaseDataManager {
     if (!this.config?.clinicId) throw new Error('Firebase Data Manager not initialized');
 
     try {
-      const paymentsRef = collection(this.getDb(), this.paymentsCollection);
+      const db = await this.getDb();
+      const paymentsRef = collection(db, this.paymentsCollection);
       const docRef = await addDoc(paymentsRef, {
         ...paymentData,
         clinicId: this.config.clinicId,
@@ -188,6 +191,7 @@ class FirebaseDataManager {
 
   public async updatePayment(paymentId: string, updates: Partial<Payment>): Promise<void> {
     try {
+      const db = await this.getDb();
       const paymentRef = doc(db, this.paymentsCollection, paymentId);
       await updateDoc(paymentRef, {
         ...updates,
@@ -211,6 +215,7 @@ class FirebaseDataManager {
 
   public async deletePayment(paymentId: string): Promise<void> {
     try {
+      const db = await this.getDb();
       const paymentRef = doc(db, this.paymentsCollection, paymentId);
       await updateDoc(paymentRef, {
         isActive: false,
@@ -231,10 +236,11 @@ class FirebaseDataManager {
   }
 
   // ✅ APPOINTMENTS - Real-time Firebase management
-  public startAppointmentListener(): void {
+  public async startAppointmentListener(): Promise<void> {
     if (!this.config?.clinicId) return;
 
-    const appointmentsRef = collection(this.getDb(), this.appointmentsCollection);
+    const db = await this.getDb();
+    const appointmentsRef = collection(db, this.appointmentsCollection);
     const q = query(
       appointmentsRef, 
       where('clinicId', '==', this.config.clinicId),
@@ -274,33 +280,141 @@ class FirebaseDataManager {
     if (!this.config?.clinicId) throw new Error('Firebase Data Manager not initialized');
 
     try {
-      const appointmentsRef = collection(this.getDb(), this.appointmentsCollection);
-      const docRef = await addDoc(appointmentsRef, {
+      const db = await this.getDb();
+      const appointmentsRef = collection(db, this.appointmentsCollection);
+      
+      // ✅ ENHANCED: Validate and clean appointment data to prevent undefined values
+      const cleanedData = {
         ...appointmentData,
+        duration: appointmentData.duration || 30,
+        type: appointmentData.type || 'consultation',
+        priority: appointmentData.priority || 'normal',
+        status: appointmentData.status || 'scheduled',
+        paymentStatus: appointmentData.paymentStatus || 'pending',
+        location: appointmentData.location || '',
+        notes: appointmentData.notes || '',
+        phone: appointmentData.phone || '',
+        time: appointmentData.time || '09:00',
+        timeSlot: appointmentData.timeSlot || appointmentData.time || '09:00',
+        patient: appointmentData.patient || '',
+        doctor: appointmentData.doctor || 'Unknown Doctor',
+        date: appointmentData.date || new Date().toISOString().split('T')[0]
+      };
+      
+      // Remove any undefined values
+      Object.keys(cleanedData).forEach(key => {
+        if (cleanedData[key] === undefined) {
+          console.warn(`⚠️ DataManager: Removing undefined field: ${key}`);
+          delete cleanedData[key];
+        }
+      });
+      
+      // ✅ Enhanced appointment data with proper defaults
+      const enhancedAppointmentData = {
+        ...cleanedData,
         clinicId: this.config.clinicId,
         isActive: true,
+        completed: cleanedData.status === 'completed' || false,
+        reminderSent: false,
+        followUpRequired: false,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
-      });
+      };
+      
+      // ✅ Save with retry logic
+      let docRef;
+      let attempts = 0;
+      const maxAttempts = 3;
+      
+      while (attempts < maxAttempts) {
+        try {
+          docRef = await addDoc(appointmentsRef, enhancedAppointmentData);
+          console.log('✅ Appointment created in Firebase via DataManager:', docRef.id);
+          break;
+        } catch (saveError) {
+          attempts++;
+          console.error(`❌ DataManager save attempt ${attempts} failed:`, saveError);
+          
+          if (attempts >= maxAttempts) {
+            throw saveError;
+          }
+          
+          // Wait before retry
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
+        }
+      }
+      
+      if (!docRef) {
+        throw new Error('Failed to create document reference');
+      }
 
-      console.log('✅ Appointment created in Firebase:', docRef.id);
+      // ✅ Create local backup
+      try {
+        const localAppointments = JSON.parse(localStorage.getItem('clinic_appointments_backup') || '[]');
+        localAppointments.push({
+          ...enhancedAppointmentData,
+          id: docRef.id,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          backupTimestamp: Date.now(),
+          source: 'FirebaseDataManager'
+        });
+        localStorage.setItem('clinic_appointments_backup', JSON.stringify(localAppointments));
+        console.log('✅ Appointment backed up locally via DataManager');
+      } catch (backupError) {
+        console.warn('⚠️ Failed to create local backup via DataManager:', backupError);
+      }
       
       this.triggerGlobalEvent('appointmentCreated', {
         appointmentId: docRef.id,
-        appointmentData,
+        appointmentData: enhancedAppointmentData,
         source: 'firebase-create',
         timestamp: Date.now()
       });
 
       return docRef.id;
     } catch (error) {
-      console.error('❌ Error creating appointment:', error);
-      throw error;
+      console.error('❌ Error creating appointment in DataManager:', error);
+      
+      // ✅ Emergency fallback for DataManager
+      try {
+        const emergencyAppointment = {
+          ...appointmentData,
+          id: 'emergency-dm-' + Date.now(),
+          clinicId: this.config.clinicId,
+          isActive: true,
+          completed: false,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          isEmergencyBackup: true,
+          source: 'DataManager-Emergency'
+        };
+        
+        const emergencyBackups = JSON.parse(localStorage.getItem('clinic_appointments_emergency') || '[]');
+        emergencyBackups.push(emergencyAppointment);
+        localStorage.setItem('clinic_appointments_emergency', JSON.stringify(emergencyBackups));
+        
+        console.log('🚨 DataManager: Appointment saved as emergency backup:', emergencyAppointment.id);
+        
+        // Trigger event even for emergency save
+        this.triggerGlobalEvent('appointmentCreated', {
+          appointmentId: emergencyAppointment.id,
+          appointmentData: emergencyAppointment,
+          source: 'firebase-emergency',
+          timestamp: Date.now()
+        });
+        
+        return emergencyAppointment.id;
+      } catch (emergencyError) {
+        console.error('❌ DataManager emergency backup also failed:', emergencyError);
+        throw error; // Throw original error
+      }
     }
   }
 
   public async updateAppointment(appointmentId: string, updates: Partial<Appointment>): Promise<void> {
     try {
+      const db = await this.getDb();
       const appointmentRef = doc(db, this.appointmentsCollection, appointmentId);
       await updateDoc(appointmentRef, {
         ...updates,
@@ -328,7 +442,8 @@ class FirebaseDataManager {
       await this.updateAppointment(appointmentId, { paymentStatus: paymentStatus as any });
       
       // Find and update related payments
-      const paymentsRef = collection(this.getDb(), this.paymentsCollection);
+      const db = await this.getDb();
+      const paymentsRef = collection(db, this.paymentsCollection);
       const q = query(
         paymentsRef,
         where('appointmentId', '==', appointmentId),
@@ -418,7 +533,8 @@ class FirebaseDataManager {
     if (!this.config?.clinicId) return [];
 
     try {
-      const paymentsRef = collection(this.getDb(), this.paymentsCollection);
+      const db = await this.getDb();
+      const paymentsRef = collection(db, this.paymentsCollection);
       const q = query(
         paymentsRef,
         where('clinicId', '==', this.config.clinicId),
@@ -447,7 +563,8 @@ class FirebaseDataManager {
     if (!this.config?.clinicId) return [];
 
     try {
-      const appointmentsRef = collection(this.getDb(), this.appointmentsCollection);
+      const db = await this.getDb();
+      const appointmentsRef = collection(db, this.appointmentsCollection);
       const q = query(
         appointmentsRef,
         where('clinicId', '==', this.config.clinicId),

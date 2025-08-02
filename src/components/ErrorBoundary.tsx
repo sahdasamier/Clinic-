@@ -69,6 +69,22 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
       }
     }
 
+    // ✅ Handle Firebase initialization errors specifically
+    const isFirebaseInitError = error?.message?.includes('🔥') && 
+      (error?.message?.includes('failed to initialize') || error?.message?.includes('not ready'));
+
+    if (isFirebaseInitError) {
+      console.log('🔄 Firebase initialization error detected, attempting recovery...');
+      
+      // Attempt to trigger Firebase reinitialization
+      setTimeout(() => {
+        if (typeof window !== 'undefined') {
+          console.log('🔄 Attempting to reload page for Firebase recovery...');
+          window.location.reload();
+        }
+      }, 3000);
+    }
+
     // Log error to external service if needed
     // Example: Sentry, LogRocket, etc.
   }
@@ -98,6 +114,10 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
                              this.state.error?.message.includes('collection()') ||
                              this.state.error?.message.includes('Firestore') ||
                              this.state.error?.name === 'FirebaseError';
+                             
+      // ✅ Detect Firebase initialization errors specifically
+      const isFirebaseInitError = this.state.error?.message?.includes('🔥') && 
+        (this.state.error?.message?.includes('failed to initialize') || this.state.error?.message?.includes('not ready'));
 
       // Default error UI
       return (
@@ -107,17 +127,20 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
               <BugReportOutlined sx={{ fontSize: 64, color: 'error.main' }} />
               
               <Typography variant="h4" color="error" gutterBottom>
-                {isFirebaseError ? '🔥 Firebase Connection Error' : 'Oops! Something went wrong'}
+                {isFirebaseInitError ? '🔥 Firebase Initialization Error' : 
+                 isFirebaseError ? '🔥 Firebase Connection Error' : 'Oops! Something went wrong'}
               </Typography>
               
               <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 600 }}>
-                {isFirebaseError 
+                {isFirebaseInitError 
+                  ? 'Firebase authentication services are still initializing. The page will automatically refresh in a moment to retry.'
+                  : isFirebaseError 
                   ? 'We encountered a problem connecting to our database services. This is usually temporary and can be resolved by refreshing the page.'
                   : 'We encountered an unexpected error. Don\'t worry, your data is safe. Please try refreshing the page or contact support if the problem persists.'
                 }
               </Typography>
 
-              <Alert severity={isFirebaseError ? 'warning' : 'error'} sx={{ width: '100%', textAlign: 'left' }}>
+              <Alert severity={isFirebaseInitError || isFirebaseError ? 'warning' : 'error'} sx={{ width: '100%', textAlign: 'left' }}>
                 <Typography variant="body2" sx={{ fontFamily: 'monospace', mb: 1 }}>
                   <strong>Error:</strong> {this.state.error?.message}
                 </Typography>

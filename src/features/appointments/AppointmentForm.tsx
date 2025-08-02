@@ -198,7 +198,8 @@ const AppointmentForm: React.FC = () => {
         duration: formData.duration,
         location: formData.location,
         priority: formData.priority as 'normal' | 'high' | 'urgent',
-        notes: formData.notes
+        notes: formData.notes,
+        clinicId: userProfile?.clinicId || 'demo-clinic' // ✅ FIXED: Include clinicId
       };
 
       const createdAppointment = await createAppointment(appointmentData);

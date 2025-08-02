@@ -17,8 +17,8 @@ import {
   serverTimestamp,
   setDoc 
 } from 'firebase/firestore';
-import { auth, firebaseConfig, isOptimizedFirebaseReady, getOptimizedServices } from '../../api/firebase';
-import { getOptimizedFirestore } from '../../api/firebaseOptimized';
+import { firebaseConfig, isOptimizedFirebaseReady, getOptimizedServices } from '../../api/firebase';
+import { getOptimizedFirestore, getOptimizedAuth } from '../../api/firebaseOptimized';
 import { createUserAccount, createUserInvitation, isValidEmail, checkEmailExists, doubleCheckEmailBeforeCreation, createUserAccountWithCleanup, suggestAlternativeEmails } from '../../api/auth';
 import { fixClinicAccess } from '../../utils/clinicUtils';
 import { initializeDemoClinicAfterAuth } from '../../scripts/initFirestore';
@@ -180,6 +180,8 @@ const AdminPanelPage: React.FC = () => {
 
   // Verify admin status on component mount and auth changes
   useEffect(() => {
+    let unsubscribe: (() => void) | null = null;
+
     const checkAdminStatus = async () => {
       try {
         setAdminVerification(prev => ({ ...prev, loading: true }));
@@ -188,19 +190,30 @@ const AdminPanelPage: React.FC = () => {
         // Determine verification method
         let method = null;
         if (result.isAdmin) {
-          const user = auth.currentUser;
-          if (user) {
-            try {
-              const idTokenResult = await user.getIdTokenResult();
-              const claims = idTokenResult.claims as any;
-              if (claims.admin === true) {
-                method = 'Custom Claims';
-              } else {
-                method = 'Super Admin Email';
+          try {
+            // Only access auth if Firebase is ready
+            if (isOptimizedFirebaseReady()) {
+              const auth = getOptimizedAuth();
+              const user = auth.currentUser;
+              if (user) {
+                try {
+                  const idTokenResult = await user.getIdTokenResult();
+                  const claims = idTokenResult.claims as any;
+                  if (claims.admin === true) {
+                    method = 'Custom Claims';
+                  } else {
+                    method = 'Super Admin Email';
+                  }
+                } catch {
+                  method = 'Super Admin Email';
+                }
               }
-            } catch {
+            } else {
               method = 'Super Admin Email';
             }
+          } catch (error) {
+            console.warn('⚠️ Could not determine admin method:', error);
+            method = 'Super Admin Email';
           }
         }
         
@@ -220,13 +233,42 @@ const AdminPanelPage: React.FC = () => {
       }
     };
 
-    // Check on mount and auth state changes
-    checkAdminStatus();
-    const unsubscribe = auth.onAuthStateChanged(() => {
-      checkAdminStatus();
-    });
+    const setupAuthListener = async () => {
+      // Wait for Firebase to be ready before setting up auth listener
+      if (!isOptimizedFirebaseReady()) {
+        console.log('🔄 AdminPanel: Firebase not ready, waiting for initialization...');
+        // Retry after a short delay
+        setTimeout(setupAuthListener, 500);
+        return;
+      }
 
-    return () => unsubscribe();
+      try {
+        // Use optimized auth service
+        const auth = getOptimizedAuth();
+        
+        // Check admin status immediately
+        checkAdminStatus();
+        
+        // Set up auth state listener
+        unsubscribe = auth.onAuthStateChanged(() => {
+          checkAdminStatus();
+        });
+        
+        console.log('✅ AdminPanel: Auth listener setup complete');
+      } catch (error) {
+        console.error('❌ AdminPanel: Error setting up auth listener:', error);
+        // Fallback: just check admin status without listener
+        checkAdminStatus();
+      }
+    };
+
+    setupAuthListener();
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
   }, []);
 
   // Monitor Firebase readiness
@@ -845,10 +887,17 @@ const AdminPanelPage: React.FC = () => {
 
   const handleSignOut = async () => {
     try {
-      await signOut(auth);
+      if (isOptimizedFirebaseReady()) {
+        const auth = getOptimizedAuth();
+        await signOut(auth);
+      } else {
+        console.warn('Firebase not ready for sign out');
+      }
       navigate('/admin/login');
     } catch (error) {
       console.error('Error signing out:', error);
+      // Still navigate even if sign out fails
+      navigate('/admin/login');
     }
   };
 
@@ -1111,7 +1160,17 @@ const AdminPanelPage: React.FC = () => {
           ) : adminVerification.isAdmin ? (
             <Box>
               <Typography variant="body2" sx={{ color: 'success.main', fontWeight: 600 }}>
-                ✅ Admin Verified ({adminVerification.method}) - {auth.currentUser?.email}
+                ✅ Admin Verified ({adminVerification.method}) - {(() => {
+                  try {
+                    if (isOptimizedFirebaseReady()) {
+                      const auth = getOptimizedAuth();
+                      return auth.currentUser?.email || 'Unknown';
+                    }
+                    return 'Loading...';
+                  } catch {
+                    return 'Unknown';
+                  }
+                })()}
               </Typography>
               <Typography variant="body2" sx={{ mt: 1 }}>
                 🔐 <strong>Secure User Creation:</strong> Uses secondary Firebase app to prevent admin logout

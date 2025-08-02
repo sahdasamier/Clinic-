@@ -14,6 +14,20 @@ import {
   limit
 } from 'firebase/firestore';
 import { getOptimizedFirestore, firebaseManager } from '../api/firebaseOptimized';
+import { AppointmentConflictService } from './AppointmentConflictService';
+
+// ✅ Utility function for generating IDs (with fallback for older browsers)
+const generateId = (): string => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  // Fallback for older browsers
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+};
 
 const COLLECTION_NAME = 'appointments';
 
@@ -43,7 +57,7 @@ export interface Appointment {
   location?: string; // room number, etc.
   phone?: string;
   notes?: string;
-  paymentStatus?: 'pending' | 'paid' | 'partial' | 'overdue';
+  paymentStatus?: 'pending' | 'paid' | 'partial' | 'overdue' | 'cancelled' | 'failed';
   insuranceInfo?: {
     provider: string;
     number: string;
@@ -201,54 +215,143 @@ export const AppointmentService = {
     return maxLength === 0 ? 1.0 : (maxLength - matrix[n2.length][n1.length]) / maxLength;
   },
 
-  // ✅ ENHANCED: Enhanced createAppointment with conflict detection
+  //  ✅ ENHANCED: Enhanced createAppointment with conflict detection
   async createAppointment(clinicId: string, appointmentData: Omit<Appointment, 'id' | 'createdAt' | 'updatedAt' | 'clinicId'>): Promise<string> {
-    // ✅ STEP 1: Validate appointment data and check for conflicts
-    if (appointmentData.doctorId && appointmentData.date && appointmentData.timeSlot) {
-      const { AppointmentConflictService } = await import('./AppointmentConflictService');
-      
-      const validation = await AppointmentConflictService.validateAppointment({
-        doctorId: appointmentData.doctorId,
-        date: appointmentData.date,
-        timeSlot: appointmentData.timeSlot,
-        duration: appointmentData.duration || 30
-      });
-
-      if (!validation.isValid) {
-        throw new Error(`❌ Appointment Conflict: ${validation.error}`);
+    try {
+      // ✅ STEP 0: Ensure Firebase is ready
+      if (!firebaseManager.isReady()) {
+        console.log('🔄 Firebase not ready, waiting for initialization...');
+        // Wait up to 5 seconds for Firebase to be ready
+        let attempts = 0;
+        while (!firebaseManager.isReady() && attempts < 50) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+          attempts++;
+        }
+        
+        if (!firebaseManager.isReady()) {
+          throw new Error('Firebase failed to initialize within timeout period');
+        }
       }
-    }
 
-    const id = crypto.randomUUID();
-    
-    // ✅ STEP 2: Ensure patient exists and get patientId
-    let patientId = appointmentData.patientId;
-    if (!patientId && appointmentData.patient) {
-      patientId = await this.ensurePatientExists(clinicId, appointmentData.patient, appointmentData.phone);
-    }
-    
-    const appointment: Appointment = {
-      ...appointmentData,
-      id,
-      clinicId,
-      patientId: patientId || appointmentData.patientId, // Set patientId if we found/created one
-      isActive: true,
-      completed: appointmentData.status === 'completed', // for backward compatibility
-      reminderSent: false,
-      followUpRequired: false,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    };
+      // ✅ STEP 1: Validate appointment data and check for conflicts
+      if (appointmentData.doctorId && appointmentData.date && appointmentData.timeSlot) {
+        const validation = await AppointmentConflictService.validateAppointment({
+          doctorId: appointmentData.doctorId,
+          date: appointmentData.date,
+          timeSlot: appointmentData.timeSlot,
+          duration: appointmentData.duration || 30
+        });
 
-    await setDoc(doc(getAppointmentsCollection(), id), appointment);
-    console.log('✅ Appointment created:', id, patientId ? `with linked patient: ${patientId}` : 'without patient link');
-    
-    // ✅ STEP 3: Mark time slot as reserved
-    if (appointmentData.doctorId && appointmentData.date && appointmentData.timeSlot) {
-      console.log(`🔒 Time slot reserved: ${appointmentData.doctorId} at ${appointmentData.date} ${appointmentData.timeSlot}`);
+        if (!validation.isValid) {
+          throw new Error(`❌ Appointment Conflict: ${validation.error}`);
+        }
+      }
+
+      const id = generateId();
+      
+      // ✅ STEP 2: Ensure patient exists and get patientId
+      let patientId = appointmentData.patientId;
+      if (!patientId && appointmentData.patient) {
+        patientId = await this.ensurePatientExists(clinicId, appointmentData.patient, appointmentData.phone);
+      }
+      
+      // ✅ STEP 3: Validate and clean appointment data
+      const cleanedAppointmentData = {
+        ...appointmentData,
+        duration: appointmentData.duration || 30, // ✅ FIXED: Ensure duration has default value
+        type: appointmentData.type || 'consultation',
+        priority: appointmentData.priority || 'normal',
+        status: appointmentData.status || 'scheduled',
+        paymentStatus: appointmentData.paymentStatus || 'pending',
+        location: appointmentData.location || '',
+        notes: appointmentData.notes || '',
+        phone: appointmentData.phone || '',
+        time: appointmentData.time || '',
+        timeSlot: appointmentData.timeSlot || appointmentData.time || '',
+        patient: appointmentData.patient || '',
+        doctor: appointmentData.doctor || 'Unknown Doctor'
+      };
+      
+      const appointment: Appointment = {
+        ...cleanedAppointmentData,
+        id,
+        clinicId,
+        patientId: patientId || appointmentData.patientId, // Set patientId if we found/created one
+        isActive: true,
+        completed: cleanedAppointmentData.status === 'completed', // for backward compatibility
+        reminderSent: false,
+        followUpRequired: false,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      };
+
+      // ✅ STEP 3: Save to Firebase with retry logic
+      let saveAttempts = 0;
+      const maxAttempts = 3;
+      
+      while (saveAttempts < maxAttempts) {
+        try {
+          await setDoc(doc(getAppointmentsCollection(), id), appointment);
+          console.log('✅ Appointment saved to Firebase:', id, patientId ? `with linked patient: ${patientId}` : 'without patient link');
+          break; // Success, exit retry loop
+        } catch (saveError) {
+          saveAttempts++;
+          console.error(`❌ Attempt ${saveAttempts} failed to save appointment:`, saveError);
+          
+          if (saveAttempts >= maxAttempts) {
+            // Final attempt failed, try backup method
+            console.log('🔄 Trying backup save method...');
+            try {
+              // Use alternative Firebase Data Manager as backup
+              const { firebaseDataManager } = await import('../utils/firebaseDataManager');
+              const dataManager = firebaseDataManager.initialize({ clinicId });
+              await dataManager.createAppointment(appointment);
+              console.log('✅ Appointment saved via backup method');
+              break;
+            } catch (backupError) {
+              console.error('❌ Backup save method also failed:', backupError);
+              throw new Error(`Failed to save appointment after ${maxAttempts} attempts: ${saveError}`);
+            }
+          } else {
+            // Wait before retry
+            await new Promise(resolve => setTimeout(resolve, 1000 * saveAttempts));
+          }
+        }
+      }
+      
+      // ✅ STEP 4: Create local backup
+      try {
+        const localAppointments = JSON.parse(localStorage.getItem('clinic_appointments_backup') || '[]');
+        localAppointments.push({
+          ...appointment,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          backupTimestamp: Date.now()
+        });
+        localStorage.setItem('clinic_appointments_backup', JSON.stringify(localAppointments));
+        console.log('✅ Appointment backed up locally');
+      } catch (backupError) {
+        console.warn('⚠️ Failed to create local backup:', backupError);
+        // Don't fail the operation for backup errors
+      }
+      
+      // ✅ STEP 5: Mark time slot as reserved
+      if (appointmentData.doctorId && appointmentData.date && appointmentData.timeSlot) {
+        console.log(`🔒 Time slot reserved: ${appointmentData.doctorId} at ${appointmentData.date} ${appointmentData.timeSlot}`);
+      }
+      
+      // ✅ STEP 6: Trigger cross-page sync events
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('appointmentCreated', {
+          detail: { appointment, source: 'AppointmentService' }
+        }));
+      }
+      
+      return id;
+    } catch (error) {
+      console.error('❌ AppointmentService.createAppointment failed:', error);
+      throw error;
     }
-    
-    return id;
   },
 
   // Update an existing appointment with conflict detection
@@ -256,8 +359,6 @@ export const AppointmentService = {
     // ✅ Check for conflicts if rescheduling (changing date, time, or doctor)
     if ((updates.doctorId || updates.date || updates.timeSlot) && 
         updates.doctorId && updates.date && updates.timeSlot) {
-      
-      const { AppointmentConflictService } = await import('./AppointmentConflictService');
       
       const validation = await AppointmentConflictService.validateAppointment({
         doctorId: updates.doctorId,
@@ -534,7 +635,7 @@ export const AppointmentService = {
     const batch = writeBatch(getOptimizedFirestore());
     
     appointments.forEach(appointmentData => {
-      const id = crypto.randomUUID();
+      const id = generateId();
       const appointmentRef = doc(getAppointmentsCollection(), id);
       const appointment: Appointment = {
         ...appointmentData,

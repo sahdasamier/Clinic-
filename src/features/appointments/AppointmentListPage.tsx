@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { safeFirestore } from '../../api/firebaseDirect';
 import {
@@ -118,6 +118,7 @@ import FirebaseFriendlySync, { FirebaseDataBridge } from '../../utils/firebaseFr
 import { firebaseDataManager, type Appointment as FirebaseAppointment, type Payment as FirebasePayment } from '../../utils/firebaseDataManager';
 import AutoSyncIndicator from '../../components/AutoSyncIndicator';
 import AvailableTimeSlotsSelector from '../../components/AvailableTimeSlotsSelector';
+import PaymentStatusIndicator from '../../components/PaymentStatusIndicator';
 
 // Doctor interface for Firestore data
 interface Doctor {
@@ -282,6 +283,10 @@ const mapAppointmentPaymentStatusToPaymentStatus = (appointmentPaymentStatus: st
       return 'paid';
     case 'partial':
       return 'partial';
+    case 'overdue':
+      return 'overdue';
+    case 'cancelled':
+      return 'cancelled';
     case 'failed':
       return 'failed';
     case 'pending':
@@ -362,14 +367,163 @@ const AppointmentListPage: React.FC = () => {
     time: '',
     hour: '',
     minute: '',
-    type: '',
-    duration: 25,
+    type: 'consultation',
+    duration: 30, // ✅ FIXED: Changed default from 25 to 30 to match validation
     priority: 'normal',
     location: '',
     notes: '',
     phone: '',
     paymentStatus: 'pending'
   });
+
+  // Add inline editing state variables after the existing state variables
+  const [inlineEditingField, setInlineEditingField] = useState<{
+    appointmentId: string;
+    field: 'date' | 'time' | 'duration';
+    value: string;
+  } | null>(null);
+
+  // Functions for inline editing
+  const handleInlineEdit = (appointment: Appointment, field: 'date' | 'time' | 'duration') => {
+    let value = '';
+    switch (field) {
+      case 'date':
+        value = appointment.date;
+        break;
+      case 'time':
+        value = appointment.time;
+        break;
+      case 'duration':
+        value = appointment.duration.toString();
+        break;
+    }
+    
+    setInlineEditingField({
+      appointmentId: appointment.id,
+      field,
+      value
+    });
+  };
+
+  const handleInlineEditSave = async () => {
+    if (!inlineEditingField) return;
+    
+    try {
+      const appointment = appointments.find(a => a.id === inlineEditingField.appointmentId);
+      if (!appointment) return;
+
+      const updates: any = {};
+      
+      switch (inlineEditingField.field) {
+        case 'date':
+          updates.date = inlineEditingField.value;
+          break;
+        case 'time':
+          updates.time = inlineEditingField.value;
+          updates.timeSlot = inlineEditingField.value;
+          break;
+        case 'duration':
+          updates.duration = parseInt(inlineEditingField.value) || 30;
+          break;
+      }
+
+      // Update appointment using existing service
+      await AppointmentService.updateAppointment(appointment.id, updates);
+      
+      // Clear inline editing state
+      setInlineEditingField(null);
+      
+      console.log(`✅ Updated appointment ${inlineEditingField.field}: ${inlineEditingField.value}`);
+    } catch (error) {
+      console.error('❌ Error updating appointment field:', error);
+      alert('Failed to update appointment. Please try again.');
+    }
+  };
+
+  const handleInlineEditCancel = () => {
+    setInlineEditingField(null);
+  };
+
+  const handleInlineEditKeyPress = (event: React.KeyboardEvent) => {
+    if (event.key === 'Enter') {
+      handleInlineEditSave();
+    } else if (event.key === 'Escape') {
+      handleInlineEditCancel();
+    }
+  };
+
+  // Component for inline editable field
+  const InlineEditableField: React.FC<{
+    appointment: Appointment;
+    field: 'date' | 'time' | 'duration';
+    displayValue: string;
+    secondaryValue?: string;
+  }> = ({ appointment, field, displayValue, secondaryValue }) => {
+    const isEditing = inlineEditingField?.appointmentId === appointment.id && inlineEditingField?.field === field;
+    
+    if (isEditing) {
+      return (
+        <TextField
+          value={inlineEditingField?.value || ''}
+          onChange={(e) => setInlineEditingField(prev => prev ? { ...prev, value: e.target.value } : null)}
+          onKeyDown={handleInlineEditKeyPress}
+          onBlur={handleInlineEditSave}
+          autoFocus
+          size="small"
+          type={field === 'duration' ? 'number' : field === 'date' ? 'date' : 'time'}
+          inputProps={{
+            min: field === 'duration' ? 5 : undefined,
+            max: field === 'duration' ? 480 : undefined
+          }}
+          sx={{
+            '& .MuiInputBase-root': {
+              fontSize: '0.875rem',
+              fontWeight: 600
+            }
+          }}
+        />
+      );
+    }
+
+    const getTooltipText = () => {
+      switch (field) {
+        case 'date': return 'Click to edit appointment date';
+        case 'time': return 'Click to edit appointment time';
+        case 'duration': return 'Click to edit duration (minutes)';
+        default: return 'Click to edit';
+      }
+    };
+
+    return (
+      <Tooltip title={getTooltipText()} arrow placement="top">
+        <Box
+          onClick={() => handleInlineEdit(appointment, field)}
+          sx={{
+            cursor: 'pointer',
+            padding: '4px 8px',
+            borderRadius: '4px',
+            border: '1px solid transparent',
+            '&:hover': {
+              backgroundColor: 'rgba(25, 118, 210, 0.08)',
+              border: '1px solid rgba(25, 118, 210, 0.3)',
+              transform: 'scale(1.02)',
+              boxShadow: '0 2px 8px rgba(25, 118, 210, 0.1)'
+            },
+            transition: 'all 0.2s ease'
+          }}
+        >
+          <Typography variant="body2" fontWeight={600} color="primary.main">
+            {displayValue}
+          </Typography>
+          {secondaryValue && (
+            <Typography variant="caption" color="text.secondary">
+              {secondaryValue}
+            </Typography>
+          )}
+        </Box>
+      </Tooltip>
+    );
+  };
 
   // ✅ NEW: Listen for real-time updates
   useEffect(() => {
@@ -591,8 +745,8 @@ const AppointmentListPage: React.FC = () => {
         time: '',
         hour: '',
         minute: '',
-        type: '',
-        duration: 25,
+        type: 'consultation', // ✅ FIXED: Set default type
+        duration: 30, // ✅ FIXED: Changed default from 25 to 30
         priority: 'normal',
         location: '',
         notes: '',
@@ -976,55 +1130,45 @@ const AppointmentListPage: React.FC = () => {
     if (!paymentStatusEditAppointment) return;
 
     try {
+      // ✅ Ensure Firebase Data Manager is initialized
+      if (!userProfile?.clinicId) {
+        throw new Error('User profile or clinic ID not available');
+      }
+      
+      const dataManager = firebaseDataManager.initialize({
+        clinicId: userProfile.clinicId,
+        userId: userProfile.id
+      });
+      
       // ✅ Use Firebase Data Manager with cross-page sync
-      await firebaseDataManager.syncAppointmentPaymentStatus(
+      await dataManager.syncAppointmentPaymentStatus(
         paymentStatusEditAppointment.id,
         newPaymentStatus
       );
       
-      // ✅ FIXED: Create or update corresponding payment record in Firebase
+      // ✅ ENHANCED: Use the new utility function to safely update or create payment
       try {
-        const existingPayments = await PaymentService.getPayments(userProfile?.clinicId || 'demo-clinic');
-        const linkedPayment = existingPayments.find(payment => 
-          payment.patient === paymentStatusEditAppointment.patient
-        );
-
+        const { updateOrCreatePaymentForAppointment } = await import('../../utils/paymentUtils');
+        
         // Map appointment payment status to payment status
         const mappedStatus = mapAppointmentPaymentStatusToPaymentStatus(newPaymentStatus);
-
-        if (linkedPayment) {
-          // Update existing payment status
-          await PaymentService.updatePayment(linkedPayment.id, {
-            status: mappedStatus as any
-          });
-          console.log(`✅ Updated linked payment ${linkedPayment.id} status: ${newPaymentStatus} → ${mappedStatus}`);
-        } else {
-          // Create new payment record if none exists
-          const paymentData = {
+        
+        const result = await updateOrCreatePaymentForAppointment(
+          {
+            id: paymentStatusEditAppointment.id,
             patient: paymentStatusEditAppointment.patient,
-            patientAvatar: paymentStatusEditAppointment.patient.split(' ').map(n => n[0]).join('').toUpperCase() || 'P',
             doctor: paymentStatusEditAppointment.doctor || 'Unknown Doctor',
-            amount: 100, // Default amount - should be configurable
-            currency: 'EGP',
-            date: ServiceUtils.getToday(),
-            dueDate: paymentStatusEditAppointment.date,
-            status: mappedStatus === 'cancelled' ? 'pending' : mappedStatus as 'pending' | 'paid',
-            method: 'cash',
-            description: `Payment for ${paymentStatusEditAppointment.type} appointment`,
-            category: 'consultation',
-            insurance: 'No' as 'Yes' | 'No',
-            insuranceAmount: 0,
-            paidAmount: mappedStatus === 'paid' ? 100 : 0,
-            includeVAT: false,
-            vatRate: 0,
-            vatAmount: 0,
-            totalAmountWithVAT: 100,
-            baseAmount: 100,
-            appointmentId: paymentStatusEditAppointment.id
-          };
-
-          const newPayment = createPayment(paymentData);
-          console.log(`✅ Created new payment ${newPayment.invoiceId} with status ${mappedStatus} (from appointment status ${newPaymentStatus})`);
+            type: paymentStatusEditAppointment.type,
+            date: paymentStatusEditAppointment.date
+          },
+          mappedStatus,
+          userProfile.clinicId
+        );
+        
+        if (result.updated) {
+          console.log(`✅ Updated existing payment ${result.paymentId} status: ${newPaymentStatus} → ${mappedStatus}`);
+        } else {
+          console.log(`✅ Created new payment ${result.paymentId} with status: ${mappedStatus}`);
         }
       } catch (paymentError) {
         console.error('❌ Error syncing payment record:', paymentError);
@@ -1123,66 +1267,91 @@ const AppointmentListPage: React.FC = () => {
   // Handle appointment completion and auto-payment creation
   const handleAppointmentCompletion = async (appointment: Appointment) => {
     try {
-      console.log(`🏥 Creating payment for completed appointment: ${appointment.id}`);
+      console.log(`🏥 Processing completion for appointment: ${appointment.id}`);
       
-      // ✅ Use the new Firebase auto-payment creation function
-      const paymentParams = {
-        clinicId: userProfile!.clinicId,
-        appointmentId: appointment.id,
-        patientId: appointment.patientId,
-        patientName: appointment.patient,
-        patientAvatar: appointment.patient.split(' ').map(n => n[0]).join('').toUpperCase(),
-        doctorName: appointment.doctor,
-        appointmentType: appointment.type,
-        appointmentDate: appointment.date,
-        appointmentDuration: appointment.duration || 30,
-        isCompleted: true
-      };
+      // ✅ Check if payment already exists for this appointment
+      const existingPayments = await PaymentService.getPayments(userProfile?.clinicId || 'demo-clinic');
+      const existingPayment = existingPayments.find(payment => 
+        payment.appointmentId === appointment.id ||
+        (payment.patient === appointment.patient && payment.date === appointment.date)
+      );
 
-      // Update appointment status to completed and create payment
-      await firebaseDataManager.updateAppointment(appointment.id, {
+      // ✅ Ensure Firebase Data Manager is initialized
+      if (!userProfile?.clinicId) {
+        throw new Error('User profile or clinic ID not available');
+      }
+      
+      const dataManager = firebaseDataManager.initialize({
+        clinicId: userProfile.clinicId,
+        userId: userProfile.id
+      });
+      
+      // Update appointment status to completed
+      await dataManager.updateAppointment(appointment.id, {
         status: 'completed',
         completed: true,
         paymentStatus: 'paid'
       });
 
-      // Create payment in Firebase
-      const paymentData = {
-        clinicId: userProfile!.clinicId,
-        patient: appointment.patient,
-        doctor: appointment.doctor,
-        appointmentId: appointment.id,
-        amount: 200, // Default amount - should be configurable
-        currency: 'EGP',
-        status: 'paid' as const,
-        date: new Date().toISOString().split('T')[0],
-        dueDate: appointment.date,
-        method: 'cash',
-        description: `Payment for completed ${appointment.type || 'unknown'} appointment`,
-        category: appointment.type ? appointment.type.toLowerCase() : 'general',
-        invoiceId: `INV-${Date.now()}-${appointment.id.slice(-6)}`,
-        paidAmount: 200,
-        includeVAT: false,
-        vatRate: 0,
-        vatAmount: 0,
-        totalAmountWithVAT: 200,
-        baseAmount: 200,
-        insurance: 'No' as const,
-        insuranceAmount: 0,
-        isActive: true
-      };
-
-      const paymentId = await firebaseDataManager.createPayment(paymentData);
-      console.log(`✅ Appointment completed and payment ${paymentId} created and marked as PAID`);
+      if (existingPayment) {
+        // ✅ Update existing payment instead of creating new one
+        await PaymentService.updatePayment(existingPayment.id, {
+          status: 'paid'
+        });
+        console.log(`✅ Appointment completed and existing payment ${existingPayment.id} updated to PAID`);
         
-      // Dispatch custom event to notify Payment Management about new revenue
-      window.dispatchEvent(new CustomEvent('appointmentCompletedWithPayment', {
-        detail: {
-          appointment,
-          payment: paymentData,
-          revenue: paymentData.amount
-        }
-      }));
+        // Dispatch event with existing payment
+        window.dispatchEvent(new CustomEvent('appointmentCompletedWithPayment', {
+          detail: {
+            appointment,
+            payment: existingPayment,
+            revenue: existingPayment.amount,
+            updated: true
+          }
+        }));
+      } else {
+        // ✅ Create new payment only if none exists
+        const { getAppointmentPaymentAmount } = await import('../../utils/paymentUtils');
+        const appointmentAmount = getAppointmentPaymentAmount(appointment.type);
+        
+        const paymentData = {
+          clinicId: userProfile!.clinicId,
+          patient: appointment.patient,
+          doctor: appointment.doctor,
+          appointmentId: appointment.id,
+          amount: appointmentAmount,
+          currency: 'EGP',
+          status: 'paid' as const,
+          date: new Date().toISOString().split('T')[0],
+          dueDate: appointment.date,
+          method: 'cash',
+          description: `Payment for completed ${appointment.type || 'unknown'} appointment`,
+          category: appointment.type ? appointment.type.toLowerCase() : 'general',
+          invoiceId: `INV-${Date.now()}-${appointment.id.slice(-6)}`,
+          paidAmount: appointmentAmount,
+          includeVAT: false,
+          vatRate: 0,
+          vatAmount: 0,
+          totalAmountWithVAT: appointmentAmount,
+          baseAmount: appointmentAmount,
+          insurance: 'No' as const,
+          insuranceAmount: 0,
+          isActive: true
+        };
+
+        const paymentId = await dataManager.createPayment(paymentData);
+        console.log(`✅ Appointment completed and new payment ${paymentId} created and marked as PAID`);
+          
+        // Dispatch custom event to notify Payment Management about new revenue
+        window.dispatchEvent(new CustomEvent('appointmentCompletedWithPayment', {
+          detail: {
+            appointment,
+            payment: paymentData,
+            revenue: paymentData.amount,
+            created: true
+          }
+        }));
+      }
     } catch (error) {
       console.error('❌ Error handling appointment completion:', error);
     }
@@ -1332,16 +1501,16 @@ const AppointmentListPage: React.FC = () => {
 
         const appointmentData = {
           clinicId: userProfile.clinicId,
-          patient: newAppointment.patient,
+          patient: newAppointment.patient || '',
           patientId: patientId || 'legacy-patient', // Use actual patient ID
-          doctor: newAppointment.doctor, // Store the NAME, not ID
+          doctor: newAppointment.doctor || 'Unknown Doctor', // Store the NAME, not ID
           doctorId: selectedDoctor?.id || 'unknown-doctor', // Store actual doctor ID for lookup
-          phone: newAppointment.phone,
-          date: newAppointment.date,
-          time: newAppointment.time,
-          timeSlot: timeSlot,
+          phone: newAppointment.phone || '',
+          date: newAppointment.date || new Date().toISOString().split('T')[0],
+          time: newAppointment.time || '09:00',
+          timeSlot: timeSlot || newAppointment.time || '09:00',
           type: (newAppointment.type as 'consultation' | 'follow-up' | 'surgery' | 'emergency') || 'consultation',
-          duration: newAppointment.duration,
+          duration: newAppointment.duration || 30, // ✅ FIXED: Ensure duration has default value
           priority: (newAppointment.priority as 'high' | 'normal' | 'urgent') || 'normal',
           location: newAppointment.location || 'TBD',
           notes: newAppointment.notes || '',
@@ -1351,8 +1520,49 @@ const AppointmentListPage: React.FC = () => {
           isAvailableSlot: false  // ✅ FIXED: Explicitly mark as reserved appointment
         };
 
+        console.log('🏥 Creating appointment with data:', appointmentData);
+
         // ✅ Use AppointmentService for better error handling
         const appointmentId = await AppointmentService.createAppointment(userProfile.clinicId, appointmentData);
+        
+        // ✅ ENHANCED: Create corresponding payment immediately after appointment creation
+        try {
+          console.log('💰 Creating payment for new appointment...');
+          const { getAppointmentPaymentAmount, createPayment } = await import('../../utils/paymentUtils');
+          const appointmentAmount = getAppointmentPaymentAmount(appointmentData.type);
+          
+          const paymentData = {
+            clinicId: userProfile.clinicId,
+            patient: appointmentData.patient,
+            patientAvatar: appointmentData.patient.split(' ').map(n => n[0]).join('').toUpperCase() || 'P',
+            doctor: appointmentData.doctor,
+            appointmentId: appointmentId,
+            amount: appointmentAmount,
+            currency: 'EGP',
+            status: appointmentData.paymentStatus === 'paid' ? 'paid' : 'pending',
+            date: new Date().toISOString().split('T')[0],
+            dueDate: appointmentData.date,
+            method: 'cash',
+            description: `Payment for ${appointmentData.type} appointment`,
+            category: 'consultation',
+            invoiceId: `INV-${Date.now()}-${appointmentId.slice(-6)}`,
+            paidAmount: appointmentData.paymentStatus === 'paid' ? appointmentAmount : 0,
+            includeVAT: false,
+            vatRate: 0,
+            vatAmount: 0,
+            totalAmountWithVAT: appointmentAmount,
+            baseAmount: appointmentAmount,
+            insurance: 'No' as const,
+            insuranceAmount: 0,
+            isActive: true
+          };
+
+          const paymentRecord = createPayment(paymentData);
+          console.log('✅ Payment created for appointment:', paymentRecord.invoiceId);
+        } catch (paymentError) {
+          console.error('❌ Error creating payment for appointment:', paymentError);
+          // Don't fail appointment creation if payment creation fails
+        }
         
         // ✅ ENHANCED: Trigger automatic cross-page sync
         import('../../utils/globalDataSync').then(({ triggerAutomaticSync }) => {
@@ -1377,8 +1587,8 @@ const AppointmentListPage: React.FC = () => {
         time: '',
         hour: '',
         minute: '',
-        type: '',
-        duration: 25,
+        type: 'consultation', // ✅ FIXED: Set default type
+        duration: 30, // ✅ FIXED: Changed default from 25 to 30
         priority: 'normal',
         location: '',
         notes: '',
@@ -1443,11 +1653,77 @@ const AppointmentListPage: React.FC = () => {
 
   const getPaymentStatusColor = (paymentStatus: string) => {
     switch (paymentStatus) {
-      case 'completed': return 'success';
-      case 'partial': return 'warning';
-      case 'failed': return 'error';
+      case 'paid':
+      case 'completed': 
+        return 'success';
+      case 'partial': 
+        return 'warning';
+      case 'overdue':
+      case 'failed': 
+        return 'error';
+      case 'cancelled':
+        return 'default';
       case 'pending':
-      default: return 'default';
+      default: 
+        return 'warning';
+    }
+  };
+
+  const getPaymentStatusStyles = (paymentStatus: string) => {
+    switch (paymentStatus) {
+      case 'paid':
+      case 'completed':
+        return {
+          backgroundColor: '#4caf50 !important',
+          color: '#ffffff !important',
+          border: '2px solid #4caf50 !important',
+          '&:hover': {
+            backgroundColor: '#388e3c !important',
+            transform: 'scale(1.05)'
+          }
+        };
+      case 'partial':
+        return {
+          backgroundColor: '#ff9800 !important',
+          color: '#ffffff !important',
+          border: '2px solid #ff9800 !important',
+          '&:hover': {
+            backgroundColor: '#f57c00 !important',
+            transform: 'scale(1.05)'
+          }
+        };
+      case 'overdue':
+      case 'failed':
+        return {
+          backgroundColor: '#f44336 !important',
+          color: '#ffffff !important',
+          border: '2px solid #f44336 !important',
+          '&:hover': {
+            backgroundColor: '#d32f2f !important',
+            transform: 'scale(1.05)'
+          }
+        };
+      case 'cancelled':
+        return {
+          backgroundColor: '#9e9e9e !important',
+          color: '#ffffff !important',
+          border: '2px solid #9e9e9e !important',
+          '&:hover': {
+            backgroundColor: '#757575 !important',
+            transform: 'scale(1.05)'
+          }
+        };
+      case 'pending':
+      default:
+        return {
+          backgroundColor: '#ff9800 !important',
+          color: '#ffffff !important',
+          border: '2px solid #ff9800 !important',
+          '&:hover': {
+            backgroundColor: '#f57c00 !important',
+            transform: 'scale(1.05)'
+          }
+        };
     }
   };
 
@@ -2468,7 +2744,14 @@ const AppointmentListPage: React.FC = () => {
                            WebkitBackgroundClip: 'text',
                            WebkitTextFillColor: 'transparent',
                            borderBottom: '2px solid rgba(9, 9, 121, 0.2)'
-                         }}>{t('appointment_date')}</TableCell>
+                         }}>
+                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                             {t('appointment_date')}
+                             <Tooltip title="Click on date to edit inline" arrow>
+                               <Edit sx={{ fontSize: '0.7rem', opacity: 0.6 }} />
+                             </Tooltip>
+                           </Box>
+                         </TableCell>
                          <TableCell sx={{ 
                            fontWeight: 700, 
                            fontSize: '0.9rem',
@@ -2477,7 +2760,14 @@ const AppointmentListPage: React.FC = () => {
                            WebkitBackgroundClip: 'text',
                            WebkitTextFillColor: 'transparent',
                            borderBottom: '2px solid rgba(9, 9, 121, 0.2)'
-                         }}>{t('time_duration')}</TableCell>
+                         }}>
+                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                             {t('time_duration')}
+                             <Tooltip title="Click on time or duration to edit inline" arrow>
+                               <Edit sx={{ fontSize: '0.7rem', opacity: 0.6 }} />
+                             </Tooltip>
+                           </Box>
+                         </TableCell>
                          <TableCell sx={{ 
                            fontWeight: 700, 
                            fontSize: '0.9rem',
@@ -2691,26 +2981,28 @@ const AppointmentListPage: React.FC = () => {
                                  </Box>
                                </Box>
                              </TableCell>
-                             <TableCell>
-                               <Box>
-                                 <Typography variant="body2" fontWeight={600} color="primary.main">
-                                   {new Date(appointment.date).toLocaleDateString()}
-                                 </Typography>
-                                 <Typography variant="caption" color="text.secondary">
-                                   {new Date(appointment.date).toLocaleDateString('en-US', { weekday: 'short' })}
-                                 </Typography>
-                               </Box>
-                             </TableCell>
-                             <TableCell>
-                               <Box>
-                                 <Typography variant="body2" fontWeight={600} color="primary.main">
-                                   {appointment.time}
-                                 </Typography>
-                                 <Typography variant="caption" color="text.secondary">
-                                   {appointment.duration} {t('minutes')}
-                                 </Typography>
-                               </Box>
-                             </TableCell>
+                                                         <TableCell>
+                              <InlineEditableField
+                                appointment={appointment}
+                                field="date"
+                                displayValue={new Date(appointment.date).toLocaleDateString()}
+                                secondaryValue={new Date(appointment.date).toLocaleDateString('en-US', { weekday: 'short' })}
+                              />
+                            </TableCell>
+                                                         <TableCell>
+                              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                                <InlineEditableField
+                                  appointment={appointment}
+                                  field="time"
+                                  displayValue={appointment.time}
+                                />
+                                <InlineEditableField
+                                  appointment={appointment}
+                                  field="duration"
+                                  displayValue={`${appointment.duration} ${t('minutes')}`}
+                                />
+                              </Box>
+                            </TableCell>
                              <TableCell>
                                <Tooltip title={t('click_to_change_type')} arrow>
                                  <Chip
@@ -2752,28 +3044,24 @@ const AppointmentListPage: React.FC = () => {
                                  </Typography>
                                </Box>
                              </TableCell>
-                             <TableCell>
-                               <Tooltip title={t('click_to_change_payment_status')} arrow>
-                                 <Chip
-                                   label={t((appointment as any).paymentStatus || 'pending')}
-                                   size="small"
-                                   variant="filled"
-                                   color={getPaymentStatusColor((appointment as any).paymentStatus || 'pending') as any}
-                                   onClick={(e) => handleQuickPaymentStatusEdit(appointment, e)}
-                                   sx={{ 
-                                     minWidth: 80,
-                                     fontWeight: 600,
-                                     textTransform: 'capitalize',
-                                     cursor: 'pointer',
-                                     '&:hover': { 
-                                       backgroundColor: 'primary.light',
-                                       transform: 'scale(1.05)'
-                                     },
-                                     transition: 'all 0.2s ease'
-                                   }}
-                                 />
-                               </Tooltip>
-                             </TableCell>
+                                                         <TableCell>
+                              <Tooltip title={t('click_to_change_payment_status')} arrow>
+                                <Chip
+                                  label={t((appointment as any).paymentStatus || 'pending')}
+                                  size="small"
+                                  variant="filled"
+                                  onClick={(e) => handleQuickPaymentStatusEdit(appointment, e)}
+                                  sx={{ 
+                                    minWidth: 80,
+                                    fontWeight: 600,
+                                    textTransform: 'capitalize',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease',
+                                    ...getPaymentStatusStyles((appointment as any).paymentStatus || 'pending')
+                                  }}
+                                />
+                              </Tooltip>
+                            </TableCell>
                              <TableCell>
                                <Tooltip title={t('click_to_change_status')} arrow>
                                  <Chip

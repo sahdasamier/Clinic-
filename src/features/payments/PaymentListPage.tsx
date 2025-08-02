@@ -73,6 +73,8 @@ import {
   Business,
   Refresh,
   Sync,
+  Close,
+  DeleteSweep
 } from '@mui/icons-material';
 
 import {
@@ -123,7 +125,11 @@ import {
   savePaymentsToStorage as savePaymentsToPaymentUtils,
   updatePaymentStatus,
   updatePaymentAmount,
-  createPayment
+  createPayment,
+  clearAllPaymentCache,
+  forceRefreshFromFirebase,
+  hasStalePaymentData,
+  resetPaymentSystemCache
 } from '../../utils/paymentUtils';
 import VATAdjustmentModal from './components/VATAdjustmentModal';
 import ExpenseManagementModal from './components/ExpenseManagementModal';
@@ -483,6 +489,114 @@ const PaymentListPage: React.FC = () => {
   
   const [availableDoctors, setAvailableDoctors] = useState<Doctor[]>([]);
 
+  // Add state for cache operations
+  const [isClearingCache, setIsClearingCache] = useState(false);
+  const [showStaleDataWarning, setShowStaleDataWarning] = useState(false);
+
+  // Check for stale data on mount
+  useEffect(() => {
+    if (hasStalePaymentData()) {
+      setShowStaleDataWarning(true);
+    }
+  }, []);
+
+  // Handle cache clearing with better feedback
+  const handleClearCache = async () => {
+    if (!userProfile?.clinicId) {
+      alert('❌ No clinic ID available. Please log in again.');
+      return;
+    }
+    
+    // Confirm with user
+    const confirmed = window.confirm(
+      '🧹 Clear Payment Cache?\n\n' +
+      'This will:\n' +
+      '• Clear all cached payment data\n' +
+      '• Refresh from Firebase database\n' +
+      '• Remove any deleted/stale payments\n\n' +
+      'Continue?'
+    );
+    
+    if (!confirmed) return;
+    
+    setIsClearingCache(true);
+    try {
+      console.log('🔄 Starting payment cache clear...');
+      
+      // Step 1: Clear cache
+      await resetPaymentSystemCache(userProfile.clinicId);
+      
+      // Step 2: Force refresh from Firebase
+      console.log('🔄 Force refreshing from Firebase...');
+      const freshPayments = await forceRefreshFromFirebase(userProfile.clinicId);
+      
+      // Step 3: Update UI
+      setPayments(freshPayments);
+      setShowStaleDataWarning(false);
+      
+      // Step 4: Show success message
+      const message = freshPayments.length > 0 
+        ? `✅ Cache cleared! Found ${freshPayments.length} payments in Firebase.`
+        : '✅ Cache cleared! No payments found in Firebase (showing empty state).';
+      
+      console.log('✅ Payment cache clear complete');
+      alert(message + '\n\nAll stale/deleted payments have been removed.');
+      
+    } catch (error) {
+      console.error('❌ Error clearing cache:', error);
+      
+      // Provide detailed error feedback
+      let errorMessage = '❌ Error clearing cache:\n\n';
+      if (error instanceof Error) {
+        errorMessage += error.message;
+      } else {
+        errorMessage += 'Unknown error occurred';
+      }
+      errorMessage += '\n\nCheck browser console for details.';
+      
+      alert(errorMessage);
+    } finally {
+      setIsClearingCache(false);
+    }
+  };
+
+  // Add debug info for developers
+  const handleClearCacheDebug = () => {
+    console.log('🔍 PAYMENT CACHE DEBUG INFO:');
+    console.log('Has stale data:', hasStalePaymentData());
+    console.log('Clinic ID:', userProfile?.clinicId);
+    console.log('Current payments count:', payments.length);
+    console.log('localStorage keys:', Object.keys(localStorage).filter(key => 
+      key.includes('payment') || key.includes('clinic') || key.includes('vat')
+    ));
+    
+    // Show cache contents
+    try {
+      const cached = localStorage.getItem('clinic_payments_data');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        console.log('Cached payments:', parsed.length, parsed);
+      } else {
+        console.log('No cached payments found');
+      }
+    } catch (e) {
+      console.log('Error reading cached payments:', e);
+    }
+  };
+
+  // Add keyboard shortcut for developers (Ctrl+Shift+D on payment page)
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.ctrlKey && event.shiftKey && event.key === 'D') {
+        event.preventDefault();
+        handleClearCacheDebug();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [payments.length, userProfile?.clinicId]);
+
   // ✅ NEW: Direct Firebase connection test with fallback
   React.useEffect(() => {
     if (!initialized || authLoading || !user || !userProfile) return;
@@ -494,7 +608,7 @@ const PaymentListPage: React.FC = () => {
         const clinicId = userProfile.clinicId || 'demo-clinic';
         
         // Direct fetch from Firebase services
-        console.log('💰 Fetching payments directly...');
+        console.log('💰 Fetching payments directly from Firebase...');
         const directPayments = await PaymentService.getPayments(clinicId);
         console.log(`💰 Direct fetch: Found ${directPayments.length} payments`);
         
@@ -502,7 +616,7 @@ const PaymentListPage: React.FC = () => {
         const directAppointments = await AppointmentService.getAllAppointments(clinicId);
         console.log(`📋 Direct fetch: Found ${directAppointments.length} appointments`);
         
-        // ✅ FIXED: Convert Firebase payments to PaymentData format properly
+        // ✅ PRIORITIZE FIREBASE: Only use Firebase data, show warning if localStorage has stale data
         if (directPayments.length > 0) {
           const convertedPayments = directPayments.map((payment: any) => ({
             id: parseInt(payment.id) || Math.random() * 1000,
@@ -531,12 +645,22 @@ const PaymentListPage: React.FC = () => {
           
           setPayments(convertedPayments);
           console.log('✅ Payments state updated from Firebase');
+          
+          // Clear any stale localStorage data
+          if (hasStalePaymentData()) {
+            localStorage.removeItem('clinic_payments_data');
+            console.log('🧹 Cleared stale localStorage data');
+          }
         } else {
-          // No Firebase payments, check if we should load from local storage as fallback
-          console.log('💰 No Firebase payments found, loading from local storage as fallback...');
-          const localPayments = loadPaymentsFromStorage();
-          setPayments(localPayments);
-          console.log(`💰 Loaded ${localPayments.length} payments from local storage`);
+          // ✅ NO FIREBASE DATA: Show empty state instead of falling back to localStorage
+          console.log('💰 No Firebase payments found - showing empty state');
+          setPayments([]);
+          
+          // Check if we have stale data in localStorage
+          if (hasStalePaymentData()) {
+            setShowStaleDataWarning(true);
+            console.log('⚠️ Stale data detected in localStorage - showing warning');
+          }
         }
         
         if (directAppointments.length > 0) {
@@ -547,23 +671,22 @@ const PaymentListPage: React.FC = () => {
         setIsDataLoaded(true);
         setDataLoading(false);
         
-        // Show immediate results
-        console.log(`🎯 PAYMENT DIRECT TEST RESULTS: ${directPayments.length} payments, ${directAppointments.length} appointments`);
-        
       } catch (error) {
         console.error('❌ PAYMENT DIRECT TEST: Firebase connection failed:', error);
         
-        // Fallback to defaults
-        console.log('🔄 Using local payment data as fallback...');
-        const localPayments = generateDefaultPayments();
-        setPayments(localPayments);
+        // ✅ FALLBACK: Only fall back to localStorage if Firebase is completely unavailable
+        console.log('🔄 Firebase unavailable, checking localStorage as last resort...');
+        const localPayments = loadPaymentsFromStorage();
+        
+        if (localPayments.length > 0) {
+          setPayments(localPayments);
+          setShowStaleDataWarning(true); // Always show warning when using localStorage
+        } else {
+          setPayments([]);
+        }
+        
         setIsDataLoaded(true);
         setDataLoading(false);
-        
-        // Show error to user
-        setTimeout(() => {
-          alert(`❌ Payment Firebase Connection Failed:\n\n${error}\n\nUsing local data. Please check:\n1. Internet connection\n2. Firebase configuration\n3. Browser console for details`);
-        }, 1000);
       }
     };
     
@@ -3658,6 +3781,79 @@ ${formatDate(new Date().toISOString())}
 
            {/* Firebase Status */}
            {renderFirebaseStatus()}
+
+           {/* ✅ Stale Data Warning */}
+           {showStaleDataWarning && (
+             <Alert 
+               severity="warning" 
+               sx={{ mb: 2 }}
+               action={
+                 <Box sx={{ display: 'flex', gap: 1 }}>
+                   <Button
+                     color="inherit"
+                     size="small"
+                     onClick={handleClearCache}
+                     disabled={isClearingCache}
+                     startIcon={isClearingCache ? <CircularProgress size={16} /> : <Refresh />}
+                   >
+                     {isClearingCache ? 'Clearing...' : 'Clear Cache'}
+                   </Button>
+                   <IconButton
+                     color="inherit"
+                     size="small"
+                     onClick={() => setShowStaleDataWarning(false)}
+                   >
+                     <Close />
+                   </IconButton>
+                 </Box>
+               }
+             >
+               <Typography variant="body2">
+                 ⚠️ <strong>Stale Data Detected:</strong> You may be seeing old cached payment data that no longer exists in Firebase. 
+                 Click "Clear Cache" to refresh from the database and remove any deleted payments.
+               </Typography>
+             </Alert>
+           )}
+
+           {/* ✅ Manual Cache Clear Button for Admin */}
+           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+             <Typography variant="h4" component="h1" sx={{ fontWeight: 600, color: 'primary.main' }}>
+               {t('payment_management')}
+             </Typography>
+             
+             <Box sx={{ display: 'flex', gap: 1 }}>
+               {/* Clear Cache Button */}
+               <Tooltip title="Clear all cached payment data and refresh from Firebase" arrow>
+                 <Button
+                   variant="outlined"
+                   size="small"
+                   onClick={handleClearCache}
+                   disabled={isClearingCache}
+                   startIcon={isClearingCache ? <CircularProgress size={16} /> : <DeleteSweep />}
+                   sx={{
+                     borderColor: 'warning.main',
+                     color: 'warning.main',
+                     '&:hover': {
+                       borderColor: 'warning.dark',
+                       backgroundColor: 'warning.light',
+                       color: 'warning.dark'
+                     }
+                   }}
+                 >
+                   {isClearingCache ? 'Clearing...' : 'Clear Cache'}
+                 </Button>
+               </Tooltip>
+               
+               {/* Existing buttons */}
+               <Button
+                 variant="contained"
+                 startIcon={<Add />}
+                 onClick={() => setAddPaymentOpen(true)}
+               >
+                 {t('add_payment')}
+               </Button>
+             </Box>
+           </Box>
          </Container>
  );
 };
