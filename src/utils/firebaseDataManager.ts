@@ -286,7 +286,7 @@ class FirebaseDataManager {
       // ✅ ENHANCED: Validate and clean appointment data to prevent undefined values
       const cleanedData = {
         ...appointmentData,
-        duration: appointmentData.duration || 30,
+        duration: appointmentData.duration || 20,
         type: appointmentData.type || 'consultation',
         priority: appointmentData.priority || 'normal',
         status: appointmentData.status || 'scheduled',

@@ -258,7 +258,7 @@ export const AppointmentService = {
       // ✅ STEP 3: Validate and clean appointment data
       const cleanedAppointmentData = {
         ...appointmentData,
-        duration: appointmentData.duration || 30, // ✅ FIXED: Ensure duration has default value
+        duration: appointmentData.duration || 20, // ✅ FIXED: Ensure duration has default value (updated to 20 mins)
         type: appointmentData.type || 'consultation',
         priority: appointmentData.priority || 'normal',
         status: appointmentData.status || 'scheduled',

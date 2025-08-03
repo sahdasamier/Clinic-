@@ -1767,7 +1767,7 @@ console.log('   • testAppointmentAndPaymentFlow(clinicId) - Complete flow test
 export const validateAndCleanAppointmentData = (appointmentData: any): any => {
   const cleaned = {
     ...appointmentData,
-    duration: appointmentData.duration || 30,
+    duration: appointmentData.duration || 20,
     type: appointmentData.type || 'consultation',
     priority: appointmentData.priority || 'normal',
     status: appointmentData.status || 'scheduled',

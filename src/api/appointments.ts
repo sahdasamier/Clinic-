@@ -110,7 +110,7 @@ export const createAppointment = async (appointmentData: AppointmentFormData): P
       date: appointmentData.date || new Date().toISOString().split('T')[0],
       time: appointmentData.time || '09:00',
       timeSlot: convertTimeToSlot(appointmentData.time) || appointmentData.time || '09:00',
-      duration: appointmentData.duration || 30, // ✅ FIXED: Ensure duration has default value
+      duration: appointmentData.duration || 20, // ✅ FIXED: Ensure duration has default value (updated to 20 mins)
       type: appointmentData.type || 'consultation',
       status: 'scheduled',  // ✅ Changed from 'pending' to 'scheduled'
       location: appointmentData.location || '',

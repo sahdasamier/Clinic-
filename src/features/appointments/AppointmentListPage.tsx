@@ -368,7 +368,7 @@ const AppointmentListPage: React.FC = () => {
     hour: '',
     minute: '',
     type: 'consultation',
-    duration: 30, // ✅ FIXED: Changed default from 25 to 30 to match validation
+    duration: 20, // ✅ FIXED: Changed default to 20 minutes
     priority: 'normal',
     location: '',
     notes: '',
@@ -379,12 +379,12 @@ const AppointmentListPage: React.FC = () => {
   // Add inline editing state variables after the existing state variables
   const [inlineEditingField, setInlineEditingField] = useState<{
     appointmentId: string;
-    field: 'date' | 'time' | 'duration';
+    field: 'date' | 'time' | 'duration' | 'priority';
     value: string;
   } | null>(null);
 
   // Functions for inline editing
-  const handleInlineEdit = (appointment: Appointment, field: 'date' | 'time' | 'duration') => {
+  const handleInlineEdit = (appointment: Appointment, field: 'date' | 'time' | 'duration' | 'priority') => {
     let value = '';
     switch (field) {
       case 'date':
@@ -395,6 +395,9 @@ const AppointmentListPage: React.FC = () => {
         break;
       case 'duration':
         value = appointment.duration.toString();
+        break;
+      case 'priority':
+        value = appointment.priority;
         break;
     }
     
@@ -423,7 +426,10 @@ const AppointmentListPage: React.FC = () => {
           updates.timeSlot = inlineEditingField.value;
           break;
         case 'duration':
-          updates.duration = parseInt(inlineEditingField.value) || 30;
+          updates.duration = parseInt(inlineEditingField.value) || 20; // ✅ Changed default to 20 minutes
+          break;
+        case 'priority':
+          updates.priority = inlineEditingField.value as 'normal' | 'high' | 'urgent';
           break;
       }
 
@@ -455,13 +461,63 @@ const AppointmentListPage: React.FC = () => {
   // Component for inline editable field
   const InlineEditableField: React.FC<{
     appointment: Appointment;
-    field: 'date' | 'time' | 'duration';
+    field: 'date' | 'time' | 'duration' | 'priority';
     displayValue: string;
     secondaryValue?: string;
   }> = ({ appointment, field, displayValue, secondaryValue }) => {
     const isEditing = inlineEditingField?.appointmentId === appointment.id && inlineEditingField?.field === field;
     
     if (isEditing) {
+      // Handle priority as a select field
+      if (field === 'priority') {
+        return (
+          <Select
+            value={inlineEditingField?.value || 'normal'}
+            onChange={(e) => setInlineEditingField(prev => prev ? { ...prev, value: e.target.value } : null)}
+            onBlur={handleInlineEditSave}
+            autoFocus
+            size="small"
+            sx={{
+              '& .MuiInputBase-root': {
+                fontSize: '0.875rem',
+                fontWeight: 600
+              }
+            }}
+          >
+            <MenuItem value="normal">Normal</MenuItem>
+            <MenuItem value="high">High Priority</MenuItem>
+            <MenuItem value="urgent">Urgent</MenuItem>
+          </Select>
+        );
+      }
+      
+      // Handle duration as a select with predefined options
+      if (field === 'duration') {
+        return (
+          <Select
+            value={inlineEditingField?.value || '20'}
+            onChange={(e) => setInlineEditingField(prev => prev ? { ...prev, value: e.target.value } : null)}
+            onBlur={handleInlineEditSave}
+            autoFocus
+            size="small"
+            sx={{
+              '& .MuiInputBase-root': {
+                fontSize: '0.875rem',
+                fontWeight: 600
+              }
+            }}
+          >
+            <MenuItem value="15">15 minutes</MenuItem>
+            <MenuItem value="20">20 minutes</MenuItem>
+            <MenuItem value="30">30 minutes</MenuItem>
+            <MenuItem value="45">45 minutes</MenuItem>
+            <MenuItem value="60">1 hour</MenuItem>
+            <MenuItem value="90">1.5 hours</MenuItem>
+            <MenuItem value="120">2 hours</MenuItem>
+          </Select>
+        );
+      }
+      
       return (
         <TextField
           value={inlineEditingField?.value || ''}
@@ -470,11 +526,7 @@ const AppointmentListPage: React.FC = () => {
           onBlur={handleInlineEditSave}
           autoFocus
           size="small"
-          type={field === 'duration' ? 'number' : field === 'date' ? 'date' : 'time'}
-          inputProps={{
-            min: field === 'duration' ? 5 : undefined,
-            max: field === 'duration' ? 480 : undefined
-          }}
+          type={field === 'date' ? 'date' : field === 'time' ? 'time' : 'text'}
           sx={{
             '& .MuiInputBase-root': {
               fontSize: '0.875rem',
@@ -490,6 +542,7 @@ const AppointmentListPage: React.FC = () => {
         case 'date': return 'Click to edit appointment date';
         case 'time': return 'Click to edit appointment time';
         case 'duration': return 'Click to edit duration (minutes)';
+        case 'priority': return 'Click to edit priority level';
         default: return 'Click to edit';
       }
     };
@@ -995,6 +1048,49 @@ const AppointmentListPage: React.FC = () => {
       case 'high': return '#F59E0B';
       case 'urgent': return '#EF4444';
       default: return '#6B7280';
+    }
+  };
+
+  // ✅ NEW: Helper function to safely format dates
+  const formatSafeDate = (dateValue: any, options?: Intl.DateTimeFormatOptions) => {
+    try {
+      // Handle Firestore timestamp
+      if (dateValue && typeof dateValue.toDate === 'function') {
+        return dateValue.toDate().toLocaleDateString(undefined, options);
+      }
+      
+      // Handle regular date string or Date object
+      const date = new Date(dateValue);
+      if (!isNaN(date.getTime())) {
+        return date.toLocaleDateString(undefined, options);
+      }
+      
+      // Fallback for invalid dates
+      return 'N/A';
+    } catch (error) {
+      console.warn('Error formatting date:', dateValue, error);
+      return 'N/A';
+    }
+  };
+
+  const formatSafeTime = (dateValue: any, options?: Intl.DateTimeFormatOptions) => {
+    try {
+      // Handle Firestore timestamp
+      if (dateValue && typeof dateValue.toDate === 'function') {
+        return dateValue.toDate().toLocaleTimeString(undefined, options || { hour: '2-digit', minute: '2-digit' });
+      }
+      
+      // Handle regular date string or Date object
+      const date = new Date(dateValue);
+      if (!isNaN(date.getTime())) {
+        return date.toLocaleTimeString(undefined, options || { hour: '2-digit', minute: '2-digit' });
+      }
+      
+      // Fallback for invalid dates
+      return 'N/A';
+    } catch (error) {
+      console.warn('Error formatting time:', dateValue, error);
+      return 'N/A';
     }
   };
 
@@ -2785,7 +2881,14 @@ const AppointmentListPage: React.FC = () => {
                            WebkitBackgroundClip: 'text',
                            WebkitTextFillColor: 'transparent',
                            borderBottom: '2px solid rgba(9, 9, 121, 0.2)'
-                         }}>{t('priority')}</TableCell>
+                         }}>
+                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                             {t('priority')}
+                             <Tooltip title="Click on priority to edit inline" arrow>
+                               <Edit sx={{ fontSize: '0.7rem', opacity: 0.6 }} />
+                             </Tooltip>
+                           </Box>
+                         </TableCell>
                          <TableCell sx={{ 
                            fontWeight: 700, 
                            fontSize: '0.9rem',
@@ -2985,8 +3088,8 @@ const AppointmentListPage: React.FC = () => {
                               <InlineEditableField
                                 appointment={appointment}
                                 field="date"
-                                displayValue={new Date(appointment.date).toLocaleDateString()}
-                                secondaryValue={new Date(appointment.date).toLocaleDateString('en-US', { weekday: 'short' })}
+                                displayValue={formatSafeDate(appointment.date)}
+                                secondaryValue={formatSafeDate(appointment.date, { weekday: 'short' })}
                               />
                             </TableCell>
                                                          <TableCell>
@@ -3024,23 +3127,19 @@ const AppointmentListPage: React.FC = () => {
                                </Tooltip>
                              </TableCell>
                              <TableCell>
-                               <Chip
-                                 label={t(appointment.priority)}
-                                 size="small"
-                                 variant="outlined"
-                                 sx={{ 
-                                   borderColor: getPriorityColor(appointment.priority),
-                                   color: getPriorityColor(appointment.priority)
-                                 }}
+                               <InlineEditableField
+                                 appointment={appointment}
+                                 field="priority"
+                                 displayValue={t(appointment.priority)}
                                />
                              </TableCell>
                              <TableCell>
                                <Box>
                                  <Typography variant="body2" color="text.primary">
-                                   {new Date(appointment.createdAt).toLocaleDateString()}
+                                   {formatSafeDate(appointment.createdAt)}
                                  </Typography>
                                  <Typography variant="caption" color="text.secondary">
-                                   {new Date(appointment.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                   {formatSafeTime(appointment.createdAt)}
                                  </Typography>
                                </Box>
                              </TableCell>
@@ -4239,12 +4338,13 @@ const AppointmentListPage: React.FC = () => {
                      value={newAppointment.duration}
                      onChange={(e) => setNewAppointment(prev => ({ ...prev, duration: Number(e.target.value) }))}
                    >
-                     <MenuItem value={15}>{t('duration_minutes', { minutes: 15 })}</MenuItem>
-                     <MenuItem value={20}>{t('duration_minutes', { minutes: 20 })}</MenuItem>
-                     <MenuItem value={25}>{t('duration_minutes', { minutes: 25 })}</MenuItem>
-                     <MenuItem value={30}>{t('duration_minutes', { minutes: 30 })}</MenuItem>
-                     <MenuItem value={45}>{t('duration_minutes', { minutes: 45 })}</MenuItem>
-                     <MenuItem value={60}>{t('duration_hour', { hours: 1 })}</MenuItem>
+                     <MenuItem value={15}>15 minutes</MenuItem>
+                     <MenuItem value={20}>20 minutes</MenuItem>
+                     <MenuItem value={30}>30 minutes</MenuItem>
+                     <MenuItem value={45}>45 minutes</MenuItem>
+                     <MenuItem value={60}>1 hour</MenuItem>
+                     <MenuItem value={90}>1.5 hours</MenuItem>
+                     <MenuItem value={120}>2 hours</MenuItem>
                    </Select>
                  </FormControl>
                </Grid>

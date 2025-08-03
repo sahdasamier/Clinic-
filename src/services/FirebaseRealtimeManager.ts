@@ -378,6 +378,41 @@ export class FirebaseRealtimeManager {
     }
   }
 
+  // ✅ NEW: Clean data for Firebase by removing undefined values and applying defaults
+  private cleanDataForFirebase(data: any): any {
+    const cleaned: any = {};
+    
+    // Process each field, removing undefined values
+    for (const [key, value] of Object.entries(data)) {
+      if (value !== undefined) {
+        cleaned[key] = value;
+      } else {
+        console.warn(`⚠️ FirebaseRealtimeManager: Removing undefined field: ${key}`);
+      }
+    }
+    
+    // Apply default values for critical appointment fields if they're missing
+    if (data.duration === undefined) {
+      console.warn('⚠️ FirebaseRealtimeManager: Setting default duration to 20 minutes');
+      cleaned.duration = 20;
+    }
+    
+    if (data.priority === undefined) {
+      cleaned.priority = 'normal';
+    }
+    
+    if (data.status === undefined) {
+      cleaned.status = 'scheduled';
+    }
+    
+    if (data.paymentStatus === undefined) {
+      cleaned.paymentStatus = 'pending';
+    }
+    
+    console.log('🧹 Cleaned data for Firebase:', { original: data, cleaned });
+    return cleaned;
+  }
+
   // Cache management
   private setCache(key: string, data: any[], ttl: number): void {
     this.cache.set(key, {
@@ -451,10 +486,13 @@ export class FirebaseRealtimeManager {
     }
 
     try {
+      // ✅ FIXED: Clean data to remove undefined values that Firebase doesn't allow
+      const cleanedData = this.cleanDataForFirebase(data);
+      
       const docRef = doc(collection(this.db, collectionName));
       await runTransaction(this.db, async (transaction: Transaction) => {
         transaction.set(docRef, {
-          ...data,
+          ...cleanedData,
           createdAt: new Date(),
           updatedAt: new Date(),
           clinicId: this.config.clinicId
@@ -476,10 +514,13 @@ export class FirebaseRealtimeManager {
     }
 
     try {
+      // ✅ FIXED: Clean updates to remove undefined values that Firebase doesn't allow
+      const cleanedUpdates = this.cleanDataForFirebase(updates);
+      
       const docRef = doc(this.db, collectionName, docId);
       await runTransaction(this.db, async (transaction: Transaction) => {
         transaction.update(docRef, {
-          ...updates,
+          ...cleanedUpdates,
           updatedAt: new Date()
         });
       });
@@ -522,15 +563,17 @@ export class FirebaseRealtimeManager {
           const docRef = doc(this.db, op.collection, op.id || doc(collection(this.db, op.collection)).id);
           
           if (op.type === 'set') {
+            const cleanedData = this.cleanDataForFirebase(op.data);
             transaction.set(docRef, {
-              ...op.data,
+              ...cleanedData,
               createdAt: new Date(),
               updatedAt: new Date(),
               clinicId: this.config.clinicId
             });
           } else if (op.type === 'update') {
+            const cleanedData = this.cleanDataForFirebase(op.data);
             transaction.update(docRef, {
-              ...op.data,
+              ...cleanedData,
               updatedAt: new Date()
             });
           } else if (op.type === 'delete') {

@@ -1632,7 +1632,7 @@ const PatientListPage: React.FC = () => {
       date: '',
       time: '',
       type: 'Follow-up',
-      duration: '30',
+      duration: '20',
       notes: '',
       priority: 'Normal'
     });
@@ -1670,7 +1670,7 @@ const PatientListPage: React.FC = () => {
         time: appointmentTime,
         timeSlot: appointmentTime,
         type: (appointmentData.type as 'consultation' | 'follow-up' | 'surgery' | 'emergency') || 'follow-up',
-        duration: parseInt(appointmentData.duration) || 30,
+        duration: parseInt(appointmentData.duration) || 20,
         priority: (appointmentData.priority?.toLowerCase() as 'normal' | 'high' | 'urgent') || 'normal',
         location: 'Main Clinic',
         notes: appointmentData.notes || '',
@@ -4565,7 +4565,7 @@ const PatientListPage: React.FC = () => {
                                           <Chip label={appointment.type} size="small" variant="outlined" />
                                         </TableCell>
                                         <TableCell>
-                                          <Typography variant="body2">{appointment.duration || 30} min</Typography>
+                                          <Typography variant="body2">{appointment.duration || 20} min</Typography>
                                         </TableCell>
                                         <TableCell>
                                           <Chip 
@@ -4638,7 +4638,7 @@ const PatientListPage: React.FC = () => {
                                           <Chip label={appointment.type} size="small" variant="outlined" />
                                         </TableCell>
                                         <TableCell>
-                                          <Typography variant="body2">{appointment.duration || 30} min</Typography>
+                                          <Typography variant="body2">{appointment.duration || 20} min</Typography>
                                         </TableCell>
                                         <TableCell>
                                           <Chip 
@@ -5747,7 +5747,7 @@ const PatientListPage: React.FC = () => {
                                         Type: {appointment.type}
                                       </Typography>
                                       <Typography variant="body2" color="text.secondary">
-                                        Duration: {appointment.duration || 30} minutes
+                                        Duration: {appointment.duration || 20} minutes
                                       </Typography>
                                     </Box>
                                   </CardContent>
@@ -5808,7 +5808,7 @@ const PatientListPage: React.FC = () => {
                                         Type: {appointment.type}
                                       </Typography>
                                       <Typography variant="body2" color="text.secondary">
-                                        Duration: {appointment.duration || 30} minutes
+                                        Duration: {appointment.duration || 20} minutes
                                       </Typography>
                                     </Box>
                                   </CardContent>
@@ -8057,7 +8057,7 @@ const PatientListPage: React.FC = () => {
                   <AvailableTimeSlotsSelector
                     doctorId={appointmentData.doctor}
                     date={appointmentData.date}
-                    duration={Number(appointmentData.duration) || 30}
+                    duration={Number(appointmentData.duration) || 20}
                     selectedTimeSlot={appointmentData.time}
                     onTimeSlotSelect={(timeSlot) => setAppointmentData({ ...appointmentData, time: timeSlot })}
                   />
@@ -8089,6 +8089,7 @@ const PatientListPage: React.FC = () => {
                       label="Duration (minutes)"
                     >
                       <MenuItem value="15">15 minutes</MenuItem>
+                      <MenuItem value="20">20 minutes</MenuItem>
                       <MenuItem value="30">30 minutes</MenuItem>
                       <MenuItem value="45">45 minutes</MenuItem>
                       <MenuItem value="60">1 hour</MenuItem>

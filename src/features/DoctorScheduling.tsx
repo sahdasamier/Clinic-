@@ -549,7 +549,7 @@ const DoctorSchedulingPage: React.FC = () => {
       timeSlot: formData.time,
       patient: t('available_slot'), // Use a default name for available slots
       patientId: 'available-slot',
-      duration: doctor.consultationDuration || 30,
+              duration: doctor.consultationDuration || 20,
       type: t('available_slot'),
       status: 'pending',
       location: `${t('room')} ${100 + doctor.id}`,
@@ -826,7 +826,7 @@ const DoctorSchedulingPage: React.FC = () => {
         time: timeDisplay,
         timeSlot: selectedTimeSlot.time,
         patient: timeSlotFormData.type === 'reserved' ? timeSlotFormData.patientName.trim() : t('available_slot'),
-        duration: doctor.consultationDuration || 30,
+        duration: doctor.consultationDuration || 20,
         type: timeSlotFormData.type === 'reserved' ? timeSlotFormData.appointmentType : t('available_slot'),
         status: timeSlotFormData.type === 'reserved' ? 'confirmed' : 'pending',
         location: `${t('room')} ${100 + doctor.id}`,
@@ -960,7 +960,7 @@ const DoctorSchedulingPage: React.FC = () => {
               time: timeDisplay,
               timeSlot: timeSlot,
               patient: t('available_slot'),
-              duration: selectedDoctorForWeekly.consultationDuration || 30,
+              duration: selectedDoctorForWeekly.consultationDuration || 20,
               type: t('available_slot'),
               status: 'pending',
               location: `${t('room')} ${100 + selectedDoctorForWeekly.id}`,
@@ -3067,10 +3067,10 @@ const DoctorSchedulingPage: React.FC = () => {
                <Grid item xs={12} md={4}>
                  <TextField
                    fullWidth
-                   label={t('consultation_duration_minutes')}
-                   type="number"
-                   value={doctorFormData.consultationDuration}
-                   onChange={(e) => updateDoctorField("consultationDuration", parseInt(e.target.value) || 30)}
+                                     label={t('consultation_duration_minutes')}
+                  type="number"
+                  value={doctorFormData.consultationDuration}
+                  onChange={(e) => updateDoctorField("consultationDuration", parseInt(e.target.value) || 20)}
                    inputProps={{ min: 15, max: 120, step: 15 }}
                    helperText={t('typical_duration_range')}
                    sx={{
@@ -3384,15 +3384,15 @@ const DoctorSchedulingPage: React.FC = () => {
                    fullWidth
                    label={t('consultation_duration_minutes')}
                    type="number"
-                   value={doctorFormData.consultationDuration}
-                   onChange={(e) => updateDoctorField("consultationDuration", parseInt(e.target.value) || 30)}
-                   inputProps={{ min: 15, max: 120, step: 15 }}
-                   helperText={t('typical_duration_range')}
-                   sx={{
-                     '& .MuiOutlinedInput-root': {
-                       borderRadius: 3,
-                       backgroundColor: 'white',
-                       '&:hover fieldset': { borderColor: 'rgba(9, 9, 121, 1)' },
+                                     value={doctorFormData.consultationDuration}
+                  onChange={(e) => updateDoctorField("consultationDuration", parseInt(e.target.value) || 20)}
+                  inputProps={{ min: 15, max: 120, step: 15 }}
+                  helperText={t('typical_duration_range')}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 3,
+                      backgroundColor: 'white',
+                      '&:hover fieldset': { borderColor: 'rgba(9, 9, 121, 1)' },
                        '&.Mui-focused fieldset': { borderColor: 'rgba(9, 9, 121, 1)', borderWidth: 2 },
                      },
                      '& .MuiInputLabel-root.Mui-focused': { color: 'rgba(9, 9, 121, 1)' },

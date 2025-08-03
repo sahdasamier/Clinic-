@@ -75,7 +75,7 @@ const AppointmentForm: React.FC = () => {
     appointmentDate: '',
     appointmentTime: '',
     appointmentType: '',
-    duration: 30,
+    duration: 20,
     doctor: '',
     location: '',
     priority: 'normal',
@@ -447,10 +447,13 @@ const AppointmentForm: React.FC = () => {
                   label={t('duration')}
                   onChange={(e) => updateFormData('duration', Number(e.target.value))}
                 >
-                  <MenuItem value={15}>{t('duration_minutes', { minutes: 15 })}</MenuItem>
-                  <MenuItem value={30}>{t('duration_minutes', { minutes: 30 })}</MenuItem>
-                  <MenuItem value={45}>{t('duration_minutes', { minutes: 45 })}</MenuItem>
-                  <MenuItem value={60}>{t('duration_hour', { hours: 1 })}</MenuItem>
+                  <MenuItem value={15}>15 minutes</MenuItem>
+                  <MenuItem value={20}>20 minutes</MenuItem>
+                  <MenuItem value={30}>30 minutes</MenuItem>
+                  <MenuItem value={45}>45 minutes</MenuItem>
+                  <MenuItem value={60}>1 hour</MenuItem>
+                  <MenuItem value={90}>1.5 hours</MenuItem>
+                  <MenuItem value={120}>2 hours</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
