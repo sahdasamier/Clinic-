@@ -72,7 +72,6 @@ import {
   Percent,
   Business,
   Refresh,
-  Sync,
   Close,
   DeleteSweep
 } from '@mui/icons-material';
@@ -474,7 +473,6 @@ const PaymentListPage: React.FC = () => {
   const [dataLoading, setDataLoading] = useState(true);
   const [firebasePayments, setFirebasePayments] = useState<FirebasePayment[]>([]);
   const [firebaseConnected, setFirebaseConnected] = useState(false);
-  const [processingAppointments, setProcessingAppointments] = useState(false);
   
   // ✅ Initialize invoice form with defaults (no localStorage)
   const [newInvoiceData, setNewInvoiceData] = useState<NewInvoiceData>(() => {
@@ -1846,7 +1844,9 @@ ${formatDate(new Date().toISOString())}
   // ✅ HELPER FUNCTION: Convert Firebase Payment to PaymentData
   const convertFirebasePaymentToPaymentData = (firebasePayment: FirebasePayment): PaymentData => {
     return {
-      id: parseInt(firebasePayment.id.slice(-6)) || Math.floor(Math.random() * 1000000),
+      id: firebasePayment.id ? 
+        Math.abs(firebasePayment.id.split('').reduce((a, b) => ((a << 5) - a + b.charCodeAt(0)) & 0xffffffff, 0)) :
+        Date.now() + Math.floor(Math.random() * 10000),
       invoiceId: firebasePayment.invoiceId || `INV-${firebasePayment.id}`,
       patient: firebasePayment.patient,
       patientAvatar: firebasePayment.patient.split(' ').map(n => n[0]).join('').toUpperCase() || 'P',
@@ -1871,81 +1871,7 @@ ${formatDate(new Date().toISOString())}
     };
   };
 
-  // ✅ APPOINTMENT PROCESSING WITH FIREBASE
-  const handleProcessAppointments = async () => {
-    if (!userProfile?.clinicId) return;
-    
-    try {
-      setProcessingAppointments(true);
-      
-      // Get appointments from Firebase
-      const appointments = await firebaseDataManager.getAppointments();
-      console.log(`📋 Processing ${appointments.length} appointments for payments...`);
-      
-      let createdCount = 0;
-      const errors: string[] = [];
-      
-      for (const appointment of appointments) {
-        // Only create payments for completed appointments that don't have payments yet
-        if (appointment.status === 'completed' || appointment.completed) {
-          // Check if payment already exists
-          const existingPayment = firebasePayments.find(p => p.appointmentId === appointment.id);
-          
-          if (!existingPayment) {
-            try {
-              const paymentData = {
-                clinicId: userProfile.clinicId,
-                patient: appointment.patient,
-                doctor: appointment.doctor,
-                appointmentId: appointment.id,
-                amount: 200, // Default amount - should be configurable
-                currency: 'EGP',
-                status: 'paid' as const, // Completed appointments get paid status
-                date: appointment.date,
-                dueDate: appointment.date,
-                method: 'cash',
-                description: `Payment for ${appointment.type} appointment`,
-                category: appointment.type.toLowerCase(),
-                invoiceId: `INV-${Date.now()}-${appointment.id.slice(-6)}`,
-                paidAmount: 200,
-                includeVAT: false,
-                vatRate: 0,
-                vatAmount: 0,
-                totalAmountWithVAT: 200,
-                baseAmount: 200,
-                insurance: 'No' as const,
-                insuranceAmount: 0,
-                isActive: true
-              };
-              
-              await firebaseDataManager.createPayment(paymentData);
-              createdCount++;
-              
-            } catch (error) {
-              console.error(`❌ Error creating payment for appointment ${appointment.id}:`, error);
-              errors.push(`Appointment ${appointment.patient}: ${error}`);
-            }
-          }
-        }
-      }
-      
-      setSnackbar({
-        open: true,
-        message: `✅ Processed ${appointments.length} appointments. Created ${createdCount} payments.${errors.length > 0 ? ` ${errors.length} errors.` : ''}`,
-        severity: createdCount > 0 ? 'success' : 'info'
-      });
-      
-    } catch (error) {
-      console.error('❌ Error processing appointments:', error);
-      setSnackbar({
-        open: true,
-        message: 'Failed to process appointments',
-        severity: 'error'
-      });
-    } finally {
-      setProcessingAppointments(false);
-    }
-  };
+  // ✅ AUTOMATIC APPOINTMENT PROCESSING: This happens automatically via useEffect
 
   // Add Firebase connection indicator
   const renderFirebaseStatus = () => (
@@ -2138,45 +2064,7 @@ ${formatDate(new Date().toISOString())}
                     </Box>
                   </Button>
                   
-                  {/* ✅ NEW: Sync Appointments Button */}
-                  <Button
-                    variant="outlined"
-                    size="large"
-                    startIcon={<Sync />}
-                    onClick={handleProcessAppointments}
-                    disabled={processingAppointments}
-                    sx={{ 
-                      borderRadius: 3,
-                      px: { xs: 3, md: 4 },
-                      py: { xs: 1.5, md: 1.5 },
-                      minHeight: 48,
-                      backgroundColor: 'rgba(255,255,255,0.1)',
-                      backdropFilter: 'blur(10px)',
-                      border: '1px solid rgba(255,255,255,0.3)',
-                      color: 'white',
-                      fontWeight: 600,
-                      textTransform: 'none',
-                      fontSize: { xs: '0.9rem', md: '1rem' },
-                      flex: { xs: 1, sm: 'none' },
-                      minWidth: { xs: 'auto', sm: 140 },
-                      whiteSpace: 'nowrap',
-                      textOverflow: 'ellipsis',
-                      overflow: 'hidden',
-                      '&:hover': {
-                        backgroundColor: 'rgba(255,255,255,0.2)',
-                        transform: 'translateY(-2px)',
-                        boxShadow: '0 8px 25px rgba(0,0,0,0.2)',
-                      },
-                      transition: 'all 0.3s ease'
-                    }}
-                  >
-                    <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
-                      {processingAppointments ? 'Processing...' : 'Sync Appointments'}
-                    </Box>
-                    <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
-                      {processingAppointments ? 'Processing...' : 'Sync'}
-                    </Box>
-                  </Button>
+
               </Box>
             </Box>
           </Box>
@@ -2489,9 +2377,9 @@ ${formatDate(new Date().toISOString())}
                             </TableRow>
                           </TableHead>
                           <TableBody>
-                            {filteredPayments.map((payment) => (
+                            {filteredPayments.map((payment, index) => (
                               <TableRow 
-                                key={payment.id} 
+                                key={`${payment.id}-${payment.invoiceId}-${index}`} 
                                 hover
                                 sx={{
                                   background: 'linear-gradient(135deg, rgba(9, 9, 121, 0.02) 0%, rgba(0, 212, 255, 0.02) 100%)',
@@ -2647,8 +2535,8 @@ ${formatDate(new Date().toISOString())}
                    {viewMode === 'cards' && (
                      <TabPanel value={tabValue} index={0}>
                        <Grid container spacing={3} sx={{ p: 3 }}>
-                         {filteredPayments.map((payment) => (
-                           <Grid item xs={12} sm={6} md={6} key={payment.id}>
+                         {filteredPayments.map((payment, index) => (
+                           <Grid item xs={12} sm={6} md={6} key={`${payment.id}-${payment.invoiceId}-${index}`}>
                              <Card sx={{ 
                                height: '100%', 
                                background: 'linear-gradient(135deg, rgba(2, 0, 36, 0.05) 0%, rgba(9, 9, 121, 0.08) 35%, rgba(0, 212, 255, 0.05) 100%)',
@@ -3701,51 +3589,7 @@ ${formatDate(new Date().toISOString())}
              </DialogActions>
            </Dialog>
 
-           {/* Process Appointments Button */}
-           <Tooltip title="Process All Appointments to Create Payments" placement="left">
-             <Button
-               variant="contained"
-               onClick={() => {
-                 const created = processAllAppointmentsForPayments(appointments);
-                 
-                                 // Reload payments
-                setTimeout(() => {
-                  const updatedPayments = loadPaymentsFromStorage();
-                  setPayments(updatedPayments);
-                  
-                  setSnackbar({
-                    open: true,
-                    message: `🔄 Processed ${appointments.length} appointments, ${created.length} payments created/updated!`,
-                    severity: 'success'
-                  });
-                }, 100);
-               }}
-               sx={{
-                 position: 'fixed',
-                 bottom: 100,
-                 right: 24,
-                 borderRadius: '50%',
-                 width: 64,
-                 height: 64,
-                 minWidth: 64,
-                 background: 'linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%)',
-                 color: 'white',
-                 boxShadow: '0 8px 32px rgba(76, 175, 80, 0.4)',
-                 zIndex: 1000,
-                 '&:hover': {
-                   background: 'linear-gradient(135deg, #2E7D32 0%, #4CAF50 100%)',
-                   transform: 'scale(1.1)',
-                   boxShadow: '0 12px 48px rgba(76, 175, 80, 0.6)',
-                 },
-                 transition: 'all 0.3s ease',
-                 display: 'flex',
-                 alignItems: 'center',
-                 justifyContent: 'center'
-               }}
-             >
-               📋
-             </Button>
-           </Tooltip>
+           
 
            {/* Test Notification Button */}
            <Tooltip title="Test Payment Notification System" placement="left">
