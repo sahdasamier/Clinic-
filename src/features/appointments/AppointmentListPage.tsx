@@ -360,6 +360,35 @@ const AppointmentListPage: React.FC = () => {
   const [rescheduleDialogOpen, setRescheduleDialogOpen] = useState(false);
   const [rescheduleAppointment, setRescheduleAppointment] = useState<Appointment | null>(null);
   const [rescheduleData, setRescheduleData] = useState({ date: '', time: '' });
+  
+  // ✅ ENHANCED: Normalize appointment type values for MUI Select compatibility
+  const normalizeAppointmentType = (type: string): string => {
+    const typeMap: { [key: string]: string } = {
+      'consultation': 'Consultation',
+      'check_up': 'Check-up', 
+      'check-up': 'Check-up',
+      'follow_up': 'Follow-up',
+      'follow-up': 'Follow-up',
+      'surgery_consultation': 'Surgery Consultation',
+      'surgery-consultation': 'Surgery Consultation', 
+      'emergency': 'Emergency',
+      'diagnostic': 'Diagnostic',
+      'therapy': 'Therapy',
+      'routine_checkup': 'Routine Checkup',
+      'routine-checkup': 'Routine Checkup'
+    };
+    
+    return typeMap[type?.toLowerCase()] || type || 'Consultation';
+  };
+
+  // ✅ ENHANCED: Normalize appointments data to fix MUI Select errors
+  const normalizeAppointments = (appointments: Appointment[]): Appointment[] => {
+    return appointments.map(apt => ({
+      ...apt,
+      type: normalizeAppointmentType(apt.type)
+    }));
+  };
+
   const [newAppointment, setNewAppointment] = useState<NewAppointment>({
     patient: '',
     doctor: '',
@@ -367,7 +396,7 @@ const AppointmentListPage: React.FC = () => {
     time: '',
     hour: '',
     minute: '',
-    type: 'consultation',
+    type: 'Consultation', // ✅ FIXED: Use capitalized value to match Select options
     duration: 20, // ✅ FIXED: Changed default to 20 minutes
     priority: 'normal',
     location: '',
@@ -613,7 +642,7 @@ const AppointmentListPage: React.FC = () => {
   // ✅ Sync hook data with legacy appointmentList state
   useEffect(() => {
     if (appointments && appointments.length > 0) {
-      setAppointmentList(appointments);
+      setAppointmentList(normalizeAppointments(appointments));
       setDataLoading(false);
       setFirebaseConnected(true);
     }
@@ -728,7 +757,7 @@ const AppointmentListPage: React.FC = () => {
         
         // Convert Firebase appointments to local format for UI compatibility
         const convertedAppointments = firebaseAppointments.map(convertFirebaseAppointmentToLocal);
-        setAppointmentList(convertedAppointments);
+        setAppointmentList(normalizeAppointments(convertedAppointments));
         setDataLoading(false);
         setFirebaseConnected(true);
       });
@@ -801,7 +830,7 @@ const AppointmentListPage: React.FC = () => {
       const data = event.detail;
       
       if (data.appointments) {
-        setAppointmentList(data.appointments);
+        setAppointmentList(normalizeAppointments(data.appointments));
       }
       
       if (data.patients) {
@@ -4543,11 +4572,11 @@ const AppointmentListPage: React.FC = () => {
                <Grid item xs={12} md={6}>
                  <FormControl fullWidth>
                    <InputLabel>{t('appointment_type')}</InputLabel>
-                   <Select 
-                     label={t('appointment_type')}
-                     value={newAppointment.type}
-                     onChange={(e) => setNewAppointment(prev => ({ ...prev, type: e.target.value }))}
-                   >
+                                     <Select 
+                    label={t('appointment_type')}
+                    value={normalizeAppointmentType(newAppointment.type)}
+                    onChange={(e) => setNewAppointment(prev => ({ ...prev, type: e.target.value }))}
+                  >
                      <MenuItem value="Consultation">
                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                          <MedicalServices fontSize="small" color="primary" />

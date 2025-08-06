@@ -48,7 +48,7 @@ export class AppointmentConflictService {
         where('doctorId', '==', slotInfo.doctorId),
         where('date', '==', slotInfo.date),
         where('isActive', '==', true),
-        where('status', 'in', ['pending', 'confirmed']) // Don't consider cancelled/completed
+        where('status', 'in', ['pending', 'confirmed', 'scheduled']) // ✅ FIXED: Include 'scheduled' status
       );
 
       const querySnapshot = await getDocs(appointmentQuery);
@@ -127,7 +127,7 @@ export class AppointmentConflictService {
         where('doctorId', '==', doctorId),
         where('date', '==', date),
         where('isActive', '==', true),
-        where('status', 'in', ['pending', 'confirmed'])
+        where('status', 'in', ['pending', 'confirmed', 'scheduled']) // ✅ FIXED: Include 'scheduled' status
       );
 
       const querySnapshot = await getDocs(appointmentQuery);

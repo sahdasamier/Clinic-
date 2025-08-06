@@ -25,7 +25,8 @@ import {
   InputAdornment,
   Snackbar,
   CircularProgress,
-  Tooltip
+  Tooltip,
+  Autocomplete
 } from '@mui/material';
 import {
   Person,
@@ -35,7 +36,9 @@ import {
   Notes,
   CheckCircle,
   Phone,
-  LocationOn
+  LocationOn,
+  Add,
+  PersonAdd
 } from '@mui/icons-material';
 import Header from '../../components/NavBar';
 import Sidebar from '../../components/Sidebar';
@@ -44,6 +47,8 @@ import { createAppointment, type AppointmentFormData as ApiAppointmentFormData }
 import { getDoctorsByClinic } from '../../api/doctorPatients';
 import { UserData } from '../../api/auth';
 import { testPaymentNotificationSystem } from '../../utils/paymentUtils';
+import { AppointmentValidationService, ValidationResult } from '../../services/AppointmentValidationService';
+import { PatientService, Patient } from '../../services/PatientService';
 
 interface AppointmentFormData {
   patientName: string;
@@ -68,6 +73,12 @@ const AppointmentForm: React.FC = () => {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [doctors, setDoctors] = useState<UserData[]>([]);
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [isLoadingPatients, setIsLoadingPatients] = useState(false);
+  const [showCustomPatient, setShowCustomPatient] = useState(false);
+  const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
+  const [timeSlotReservation, setTimeSlotReservation] = useState<string | null>(null);
+  const [isValidating, setIsValidating] = useState(false);
   // ✅ Use persistent form hook for data persistence
   const defaultFormData: AppointmentFormData = {
     patientName: '',
@@ -96,21 +107,127 @@ const AppointmentForm: React.FC = () => {
 
   const [errors, setErrors] = useState<Partial<AppointmentFormData>>({});
 
+  // ✅ NEW: Real-time appointment validation
+  const validateAppointmentRealTime = async () => {
+    if (!formData.doctor || !formData.appointmentDate || !formData.appointmentTime || !formData.patientName) {
+      setValidationResult(null);
+      return;
+    }
+
+    setIsValidating(true);
+    try {
+      // Find doctor ID
+      const selectedDoctor = doctors.find(d => `${d.firstName} ${d.lastName}` === formData.doctor);
+      if (!selectedDoctor) {
+        setValidationResult(null);
+        return;
+      }
+
+      const validationOptions = {
+        doctorId: selectedDoctor.id,
+        date: formData.appointmentDate,
+        timeSlot: formData.appointmentTime,
+        duration: formData.duration,
+        patientName: formData.patientName,
+        appointmentType: formData.appointmentType
+      };
+
+      const result = await AppointmentValidationService.validateAppointmentDetails(validationOptions);
+      setValidationResult(result);
+
+      // If validation passes and we don't have a reservation, create one
+      if (result.isValid && !timeSlotReservation) {
+        const reservationId = AppointmentValidationService.reserveTimeSlot(validationOptions);
+        setTimeSlotReservation(reservationId);
+        
+        // Auto-release reservation after 4 minutes to give 1 minute buffer
+        setTimeout(() => {
+          if (timeSlotReservation === reservationId) {
+            AppointmentValidationService.releaseReservation(reservationId);
+            setTimeSlotReservation(null);
+          }
+        }, 4 * 60 * 1000);
+      }
+
+    } catch (error) {
+      console.error('Error validating appointment:', error);
+      setValidationResult({
+        isValid: false,
+        errors: ['Validation failed'],
+        warnings: []
+      });
+    } finally {
+      setIsValidating(false);
+    }
+  };
+
+  // Real-time validation when key fields change
   useEffect(() => {
-    const loadDoctors = async () => {
+    const debounceTimer = setTimeout(() => {
+      if (formData.doctor && formData.appointmentDate && formData.appointmentTime && formData.patientName) {
+        validateAppointmentRealTime();
+      }
+    }, 500); // Debounce for 500ms
+
+    return () => clearTimeout(debounceTimer);
+  }, [formData.doctor, formData.appointmentDate, formData.appointmentTime, formData.patientName, formData.duration, formData.appointmentType]);
+
+  // Cleanup reservation on component unmount
+  useEffect(() => {
+    return () => {
+      if (timeSlotReservation) {
+        AppointmentValidationService.releaseReservation(timeSlotReservation);
+      }
+    };
+  }, []);
+
+  // ✅ DEBUG: Expose patient loading for console testing
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).debugAppointmentForm = {
+        patients: () => patients,
+        reloadPatients: async () => {
+          if (!userProfile?.clinicId) return;
+          setIsLoadingPatients(true);
+          try {
+            const patients = await PatientService.searchPatients(userProfile.clinicId, '');
+            console.log('🔄 Manual reload - Patients loaded:', patients.length);
+            setPatients(patients);
+          } catch (error) {
+            console.error('❌ Manual reload failed:', error);
+          }
+          setIsLoadingPatients(false);
+        },
+        formData: () => formData,
+        showCustomPatient: () => showCustomPatient
+      };
+    }
+  }, [patients, formData, showCustomPatient, userProfile?.clinicId]);
+
+  useEffect(() => {
+    const loadDoctorsAndPatients = async () => {
       if (!userProfile?.clinicId) return;
       
       try {
-        console.log('🔍 AppointmentForm: Loading doctors for clinic:', userProfile.clinicId);
+        console.log('🔍 AppointmentForm: Loading doctors and patients for clinic:', userProfile.clinicId);
         
+        // Load doctors
         const doctors = await getDoctorsByClinic(userProfile.clinicId);
         console.log('🏥 AppointmentForm: Loaded doctors:', doctors);
         setDoctors(doctors);
+
+        // Load patients
+        setIsLoadingPatients(true);
+        const patients = await PatientService.searchPatients(userProfile.clinicId, '');
+        console.log('👥 AppointmentForm: Loaded patients:', patients.length, patients.map(p => ({ name: p.name, phone: p.phone })));
+        setPatients(patients);
+        setIsLoadingPatients(false);
       } catch (error) {
-        console.error('Error loading doctors:', error);
+        console.error('Error loading doctors and patients:', error);
+        setIsLoadingPatients(false);
       }
     };
-    loadDoctors();
+    loadDoctorsAndPatients();
   }, [userProfile?.clinicId]);
 
   // Reset time slot when doctor or date changes
@@ -178,6 +295,40 @@ const AppointmentForm: React.FC = () => {
     setError(null);
 
     try {
+      // ✅ ENHANCED: Final validation before creating appointment
+      const selectedDoctor = doctors.find(d => `${d.firstName} ${d.lastName}` === formData.doctor);
+      if (!selectedDoctor) {
+        throw new Error('Selected doctor not found');
+      }
+
+      const validationOptions = {
+        doctorId: selectedDoctor.id,
+        date: formData.appointmentDate,
+        timeSlot: formData.appointmentTime,
+        duration: formData.duration,
+        patientName: formData.patientName,
+        appointmentType: formData.appointmentType
+      };
+
+      console.log('🔍 FINAL VALIDATION before appointment creation:', validationOptions);
+
+      const finalValidation = await AppointmentValidationService.validateAppointmentDetails(validationOptions);
+      
+      if (!finalValidation.isValid) {
+        const errorMessage = finalValidation.errors.join(', ');
+        const warningMessage = finalValidation.warnings.length > 0 ? '\n\nWarnings: ' + finalValidation.warnings.join(', ') : '';
+        
+        if (finalValidation.conflictDetails?.suggestedAlternatives) {
+          const alternatives = finalValidation.conflictDetails.suggestedAlternatives;
+          const altMessage = alternatives.length > 0 ? `\n\nSuggested alternatives: ${alternatives.join(', ')}` : '';
+          throw new Error(errorMessage + warningMessage + altMessage);
+        } else {
+          throw new Error(errorMessage + warningMessage);
+        }
+      }
+
+      console.log('✅ VALIDATION PASSED - Creating appointment');
+
       // ✅ ENHANCED: Ensure patient exists before creating appointment
       const { AppointmentService } = await import('../../services/AppointmentService');
       const patientId = await AppointmentService.ensurePatientExists(
@@ -192,6 +343,7 @@ const AppointmentForm: React.FC = () => {
         patientPhone: formData.patientPhone,
         patientId: patientId, // ✅ Include the actual patient ID
         doctorName: formData.doctor,
+        doctorId: selectedDoctor.id, // ✅ Include doctor ID for validation
         date: formData.appointmentDate,
         time: formData.appointmentTime,
         type: formData.appointmentType,
@@ -203,6 +355,13 @@ const AppointmentForm: React.FC = () => {
       };
 
       const createdAppointment = await createAppointment(appointmentData);
+      
+      // ✅ Release time slot reservation after successful creation
+      if (timeSlotReservation) {
+        AppointmentValidationService.releaseReservation(timeSlotReservation);
+        setTimeSlotReservation(null);
+      }
+      
       setSuccess(true);
       
       // ✅ ENHANCED: Trigger automatic cross-page sync
@@ -258,29 +417,107 @@ const AppointmentForm: React.FC = () => {
               <Alert severity="info" sx={{ mb: 3 }}>
                 {t('patient_info_step_description')}
               </Alert>
+              {/* ✅ Patient summary */}
+              {patients.length > 0 && (
+                <Alert severity="success" sx={{ mb: 2 }}>
+                  <Typography variant="body2">
+                    📋 <strong>{patients.length} existing patients</strong> found in your clinic. Select from dropdown or add a new patient.
+                  </Typography>
+                </Alert>
+              )}
             </Grid>
             <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label={t('patient_name')}
-                value={formData.patientName}
-                onChange={(e) => updateFormData('patientName', e.target.value)}
-                error={!!errors.patientName}
-                helperText={errors.patientName}
-                required
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Person sx={{ color: 'primary.main' }} />
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{ 
-                  '& .MuiOutlinedInput-root': { 
-                    borderRadius: 3 
-                  }
-                }}
-              />
+              {/* ✅ ENHANCED: Patient dropdown with existing patients + option to add new */}
+              {isLoadingPatients ? (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 2 }}>
+                  <CircularProgress size={20} />
+                  <Typography variant="body2">Loading patients...</Typography>
+                </Box>
+              ) : (
+                <FormControl fullWidth error={!!errors.patientName}>
+                  <InputLabel>{t('patient_name')} *</InputLabel>
+                  <Select
+                    value={showCustomPatient ? 'custom' : (patients.find(p => p.name === formData.patientName) ? formData.patientName : 'custom')}
+                    label={`${t('patient_name')} *`}
+                    onChange={(e) => {
+                      if (e.target.value === 'custom') {
+                        setShowCustomPatient(true);
+                        updateFormData('patientName', '');
+                        updateFormData('patientPhone', '');
+                      } else {
+                        setShowCustomPatient(false);
+                        const selectedPatient = patients.find(p => p.name === e.target.value);
+                        updateFormData('patientName', e.target.value);
+                        updateFormData('patientPhone', selectedPatient?.phone || '');
+                      }
+                    }}
+                    startAdornment={
+                      <InputAdornment position="start">
+                        <Person sx={{ color: 'primary.main' }} />
+                      </InputAdornment>
+                    }
+                    sx={{ 
+                      '& .MuiOutlinedInput-root': { 
+                        borderRadius: 3 
+                      }
+                    }}
+                  >
+                    <MenuItem value="custom">
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'primary.main' }}>
+                        <PersonAdd fontSize="small" />
+                        <Typography variant="body2">Add New Patient</Typography>
+                      </Box>
+                    </MenuItem>
+                    {patients.map((patient) => (
+                      <MenuItem key={patient.id} value={patient.name}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                          <Box>
+                            <Typography variant="body1">{patient.name}</Typography>
+                            {patient.phone && (
+                              <Typography variant="caption" color="text.secondary">
+                                📱 {patient.phone}
+                              </Typography>
+                            )}
+                          </Box>
+                          {patient.dateOfBirth && (
+                            <Chip 
+                              label={`Age: ${new Date().getFullYear() - new Date(patient.dateOfBirth).getFullYear()}`}
+                              size="small" 
+                              variant="outlined"
+                            />
+                          )}
+                        </Box>
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  {errors.patientName && (
+                    <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1 }}>
+                      {errors.patientName}
+                    </Typography>
+                  )}
+                </FormControl>
+              )}
+              
+              {/* ✅ Custom patient name input (shown when "Add New Patient" is selected) */}
+              {showCustomPatient && (
+                <TextField
+                  fullWidth
+                  label="New Patient Name"
+                  value={formData.patientName}
+                  onChange={(e) => updateFormData('patientName', e.target.value)}
+                  error={!!errors.patientName}
+                  helperText={errors.patientName}
+                  required
+                  placeholder="Enter patient name"
+                  sx={{ 
+                    mt: 2,
+                    '& .MuiOutlinedInput-root': { 
+                      borderRadius: 3,
+                      backgroundColor: 'rgba(25, 118, 210, 0.04)'
+                    }
+                  }}
+                />
+              )}
             </Grid>
             <Grid item xs={12} md={6}>
               <TextField
@@ -289,9 +526,9 @@ const AppointmentForm: React.FC = () => {
                 value={formData.patientPhone}
                 onChange={(e) => updateFormData('patientPhone', e.target.value)}
                 error={!!errors.patientPhone}
-                helperText={errors.patientPhone}
+                helperText={errors.patientPhone || (!showCustomPatient && formData.patientPhone && patients.find(p => p.name === formData.patientName) ? '📱 Auto-filled from selected patient' : '')}
                 required
-                placeholder={t('phone_placeholder')}
+                placeholder={showCustomPatient ? "Enter patient phone number" : (formData.patientPhone ? formData.patientPhone : t('phone_placeholder'))}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
@@ -301,7 +538,8 @@ const AppointmentForm: React.FC = () => {
                 }}
                 sx={{ 
                   '& .MuiOutlinedInput-root': { 
-                    borderRadius: 3 
+                    borderRadius: 3,
+                    backgroundColor: (!showCustomPatient && formData.patientPhone && patients.find(p => p.name === formData.patientName)) ? 'rgba(76, 175, 80, 0.04)' : undefined
                   }
                 }}
               />
@@ -345,12 +583,158 @@ const AppointmentForm: React.FC = () => {
                 date={formData.appointmentDate}
                 duration={formData.duration}
                 selectedTimeSlot={formData.appointmentTime}
-                onTimeSlotSelect={(timeSlot) => updateFormData('appointmentTime', timeSlot)}
+                onTimeSlotSelect={(timeSlot) => {
+                  updateFormData('appointmentTime', timeSlot);
+                  // Trigger immediate validation after time slot selection
+                  setTimeout(() => validateAppointmentRealTime(), 100);
+                }}
               />
               {errors.appointmentTime && (
                 <Alert severity="error" sx={{ mt: 2 }}>
                   {errors.appointmentTime}
                 </Alert>
+              )}
+              
+              {/* ✅ NEW: Real-time Validation Status Indicator */}
+              {(formData.doctor && formData.appointmentDate && formData.appointmentTime && formData.patientName) && (
+                <Box sx={{ mt: 2 }}>
+                  {isValidating ? (
+                    <Alert 
+                      severity="info" 
+                      icon={<CircularProgress size={20} />}
+                      sx={{ 
+                        '& .MuiAlert-icon': { alignItems: 'center' }
+                      }}
+                    >
+                      <Typography variant="body2">
+                        🔍 Validating appointment slot...
+                      </Typography>
+                    </Alert>
+                  ) : validationResult ? (
+                    validationResult.isReservedSlot ? (
+                      // ✅ ENHANCED: Special handling for reserved slots
+                      <Alert severity="warning" sx={{ mb: 1 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+                          ⏰ Time slot is reserved
+                        </Typography>
+                        <Typography variant="body2" sx={{ mb: 1 }}>
+                          This time slot is already booked by another patient. Please select a different time.
+                        </Typography>
+                        {validationResult.conflictDetails?.conflictingAppointment && (
+                          <Typography variant="caption" sx={{ display: 'block', opacity: 0.8 }}>
+                            📅 Reserved for: {validationResult.conflictDetails.conflictingAppointment.patient || 'Unknown Patient'}
+                          </Typography>
+                        )}
+                        {validationResult.conflictDetails?.suggestedAlternatives && validationResult.conflictDetails.suggestedAlternatives.length > 0 && (
+                          <Box sx={{ mt: 2, p: 2, backgroundColor: 'action.hover', borderRadius: 1 }}>
+                            <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+                              💡 Available alternatives:
+                            </Typography>
+                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                              {validationResult.conflictDetails.suggestedAlternatives.map((timeSlot, index) => {
+                                const [hours, minutes] = timeSlot.split(':').map(Number);
+                                const date = new Date();
+                                date.setHours(hours, minutes);
+                                const displayTime = date.toLocaleTimeString('en-US', {
+                                  hour: 'numeric',
+                                  minute: '2-digit',
+                                  hour12: true
+                                });
+                                
+                                return (
+                                  <Chip
+                                    key={index}
+                                    label={displayTime}
+                                    size="small"
+                                    variant="outlined"
+                                    onClick={() => updateFormData('appointmentTime', timeSlot)}
+                                    sx={{
+                                      cursor: 'pointer',
+                                      '&:hover': {
+                                        backgroundColor: 'primary.main',
+                                        color: 'primary.contrastText'
+                                      }
+                                    }}
+                                  />
+                                );
+                              })}
+                            </Box>
+                          </Box>
+                        )}
+                      </Alert>
+                    ) : validationResult.isValid ? (
+                      <Alert severity="success" sx={{ mb: 1 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+                          ✅ Time slot is available!
+                        </Typography>
+                        {timeSlotReservation && (
+                          <Typography variant="caption" sx={{ display: 'block', opacity: 0.8 }}>
+                            🔒 Time slot reserved for 5 minutes
+                          </Typography>
+                        )}
+                        {validationResult.warnings.length > 0 && (
+                          <Box sx={{ mt: 1 }}>
+                            <Typography variant="caption" sx={{ fontWeight: 500 }}>
+                              ⚠️ Warnings:
+                            </Typography>
+                            {validationResult.warnings.map((warning, index) => (
+                              <Typography key={index} variant="caption" sx={{ display: 'block', ml: 1 }}>
+                                • {warning}
+                              </Typography>
+                            ))}
+                          </Box>
+                        )}
+                      </Alert>
+                    ) : (
+                      <Alert severity="error" sx={{ mb: 1 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+                          ❌ Appointment conflicts detected:
+                        </Typography>
+                        {validationResult.errors.map((error, index) => (
+                          <Typography key={index} variant="body2" sx={{ display: 'block', ml: 1 }}>
+                            • {error}
+                          </Typography>
+                        ))}
+                        {validationResult.conflictDetails?.suggestedAlternatives && validationResult.conflictDetails.suggestedAlternatives.length > 0 && (
+                          <Box sx={{ mt: 2, p: 2, backgroundColor: 'action.hover', borderRadius: 1 }}>
+                            <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+                              💡 Suggested alternatives:
+                            </Typography>
+                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                              {validationResult.conflictDetails.suggestedAlternatives.map((timeSlot, index) => {
+                                const [hours, minutes] = timeSlot.split(':').map(Number);
+                                const date = new Date();
+                                date.setHours(hours, minutes);
+                                const displayTime = date.toLocaleTimeString('en-US', {
+                                  hour: 'numeric',
+                                  minute: '2-digit',
+                                  hour12: true
+                                });
+                                
+                                return (
+                                  <Chip
+                                    key={index}
+                                    label={displayTime}
+                                    size="small"
+                                    clickable
+                                    onClick={() => updateFormData('appointmentTime', timeSlot)}
+                                    sx={{ 
+                                      backgroundColor: 'primary.light',
+                                      color: 'primary.contrastText',
+                                      '&:hover': {
+                                        backgroundColor: 'primary.main'
+                                      }
+                                    }}
+                                  />
+                                );
+                              })}
+                            </Box>
+                          </Box>
+                        )}
+                      </Alert>
+                    )
+                  ) : null}
+                </Box>
               )}
             </Grid>
             <Grid item xs={12} md={6}>
@@ -803,11 +1187,24 @@ const AppointmentForm: React.FC = () => {
                           <Button
                             variant="contained"
                             onClick={handleSubmit}
-                            disabled={loading}
+                            disabled={loading || (validationResult && (!validationResult.isValid || validationResult.isReservedSlot)) || isValidating}
                             sx={{ 
                               borderRadius: 3,
-                              background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
-                              px: 4
+                                              background: validationResult && (!validationResult.isValid || validationResult.isReservedSlot)
+                  ? validationResult.isReservedSlot 
+                    ? 'linear-gradient(90deg, rgba(255, 193, 7, 1) 0%, rgba(255, 152, 0, 1) 100%)'  // Orange for reserved
+                    : 'linear-gradient(90deg, rgba(244, 67, 54, 1) 0%, rgba(198, 40, 40, 1) 100%)'  // Red for errors
+                  : 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
+                              px: 4,
+                              position: 'relative',
+                              overflow: 'hidden',
+                                                '&:disabled': {
+                    background: validationResult && (!validationResult.isValid || validationResult.isReservedSlot)
+                      ? validationResult.isReservedSlot
+                        ? 'linear-gradient(90deg, rgba(255, 193, 7, 0.5) 0%, rgba(255, 152, 0, 0.5) 100%)'  // Orange for reserved
+                        : 'linear-gradient(90deg, rgba(244, 67, 54, 0.5) 0%, rgba(198, 40, 40, 0.5) 100%)'  // Red for errors
+                      : undefined
+                  }
                             }}
                           >
                             {loading ? (
