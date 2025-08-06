@@ -398,26 +398,42 @@ export const updatePaymentStatus = (paymentId: string, newStatus: string, paidAm
     const payment = payments[paymentIndex];
     const oldStatus = payment.status;
     
-    // Update payment status
+    // ✅ FIX: Update payment status first
     payment.status = newStatus as any;
     
-    // Handle paid amount for partial payments
-    if (paidAmount !== undefined) {
+    // ✅ FIX: Auto-update paidAmount based on status change
+    if (newStatus === 'paid' && paidAmount === undefined) {
+      // If status is set to "paid" and no paidAmount provided, set to full amount
+      payment.paidAmount = payment.amount;
+      console.log(`💰 Auto-updated paidAmount to ${payment.amount} for payment ${paymentId} (status: paid)`);
+    } else if (newStatus === 'pending' && paidAmount === undefined) {
+      // If status is set to "pending", reset paidAmount to 0
+      payment.paidAmount = 0;
+      console.log(`💰 Auto-reset paidAmount to 0 for payment ${paymentId} (status: pending)`);
+    } else if (paidAmount !== undefined) {
+      // Use provided paidAmount
       payment.paidAmount = paidAmount;
     }
     
-    // ✅ NEW: Use calculated payment status based on amounts and due date
-    const calculatedStatus = getCalculatedPaymentStatus(
-      newStatus,
-      payment.paidAmount || 0,
-      payment.amount,
-      payment.dueDate
-    );
+    // ✅ FIX: Only use calculated status for automatic scenarios, not manual changes
+    // Skip auto-calculation for manual status changes from UI
+    const isManualStatusChange = ['paid', 'pending', 'partial', 'overdue', 'cancelled', 'failed'].includes(newStatus);
     
-    // Update to calculated status if different
-    if (calculatedStatus !== newStatus) {
-      payment.status = calculatedStatus as any;
-      console.log(`🔄 Auto-corrected payment status from ${newStatus} to ${calculatedStatus} based on amounts and due date`);
+    if (!isManualStatusChange) {
+      // Only apply auto-calculation for system-generated status changes
+      const calculatedStatus = getCalculatedPaymentStatus(
+        newStatus,
+        payment.paidAmount || 0,
+        payment.amount,
+        payment.dueDate
+      );
+      
+      if (calculatedStatus !== newStatus) {
+        payment.status = calculatedStatus as any;
+        console.log(`🔄 Auto-corrected payment status from ${newStatus} to ${calculatedStatus} based on amounts and due date`);
+      }
+    } else {
+      console.log(`✅ Manual status change: ${oldStatus} → ${newStatus} (skipping auto-calculation)`);
     }
     
     // Update the payment in array
@@ -426,7 +442,7 @@ export const updatePaymentStatus = (paymentId: string, newStatus: string, paidAm
     // Save back to localStorage
     savePaymentsToStorage(payments);
     
-    console.log(`✅ Payment ${paymentId} status: ${oldStatus} → ${payment.status}`);
+    console.log(`✅ Payment ${paymentId} status: ${oldStatus} → ${payment.status} (paidAmount: ${payment.paidAmount})`);
     
     // ✅ CRITICAL: Sync with appointments immediately
     updateAppointmentPaymentStatusInPayments(payment.appointmentId || '', payment.status);
@@ -1238,31 +1254,62 @@ TROUBLESHOOTING:
   console.log('   - clearPaymentCacheHelp() - Show detailed help');
 } 
 
-// ✅ NEW: Find existing payment by appointment ID to prevent duplicates
+// ✅ ENHANCED: Find existing payment by appointment ID with multiple matching strategies
 export const findPaymentByAppointmentId = async (appointmentId: string, clinicId: string): Promise<any | null> => {
   try {
+    console.log(`🔍 SEARCHING for payment with appointmentId: ${appointmentId} in clinic: ${clinicId}`);
+    
     // Import PaymentService dynamically to avoid circular dependencies
     const { PaymentService } = await import('../services/PaymentService');
     
     const payments = await PaymentService.getPayments(clinicId);
+    console.log(`📊 Found ${payments.length} total payments in clinic ${clinicId}`);
     
-    // First try to find by exact appointmentId match
+    // ✅ ENHANCED: Try multiple matching strategies to find existing payment
+    
+    // Strategy 1: Exact appointmentId match
     let payment = payments.find(p => p.appointmentId === appointmentId);
     
-    if (!payment) {
-      console.log(`⚠️ No payment found with appointmentId: ${appointmentId}`);
-      return null;
+    if (payment) {
+      console.log(`✅ MATCH FOUND (Strategy 1 - exact appointmentId): ${payment.id}`);
+      return payment;
     }
     
-    console.log(`✅ Found existing payment ${payment.id} for appointmentId: ${appointmentId}`);
-    return payment;
+    // Strategy 2: Match by appointmentId as string vs number
+    payment = payments.find(p => p.appointmentId?.toString() === appointmentId?.toString());
+    
+    if (payment) {
+      console.log(`✅ MATCH FOUND (Strategy 2 - appointmentId string): ${payment.id}`);
+      return payment;
+    }
+    
+    // Strategy 3: Search in localStorage as fallback
+    const localPayments = loadPaymentsFromStorage();
+    payment = localPayments.find(p => 
+      p.appointmentId === appointmentId || 
+      p.appointmentId?.toString() === appointmentId?.toString()
+    );
+    
+    if (payment) {
+      console.log(`✅ MATCH FOUND (Strategy 3 - localStorage): ${payment.id}`);
+      return payment;
+    }
+    
+    console.log(`⚠️ NO PAYMENT FOUND for appointmentId: ${appointmentId}`);
+    console.log(`🔍 Available appointment IDs in payments:`, payments.map(p => ({
+      id: p.id,
+      appointmentId: p.appointmentId,
+      patient: p.patient
+    })));
+    
+    return null;
   } catch (error) {
     console.error('❌ Error finding payment by appointment ID:', error);
     return null;
   }
 };
 
-// ✅ NEW: Safely update or create payment for appointment
+// ✅ ENHANCED: Safely update or create payment for appointment with duplicate prevention
 export const updateOrCreatePaymentForAppointment = async (
   appointmentData: {
     id: string;
@@ -1275,20 +1322,75 @@ export const updateOrCreatePaymentForAppointment = async (
   clinicId: string
 ): Promise<{ updated: boolean; paymentId: string }> => {
   try {
-    // Check for existing payment
-    const existingPayment = await findPaymentByAppointmentId(appointmentData.id, clinicId);
+    console.log(`🔍 PAYMENT SYNC: Looking for existing payment for appointment ${appointmentData.id}`);
+    console.log(`👤 Patient: ${appointmentData.patient} | 👨‍⚕️ Doctor: ${appointmentData.doctor}`);
+    
+    // ✅ ENHANCED: Check for existing payment with multiple strategies
+    let existingPayment = await findPaymentByAppointmentId(appointmentData.id, clinicId);
+    
+    // ✅ FALLBACK: If not found by appointmentId, try finding by patient name and date
+    if (!existingPayment) {
+      console.log(`🔍 FALLBACK SEARCH: Looking for payment by patient name and date...`);
+      
+      const { PaymentService } = await import('../services/PaymentService');
+      const allPayments = await PaymentService.getPayments(clinicId);
+      
+      // Find payment by patient name and date (same day)
+      existingPayment = allPayments.find(payment => 
+        payment.patient === appointmentData.patient && 
+        payment.date === appointmentData.date &&
+        !payment.appointmentId // Only match payments without appointmentId to avoid conflicts
+      );
+      
+      if (existingPayment) {
+        console.log(`✅ FALLBACK MATCH: Found payment by patient and date: ${existingPayment.id}`);
+        
+        // Link this payment to the appointment
+        await PaymentService.updatePayment(existingPayment.id, {
+          appointmentId: appointmentData.id
+        });
+        console.log(`🔗 Linked payment ${existingPayment.id} to appointment ${appointmentData.id}`);
+      }
+    }
     
     if (existingPayment) {
+      console.log(`🔄 UPDATING existing payment ${existingPayment.id} from status ${existingPayment.status} to ${paymentStatus}`);
+      
       // Update existing payment
       const { PaymentService } = await import('../services/PaymentService');
       await PaymentService.updatePayment(existingPayment.id, {
-        status: paymentStatus
+        status: paymentStatus,
+        paidAmount: paymentStatus === 'paid' ? existingPayment.amount : 0
       });
       
-      console.log(`✅ Updated existing payment ${existingPayment.id} to status: ${paymentStatus}`);
+      console.log(`✅ PAYMENT UPDATE SUCCESS: ${existingPayment.id} → status: ${paymentStatus}`);
       return { updated: true, paymentId: existingPayment.id };
     } else {
-      // Create new payment
+      console.log(`🆕 CREATING NEW PAYMENT: No existing payment found for appointment ${appointmentData.id}`);
+      
+      // ✅ DOUBLE-CHECK: Make sure no duplicate payments exist for this patient on this date
+      const { PaymentService } = await import('../services/PaymentService');
+      const todaysPayments = await PaymentService.getPayments(clinicId);
+      const duplicateCheck = todaysPayments.filter(p => 
+        p.patient === appointmentData.patient && 
+        p.date === appointmentData.date
+      );
+      
+      if (duplicateCheck.length > 0) {
+        console.log(`⚠️ DUPLICATE PREVENTION: Found ${duplicateCheck.length} existing payments for ${appointmentData.patient} on ${appointmentData.date}`);
+        console.log(`🔄 Using first existing payment instead of creating new one`);
+        
+        const firstPayment = duplicateCheck[0];
+        await PaymentService.updatePayment(firstPayment.id, {
+          status: paymentStatus,
+          appointmentId: appointmentData.id,
+          paidAmount: paymentStatus === 'paid' ? firstPayment.amount : 0
+        });
+        
+        return { updated: true, paymentId: firstPayment.id };
+      }
+      
+      // Create new payment only if no duplicates exist
       const appointmentAmount = getAppointmentPaymentAmount(appointmentData.type);
       
       const paymentData = {
@@ -1297,7 +1399,7 @@ export const updateOrCreatePaymentForAppointment = async (
         doctor: appointmentData.doctor || 'Unknown Doctor',
         amount: appointmentAmount,
         currency: 'EGP',
-        date: new Date().toISOString().split('T')[0],
+        date: appointmentData.date, // ✅ Use appointment date instead of today
         dueDate: appointmentData.date,
         status: paymentStatus as 'pending' | 'paid',
         method: 'cash',
@@ -1315,7 +1417,7 @@ export const updateOrCreatePaymentForAppointment = async (
       };
 
       const newPayment = createPayment(paymentData);
-      console.log(`✅ Created new payment ${newPayment.invoiceId} with status: ${paymentStatus}`);
+      console.log(`✅ NEW PAYMENT CREATED: ${newPayment.invoiceId} with status: ${paymentStatus}`);
       return { updated: false, paymentId: newPayment.id };
     }
   } catch (error) {
@@ -1831,3 +1933,292 @@ export const validateAndCleanAppointmentData = (appointmentData: any): any => {
 
 console.log('🧪 VALIDATION COMMANDS:');
 console.log('   • debugAppointmentValidation(data) - Test appointment data cleaning'); 
+
+// ✅ NEW: Debug function for testing payment status changes
+(window as any).debugPaymentStatusChange = (paymentId?: number, newStatus?: string) => {
+  console.log('🧪 DEBUGGING PAYMENT STATUS CHANGE...');
+  
+  const payments = loadPaymentsFromStorage();
+  console.log(`📊 Current payments count: ${payments.length}`);
+  
+  if (!paymentId && payments.length > 0) {
+    paymentId = payments[0].id;
+    console.log(`📋 Using first payment ID: ${paymentId}`);
+  }
+  
+  if (!paymentId) {
+    console.error('❌ No payment ID provided and no payments found');
+    return { error: 'No payments available' };
+  }
+  
+  const payment = payments.find(p => p.id === paymentId);
+  if (!payment) {
+    console.error(`❌ Payment ${paymentId} not found`);
+    return { error: 'Payment not found' };
+  }
+  
+  console.log('📋 Payment before update:', {
+    id: payment.id,
+    invoiceId: payment.invoiceId,
+    status: payment.status,
+    paidAmount: payment.paidAmount,
+    totalAmount: payment.amount
+  });
+  
+  if (!newStatus) {
+    newStatus = payment.status === 'pending' ? 'paid' : 'pending';
+    console.log(`🔄 Auto-selecting opposite status: ${newStatus}`);
+  }
+  
+  console.log(`🎯 Attempting to change status from ${payment.status} to ${newStatus}`);
+  
+  try {
+    const result = updatePaymentStatus(paymentId.toString(), newStatus);
+    
+    if (result) {
+      const updatedPayments = loadPaymentsFromStorage();
+      const updatedPayment = updatedPayments.find(p => p.id === paymentId);
+      
+      console.log('📋 Payment after update:', {
+        id: updatedPayment?.id,
+        invoiceId: updatedPayment?.invoiceId,
+        status: updatedPayment?.status,
+        paidAmount: updatedPayment?.paidAmount,
+        totalAmount: updatedPayment?.amount
+      });
+      
+      const success = updatedPayment?.status === newStatus;
+      
+      console.log(`${success ? '✅' : '❌'} Status change ${success ? 'successful' : 'failed'}`);
+      
+      if (!success) {
+        console.error(`❌ Expected status: ${newStatus}, Actual status: ${updatedPayment?.status}`);
+      }
+      
+      return {
+        success,
+        before: payment,
+        after: updatedPayment,
+        expectedStatus: newStatus,
+        actualStatus: updatedPayment?.status
+      };
+    } else {
+      console.error('❌ updatePaymentStatus returned false');
+      return { error: 'Update function returned false' };
+    }
+  } catch (error) {
+    console.error('❌ Error during status update:', error);
+    return { error: error.message };
+  }
+};
+
+console.log('🧪 Payment Status Debug Command Available:');
+console.log('   • debugPaymentStatusChange() - Test status change on first payment');
+console.log('   • debugPaymentStatusChange(paymentId) - Test specific payment');
+console.log('   • debugPaymentStatusChange(paymentId, "paid") - Test specific status change'); 
+
+// ✅ DEBUG: Function to find and clean up duplicate payments
+export const findAndCleanupDuplicatePayments = async (clinicId: string): Promise<void> => {
+  try {
+    console.log('🧹 STARTING DUPLICATE PAYMENT CLEANUP...');
+    
+    const { PaymentService } = await import('../services/PaymentService');
+    const allPayments = await PaymentService.getPayments(clinicId);
+    
+    console.log(`📊 Found ${allPayments.length} total payments`);
+    
+    // Group payments by patient and date
+    const paymentGroups = new Map<string, any[]>();
+    
+    allPayments.forEach(payment => {
+      const key = `${payment.patient}-${payment.date}`;
+      if (!paymentGroups.has(key)) {
+        paymentGroups.set(key, []);
+      }
+      paymentGroups.get(key)!.push(payment);
+    });
+    
+    // Find duplicates
+    const duplicateGroups = Array.from(paymentGroups.entries())
+      .filter(([key, payments]) => payments.length > 1)
+      .map(([key, payments]) => ({
+        key,
+        count: payments.length,
+        payments: payments.sort((a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime())
+      }));
+    
+    console.log(`🔍 Found ${duplicateGroups.length} groups with duplicate payments:`);
+    
+    duplicateGroups.forEach(group => {
+      console.log(`👤 ${group.key}: ${group.count} payments`);
+      group.payments.forEach((payment, index) => {
+        console.log(`  ${index + 1}. ID: ${payment.id} | Status: ${payment.status} | Amount: ${payment.amount} | AppointmentId: ${payment.appointmentId || 'N/A'}`);
+      });
+    });
+    
+    // Clean up duplicates (keep the first one, remove others)
+    for (const group of duplicateGroups) {
+      const [keepPayment, ...duplicatePayments] = group.payments;
+      
+      console.log(`🛠️ Keeping payment ${keepPayment.id} for ${group.key}`);
+      
+      for (const duplicate of duplicatePayments) {
+        console.log(`🗑️ Removing duplicate payment ${duplicate.id}`);
+        try {
+          await PaymentService.deletePayment(duplicate.id);
+          console.log(`✅ Deleted duplicate payment ${duplicate.id}`);
+        } catch (error) {
+          console.error(`❌ Failed to delete payment ${duplicate.id}:`, error);
+        }
+      }
+    }
+    
+    console.log('🎉 DUPLICATE CLEANUP COMPLETED!');
+    
+  } catch (error) {
+    console.error('❌ Error cleaning up duplicate payments:', error);
+  }
+};
+
+// ✅ DEBUG: Function to inspect payment-appointment relationships
+export const debugPaymentAppointmentRelationships = async (clinicId: string): Promise<void> => {
+  try {
+    console.log('🔍 DEBUGGING PAYMENT-APPOINTMENT RELATIONSHIPS...');
+    
+    const { PaymentService } = await import('../services/PaymentService');
+    
+    // ✅ FIX: Import appointments service correctly
+    let appointments = [];
+    try {
+      // Try different import paths for appointments
+      const appointmentModule = await import('../api/appointments');
+      if (appointmentModule.AppointmentService && appointmentModule.AppointmentService.getAppointments) {
+        appointments = await appointmentModule.AppointmentService.getAppointments(clinicId);
+      } else if (appointmentModule.getAppointments) {
+        appointments = await appointmentModule.getAppointments(clinicId);
+      } else {
+        console.log('⚠️ AppointmentService not available, checking localStorage...');
+        // Fallback to localStorage
+        const storedAppointments = localStorage.getItem('appointments');
+        appointments = storedAppointments ? JSON.parse(storedAppointments) : [];
+      }
+    } catch (error) {
+      console.log('⚠️ Could not load appointments from service, using localStorage fallback');
+      const storedAppointments = localStorage.getItem('appointments');
+      appointments = storedAppointments ? JSON.parse(storedAppointments) : [];
+    }
+    
+    const payments = await PaymentService.getPayments(clinicId);
+    
+    console.log(`📊 Found ${payments.length} payments and ${appointments.length} appointments`);
+    
+    // Check for payments without appointments
+    const paymentsWithoutAppointments = payments.filter(payment => {
+      if (!payment.appointmentId) return true;
+      return !appointments.find(apt => apt.id === payment.appointmentId);
+    });
+    
+    console.log(`⚠️ Payments without valid appointments: ${paymentsWithoutAppointments.length}`);
+    paymentsWithoutAppointments.forEach(payment => {
+      console.log(`  - Payment ${payment.id}: Patient ${payment.patient}, AppointmentId: ${payment.appointmentId || 'N/A'}`);
+    });
+    
+    // Check for appointments without payments
+    const appointmentsWithoutPayments = appointments.filter(appointment => {
+      return !payments.find(payment => payment.appointmentId === appointment.id);
+    });
+    
+    console.log(`⚠️ Appointments without payments: ${appointmentsWithoutPayments.length}`);
+    appointmentsWithoutPayments.forEach(appointment => {
+      console.log(`  - Appointment ${appointment.id}: Patient ${appointment.patient}, Status: ${appointment.paymentStatus || 'N/A'}`);
+    });
+    
+    // Check for multiple payments per appointment
+    const appointmentPaymentCounts = new Map<string, any[]>();
+    payments.forEach(payment => {
+      if (payment.appointmentId) {
+        if (!appointmentPaymentCounts.has(payment.appointmentId)) {
+          appointmentPaymentCounts.set(payment.appointmentId, []);
+        }
+        appointmentPaymentCounts.get(payment.appointmentId)!.push(payment);
+      }
+    });
+    
+    const multiplePayments = Array.from(appointmentPaymentCounts.entries())
+      .filter(([appointmentId, payments]) => payments.length > 1);
+    
+    console.log(`⚠️ Appointments with multiple payments: ${multiplePayments.length}`);
+    multiplePayments.forEach(([appointmentId, payments]) => {
+      const appointment = appointments.find(a => a.id === appointmentId);
+      console.log(`  - Appointment ${appointmentId} (${appointment?.patient || 'Unknown'}): ${payments.length} payments`);
+      payments.forEach((payment, index) => {
+        console.log(`    ${index + 1}. Payment ${payment.id}: Status ${payment.status}, Amount ${payment.amount}`);
+      });
+    });
+    
+  } catch (error) {
+    console.error('❌ Error debugging payment-appointment relationships:', error);
+  }
+};
+
+// ✅ NEW: Helper function to get current clinic ID
+export const getCurrentClinicId = (): string | null => {
+  try {
+    // Try to get from various sources
+    const userProfile = JSON.parse(localStorage.getItem('userProfile') || '{}');
+    if (userProfile.clinicId) {
+      return userProfile.clinicId;
+    }
+    
+    const authUser = JSON.parse(localStorage.getItem('authUser') || '{}');
+    if (authUser.clinicId) {
+      return authUser.clinicId;
+    }
+    
+    // Try to get from URL or other sources
+    const urlParams = new URLSearchParams(window.location.search);
+    const clinicFromUrl = urlParams.get('clinicId');
+    if (clinicFromUrl) {
+      return clinicFromUrl;
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error getting clinic ID:', error);
+    return null;
+  }
+};
+
+// ✅ NEW: Easy debug commands that auto-detect clinic ID
+export const debugCurrentClinicPayments = async (): Promise<void> => {
+  const clinicId = getCurrentClinicId();
+  if (!clinicId) {
+    console.error('❌ Could not detect clinic ID. Please check your login status.');
+    console.log('💡 Try: debugPaymentDuplicates("your-actual-clinic-id")');
+    return;
+  }
+  
+  console.log(`🎯 Using detected clinic ID: ${clinicId}`);
+  await findAndCleanupDuplicatePayments(clinicId);
+};
+
+export const debugCurrentClinicRelationships = async (): Promise<void> => {
+  const clinicId = getCurrentClinicId();
+  if (!clinicId) {
+    console.error('❌ Could not detect clinic ID. Please check your login status.');
+    console.log('💡 Try: debugPaymentAppointmentRelationships("your-actual-clinic-id")');
+    return;
+  }
+  
+  console.log(`🎯 Using detected clinic ID: ${clinicId}`);
+  await debugPaymentAppointmentRelationships(clinicId);
+};
+
+// Expose debugging functions to window for console access
+if (typeof window !== 'undefined') {
+  (window as any).debugPaymentDuplicates = findAndCleanupDuplicatePayments;
+  (window as any).debugPaymentAppointmentRelationships = debugPaymentAppointmentRelationships;
+  (window as any).getCurrentClinicId = getCurrentClinicId;
+  (window as any).debugCurrentClinicPayments = debugCurrentClinicPayments;
+  (window as any).debugCurrentClinicRelationships = debugCurrentClinicRelationships;
+}

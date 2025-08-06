@@ -11,7 +11,8 @@ import {
   getDocs,
   setDoc,
   serverTimestamp,
-  type Unsubscribe 
+  type Unsubscribe,
+  writeBatch
 } from 'firebase/firestore';
 import { getOptimizedFirestore, firebaseManager } from '../api/firebaseOptimized';
 
@@ -283,6 +284,20 @@ class FirebaseDataManager {
       const db = await this.getDb();
       const appointmentsRef = collection(db, this.appointmentsCollection);
       
+      // ✅ FIX: Validate essential fields before creating appointment
+      if (!appointmentData.patient || appointmentData.patient.trim() === '') {
+        throw new Error('❌ Cannot create appointment: Patient name is required');
+      }
+      if (!appointmentData.doctor || appointmentData.doctor.trim() === '') {
+        throw new Error('❌ Cannot create appointment: Doctor name is required');
+      }
+      if (!appointmentData.date || appointmentData.date.trim() === '') {
+        throw new Error('❌ Cannot create appointment: Date is required');
+      }
+      if (!appointmentData.time || appointmentData.time.trim() === '') {
+        throw new Error('❌ Cannot create appointment: Time is required');
+      }
+      
       // ✅ ENHANCED: Validate and clean appointment data to prevent undefined values
       const cleanedData = {
         ...appointmentData,
@@ -296,9 +311,9 @@ class FirebaseDataManager {
         phone: appointmentData.phone || '',
         time: appointmentData.time || '09:00',
         timeSlot: appointmentData.timeSlot || appointmentData.time || '09:00',
-        patient: appointmentData.patient || '',
-        doctor: appointmentData.doctor || 'Unknown Doctor',
-        date: appointmentData.date || new Date().toISOString().split('T')[0]
+        patient: appointmentData.patient.trim(),
+        doctor: appointmentData.doctor.trim(),
+        date: appointmentData.date.trim()
       };
       
       // Remove any undefined values
@@ -528,6 +543,85 @@ class FirebaseDataManager {
     console.log('🧹 Firebase Data Manager cleaned up');
   }
 
+  // ✅ NEW: Cleanup utility to remove empty/invalid appointments
+  public async cleanupEmptyAppointments(): Promise<{
+    totalChecked: number;
+    invalidFound: number;
+    deleted: number;
+    errors: string[];
+  }> {
+    if (!this.config?.clinicId) throw new Error('Firebase Data Manager not initialized');
+
+    try {
+      const db = await this.getDb();
+      const appointmentsRef = collection(db, this.appointmentsCollection);
+      
+      // Get all appointments for this clinic
+      const q = query(appointmentsRef, where('clinicId', '==', this.config.clinicId));
+      const snapshot = await getDocs(q);
+      
+      const appointments = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ref: doc.ref,
+        ...doc.data()
+      }));
+      
+      console.log(`🧹 Checking ${appointments.length} appointments for cleanup...`);
+      
+      // Find appointments with missing essential data
+      const invalidAppointments = appointments.filter(apt => {
+        const hasEmptyFields = !apt.patient || apt.patient.trim() === '' ||
+                              !apt.doctor || apt.doctor.trim() === '' ||
+                              !apt.date || apt.date.trim() === '' ||
+                              !apt.time || apt.time.trim() === '';
+        return hasEmptyFields;
+      });
+      
+      console.log(`🚫 Found ${invalidAppointments.length} invalid appointments`);
+      
+      let deleted = 0;
+      const errors: string[] = [];
+      
+      // Delete invalid appointments in batches
+      const batch = writeBatch(db);
+      
+      for (const apt of invalidAppointments) {
+        try {
+          console.log(`🗑️ Marking for deletion: ID ${apt.id}`, {
+            patient: apt.patient || '(empty)',
+            doctor: apt.doctor || '(empty)',
+            date: apt.date || '(empty)',
+            time: apt.time || '(empty)'
+          });
+          
+          batch.delete(apt.ref);
+          deleted++;
+        } catch (error) {
+          const errorMsg = `Failed to delete appointment ${apt.id}: ${error}`;
+          console.error(errorMsg);
+          errors.push(errorMsg);
+        }
+      }
+      
+      // Commit the batch deletion
+      if (deleted > 0) {
+        await batch.commit();
+        console.log(`✅ Successfully deleted ${deleted} invalid appointments`);
+      }
+      
+      return {
+        totalChecked: appointments.length,
+        invalidFound: invalidAppointments.length,
+        deleted,
+        errors
+      };
+      
+    } catch (error) {
+      console.error('❌ Error during cleanup:', error);
+      throw error;
+    }
+  }
+
   // ✅ GETTERS for current data
   public async getPayments(): Promise<Payment[]> {
     if (!this.config?.clinicId) return [];
@@ -628,6 +722,11 @@ class FirebaseDataManager {
 
 // ✅ EXPORT SINGLETON INSTANCE
 export const firebaseDataManager = FirebaseDataManager.getInstance();
+
+// ✅ NEW: Export getter for cleanup functions
+export const getFirebaseDataManager = (): FirebaseDataManager => {
+  return firebaseDataManager;
+};
 
 // ✅ CONVENIENCE HOOKS FOR REACT COMPONENTS
 export const useFirebaseData = (clinicId: string) => {

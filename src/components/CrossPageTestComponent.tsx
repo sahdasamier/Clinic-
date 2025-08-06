@@ -1,908 +1,221 @@
-import React, { useState, useEffect, useRef } from 'react';
-import {
-  Box,
-  Card,
-  CardContent,
-  Typography,
-  Button,
-  Grid,
-  Alert,
-  Chip,
-  Paper,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
-  ListItemSecondaryAction,
-  IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Tabs,
-  Tab,
-  Badge,
-  Tooltip,
-  LinearProgress,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-} from '@mui/material';
-import {
-  OpenInNew as OpenInNewIcon,
-  Refresh as RefreshIcon,
-  CheckCircle as CheckCircleIcon,
-  Error as ErrorIcon,
-  Warning as WarningIcon,
-  Add as AddIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  Visibility as VisibilityIcon,
-  Schedule as ScheduleIcon,
-  People as PeopleIcon,
-  Payment as PaymentIcon,
-  Inventory as InventoryIcon,
-  Notifications as NotificationsIcon,
-  Dashboard as DashboardIcon,
-  Timeline as TimelineIcon,
-  Speed as SpeedIcon,
-  Sync as SyncIcon,
-  ExpandMore as ExpandMoreIcon,
-  PlayArrow as PlayArrowIcon,
-  Stop as StopIcon,
-} from '@mui/icons-material';
-import {
-  useGlobalData,
-  useAppointments,
-  usePatients,
-  usePayments,
-  useInventory,
-  useNotifications,
-  useDashboardStats,
-  useRealtimeUpdates
-} from '../hooks/useGlobalData';
-
-interface PageSimulation {
-  name: string;
-  path: string;
-  icon: React.ReactElement;
-  description: string;
-  updates: number;
-  lastUpdate: Date | null;
-  isActive: boolean;
-}
-
-interface TestOperation {
-  id: string;
-  type: 'create' | 'update' | 'delete';
-  collection: 'appointments' | 'patients' | 'payments' | 'inventory';
-  description: string;
-  executed: boolean;
-  timestamp?: Date;
-  result?: any;
-}
+import React, { useState, useEffect } from 'react';
 
 const CrossPageTestComponent: React.FC = () => {
-  const [testRunning, setTestRunning] = useState(false);
-  const [selectedTab, setSelectedTab] = useState(0);
-  const [updateCounter, setUpdateCounter] = useState(0);
-  const [globalUpdates, setGlobalUpdates] = useState<{[key: string]: any[]}>({});
-  
-  // Simulated pages that would be listening to updates
-  const [pageSimulations, setPageSimulations] = useState<PageSimulation[]>([
-    {
-      name: 'Dashboard',
-      path: '/dashboard',
-      icon: <DashboardIcon />,
-      description: 'Main dashboard with overview statistics',
-      updates: 0,
-      lastUpdate: null,
-      isActive: true,
-    },
-    {
-      name: 'Appointments',
-      path: '/appointments',
-      icon: <ScheduleIcon />,
-      description: 'Appointment management page',
-      updates: 0,
-      lastUpdate: null,
-      isActive: true,
-    },
-    {
-      name: 'Patients',
-      path: '/patients',
-      icon: <PeopleIcon />,
-      description: 'Patient management page',
-      updates: 0,
-      lastUpdate: null,
-      isActive: true,
-    },
-    {
-      name: 'Payments',
-      path: '/payments',
-      icon: <PaymentIcon />,
-      description: 'Payment management page',
-      updates: 0,
-      lastUpdate: null,
-      isActive: true,
-    },
-    {
-      name: 'Inventory',
-      path: '/inventory',
-      icon: <InventoryIcon />,
-      description: 'Inventory management page',
-      updates: 0,
-      lastUpdate: null,
-      isActive: true,
-    },
-  ]);
+  const [testResults, setTestResults] = useState<string[]>([]);
+  const [isTestRunning, setIsTestRunning] = useState(false);
 
-  // Test operations queue
-  const [testOperations, setTestOperations] = useState<TestOperation[]>([]);
-  const [operationResults, setOperationResults] = useState<{[key: string]: any}>({});
+  const addTestResult = (message: string) => {
+    setTestResults(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${message}`]);
+    console.log(`🧪 TEST: ${message}`);
+  };
 
-  // Data hooks
-  const {
-    appointments,
-    addAppointment,
-    updateAppointment,
-    deleteAppointment,
-  } = useAppointments();
+  const clearTestResults = () => {
+    setTestResults([]);
+    console.clear();
+  };
 
-  const {
-    patients,
-    addPatient,
-    updatePatient,
-    deletePatient,
-  } = usePatients();
+  // Test payment status synchronization
+  const testPaymentSync = () => {
+    setIsTestRunning(true);
+    addTestResult('🚀 Starting Payment Synchronization Test');
 
-  const {
-    payments,
-    addPayment,
-    updatePayment,
-    deletePayment,
-  } = usePayments();
+    // Test 1: Dispatch payment status change event
+    addTestResult('📤 Test 1: Dispatching payment status change event...');
+    window.dispatchEvent(new CustomEvent('paymentStatusChanged', {
+      detail: {
+        appointmentId: 'test-appointment-123',
+        patient: 'Test Patient',
+        paymentId: 'test-payment-456',
+        oldStatus: 'pending',
+        newStatus: 'paid',
+        source: 'AppointmentListPage',
+        timestamp: Date.now()
+      }
+    }));
+    addTestResult('✅ Payment status change event dispatched');
 
-  const {
-    inventory,
-    addInventoryItem,
-    updateInventoryItem,
-    deleteInventoryItem,
-  } = useInventory();
-
-  const dashboardStats = useDashboardStats();
-  const { onDataUpdate, onError, onConnectionChange } = useRealtimeUpdates();
-
-  // Monitor real-time updates
-  useEffect(() => {
-    const unsubscribeDataUpdate = onDataUpdate((collection, data) => {
-      const timestamp = new Date();
-      
-      // Update global updates log
-      setGlobalUpdates(prev => ({
-        ...prev,
-        [collection]: [...(prev[collection] || []).slice(-9), { timestamp, count: data.length }]
+    // Test 2: Dispatch appointment payment sync event
+    setTimeout(() => {
+      addTestResult('📤 Test 2: Dispatching appointment payment sync event...');
+      window.dispatchEvent(new CustomEvent('appointmentPaymentStatusSynced', {
+        detail: {
+          appointmentId: 'test-appointment-123',
+          newStatus: 'paid',
+          source: 'PaymentListPage',
+          timestamp: Date.now()
+        }
       }));
+      addTestResult('✅ Appointment payment sync event dispatched');
+    }, 1000);
 
-      // Update counter
-      setUpdateCounter(prev => prev + 1);
-
-      // Update all page simulations
-      setPageSimulations(prev => prev.map(page => ({
-        ...page,
-        updates: page.updates + 1,
-        lastUpdate: timestamp,
-      })));
-
-      console.log(`🔄 Cross-Page Test: ${collection} update received by ALL pages`, {
-        collection,
-        dataCount: data.length,
-        timestamp: timestamp.toLocaleTimeString()
-      });
-    });
-
-    const unsubscribeError = onError((collection, error) => {
-      console.error(`❌ Cross-Page Test: Error in ${collection}`, error);
-    });
-
-    const unsubscribeConnection = onConnectionChange((status) => {
-      console.log(`🔗 Cross-Page Test: Connection status - ${status}`);
-    });
-
-    return () => {
-      unsubscribeDataUpdate();
-      unsubscribeError();
-      unsubscribeConnection();
-    };
-  }, [onDataUpdate, onError, onConnectionChange]);
-
-  // Create test operations
-  const createTestOperations = (): TestOperation[] => [
-    {
-      id: 'create-appointment',
-      type: 'create',
-      collection: 'appointments',
-      description: 'Create test appointment',
-      executed: false,
-    },
-    {
-      id: 'create-patient',
-      type: 'create',
-      collection: 'patients',
-      description: 'Create test patient',
-      executed: false,
-    },
-    {
-      id: 'create-payment',
-      type: 'create',
-      collection: 'payments',
-      description: 'Create test payment',
-      executed: false,
-    },
-    {
-      id: 'update-appointment',
-      type: 'update',
-      collection: 'appointments',
-      description: 'Update test appointment',
-      executed: false,
-    },
-    {
-      id: 'update-patient',
-      type: 'update',
-      collection: 'patients',
-      description: 'Update test patient',
-      executed: false,
-    },
-    {
-      id: 'delete-appointment',
-      type: 'delete',
-      collection: 'appointments',
-      description: 'Delete test appointment',
-      executed: false,
-    },
-    {
-      id: 'delete-patient',
-      type: 'delete',
-      collection: 'patients',
-      description: 'Delete test patient',
-      executed: false,
-    },
-  ];
-
-  // Execute single operation
-  const executeOperation = async (operation: TestOperation) => {
-    const timestamp = new Date();
-    console.log(`🚀 Executing operation: ${operation.description}`);
-
-    try {
-      let result: any;
-
-      switch (operation.id) {
-        case 'create-appointment':
-          result = await addAppointment({
-            patientId: 'test-patient-id',
-            doctorId: 'test-doctor-id',
-            branchId: 'test-branch-id',
-            date: new Date().toISOString().split('T')[0],
-            status: 'scheduled'
-          });
-          break;
-
-        case 'create-patient':
-          result = await addPatient({
-            name: 'CrossPage TestPatient',
-            firstName: 'CrossPage',
-            lastName: 'TestPatient',
-            email: 'crosspage.test@example.com',
-            phone: '555-0199',
-            dateOfBirth: '1985-06-15',
-            gender: 'other',
-            address: 'Cross-page Test Address',
-            status: 'new',
-            isActive: true,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            clinicId: 'test-clinic'
-          });
-          break;
-
-        case 'create-payment':
-          result = await addPayment({
-            patient: 'CrossPage TestPatient',
-            doctor: 'CrossPage TestDoctor',
-            amount: 250,
-            currency: 'USD',
-            status: 'pending',
-            method: 'credit_card',
-            description: 'Cross-page sync test payment',
-            clinicId: 'test-clinic',
-            date: new Date().toISOString().split('T')[0],
-            isActive: true,
-            createdAt: new Date(),
-            updatedAt: new Date()
-          });
-          break;
-
-        case 'update-appointment':
-          const appointmentToUpdate = appointments.find(apt => 
-            apt.patientId === 'test-patient-id'
-          );
-          if (appointmentToUpdate) {
-            result = await updateAppointment(appointmentToUpdate.id, {
-              status: 'completed'
-            });
-          }
-          break;
-
-        case 'update-patient':
-          const patientToUpdate = patients.find(patient => 
-            patient.firstName === 'CrossPage'
-          );
-          if (patientToUpdate) {
-            result = await updatePatient(patientToUpdate.id, {
-              phone: '555-0299',
-              address: 'Updated Cross-page Test Address'
-            });
-          }
-          break;
-
-        case 'delete-appointment':
-          const appointmentToDelete = appointments.find(apt => 
-            apt.patientId === 'test-patient-id'
-          );
-          if (appointmentToDelete) {
-            result = await deleteAppointment(appointmentToDelete.id);
-          }
-          break;
-
-        case 'delete-patient':
-          const patientToDelete = patients.find(patient => 
-            patient.firstName === 'CrossPage'
-          );
-          if (patientToDelete) {
-            result = await deletePatient(patientToDelete.id);
-          }
-          break;
-
-        default:
-          throw new Error(`Unknown operation: ${operation.id}`);
+    // Test 3: Check debug functions
+    setTimeout(() => {
+      addTestResult('🔍 Test 3: Checking debug functions...');
+      
+      if ((window as any).debugPaymentSync) {
+        addTestResult('✅ debugPaymentSync function is available');
+        (window as any).debugPaymentSync('test-appointment-123', 'Test Patient');
+      } else {
+        addTestResult('❌ debugPaymentSync function not found');
       }
 
-      // Update operation status
-      setTestOperations(prev => prev.map(op =>
-        op.id === operation.id
-          ? { ...op, executed: true, timestamp, result }
-          : op
-      ));
+      if ((window as any).debugAppointmentSync) {
+        addTestResult('✅ debugAppointmentSync function is available');
+        (window as any).debugAppointmentSync('test-appointment-123');
+      } else {
+        addTestResult('❌ debugAppointmentSync function not found');
+      }
 
-      // Store result
-      setOperationResults(prev => ({
-        ...prev,
-        [operation.id]: { success: true, result, timestamp }
-      }));
-
-      console.log(`✅ Operation completed: ${operation.description}`, result);
-
-    } catch (error) {
-      console.error(`❌ Operation failed: ${operation.description}`, error);
-      
-      setTestOperations(prev => prev.map(op =>
-        op.id === operation.id
-          ? { ...op, executed: true, timestamp, result: null }
-          : op
-      ));
-
-      setOperationResults(prev => ({
-        ...prev,
-        [operation.id]: { success: false, error: String(error), timestamp }
-      }));
-    }
+      setIsTestRunning(false);
+      addTestResult('🎯 Payment Synchronization Test Completed');
+    }, 2000);
   };
 
-  // Run comprehensive cross-page test
-  const runCrossPageTest = async () => {
-    setTestRunning(true);
-    const operations = createTestOperations();
-    setTestOperations(operations);
-    setOperationResults({});
-    setUpdateCounter(0);
-    setGlobalUpdates({});
-
-    console.log('🚀 Starting Cross-Page Communication Test...');
-
-    // Reset page simulations
-    setPageSimulations(prev => prev.map(page => ({
-      ...page,
-      updates: 0,
-      lastUpdate: null,
-    })));
-
-    // Execute operations with delays to observe real-time updates
-    for (const operation of operations) {
-      await executeOperation(operation);
-      
-      // Wait for updates to propagate
-      await new Promise(resolve => setTimeout(resolve, 2000));
-    }
-
-    setTestRunning(false);
-    console.log('🎯 Cross-Page Communication Test Completed!');
-  };
-
-  // Stop test
-  const stopTest = () => {
-    setTestRunning(false);
-    console.log('⏹️ Cross-Page Test Stopped');
-  };
-
-  // Open simulated pages
-  const openSimulatedPage = (page: PageSimulation) => {
-    // In a real scenario, this would open the page in a new tab
-    // For demo purposes, we'll just log it
-    console.log(`🔗 Opening simulated page: ${page.name} at ${page.path}`);
+  // Test console logging
+  const testConsoleLogging = () => {
+    addTestResult('🎯 Testing Console Logging...');
     
-    // You could use: window.open(`${window.location.origin}${page.path}`, '_blank');
-    alert(`In a real test, this would open ${page.name} in a new tab to verify real-time sync.`);
+    console.log('🧪 TEST LOG: Payment status change simulation');
+    console.log('📋 Simulated payment details:', {
+      appointmentId: 'test-123',
+      oldStatus: 'pending',
+      newStatus: 'paid',
+      timestamp: new Date().toISOString()
+    });
+    
+    addTestResult('✅ Console logging test completed - check browser console');
   };
 
-  const getUpdatesSummary = () => {
-    const totalUpdates = Object.values(globalUpdates).reduce(
-      (total, updates) => total + updates.length, 0
-    );
-    const collectionsWithUpdates = Object.keys(globalUpdates).length;
-    return { totalUpdates, collectionsWithUpdates };
+  // Test Firebase data manager functions
+  const testFirebaseDataManager = () => {
+    addTestResult('🔥 Testing Firebase Data Manager functions...');
+    
+    // Check if Firebase functions are available
+    const functionsToCheck = [
+      'processAllAppointmentsForPayments',
+      'syncPaymentWithAppointment',
+      'updatePaymentStatus'
+    ];
+
+    functionsToCheck.forEach(funcName => {
+      if ((window as any)[funcName]) {
+        addTestResult(`✅ ${funcName} function is available`);
+      } else {
+        addTestResult(`⚠️ ${funcName} function not found on window`);
+      }
+    });
   };
+
+  // Comprehensive test suite
+  const runFullTestSuite = () => {
+    clearTestResults();
+    addTestResult('🎯 Starting Comprehensive Payment Sync Test Suite');
+    
+    // Test console logging first
+    testConsoleLogging();
+    
+    // Test Firebase functions
+    setTimeout(() => testFirebaseDataManager(), 500);
+    
+    // Test payment synchronization
+    setTimeout(() => testPaymentSync(), 1000);
+    
+    addTestResult('🏁 Full test suite initiated - results will appear below');
+  };
+
+  // Listen for events during testing
+  useEffect(() => {
+    const handlePaymentStatusChanged = (event: CustomEvent) => {
+      addTestResult(`📨 Received paymentStatusChanged event: ${JSON.stringify(event.detail, null, 2)}`);
+    };
+
+    const handleAppointmentPaymentSynced = (event: CustomEvent) => {
+      addTestResult(`📨 Received appointmentPaymentStatusSynced event: ${JSON.stringify(event.detail, null, 2)}`);
+    };
+
+    window.addEventListener('paymentStatusChanged', handlePaymentStatusChanged as EventListener);
+    window.addEventListener('appointmentPaymentStatusSynced', handleAppointmentPaymentSynced as EventListener);
+
+    return () => {
+      window.removeEventListener('paymentStatusChanged', handlePaymentStatusChanged as EventListener);
+      window.removeEventListener('appointmentPaymentStatusSynced', handleAppointmentPaymentSynced as EventListener);
+    };
+  }, []);
 
   return (
-    <Box p={3}>
-      <Typography variant="h4" gutterBottom>
-        🔄 Cross-Page Communication Test
-      </Typography>
+    <div className="p-6 bg-white rounded-lg shadow-lg max-w-4xl mx-auto">
+      <h2 className="text-2xl font-bold mb-4 text-gray-800">
+        🧪 Payment Synchronization Testing Console
+      </h2>
+      
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <button
+          onClick={runFullTestSuite}
+          disabled={isTestRunning}
+          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
+        >
+          {isTestRunning ? '⏳ Testing...' : '🚀 Run Full Test Suite'}
+        </button>
+        
+        <button
+          onClick={testPaymentSync}
+          disabled={isTestRunning}
+          className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded disabled:opacity-50"
+        >
+          🔄 Test Payment Sync
+        </button>
+        
+        <button
+          onClick={testConsoleLogging}
+          className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded"
+        >
+          📝 Test Console Logs
+        </button>
+        
+        <button
+          onClick={clearTestResults}
+          className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded"
+        >
+          🗑️ Clear Results
+        </button>
+      </div>
 
-      <Alert severity="info" sx={{ mb: 3 }}>
-        This test verifies that when data changes in one part of the system, ALL pages receive the updates 
-        in real-time. Open multiple browser tabs to see live synchronization.
-      </Alert>
+      <div className="bg-gray-900 text-green-400 p-4 rounded-lg font-mono text-sm max-h-96 overflow-y-auto">
+        <div className="mb-2 text-gray-300">Test Results Console:</div>
+        {testResults.length === 0 ? (
+          <div className="text-gray-500">No test results yet. Click a test button to start.</div>
+        ) : (
+          testResults.map((result, index) => (
+            <div key={index} className="mb-1">
+              {result}
+            </div>
+          ))
+        )}
+      </div>
 
-      {/* System Status */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} md={3}>
-          <Card>
-            <CardContent>
-              <Box display="flex" alignItems="center" gap={2}>
-                <SyncIcon color={dashboardStats.connectionStatus === 'connected' ? 'success' : 'error'} />
-                <Box>
-                  <Typography variant="h6">
-                    {dashboardStats.connectionStatus === 'connected' ? 'Connected' : 'Disconnected'}
-                  </Typography>
-                  <Typography variant="body2" color="textSecondary">
-                    Real-time Status
-                  </Typography>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
+      <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+        <h3 className="font-semibold text-blue-800 mb-2">🔍 Manual Testing Instructions:</h3>
+        <ol className="list-decimal list-inside text-blue-700 space-y-1">
+          <li>Open the Appointments page in one browser tab</li>
+          <li>Open the Payments page in another browser tab</li>
+          <li>Create an appointment with payment status "pending"</li>
+          <li>Switch to the Appointments tab and change payment status to "paid"</li>
+          <li>Check the browser console for detailed logs</li>
+          <li>Switch to the Payments tab and verify the payment status updated</li>
+          <li>Try changing payment status from the Payments page</li>
+          <li>Verify the appointment status updates accordingly</li>
+        </ol>
+      </div>
 
-        <Grid item xs={12} md={3}>
-          <Card>
-            <CardContent>
-              <Box display="flex" alignItems="center" gap={2}>
-                <TimelineIcon color="primary" />
-                <Box>
-                  <Typography variant="h6">
-                    {updateCounter}
-                  </Typography>
-                  <Typography variant="body2" color="textSecondary">
-                    Total Updates
-                  </Typography>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} md={3}>
-          <Card>
-            <CardContent>
-              <Box display="flex" alignItems="center" gap={2}>
-                <PeopleIcon color="secondary" />
-                <Box>
-                  <Typography variant="h6">
-                    {pageSimulations.filter(p => p.isActive).length}
-                  </Typography>
-                  <Typography variant="body2" color="textSecondary">
-                    Active Pages
-                  </Typography>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} md={3}>
-          <Card>
-            <CardContent>
-              <Box display="flex" alignItems="center" gap={2}>
-                <SpeedIcon color="warning" />
-                <Box>
-                  <Typography variant="h6">
-                    {testOperations.filter(op => op.executed).length}/{testOperations.length}
-                  </Typography>
-                  <Typography variant="body2" color="textSecondary">
-                    Operations Done
-                  </Typography>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-
-      {/* Control Panel */}
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Box display="flex" justifyContent="space-between" alignItems="center">
-            <Typography variant="h6">Cross-Page Test Control</Typography>
-            <Box display="flex" gap={2}>
-              <Button
-                variant="contained"
-                onClick={runCrossPageTest}
-                disabled={testRunning}
-                startIcon={testRunning ? <StopIcon /> : <PlayArrowIcon />}
-                color="primary"
-              >
-                {testRunning ? 'Test Running...' : 'Start Cross-Page Test'}
-              </Button>
-              {testRunning && (
-                <Button
-                  variant="outlined"
-                  onClick={stopTest}
-                  startIcon={<StopIcon />}
-                  color="error"
-                >
-                  Stop Test
-                </Button>
-              )}
-              <Button
-                variant="outlined"
-                onClick={() => {
-                  setUpdateCounter(0);
-                  setGlobalUpdates({});
-                  setTestOperations([]);
-                  setOperationResults({});
-                }}
-                startIcon={<RefreshIcon />}
-              >
-                Reset
-              </Button>
-            </Box>
-          </Box>
-          
-          {testRunning && (
-            <LinearProgress sx={{ mt: 2 }} />
-          )}
-        </CardContent>
-      </Card>
-
-      <Tabs value={selectedTab} onChange={(e, newValue) => setSelectedTab(newValue)} sx={{ mb: 3 }}>
-        <Tab label="Page Simulations" />
-        <Tab label="Test Operations" />
-        <Tab label="Update Log" />
-        <Tab label="Current Data State" />
-      </Tabs>
-
-      {/* Page Simulations Tab */}
-      {selectedTab === 0 && (
-        <Grid container spacing={3}>
-          {pageSimulations.map((page, index) => (
-            <Grid item xs={12} md={6} lg={4} key={page.name}>
-              <Card sx={{ height: '100%' }}>
-                <CardContent>
-                  <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
-                    <Box display="flex" alignItems="center" gap={2}>
-                      {page.icon}
-                      <Typography variant="h6">{page.name}</Typography>
-                    </Box>
-                    <Chip
-                      label={page.isActive ? 'Active' : 'Inactive'}
-                      color={page.isActive ? 'success' : 'default'}
-                      size="small"
-                    />
-                  </Box>
-
-                  <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
-                    {page.description}
-                  </Typography>
-
-                  <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                    <Typography variant="body2">
-                      <strong>Updates Received:</strong> {page.updates}
-                    </Typography>
-                    <Badge badgeContent={page.updates} color="primary">
-                      <NotificationsIcon />
-                    </Badge>
-                  </Box>
-
-                  {page.lastUpdate && (
-                    <Typography variant="caption" color="textSecondary">
-                      Last Update: {page.lastUpdate.toLocaleTimeString()}
-                    </Typography>
-                  )}
-
-                  <Box display="flex" gap={1} mt={2}>
-                    <Button
-                      size="small"
-                      onClick={() => openSimulatedPage(page)}
-                      startIcon={<OpenInNewIcon />}
-                      variant="outlined"
-                    >
-                      Open Page
-                    </Button>
-                    <Button
-                      size="small"
-                      onClick={() => {
-                        setPageSimulations(prev => prev.map(p =>
-                          p.name === page.name ? { ...p, isActive: !p.isActive } : p
-                        ));
-                      }}
-                      variant="text"
-                    >
-                      {page.isActive ? 'Deactivate' : 'Activate'}
-                    </Button>
-                  </Box>
-                </CardContent>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
-      )}
-
-      {/* Test Operations Tab */}
-      {selectedTab === 1 && (
-        <Card>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>
-              Test Operations Queue
-            </Typography>
-            
-            <List>
-              {testOperations.map((operation) => (
-                <ListItem key={operation.id}>
-                  <ListItemIcon>
-                    {operation.type === 'create' && <AddIcon />}
-                    {operation.type === 'update' && <EditIcon />}
-                    {operation.type === 'delete' && <DeleteIcon />}
-                  </ListItemIcon>
-                  
-                  <ListItemText
-                    primary={operation.description}
-                    secondary={
-                      <Box>
-                        <Typography variant="caption">
-                          Collection: {operation.collection} | Type: {operation.type}
-                        </Typography>
-                        {operation.timestamp && (
-                          <Typography variant="caption" display="block">
-                            Executed: {operation.timestamp.toLocaleTimeString()}
-                          </Typography>
-                        )}
-                      </Box>
-                    }
-                  />
-                  
-                  <ListItemSecondaryAction>
-                    <Chip
-                      icon={operation.executed ? <CheckCircleIcon /> : <WarningIcon />}
-                      label={operation.executed ? 'Done' : 'Pending'}
-                      color={operation.executed ? 'success' : 'default'}
-                      size="small"
-                    />
-                  </ListItemSecondaryAction>
-                </ListItem>
-              ))}
-            </List>
-
-            {testOperations.length === 0 && (
-              <Typography variant="body2" color="textSecondary" align="center" sx={{ py: 4 }}>
-                No operations in queue. Start a test to see operations.
-              </Typography>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Update Log Tab */}
-      {selectedTab === 2 && (
-        <Card>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>
-              Real-time Updates Log
-            </Typography>
-
-            {Object.keys(globalUpdates).length > 0 ? (
-              Object.entries(globalUpdates).map(([collection, updates]) => (
-                <Accordion key={collection}>
-                  <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                    <Typography variant="subtitle1">
-                      {collection.charAt(0).toUpperCase() + collection.slice(1)} 
-                      <Chip label={updates.length} size="small" sx={{ ml: 1 }} />
-                    </Typography>
-                  </AccordionSummary>
-                  <AccordionDetails>
-                    <List dense>
-                      {updates.map((update, index) => (
-                        <ListItem key={index}>
-                          <ListItemText
-                            primary={`Update ${index + 1}: ${update.count} items`}
-                            secondary={update.timestamp.toLocaleTimeString()}
-                          />
-                        </ListItem>
-                      ))}
-                    </List>
-                  </AccordionDetails>
-                </Accordion>
-              ))
-            ) : (
-              <Typography variant="body2" color="textSecondary" align="center" sx={{ py: 4 }}>
-                No updates logged yet. Start a test to see real-time updates.
-              </Typography>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Current Data State Tab */}
-      {selectedTab === 3 && (
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={6}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  Data Counts
-                </Typography>
-                <List>
-                  <ListItem>
-                    <ListItemIcon><ScheduleIcon /></ListItemIcon>
-                    <ListItemText
-                      primary="Appointments"
-                      secondary={`${appointments.length} total`}
-                    />
-                  </ListItem>
-                  <ListItem>
-                    <ListItemIcon><PeopleIcon /></ListItemIcon>
-                    <ListItemText
-                      primary="Patients"
-                      secondary={`${patients.length} total`}
-                    />
-                  </ListItem>
-                  <ListItem>
-                    <ListItemIcon><PaymentIcon /></ListItemIcon>
-                    <ListItemText
-                      primary="Payments"
-                      secondary={`${payments.length} total`}
-                    />
-                  </ListItem>
-                  <ListItem>
-                    <ListItemIcon><InventoryIcon /></ListItemIcon>
-                    <ListItemText
-                      primary="Inventory"
-                      secondary={`${inventory.length} total`}
-                    />
-                  </ListItem>
-                </List>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          <Grid item xs={12} md={6}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  Test Summary
-                </Typography>
-                <List>
-                  <ListItem>
-                    <ListItemText
-                      primary="Connection Status"
-                      secondary={dashboardStats.connectionStatus}
-                    />
-                    <ListItemSecondaryAction>
-                      <Chip
-                        label={dashboardStats.isOnline ? 'Online' : 'Offline'}
-                        color={dashboardStats.isOnline ? 'success' : 'error'}
-                        size="small"
-                      />
-                    </ListItemSecondaryAction>
-                  </ListItem>
-                  <ListItem>
-                    <ListItemText
-                      primary="Total Updates Received"
-                      secondary={`${updateCounter} across all collections`}
-                    />
-                  </ListItem>
-                  <ListItem>
-                    <ListItemText
-                      primary="Collections Updated"
-                      secondary={`${Object.keys(globalUpdates).length} different collections`}
-                    />
-                  </ListItem>
-                  <ListItem>
-                    <ListItemText
-                      primary="Operations Completed"
-                      secondary={`${testOperations.filter(op => op.executed).length}/${testOperations.length}`}
-                    />
-                  </ListItem>
-                </List>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
-      )}
-
-      {/* Quick Actions */}
-      <Card sx={{ mt: 3 }}>
-        <CardContent>
-          <Typography variant="h6" gutterBottom>
-            Quick Test Actions
-          </Typography>
-          <Box display="flex" gap={2} flexWrap="wrap">
-            <Button
-              variant="outlined"
-              onClick={() => executeOperation({
-                id: 'quick-appointment',
-                type: 'create',
-                collection: 'appointments',
-                description: 'Quick test appointment',
-                executed: false
-              })}
-              startIcon={<AddIcon />}
-            >
-              Add Test Appointment
-            </Button>
-            <Button
-              variant="outlined"
-              onClick={() => executeOperation({
-                id: 'quick-patient',
-                type: 'create',
-                collection: 'patients',
-                description: 'Quick test patient',
-                executed: false
-              })}
-              startIcon={<AddIcon />}
-            >
-              Add Test Patient
-            </Button>
-            <Button
-              variant="outlined"
-              onClick={() => window.open('/dashboard', '_blank')}
-              startIcon={<OpenInNewIcon />}
-            >
-              Open Dashboard
-            </Button>
-            <Button
-              variant="outlined"
-              onClick={() => window.open('/appointments', '_blank')}
-              startIcon={<OpenInNewIcon />}
-            >
-              Open Appointments
-            </Button>
-            <Button
-              variant="outlined"
-              onClick={() => window.open('/patients', '_blank')}
-              startIcon={<OpenInNewIcon />}
-            >
-              Open Patients
-            </Button>
-          </Box>
-        </CardContent>
-      </Card>
-    </Box>
+      <div className="mt-4 p-4 bg-yellow-50 rounded-lg">
+        <h3 className="font-semibold text-yellow-800 mb-2">🎯 Console Commands Available:</h3>
+        <ul className="list-disc list-inside text-yellow-700 space-y-1">
+          <li><code>debugPaymentSync(appointmentId, patient)</code> - Debug payment synchronization</li>
+          <li><code>debugAppointmentSync(appointmentId)</code> - Debug appointment synchronization</li>
+          <li>Open browser console (F12) to see detailed logs</li>
+        </ul>
+      </div>
+    </div>
   );
 };
 

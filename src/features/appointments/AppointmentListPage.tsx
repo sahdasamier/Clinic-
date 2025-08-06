@@ -634,26 +634,75 @@ const AppointmentListPage: React.FC = () => {
   // ✅ NEW: Listen for appointment payment status sync events
   useEffect(() => {
     const handleAppointmentPaymentStatusSync = (event: CustomEvent) => {
-      console.log('💚 Appointment page: Payment status synced from payment page:', event.detail);
+      console.log('💚 APPOINTMENT PAGE: Payment status synced from payment page');
+      console.log('📋 Sync Event Details:', event.detail);
       
       // Force refresh to get updated appointment data
       FirebaseDataBridge.refreshAll(userProfile.clinicId || 'demo-clinic');
       
-      const { appointmentId, patient, paymentId, newStatus } = event.detail;
-      console.log(`💰 Appointment page synced: Appointment ${appointmentId} payment ${paymentId} status → ${newStatus}`);
+      const { appointmentId, patient, paymentId, newStatus, source } = event.detail;
+      console.log('💰 Payment Status Sync Summary:', {
+        appointmentId,
+        patient,
+        paymentId,
+        newStatus,
+        source,
+        timestamp: new Date().toISOString()
+      });
+
+      // Update local appointment state immediately
+      setAppointmentList(prev => prev.map(apt => 
+        apt.id === appointmentId 
+          ? { ...apt, paymentStatus: newStatus }
+          : apt
+      ));
+
+      console.log('✅ Local appointment state updated with new payment status');
+    };
+
+    // ✅ NEW: Enhanced payment status change handler
+    const handlePaymentStatusChange = (event: CustomEvent) => {
+      console.log('💚 APPOINTMENT PAGE: Payment status changed event received');
+      console.log('📋 Payment Change Details:', event.detail);
+      
+      const { appointmentId, newStatus, source, updated } = event.detail;
+      
+      if (source !== 'AppointmentListPage') {
+        console.log('🔄 External payment status change detected, updating appointment');
+        
+        // Update appointment payment status locally
+        setAppointmentList(prev => prev.map(apt => 
+          apt.id === appointmentId 
+            ? { ...apt, paymentStatus: newStatus }
+            : apt
+        ));
+        
+        console.log('✅ Appointment payment status updated from external source:', {
+          appointmentId,
+          newStatus,
+          source,
+          updated
+        });
+      } else {
+        console.log('📝 Payment status change originated from this page, no action needed');
+      }
     };
 
     // Add event listeners
     window.addEventListener('paymentStatusChanged', handlePaymentStatusChange as EventListener);
     window.addEventListener('appointmentPaymentStatusSynced', handleAppointmentPaymentStatusSync as EventListener);
+    window.addEventListener('appointmentPaymentStatusSync', handleAppointmentPaymentStatusSync as EventListener);
+
+    console.log('👂 Payment status sync event listeners registered');
 
     // Cleanup on unmount
     return () => {
-      console.log('💚 AppointmentListPage: Cleaning up event listeners...');
+      console.log('💚 AppointmentListPage: Cleaning up payment sync event listeners...');
       window.removeEventListener('paymentStatusChanged', handlePaymentStatusChange as EventListener);
       window.removeEventListener('appointmentPaymentStatusSynced', handleAppointmentPaymentStatusSync as EventListener);
+      window.removeEventListener('appointmentPaymentStatusSync', handleAppointmentPaymentStatusSync as EventListener);
     };
-  }, []);
+  }, [userProfile?.clinicId]);
 
   // ✅ FIREBASE DATA MANAGER - Real-time synchronization
   useEffect(() => {
@@ -1226,6 +1275,16 @@ const AppointmentListPage: React.FC = () => {
     if (!paymentStatusEditAppointment) return;
 
     try {
+      console.log('🎯 APPOINTMENT PAYMENT STATUS CHANGE STARTED:');
+      console.log('📋 Appointment Details:', {
+        appointmentId: paymentStatusEditAppointment.id,
+        patientName: paymentStatusEditAppointment.patient,
+        currentPaymentStatus: paymentStatusEditAppointment.paymentStatus,
+        newPaymentStatus: newPaymentStatus,
+        appointmentStatus: paymentStatusEditAppointment.status,
+        timestamp: new Date().toISOString()
+      });
+
       // ✅ Ensure Firebase Data Manager is initialized
       if (!userProfile?.clinicId) {
         throw new Error('User profile or clinic ID not available');
@@ -1236,18 +1295,28 @@ const AppointmentListPage: React.FC = () => {
         userId: userProfile.id
       });
       
+      console.log('🔥 Firebase Data Manager initialized for clinic:', userProfile.clinicId);
+      
       // ✅ Use Firebase Data Manager with cross-page sync
+      console.log('🔄 Syncing appointment payment status in Firebase...');
       await dataManager.syncAppointmentPaymentStatus(
         paymentStatusEditAppointment.id,
         newPaymentStatus
       );
       
+      console.log('✅ Firebase appointment payment status synced successfully');
+      
       // ✅ ENHANCED: Use the new utility function to safely update or create payment
       try {
+        console.log('💰 Attempting to update or create payment record...');
         const { updateOrCreatePaymentForAppointment } = await import('../../utils/paymentUtils');
         
         // Map appointment payment status to payment status
         const mappedStatus = mapAppointmentPaymentStatusToPaymentStatus(newPaymentStatus);
+        console.log('🔄 Mapped payment status:', {
+          originalStatus: newPaymentStatus,
+          mappedStatus: mappedStatus
+        });
         
         const result = await updateOrCreatePaymentForAppointment(
           {
@@ -1262,17 +1331,64 @@ const AppointmentListPage: React.FC = () => {
         );
         
         if (result.updated) {
-          console.log(`✅ Updated existing payment ${result.paymentId} status: ${newPaymentStatus} → ${mappedStatus}`);
+          console.log('✅ PAYMENT SYNC SUCCESS: Updated existing payment');
+          console.log('💰 Payment Details:', {
+            paymentId: result.paymentId,
+            action: 'updated',
+            newStatus: mappedStatus,
+            appointmentId: paymentStatusEditAppointment.id,
+            timestamp: new Date().toISOString()
+          });
         } else {
-          console.log(`✅ Created new payment ${result.paymentId} with status: ${mappedStatus}`);
+          console.log('✅ PAYMENT SYNC SUCCESS: Created new payment');
+          console.log('💰 Payment Details:', {
+            paymentId: result.paymentId,
+            action: 'created',
+            status: mappedStatus,
+            appointmentId: paymentStatusEditAppointment.id,
+            timestamp: new Date().toISOString()
+          });
         }
+
+        // ✅ NEW: Dispatch cross-page event for immediate UI updates
+        window.dispatchEvent(new CustomEvent('paymentStatusChanged', {
+          detail: {
+            appointmentId: paymentStatusEditAppointment.id,
+            patient: paymentStatusEditAppointment.patient,
+            paymentId: result.paymentId,
+            oldStatus: paymentStatusEditAppointment.paymentStatus,
+            newStatus: mappedStatus,
+            source: 'AppointmentListPage',
+            timestamp: Date.now(),
+            updated: result.updated,
+            appointmentType: paymentStatusEditAppointment.type,
+            appointmentDate: paymentStatusEditAppointment.date
+          }
+        }));
+        
+        console.log('📢 CROSS-PAGE EVENT DISPATCHED: paymentStatusChanged');
+        console.log('🔄 Event Details:', {
+          eventType: 'paymentStatusChanged',
+          appointmentId: paymentStatusEditAppointment.id,
+          oldStatus: paymentStatusEditAppointment.paymentStatus,
+          newStatus: mappedStatus,
+          source: 'AppointmentListPage'
+        });
+        
       } catch (paymentError) {
-        console.error('❌ Error syncing payment record:', paymentError);
+        console.error('❌ PAYMENT SYNC ERROR:', paymentError);
+        console.error('💰 Failed Payment Sync Details:', {
+          appointmentId: paymentStatusEditAppointment.id,
+          targetStatus: newPaymentStatus,
+          error: paymentError.message || paymentError,
+          timestamp: new Date().toISOString()
+        });
         // Don't fail the appointment update if payment sync fails
       }
       
       // ✅ SIMPLIFIED: Firebase handles real-time sync automatically
-      console.log('✅ Payment status updated in Firebase - real-time listeners will handle sync');
+      console.log('🔄 Payment status updated in Firebase - real-time listeners will handle sync');
+      console.log('📋 APPOINTMENT PAYMENT STATUS CHANGE COMPLETED SUCCESSFULLY');
       
       // ✅ State updates automatically via real-time listener!
       console.log('✅ Payment status updated via Firestore and synced across pages');
@@ -1280,7 +1396,14 @@ const AppointmentListPage: React.FC = () => {
       setPaymentStatusMenuAnchor(null);
       setPaymentStatusEditAppointment(null);
     } catch (error) {
-      console.error('❌ Error updating payment status:', error);
+      console.error('❌ APPOINTMENT PAYMENT STATUS CHANGE FAILED:', error);
+      console.error('💥 Error Details:', {
+        appointmentId: paymentStatusEditAppointment?.id,
+        targetStatus: newPaymentStatus,
+        error: error.message || error,
+        timestamp: new Date().toISOString(),
+        stack: error.stack
+      });
     }
   };
 
@@ -1825,6 +1948,30 @@ const AppointmentListPage: React.FC = () => {
 
   const getFilteredAppointments = () => {
     let filtered = appointments.filter(appointment => {
+      // ✅ FIX: First validate that appointment has essential data
+      const isValidAppointment = appointment && 
+        appointment.id && 
+        appointment.patient && 
+        appointment.patient.trim() !== '' &&
+        appointment.doctor && 
+        appointment.doctor.trim() !== '' &&
+        appointment.date && 
+        appointment.date.trim() !== '' &&
+        appointment.time && 
+        appointment.time.trim() !== '';
+      
+      // ✅ FIX: Skip invalid appointments completely
+      if (!isValidAppointment) {
+        console.warn('🚫 Filtering out invalid appointment:', {
+          id: appointment?.id,
+          patient: appointment?.patient,
+          doctor: appointment?.doctor,
+          date: appointment?.date,
+          time: appointment?.time
+        });
+        return false;
+      }
+      
       const matchesSearch = searchQuery === '' || 
         (appointment.patient && appointment.patient.toLowerCase().includes(searchQuery.toLowerCase())) ||
         (appointment.doctor && appointment.doctor.toLowerCase().includes(searchQuery.toLowerCase())) ||
@@ -1890,6 +2037,112 @@ const AppointmentListPage: React.FC = () => {
   const upcomingAppointments = appointments.filter(apt => new Date(apt.date) > new Date(selectedDate));
   const completedToday = todayAppointments.filter(apt => apt.completed).length;
   const pendingToday = todayAppointments.filter(apt => !apt.completed).length;
+
+  // ✅ NEW: Debug function for finding empty appointments
+  useEffect(() => {
+    (window as any).debugEmptyAppointments = () => {
+      console.log('🔍 DEBUGGING EMPTY APPOINTMENTS...');
+      console.log(`📊 Total appointments: ${appointments.length}`);
+      
+      const emptyAppointments = appointments.filter(apt => {
+        const hasEmptyFields = !apt.patient || apt.patient.trim() === '' ||
+                              !apt.doctor || apt.doctor.trim() === '' ||
+                              !apt.date || apt.date.trim() === '' ||
+                              !apt.time || apt.time.trim() === '';
+        return hasEmptyFields;
+      });
+      
+      console.log(`🚫 Found ${emptyAppointments.length} appointments with empty fields:`);
+      emptyAppointments.forEach((apt, index) => {
+        console.log(`   ${index + 1}. ID: ${apt.id}`, {
+          patient: apt.patient || '(empty)',
+          doctor: apt.doctor || '(empty)',
+          date: apt.date || '(empty)',
+          time: apt.time || '(empty)',
+          status: apt.status,
+          type: apt.type
+        });
+      });
+      
+      console.log(`✅ Valid appointments: ${appointments.length - emptyAppointments.length}`);
+      console.log(`❌ Invalid appointments: ${emptyAppointments.length}`);
+      
+      if (emptyAppointments.length > 0) {
+        console.log('💡 To remove empty appointments, you can:');
+        console.log('   1. Check your data sources (Firebase, localStorage)');
+        console.log('   2. Run a cleanup script');
+        console.log('   3. The filter now prevents them from displaying');
+      }
+      
+      return {
+        total: appointments.length,
+        valid: appointments.length - emptyAppointments.length,
+        invalid: emptyAppointments.length,
+        emptyAppointments
+      };
+    };
+    
+         // Auto-run debug on mount if there are appointments
+     if (appointments.length > 0) {
+       const debugResult = (window as any).debugEmptyAppointments();
+       if (debugResult.invalid > 0) {
+         console.warn(`⚠️ Found ${debugResult.invalid} empty appointments that will be filtered out`);
+       }
+     }
+     
+     // ✅ NEW: Global cleanup function
+     (window as any).cleanupEmptyAppointments = async () => {
+       console.log('🧹 STARTING GLOBAL CLEANUP OF EMPTY APPOINTMENTS...');
+       
+       try {
+         // Step 1: Clean up Firebase data
+         console.log('🔥 Step 1: Cleaning Firebase appointments...');
+         const firebaseDataManager = await import('../../utils/firebaseDataManager');
+         const manager = firebaseDataManager.getFirebaseDataManager();
+         
+         if (manager) {
+           const fbResult = await manager.cleanupEmptyAppointments();
+           console.log('🔥 Firebase cleanup result:', fbResult);
+         } else {
+           console.warn('⚠️ Firebase Data Manager not available');
+         }
+         
+         // Step 2: Clean localStorage
+         console.log('💾 Step 2: Cleaning localStorage appointments...');
+         const paymentUtils = await import('../../utils/paymentUtils');
+         const appointments = paymentUtils.loadAppointmentsFromStorage();
+         const validAppointments = appointments.filter(apt => 
+           apt.patient && apt.patient.trim() !== '' &&
+           apt.doctor && apt.doctor.trim() !== '' &&
+           apt.date && apt.date.trim() !== '' &&
+           apt.time && apt.time.trim() !== ''
+         );
+         
+         const removedCount = appointments.length - validAppointments.length;
+         if (removedCount > 0) {
+           paymentUtils.saveAppointmentsToStorage(validAppointments);
+           console.log(`💾 Removed ${removedCount} empty appointments from localStorage`);
+         }
+         
+         // Step 3: Trigger data refresh
+         console.log('🔄 Step 3: Refreshing data...');
+         setTimeout(() => window.location.reload(), 1000);
+         
+         return {
+           success: true,
+           message: `Cleanup completed! Removed empty appointments and refreshing page...`,
+           removedFromStorage: removedCount
+         };
+         
+       } catch (error) {
+         console.error('❌ Cleanup failed:', error);
+         return {
+           success: false,
+           error: error.message
+         };
+       }
+     };
+   }, [appointments]);
 
   // Show loading spinner while data is loading
   if (appointmentsLoading || patientsLoading) {

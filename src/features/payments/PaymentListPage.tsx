@@ -917,13 +917,104 @@ const PaymentListPage: React.FC = () => {
     };
     
     const handleAppointmentPaymentSynced = (event: CustomEvent) => {
-      console.log('🔄 Cross-page event: Appointment payment synced', event.detail);
+      console.log('🔄 PAYMENT PAGE: Appointment payment synced from appointment page');
+      console.log('📋 Sync Event Details:', event.detail);
+      
+      const { appointmentId, newStatus, source } = event.detail;
+      
+      // Update payment status locally if change came from appointment page
+      if (source !== 'PaymentListPage') {
+        setPayments(prev => prev.map(payment => 
+          payment.appointmentId === appointmentId 
+            ? { ...payment, status: newStatus }
+            : payment
+        ));
+        
+        console.log('✅ Payment status updated from appointment sync:', {
+          appointmentId,
+          newStatus,
+          source
+        });
+      }
+      
       // Show notification
       setSnackbar({
         open: true,
-        message: `Payment status synced for appointment ${event.detail.appointmentId}`,
+        message: `Payment status synced for appointment ${appointmentId}: ${newStatus}`,
         severity: 'info'
       });
+    };
+
+    // ✅ NEW: Handle payment status changes from appointment page
+    const handlePaymentStatusChangeFromAppointment = (event: CustomEvent) => {
+      console.log('💚 PAYMENT PAGE: Payment status changed from appointment page');
+      console.log('📋 Appointment Change Details:', event.detail);
+      
+      const { appointmentId, newStatus, source, paymentId, patient } = event.detail;
+      
+      if (source === 'AppointmentListPage') {
+        console.log('🔄 Appointment-initiated payment status change detected');
+        
+        // Update payment status locally - search by appointmentId or patient name
+        setPayments(prev => {
+          const updatedPayments = prev.map(payment => {
+            const shouldUpdate = 
+              payment.appointmentId === appointmentId || 
+              payment.id.toString() === paymentId ||
+              (payment.patient === patient && !payment.appointmentId); // Fallback for payments without appointmentId
+            
+            if (shouldUpdate) {
+              console.log('🎯 Updating payment:', {
+                paymentId: payment.id,
+                invoiceId: payment.invoiceId,
+                oldStatus: payment.status,
+                newStatus: newStatus,
+                matchedBy: payment.appointmentId === appointmentId ? 'appointmentId' : 
+                          payment.id.toString() === paymentId ? 'paymentId' : 'patient'
+              });
+              
+              return { 
+                ...payment, 
+                status: newStatus,
+                // Update paidAmount if status is paid
+                paidAmount: newStatus === 'paid' ? payment.amount : 
+                           newStatus === 'pending' ? 0 : payment.paidAmount
+              };
+            }
+            return payment;
+          });
+          
+          // Save updated payments to localStorage immediately
+          try {
+            localStorage.setItem('clinic_payments_data', JSON.stringify(updatedPayments));
+            console.log('💾 Updated payments saved to localStorage');
+          } catch (error) {
+            console.error('❌ Error saving updated payments:', error);
+          }
+          
+          return updatedPayments;
+        });
+        
+        console.log('✅ Payment updated from appointment page change:', {
+          appointmentId,
+          paymentId,
+          newStatus,
+          source,
+          patient
+        });
+        
+        // Force re-render
+        setForceRenderKey(prev => prev + 1);
+        
+        // Show success notification
+        setSnackbar({
+          open: true,
+          message: `Payment status updated to ${newStatus} from appointment change`,
+          severity: 'success'
+        });
+      } else {
+        console.log('📝 Payment status change not from appointment page, ignoring');
+      }
     };
     
     // Listen for VAT adjustments updates
@@ -978,9 +1069,12 @@ const PaymentListPage: React.FC = () => {
     window.addEventListener('paymentCreated', handlePaymentCreated as EventListener);
     window.addEventListener('paymentUpdated', handlePaymentUpdated as EventListener);
     window.addEventListener('appointmentPaymentSynced', handleAppointmentPaymentSynced as EventListener);
+    window.addEventListener('paymentStatusChanged', handlePaymentStatusChangeFromAppointment as EventListener);
     window.addEventListener('vatAdjustmentsUpdated', handleVATAdjustmentsUpdated as EventListener);
     window.addEventListener('employeesUpdated', handleEmployeesUpdated as EventListener);
     window.addEventListener('businessExpensesUpdated', handleBusinessExpensesUpdated as EventListener);
+    
+    console.log('👂 Payment page event listeners registered for cross-page sync');
     
     // Handle user data clearing
     const handleUserDataCleared = () => {
@@ -1025,12 +1119,13 @@ const PaymentListPage: React.FC = () => {
       window.removeEventListener('paymentCreated', handlePaymentCreated as EventListener);
       window.removeEventListener('paymentUpdated', handlePaymentUpdated as EventListener);
       window.removeEventListener('appointmentPaymentSynced', handleAppointmentPaymentSynced as EventListener);
+      window.removeEventListener('paymentStatusChanged', handlePaymentStatusChangeFromAppointment as EventListener);
       window.removeEventListener('vatAdjustmentsUpdated', handleVATAdjustmentsUpdated as EventListener);
       window.removeEventListener('employeesUpdated', handleEmployeesUpdated as EventListener);
       window.removeEventListener('businessExpensesUpdated', handleBusinessExpensesUpdated as EventListener);
       window.removeEventListener('userDataCleared', handleUserDataCleared);
       window.removeEventListener('openAddPayment', handleOpenAddPayment);
-      console.log('🧹 Cleaned up payment listeners');
+      console.log('🧹 Cleaned up payment page event listeners');
     };
   }, [userProfile?.clinicId]);
 
@@ -1203,19 +1298,22 @@ const PaymentListPage: React.FC = () => {
   const automaticVATFromPayments = paymentsWithVAT.reduce((sum, p) => sum + (p.vatAmount || 0), 0);
   const hasVATPayments = paymentsWithVAT.length > 0;
 
+  // ❌ DISABLED: Automatic payment processing to prevent duplicates
   // Process appointments to create payments
-  useEffect(() => {
-    if (appointments.length > 0) {
-      processAllAppointmentsForPayments(appointments);
-      
-      // Reload payments after processing appointments
-      setTimeout(() => {
-        const updatedPayments = loadPaymentsFromStorage();
-        setPayments(updatedPayments);
-        console.log(`🔄 Reloaded ${updatedPayments.length} payments after processing appointments`);
-      }, 100);
-    }
-  }, [appointments]);
+  // useEffect(() => {
+  //   if (appointments.length > 0) {
+  //     processAllAppointmentsForPayments(appointments);
+  //     
+  //     // Reload payments after processing appointments
+  //     setTimeout(() => {
+  //       const updatedPayments = loadPaymentsFromStorage();
+  //       setPayments(updatedPayments);
+  //       console.log(`🔄 Reloaded ${updatedPayments.length} payments after processing appointments`);
+  //     }, 100);
+  //   }
+  // }, [appointments]);
+  
+  console.log('ℹ️ Automatic payment processing disabled to prevent duplicate payments');
 
   // Calculate comprehensive financial summary including salaries, business expenses, and VAT adjustments
   // Use refreshTrigger to force recalculation when VAT adjustments change
@@ -1632,26 +1730,110 @@ const PaymentListPage: React.FC = () => {
 
   const handleChangeStatus = async (newStatus: string) => {
     if (selectedPaymentForStatusChange) {
-      console.log(`🎯 STATUS MENU: Changing ${selectedPaymentForStatusChange.invoiceId} status from ${selectedPaymentForStatusChange.status} → ${newStatus}`);
+      console.log('🎯 PAYMENT STATUS CHANGE STARTED:');
+      console.log('💳 Payment Details:', {
+        id: selectedPaymentForStatusChange.id,
+        invoiceId: selectedPaymentForStatusChange.invoiceId,
+        patient: selectedPaymentForStatusChange.patient,
+        appointmentId: selectedPaymentForStatusChange.appointmentId,
+        currentStatus: selectedPaymentForStatusChange.status,
+        newStatus: newStatus,
+        currentPaidAmount: selectedPaymentForStatusChange.paidAmount,
+        totalAmount: selectedPaymentForStatusChange.amount,
+        timestamp: new Date().toISOString()
+      });
       
-      await handleUpdatePaymentStatus(selectedPaymentForStatusChange.id, newStatus);
-      
-      // ✅ FORCE: Immediate UI refresh
-      setTimeout(() => {
-        const refreshedPayments = loadPaymentsFromStorage();
-        setPayments(refreshedPayments);
-        forceRerender(); // Force UI re-render
-        console.log(`🔄 STATUS MENU: UI refreshed with ${refreshedPayments.length} payments`);
+      try {
+        console.log('🔄 Calling handleUpdatePaymentStatus...');
+        await handleUpdatePaymentStatus(selectedPaymentForStatusChange.id, newStatus);
         
-        const updatedPayment = refreshedPayments.find(p => p.id === selectedPaymentForStatusChange.id);
-        console.log(`✅ STATUS MENU: Payment ${selectedPaymentForStatusChange.invoiceId} new status: ${updatedPayment?.status}`);
-      }, 50);
-      
-      // ✅ IMMEDIATE: Force re-render right away
-      forceRerender();
-      
-      // ✅ Additional event for status menu changes
-      console.log(`✅ Payment status menu change: ${selectedPaymentForStatusChange.invoiceId} → ${newStatus}`);
+        console.log('✅ handleUpdatePaymentStatus completed, verifying changes...');
+        
+        // ✅ ENHANCED: Wait a bit longer for the update to complete
+        setTimeout(() => {
+          const refreshedPayments = loadPaymentsFromStorage();
+          const updatedPayment = refreshedPayments.find(p => p.id === selectedPaymentForStatusChange.id);
+          
+          console.log('🔍 PAYMENT STATUS VERIFICATION:', {
+            originalStatus: selectedPaymentForStatusChange.status,
+            requestedStatus: newStatus,
+            actualStatus: updatedPayment?.status,
+            actualPaidAmount: updatedPayment?.paidAmount,
+            statusUpdateSuccessful: updatedPayment?.status === newStatus,
+            paymentFound: !!updatedPayment,
+            timestamp: new Date().toISOString()
+          });
+          
+          if (updatedPayment?.status !== newStatus) {
+            console.warn('⚠️ PAYMENT STATUS MISMATCH DETECTED:');
+            console.warn('📊 Mismatch Details:', {
+              expected: newStatus,
+              actual: updatedPayment?.status,
+              paymentId: selectedPaymentForStatusChange.id,
+              invoiceId: selectedPaymentForStatusChange.invoiceId
+            });
+            setSnackbar({
+              open: true,
+              message: `⚠️ Status update issue: Expected ${newStatus} but got ${updatedPayment?.status}. Check console for details.`,
+              severity: 'warning'
+            });
+          } else {
+            console.log('✅ PAYMENT STATUS UPDATE SUCCESSFUL:');
+            console.log('🎉 Success Details:', {
+              invoiceId: selectedPaymentForStatusChange.invoiceId,
+              statusChange: `${selectedPaymentForStatusChange.status} → ${newStatus}`,
+              timestamp: new Date().toISOString()
+            });
+
+            // ✅ NEW: Dispatch cross-page event for appointment synchronization
+            if (selectedPaymentForStatusChange.appointmentId) {
+              console.log('📢 DISPATCHING CROSS-PAGE EVENT: appointmentPaymentStatusSync');
+              window.dispatchEvent(new CustomEvent('appointmentPaymentStatusSync', {
+                detail: {
+                  appointmentId: selectedPaymentForStatusChange.appointmentId,
+                  patient: selectedPaymentForStatusChange.patient,
+                  paymentId: selectedPaymentForStatusChange.id,
+                  invoiceId: selectedPaymentForStatusChange.invoiceId,
+                  oldStatus: selectedPaymentForStatusChange.status,
+                  newStatus: newStatus,
+                  source: 'PaymentListPage',
+                  timestamp: Date.now()
+                }
+              }));
+              
+              console.log('🔗 Appointment Sync Event Details:', {
+                eventType: 'appointmentPaymentStatusSync',
+                appointmentId: selectedPaymentForStatusChange.appointmentId,
+                statusChange: `${selectedPaymentForStatusChange.status} → ${newStatus}`,
+                source: 'PaymentListPage'
+              });
+            }
+          }
+          
+          setPayments(refreshedPayments);
+          forceRerender();
+          
+        }, 100); // Increased timeout to ensure localStorage update completes
+        
+        // ✅ IMMEDIATE: Force re-render right away
+        forceRerender();
+        
+      } catch (error) {
+        console.error('❌ PAYMENT STATUS CHANGE FAILED:', error);
+        console.error('💥 Payment Error Details:', {
+          paymentId: selectedPaymentForStatusChange.id,
+          invoiceId: selectedPaymentForStatusChange.invoiceId,
+          targetStatus: newStatus,
+          error: error.message || error,
+          timestamp: new Date().toISOString(),
+          stack: error.stack
+        });
+        setSnackbar({
+          open: true,
+          message: `Failed to update payment status: ${error.message}`,
+          severity: 'error'
+        });
+      }
     }
     handleCloseStatusMenu();
   };
@@ -1891,6 +2073,78 @@ ${formatDate(new Date().toISOString())}
     </Box>
   );
 
+  // ✅ DEBUG: Add console command for payment synchronization debugging
+  useEffect(() => {
+    (window as any).debugPaymentSync = (appointmentId?: string, patient?: string) => {
+      console.log('🔍 PAYMENT SYNC DEBUG:');
+      console.log('📊 Current payments:', payments.length);
+      
+      if (appointmentId || patient) {
+        const matchingPayments = payments.filter(payment => 
+          (appointmentId && payment.appointmentId === appointmentId) ||
+          (patient && payment.patient === patient)
+        );
+        
+        console.log('🎯 Matching payments:', matchingPayments.map(p => ({
+          id: p.id,
+          invoiceId: p.invoiceId,
+          patient: p.patient,
+          appointmentId: p.appointmentId,
+          status: p.status,
+          amount: p.amount,
+          paidAmount: p.paidAmount
+        })));
+        
+        if (matchingPayments.length === 0) {
+          console.log('❌ No payments found for:', { appointmentId, patient });
+          console.log('📋 All payments:', payments.map(p => ({
+            id: p.id,
+            patient: p.patient,
+            appointmentId: p.appointmentId,
+            status: p.status
+          })));
+        }
+      } else {
+        console.log('📋 All payments:', payments.map(p => ({
+          id: p.id,
+          invoiceId: p.invoiceId,
+          patient: p.patient,
+          appointmentId: p.appointmentId,
+          status: p.status,
+          amount: p.amount,
+          paidAmount: p.paidAmount
+        })));
+      }
+      
+      return payments;
+    };
+    
+    (window as any).testPaymentSync = (appointmentId: string, newStatus: string, patient?: string) => {
+      console.log('🧪 TESTING PAYMENT SYNC:');
+      console.log('📝 Test parameters:', { appointmentId, newStatus, patient });
+      
+      // Simulate the event from appointment page
+      window.dispatchEvent(new CustomEvent('paymentStatusChanged', {
+        detail: {
+          appointmentId,
+          patient: patient || 'Test Patient',
+          paymentId: 'test-payment-id',
+          oldStatus: 'pending',
+          newStatus,
+          source: 'AppointmentListPage',
+          timestamp: Date.now()
+        }
+      }));
+      
+      console.log('✅ Test event dispatched');
+    };
+    
+    console.log('🔧 Payment sync debug commands available:');
+    console.log('   • debugPaymentSync() - Show all payments');
+    console.log('   • debugPaymentSync(appointmentId, patient) - Find specific payments');
+    console.log('   • testPaymentSync(appointmentId, newStatus, patient) - Test sync');
+  }, [payments]);
+
   // Show loading state while connecting to Firebase
   if (dataLoading && !firebaseConnected) {
     return (
@@ -1916,8 +2170,6 @@ ${formatDate(new Date().toISOString())}
       </Container>
     );
   }
-
-
 
   return (
     <Container key={`payment-list-${forceRenderKey}`} maxWidth="xl" sx={{ mt: 4, mb: 4, flex: 1, overflow: 'auto', direction: isRTL ? 'rtl' : 'ltr' }}>
