@@ -74,6 +74,8 @@ const PatientFormFirebase: React.FC<PatientFormFirebaseProps> = ({
       email: '',
       phone: '',
       doctorName: '',
+      doctor: '',
+      doctorId: '',
       medicalHistory: ''
     },
     validationRules: {
@@ -82,6 +84,8 @@ const PatientFormFirebase: React.FC<PatientFormFirebaseProps> = ({
       email: commonValidationRules.email,
       phone: commonValidationRules.phone,
       doctorName: { maxLength: 100 },
+      doctor: { maxLength: 100 },
+      doctorId: { maxLength: 100 },
       medicalHistory: { maxLength: 2000 }
     },
     enableRealTimeSync: false
@@ -329,14 +333,20 @@ const PatientFormFirebase: React.FC<PatientFormFirebaseProps> = ({
                 />
               </Grid>
 
-              {/* Doctor */}
+              {/* Doctor Assignment - Note: This form uses simple text input for doctor name.
+                  For full doctor assignment functionality, edit patients through the main PatientListPage. */}
               <Grid item xs={12} md={6}>
                 <TextField
                   {...getTextFieldValidationProps(errors.doctorName, isValid)}
                   fullWidth
-                  label="Assigned Doctor"
+                  label="Assigned Doctor (Optional)"
                   value={patientData.doctorName || ''}
-                  onChange={(e) => updateField('doctorName', e.target.value)}
+                  onChange={(e) => {
+                    updateField('doctorName', e.target.value);
+                    // For consistency, also set the doctor field to the same value
+                    // Note: For proper ID-based assignment, use the main PatientListPage edit function
+                    updateField('doctor', e.target.value);
+                  }}
                   placeholder="Dr. John Smith"
                   InputProps={{
                     startAdornment: (
@@ -345,7 +355,7 @@ const PatientFormFirebase: React.FC<PatientFormFirebaseProps> = ({
                       </InputAdornment>
                     ),
                   }}
-                  helperText={errors.doctorName || 'Enter the assigned doctor name'}
+                  helperText={errors.doctorName || 'Enter doctor name or leave blank to assign later'}
                 />
               </Grid>
 

@@ -64,6 +64,10 @@ export interface Patient {
   status: 'new' | 'old' | 'follow-up' | 'admitted' | 'transferred' | 'discharged';
   lastVisit?: string;
   nextAppointment?: string;
+  // ✅ Doctor assignment fields - REQUIRED for proper patient-doctor linking
+  doctor?: string; // Can store either doctor name or doctor ID
+  doctorId?: string; // Firebase user ID of assigned doctor
+  doctorName?: string; // Display name of assigned doctor
   medicalHistory?: Array<{
     date: string;
     condition: string;
