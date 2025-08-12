@@ -44,12 +44,15 @@ import {
   Alert,
   CircularProgress,
   Snackbar,
+  LinearProgress,
 } from '@mui/material';
 import { safeFirestore } from '../../api/firebaseDirect';
 import { useAuth } from '../../contexts/AuthContext';
 import { useUser } from '../../contexts/UserContext';
 import EnhancedMedicalConditionSelector from '../../components/EnhancedMedicalConditionSelector';
 import EnhancedMedicationSelector from '../../components/EnhancedMedicationSelector';
+import EnhancedMedicalRequirementSelector from '../../components/EnhancedMedicalRequirementSelector';
+import { convertDocumentToPDF, downloadPDF, DocumentData } from '../../utils/pdfUtils';
 
 // ✅ NEW: Use the new real-time data hooks instead of legacy systems
 import {
@@ -248,6 +251,28 @@ const PatientListPage: React.FC = () => {
   const [documentTitle, setDocumentTitle] = useState('');
   const [shouldNavigateToDocuments, setShouldNavigateToDocuments] = useState(false);
   
+  // Enhanced medical documents states
+  const [addRequirementOpen, setAddRequirementOpen] = useState(false);
+  const [newRequirement, setNewRequirement] = useState({
+    type: '',
+    title: '',
+    description: '',
+    priority: 'normal',
+    dueDate: '',
+    status: 'pending'
+  });
+  const [documentsTab, setDocumentsTab] = useState(0);
+  const [documentViewerOpen, setDocumentViewerOpen] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState<any>(null);
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [selectedRequirementForUpload, setSelectedRequirementForUpload] = useState<any>(null);
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [pdfDataUrl, setPdfDataUrl] = useState<string>('');
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [whatsappDialogOpen, setWhatsappDialogOpen] = useState(false);
+  const [selectedDocumentsForShare, setSelectedDocumentsForShare] = useState<any[]>([]);
+  const [whatsappMessage, setWhatsappMessage] = useState(''); // 0: Requirements, 1: Completed Documents
+  
   // ✅ ENHANCED: Improved data loading logic with timeout fallback
   useEffect(() => {
     if (!initialized || authLoading || !user || !userProfile) {
@@ -296,6 +321,14 @@ const PatientListPage: React.FC = () => {
       setIsDataLoaded(true);
     }
   }, [userProfile, isDataLoaded]);
+
+  // Clear states when dialog closes
+  useEffect(() => {
+    if (!documentViewerOpen) {
+      setPdfDataUrl('');
+      setIsGeneratingPdf(false);
+    }
+  }, [documentViewerOpen]);
 
   // ✅ Doctor name resolution (like dashboard)
   const [availableDoctors, setAvailableDoctors] = useState<any[]>([]);
@@ -1097,7 +1130,6 @@ const PatientListPage: React.FC = () => {
   // ✅ NEW: Success message state
   const [documentUploadSuccess, setDocumentUploadSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
-  const [documentViewerOpen, setDocumentViewerOpen] = useState(false);
   const [viewingDocument, setViewingDocument] = useState<any>(null);
   const [addMedicalHistoryOpen, setAddMedicalHistoryOpen] = useState(false);
   const [newMedicalHistory, setNewMedicalHistory] = useState(defaultMedicalHistoryData);
@@ -6587,17 +6619,17 @@ const PatientListPage: React.FC = () => {
                         <Typography variant="h6" sx={{ fontWeight: 600 }}>
                           Current Medications ({selectedPatient.medications?.length || 0})
                         </Typography>
-                                                <Button 
-                          variant="outlined" 
-                          startIcon={<Add />}
-                          onClick={() => {
-                            // Open add medication form
-                            setNewMedication({ name: '', dosage: '', frequency: '', duration: '' });
-                            // You could open a dialog here or switch to add mode
-                          }}
-                        >
-                          Add Medication
-                        </Button>
+                          <Button 
+                            variant="outlined" 
+                            startIcon={<Add />}
+                            onClick={() => {
+                              // Open add medication form
+                              setNewMedication({ name: '', dosage: '', frequency: '', duration: '' });
+                              // You could open a dialog here or switch to add mode
+                            }}
+                          >
+                            Add Medication
+                          </Button>
                       </Box>
                       
                       <Grid container spacing={3}>
@@ -6764,55 +6796,563 @@ const PatientListPage: React.FC = () => {
                     </Box>
                   )}
 
-                  {/* Documents Tab */}
+                  {/* Enhanced Medical Documents Tab */}
                   {profileTab === 4 && (
                     <Box sx={{ p: 3 }}>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                         <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                          Medical Documents
+                          Medical Documents & Requirements
                         </Typography>
-                                                 <Button 
-                           variant="outlined" 
-                           startIcon={<AttachFile />}
-                           onClick={() => setUploadDocumentOpen(true)}
-                         >
-                           Upload Document
-                         </Button>
                       </Box>
                       
+                      {/* Documents Sub-Tabs */}
+                      <Tabs 
+                        value={documentsTab} 
+                        onChange={(e, newValue) => setDocumentsTab(newValue)}
+                        sx={{ mb: 3, borderBottom: 1, borderColor: 'divider' }}
+                      >
+                        <Tab 
+                          label={
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Assignment />
+                              <span>Requirements & Orders ({selectedPatient.medicalRequirements?.filter((req: any) => req.status === 'pending').length || 0})</span>
+                            </Box>
+                          } 
+                        />
+                        <Tab 
+                          label={
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <AttachFile />
+                              <span>Completed Documents ({
+                                (selectedPatient.medicalRequirements?.filter((req: any) => req.status === 'completed').length || 0) + 
+                                (selectedPatient.documents?.length || 0) +
+                                (selectedPatient.id === 'patient-1' ? 3 : 0) // Sample documents only for first patient
+                              })</span>
+                            </Box>
+                          } 
+                        />
+                      </Tabs>
+
+                      {/* Requirements & Orders Tab */}
+                      {documentsTab === 0 && (
+                        <Box>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                              Medical Requirements & Orders
+                            </Typography>
+                            <Button 
+                              variant="contained" 
+                              startIcon={<Add />}
+                              onClick={() => setAddRequirementOpen(true)}
+                            >
+                              Add Requirement
+                            </Button>
+                          </Box>
+
+                          <Alert severity="info" sx={{ mb: 2 }}>
+                            All medical requirements and their status are now shown in the "Documents" tab below. 
+                            Use this section to add new requirements only.
+                          </Alert>
+                          
+                          <Grid container spacing={2}>
+                            {/* Show only pending requirements count */}
+                            {selectedPatient.medicalRequirements?.filter((req: any) => req.status === 'pending').length > 0 && (
+                              <Grid item xs={12}>
+                                <Card sx={{ p: 3, backgroundColor: 'warning.50', border: '1px solid', borderColor: 'warning.light' }}>
+                                  <Typography variant="h6" sx={{ mb: 1 }}>
+                                    📋 {selectedPatient.medicalRequirements?.filter((req: any) => req.status === 'pending').length} Pending Requirements
+                                  </Typography>
+                                  <Typography variant="body2" color="text.secondary">
+                                    Check the "Documents" tab below to view all requirements and their completion status.
+                                  </Typography>
+                                </Card>
+                              </Grid>
+                            )}
+                            
+                            {selectedPatient.medicalRequirements?.filter((req: any) => req.status === 'pending').length === 0 && (
+                              <Grid item xs={12}>
+                                <Card sx={{ p: 4, textAlign: 'center', backgroundColor: 'grey.50' }}>
+                                  <Assignment sx={{ fontSize: 48, color: 'grey.400', mb: 2 }} />
+                                  <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
+                                    No Pending Requirements
+                                  </Typography>
+                                  <Typography variant="body2" color="text.secondary">
+                                    All requirements have been completed or none have been ordered yet.
+                                  </Typography>
+                                </Card>
+                              </Grid>
+                            )}
+                          </Grid>
+                        </Box>
+                      )}
+
+                      {/* Completed Documents Tab */}
+                      {documentsTab === 1 && (
+                        <Box>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                              Completed Documents & Reports
+                            </Typography>
+                            <Box sx={{ display: 'flex', gap: 1 }}>
+                              <Button
+                                variant="contained"
+                                startIcon={<WhatsApp />}
+                                onClick={() => {
+                                  // Collect all available documents
+                                  const allDocs = [];
+                                  
+                                  // Add completed requirements
+                                  if (selectedPatient.medicalRequirements) {
+                                    selectedPatient.medicalRequirements
+                                      .filter((req: any) => req.status === 'completed')
+                                      .forEach((req: any) => allDocs.push({
+                                        id: req.id,
+                                        title: req.title,
+                                        type: 'requirement',
+                                        content: req.description,
+                                        completedDate: req.completedDate,
+                                        orderedBy: req.orderedBy,
+                                        fileType: req.type === 'lab' ? 'PDF Report' : 
+                                                 req.type === 'imaging' ? 'DICOM Image + PDF' : 
+                                                 req.type === 'cardiac' ? 'PDF Report' : 'Medical Document'
+                                      }));
+                                  }
+                                  
+                                  // Add sample documents for patient-1
+                                  if (selectedPatient.id === 'patient-1') {
+                                    allDocs.push(
+                                      {
+                                        id: 'sample-lab',
+                                        title: 'Lab Results - CBC',
+                                        type: 'sample',
+                                        content: 'Complete Blood Count (CBC) showing normal values',
+                                        completedDate: '2024-01-15',
+                                        orderedBy: 'Dr. Ahmed Hassan',
+                                        fileType: 'PDF Laboratory Report'
+                                      },
+                                      {
+                                        id: 'sample-xray',
+                                        title: 'X-Ray Report - Chest',
+                                        type: 'sample',
+                                        content: 'Chest X-Ray showing clear lungs, no abnormalities',
+                                        completedDate: '2023-12-10',
+                                        orderedBy: 'Dr. Sarah Ahmed',
+                                        fileType: 'DICOM Image + PDF Report'
+                                      },
+                                      {
+                                        id: 'sample-insurance',
+                                        title: 'Insurance Card',
+                                        type: 'sample',
+                                        content: 'Egyptian General Insurance Card - Active Coverage',
+                                        completedDate: 'On File',
+                                        orderedBy: 'Reception',
+                                        fileType: 'Scanned PDF Document'
+                                      }
+                                    );
+                                  }
+                                  
+                                  setSelectedDocumentsForShare(allDocs);
+                                  setWhatsappMessage(`Hi! I'm sharing medical documents for ${selectedPatient.name}. Please find the attached files.`);
+                                  setWhatsappDialogOpen(true);
+                                }}
+                                size="small"
+                                sx={{ backgroundColor: '#25D366', '&:hover': { backgroundColor: '#1DA851' } }}
+                              >
+                                Share All
+                              </Button>
+                              <Button 
+                                variant="outlined" 
+                                startIcon={<AttachFile />}
+                                onClick={() => setUploadDocumentOpen(true)}
+                              >
+                                Upload Document
+                              </Button>
+                            </Box>
+                          </Box>
+                      
                                              <Grid container spacing={2}>
-                         {/* Default documents */}
-                         <Grid item xs={12} sm={6} md={4}>
-                           <Card 
-                             sx={{ p: 3, textAlign: 'center', cursor: 'pointer', '&:hover': { boxShadow: 4 } }}
-                             onClick={() => alert('Sample document - No file available for preview')}
-                           >
-                             <MedicalServices sx={{ fontSize: 48, color: 'primary.main', mb: 2 }} />
-                             <Typography variant="body2" fontWeight={600}>Lab Results</Typography>
-                             <Typography variant="caption" color="text.secondary">Blood Test - Jan 15, 2024</Typography>
-                           </Card>
-                         </Grid>
-                         <Grid item xs={12} sm={6} md={4}>
-                           <Card 
-                             sx={{ p: 3, textAlign: 'center', cursor: 'pointer', '&:hover': { boxShadow: 4 } }}
-                             onClick={() => alert('Sample document - No file available for preview')}
-                           >
-                             <AssignmentIcon sx={{ fontSize: 48, color: 'success.main', mb: 2 }} />
-                             <Typography variant="body2" fontWeight={600}>X-Ray Report</Typography>
-                             <Typography variant="caption" color="text.secondary">Chest X-Ray - Dec 10, 2023</Typography>
-                           </Card>
-                         </Grid>
-                         <Grid item xs={12} sm={6} md={4}>
-                           <Card 
-                             sx={{ p: 3, textAlign: 'center', cursor: 'pointer', '&:hover': { boxShadow: 4 } }}
-                             onClick={() => alert('Sample document - No file available for preview')}
-                           >
-                             <AttachFile sx={{ fontSize: 48, color: 'warning.main', mb: 2 }} />
-                             <Typography variant="body2" fontWeight={600}>Insurance Card</Typography>
-                             <Typography variant="caption" color="text.secondary">Egyptian General Insurance</Typography>
-                           </Card>
-                         </Grid>
+                             {/* All Requirements - Both Completed and Incomplete */}
+                             {selectedPatient.medicalRequirements?.map((requirement: any, index: number) => (
+                               <Grid item xs={12} sm={6} md={4} key={`doc-${requirement.id || index}`}>
+                                 <Card 
+                                   sx={{ 
+                                     p: 3, 
+                                     cursor: 'pointer', 
+                                     '&:hover': { boxShadow: 4 },
+                                     border: '2px solid',
+                                     borderColor: requirement.status === 'completed' ? 'success.light' : 'warning.light',
+                                     backgroundColor: requirement.status === 'completed' ? 'success.50' : 'warning.50'
+                                   }}
+                                   onClick={() => {
+                                     if (requirement.status === 'completed') {
+                                       // Use uploaded files if available, otherwise use sample data
+                                       const uploadedFile = requirement.uploadedFiles && requirement.uploadedFiles.length > 0 ? requirement.uploadedFiles[0] : null;
+                                       setSelectedDocument({
+                                         title: requirement.title,
+                                         content: requirement.description,
+                                         type: requirement.type,
+                                         completedDate: requirement.completedDate,
+                                         orderedBy: requirement.orderedBy,
+                                         fileType: uploadedFile ? uploadedFile.type : (requirement.type === 'lab' ? 'PDF Report' : 
+                                                  requirement.type === 'imaging' ? 'DICOM Image + PDF' : 
+                                                  requirement.type === 'cardiac' ? 'PDF Report' : 'Medical Document'),
+                                         // Use uploaded file URL if available, otherwise sample data
+                                         fileUrl: uploadedFile ? uploadedFile.url : (requirement.type === 'imaging' ? 
+                                           'https://via.placeholder.com/600x400/e8f5e8/2e7d32?text=X-Ray+Results' :
+                                           'data:application/pdf;base64,JVBERi0xLjQKJcOkw7zDscO1w7zDtsO+CjEgMCBvYmoKPDwKL1R5cGUgL0NhdGFsb2cKL1BhZ2VzIDIgMCBSCj4+CmVuZG9iagoKMiAwIG9iago8PAovVHlwZSAvUGFnZXMKL0tpZHMgWzMgMCBSXQovQ291bnQgMQo+PgplbmRvYmoKCjMgMCBvYmoKPDwKL1R5cGUgL1BhZ2UKL1BhcmVudCAyIDAgUgovTWVkaWFCb3ggWzAgMCA2MTIgNzkyXQovQ29udGVudHMgNCAwIFIKPj4KZW5kb2JqCgo0IDAgb2JqCjw8Ci9MZW5ndGggNDQKPj4Kc3RyZWFtCkJUCi9GMSAxMiBUZgoxMDAgNzAwIFRkCihNZWRpY2FsIFJlcG9ydCkgVGoKRVQKZW5kc3RyZWFtCmVuZG9iagoKNSAwIG9iago8PAovVHlwZSAvRm9udAovU3VidHlwZSAvVHlwZTEKL0Jhc2VGb250IC9IZWx2ZXRpY2EKPj4KZW5kb2JqCgp4cmVmCjAgNgowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwMDkgMDAwMDAgbiAKMDAwMDAwMDA1OCAwMDAwMCBuIAowMDAwMDAwMTE1IDAwMDAwIG4gCjAwMDAwMDAyMDcgMDAwMDAgbiAKMDAwMDAwMDMwMSAwMDAwMCBuIAp0cmFpbGVyCjw8Ci9TaXplIDYKL1Jvb3QgMSAwIFIKPj4Kc3RhcnR4cmVmCjM5OQolJUVPRg=='),
+                                         uploadedFiles: requirement.uploadedFiles || []
+                                       });
+                                       setDocumentViewerOpen(true);
+                                                                           } else {
+                                        // Open upload dialog for incomplete requirements
+                                        setSelectedRequirementForUpload(requirement);
+                                        setUploadDialogOpen(true);
+                                        setUploadedFiles([]);
+                                      }
+                                   }}
+                                 >
+                                   <Box sx={{ textAlign: 'center', mb: 2 }}>
+                                     {requirement.type === 'lab' && <Science sx={{ fontSize: 48, color: 'primary.main', mb: 1 }} />}
+                                     {requirement.type === 'imaging' && <Assignment sx={{ fontSize: 48, color: 'success.main', mb: 1 }} />}
+                                     {requirement.type === 'cardiac' && <LocalHospital sx={{ fontSize: 48, color: 'error.main', mb: 1 }} />}
+                                     {!['lab', 'imaging', 'cardiac'].includes(requirement.type) && <Assignment sx={{ fontSize: 48, color: 'info.main', mb: 1 }} />}
+                                   </Box>
+                                   
+                                   <Typography variant="body1" fontWeight={600} sx={{ mb: 1, textAlign: 'center' }}>
+                                     {requirement.title}
+                                   </Typography>
+                                   
+                                   {/* Status-specific content */}
+                                   {requirement.status === 'completed' ? (
+                                     <Box sx={{ mb: 2, p: 1, backgroundColor: 'success.100', borderRadius: 1 }}>
+                                       <Typography variant="caption" color="success.dark" sx={{ fontWeight: 600, display: 'block' }}>
+                                         📋 COMPLETED RESULTS - Click to View
+                                       </Typography>
+                                       <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                         <strong>Content:</strong> {requirement.description}
+                                       </Typography>
+                                       <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                         <strong>Type:</strong> {requirement.type === 'lab' ? 'PDF Laboratory Report' : requirement.type === 'imaging' ? 'DICOM Image + PDF Report' : requirement.type === 'cardiac' ? 'PDF Cardiac Report' : 'Medical Document'}
+                                       </Typography>
+                                       <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                         <strong>Completed:</strong> {requirement.completedDate ? new Date(requirement.completedDate).toLocaleDateString() : 'Recently'}
+                                       </Typography>
+                                       {requirement.orderedBy && (
+                                         <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                           <strong>Ordered By:</strong> {requirement.orderedBy}
+                                         </Typography>
+                                       )}
+                                     </Box>
+                                   ) : (
+                                     <Box sx={{ mb: 2, p: 1, backgroundColor: 'warning.100', borderRadius: 1 }}>
+                                       <Typography variant="caption" color="warning.dark" sx={{ fontWeight: 600, display: 'block', mb: 1 }}>
+                                         📤 CLICK TO UPLOAD DOCUMENTS
+                                       </Typography>
+                                       
+                                       {/* Progress Bar */}
+                                       <Box sx={{ mb: 2 }}>
+                                         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                                           Progress: 25% Complete
+                                         </Typography>
+                                         <LinearProgress 
+                                           variant="determinate" 
+                                           value={25} 
+                                           color="warning"
+                                           sx={{ 
+                                             height: 8, 
+                                             borderRadius: 4,
+                                             backgroundColor: 'grey.200'
+                                           }}
+                                         />
+                                       </Box>
+                                       
+                                       <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                         <strong>Required:</strong> {requirement.description}
+                                       </Typography>
+                                       <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                         <strong>Ordered:</strong> {requirement.dateOrdered ? new Date(requirement.dateOrdered).toLocaleDateString() : 'Recently'}
+                                       </Typography>
+                                       {requirement.orderedBy && (
+                                         <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                           <strong>By:</strong> {requirement.orderedBy}
+                                         </Typography>
+                                       )}
+                                       {requirement.dueDate && (
+                                         <Typography variant="caption" color="warning.main" sx={{ fontWeight: 600, display: 'block' }}>
+                                           <strong>Due:</strong> {new Date(requirement.dueDate).toLocaleDateString()}
+                                         </Typography>
+                                       )}
+                                     </Box>
+                                   )}
+                                   
+                                   <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, mb: 2 }}>
+                                     <Chip 
+                                       label={requirement.status === 'completed' ? 'Completed' : 'Incomplete'} 
+                                       size="small" 
+                                       color={requirement.status === 'completed' ? 'success' : 'warning'} 
+                                     />
+                                     <Chip 
+                                       label={requirement.priority || 'normal'} 
+                                       size="small" 
+                                       variant="outlined"
+                                       color={
+                                         requirement.priority === 'urgent' ? 'error' :
+                                         requirement.priority === 'high' ? 'warning' : 'default'
+                                       }
+                                     />
+                                   </Box>
+                                   
+                                   {/* Action Buttons */}
+                                   <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
+                                     <IconButton
+                                       size="small"
+                                       onClick={(e) => {
+                                         e.stopPropagation();
+                                         if (requirement.status === 'completed') {
+                                           // Share individual document
+                                           const docData = {
+                                             id: requirement.id,
+                                             title: requirement.title,
+                                             type: 'requirement',
+                                             content: requirement.description,
+                                             completedDate: requirement.completedDate,
+                                             orderedBy: requirement.orderedBy,
+                                             fileType: requirement.type === 'lab' ? 'PDF Report' : 
+                                                      requirement.type === 'imaging' ? 'DICOM Image + PDF' : 
+                                                      requirement.type === 'cardiac' ? 'PDF Report' : 'Medical Document'
+                                           };
+                                           setSelectedDocumentsForShare([docData]);
+                                           setWhatsappMessage(`Hi! I'm sharing a medical document: ${requirement.title} for ${selectedPatient.name}.`);
+                                           setWhatsappDialogOpen(true);
+                                         }
+                                       }}
+                                       sx={{ 
+                                         color: '#25D366',
+                                         '&:hover': { backgroundColor: 'rgba(37, 211, 102, 0.1)' },
+                                         display: requirement.status === 'completed' ? 'flex' : 'none'
+                                       }}
+                                       title="Share via WhatsApp"
+                                     >
+                                       <WhatsApp fontSize="small" />
+                                     </IconButton>
+                                     <IconButton
+                                       size="small"
+                                       onClick={(e) => {
+                                         e.stopPropagation();
+                                         if (confirm(`Are you sure you want to delete "${requirement.title}"?`)) {
+                                           // Remove from patient's requirements
+                                           const updatedRequirements = selectedPatient.medicalRequirements.filter((req: any) => req.id !== requirement.id);
+                                           const updatedPatient = { ...selectedPatient, medicalRequirements: updatedRequirements };
+                                           setSelectedPatient(updatedPatient);
+                                           
+                                           // Update the main patients list
+                                           const updatedPatients = enhancedPatients.map(patient =>
+                                             patient.id === selectedPatient.id ? updatedPatient : patient
+                                           );
+                                           setEnhancedPatients(updatedPatients);
+                                         }
+                                       }}
+                                       sx={{ 
+                                         color: 'error.main',
+                                         '&:hover': { backgroundColor: 'rgba(244, 67, 54, 0.1)' }
+                                       }}
+                                       title="Delete Document"
+                                     >
+                                       <Delete fontSize="small" />
+                                     </IconButton>
+                                   </Box>
+                                 </Card>
+                               </Grid>
+                             ))}
+                             
+                             {/* Patient-specific sample documents - only for specific patients */}
+                             {selectedPatient.id === 'patient-1' && (
+                               <>
+                                 <Grid item xs={12} sm={6} md={4}>
+                                   <Card 
+                                     sx={{ 
+                                       p: 3, 
+                                       cursor: 'pointer', 
+                                       '&:hover': { boxShadow: 4 },
+                                       border: '2px solid',
+                                       borderColor: 'success.light',
+                                       backgroundColor: 'success.50'
+                                     }}
+                                     onClick={() => {
+                                       setSelectedDocument({
+                                         title: 'Lab Results - CBC',
+                                         content: 'Complete Blood Count (CBC) showing normal values',
+                                         type: 'lab',
+                                         completedDate: '2024-01-15',
+                                         orderedBy: 'Dr. Ahmed Hassan',
+                                         fileType: 'PDF Laboratory Report',
+                                         fileUrl: 'data:application/pdf;base64,JVBERi0xLjQKJcOkw7zDscO1w7zDtsO+CjEgMCBvYmoKPDwKL1R5cGUgL0NhdGFsb2cKL1BhZ2VzIDIgMCBSCj4+CmVuZG9iagoKMiAwIG9iago8PAovVHlwZSAvUGFnZXMKL0tpZHMgWzMgMCBSXQovQ291bnQgMQo+PgplbmRvYmoKCjMgMCBvYmoKPDwKL1R5cGUgL1BhZ2UKL1BhcmVudCAyIDAgUgovTWVkaWFCb3ggWzAgMCA2MTIgNzkyXQovQ29udGVudHMgNCAwIFIKPj4KZW5kb2JqCgo0IDAgb2JqCjw8Ci9MZW5ndGggODQKPj4Kc3RyZWFtCkJUCi9GMSAxMiBUZgoxMDAgNzAwIFRkCihMYWJvcmF0b3J5IFJlcG9ydCAtIENvbXBsZXRlIEJsb29kIENvdW50KSBUagowIDYwIFRkCihXaGl0ZSBCbG9vZCBDZWxsczogNy41Lzg3LzEwXjkpIFRqCjAgLTYwIFRkCihSZWQgQmxvb2QgQ2VsbHM6IDQuNS01LjUgbWlsbGlvbi9VTCkgVGoKRVQKZW5kc3RyZWFtCmVuZG9iagoKNSAwIG9iago8PAovVHlwZSAvRm9udAovU3VidHlwZSAvVHlwZTEKL0Jhc2VGb250IC9IZWx2ZXRpY2EKPj4KZW5kb2JqCgp4cmVmCjAgNgowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwMDkgMDAwMDAgbiAKMDAwMDAwMDA1OCAwMDAwMCBuIAowMDAwMDAwMTE1IDAwMDAwIG4gCjAwMDAwMDAyMDcgMDAwMDAgbiAKMDAwMDAwMDM0MSAwMDAwMCBuIAp0cmFpbGVyCjw8Ci9TaXplIDYKL1Jvb3QgMSAwIFIKPj4Kc3RhcnR4cmVmCjQzOQolJUVPRg=='
+                                       });
+                                       setDocumentViewerOpen(true);
+                                     }}
+                                   >
+                                     <Box sx={{ textAlign: 'center', mb: 2 }}>
+                                       <Science sx={{ fontSize: 48, color: 'primary.main', mb: 1 }} />
+                                     </Box>
+                                     <Typography variant="body1" fontWeight={600} sx={{ mb: 1, textAlign: 'center' }}>
+                                       Lab Results - CBC
+                                     </Typography>
+                                     <Box sx={{ mb: 2, p: 1, backgroundColor: 'success.100', borderRadius: 1 }}>
+                                       <Typography variant="caption" color="success.dark" sx={{ fontWeight: 600, display: 'block' }}>
+                                         📋 COMPLETED RESULTS - Click to View
+                                       </Typography>
+                                       <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                         <strong>Content:</strong> Complete Blood Count showing normal values
+                                       </Typography>
+                                       <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                         <strong>Type:</strong> PDF Laboratory Report
+                                       </Typography>
+                                       <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                         <strong>Date:</strong> Jan 15, 2024
+                                       </Typography>
+                                       <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                         <strong>Ordered By:</strong> Dr. Ahmed Hassan
+                                       </Typography>
+                                     </Box>
+                                     <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
+                                       <Chip label="Completed" size="small" color="success" />
+                                       <Chip label="normal" size="small" variant="outlined" />
+                                     </Box>
+                                   </Card>
+                                 </Grid>
+                                 
+                                 <Grid item xs={12} sm={6} md={4}>
+                                   <Card 
+                                     sx={{ 
+                                       p: 3, 
+                                       cursor: 'pointer', 
+                                       '&:hover': { boxShadow: 4 },
+                                       border: '2px solid',
+                                       borderColor: 'success.light',
+                                       backgroundColor: 'success.50'
+                                     }}
+                                     onClick={() => {
+                                       setSelectedDocument({
+                                         title: 'X-Ray Report - Chest',
+                                         content: 'Chest X-Ray showing clear lungs, no abnormalities',
+                                         type: 'imaging',
+                                         completedDate: '2023-12-10',
+                                         orderedBy: 'Dr. Sarah Ahmed',
+                                         fileType: 'DICOM Image + PDF Report',
+                                         fileUrl: 'https://via.placeholder.com/600x400/e8f5e8/2e7d32?text=Chest+X-Ray+Normal'
+                                       });
+                                       setDocumentViewerOpen(true);
+                                     }}
+                                   >
+                                     <Box sx={{ textAlign: 'center', mb: 2 }}>
+                                       <Assignment sx={{ fontSize: 48, color: 'success.main', mb: 1 }} />
+                                     </Box>
+                                     <Typography variant="body1" fontWeight={600} sx={{ mb: 1, textAlign: 'center' }}>
+                                       X-Ray Report - Chest
+                                     </Typography>
+                                     <Box sx={{ mb: 2, p: 1, backgroundColor: 'success.100', borderRadius: 1 }}>
+                                       <Typography variant="caption" color="success.dark" sx={{ fontWeight: 600, display: 'block' }}>
+                                         📋 COMPLETED RESULTS - Click to View
+                                       </Typography>
+                                       <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                         <strong>Content:</strong> Chest X-Ray showing clear lungs, no abnormalities
+                                       </Typography>
+                                       <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                         <strong>Type:</strong> DICOM Image + PDF Report
+                                       </Typography>
+                                       <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                         <strong>Date:</strong> Dec 10, 2023
+                                       </Typography>
+                                       <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                         <strong>Ordered By:</strong> Dr. Sarah Ahmed
+                                       </Typography>
+                                     </Box>
+                                     <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
+                                       <Chip label="Completed" size="small" color="success" />
+                                       <Chip label="normal" size="small" variant="outlined" />
+                                     </Box>
+                                   </Card>
+                                 </Grid>
+                                 
+                                 <Grid item xs={12} sm={6} md={4}>
+                                   <Card 
+                                     sx={{ 
+                                       p: 3, 
+                                       cursor: 'pointer', 
+                                       '&:hover': { boxShadow: 4 },
+                                       border: '2px solid',
+                                       borderColor: 'info.light',
+                                       backgroundColor: 'info.50'
+                                     }}
+                                     onClick={() => {
+                                       setSelectedDocument({
+                                         title: 'Insurance Card',
+                                         content: 'Egyptian General Insurance Card - Active Coverage',
+                                         type: 'document',
+                                         completedDate: 'On File',
+                                         orderedBy: 'Reception',
+                                         fileType: 'Scanned PDF Document',
+                                         fileUrl: 'data:application/pdf;base64,JVBERi0xLjQKJcOkw7zDscO1w7zDtsO+CjEgMCBvYmoKPDwKL1R5cGUgL0NhdGFsb2cKL1BhZ2VzIDIgMCBSCj4+CmVuZG9iagoKMiAwIG9iago8PAovVHlwZSAvUGFnZXMKL0tpZHMgWzMgMCBSXQovQ291bnQgMQo+PgplbmRvYmoKCjMgMCBvYmoKPDwKL1R5cGUgL1BhZ2UKL1BhcmVudCAyIDAgUgovTWVkaWFCb3ggWzAgMCA2MTIgNzkyXQovQ29udGVudHMgNCAwIFIKPj4KZW5kb2JqCgo0IDAgb2JqCjw8Ci9MZW5ndGggNjQKPj4Kc3RyZWFtCkJUCi9GMSAxMiBUZgoxMDAgNzAwIFRkCihJbnN1cmFuY2UgQ2FyZCAtIEVneXB0aWFuIEdlbmVyYWwpIFRqCjAgLTYwIFRkCihBY3RpdmUgQ292ZXJhZ2UpIFRqCkVUCmVuZHN0cmVhbQplbmRvYmoKCjUgMCBvYmoKPDwKL1R5cGUgL0ZvbnQKL1N1YnR5cGUgL1R5cGUxCi9CYXNlRm9udCAvSGVsdmV0aWNhCj4+CmVuZG9iagoKeHJlZgowIDYKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDA5IDAwMDAwIG4gCjAwMDAwMDAwNTggMDAwMDAgbiAKMDAwMDAwMDExNSAwMDAwMCBuIAowMDAwMDAwMjA3IDAwMDAwIG4gCjAwMDAwMDAzMjEgMDAwMDAgbiAKdHJhaWxlcgo8PAovU2l6ZSA2Ci9Sb290IDEgMCBSCj4+CnN0YXJ0eHJlZgo0MTkKJSVFT0Y='
+                                       });
+                                       setDocumentViewerOpen(true);
+                                     }}
+                                   >
+                                     <Box sx={{ textAlign: 'center', mb: 2 }}>
+                                       <AttachFile sx={{ fontSize: 48, color: 'warning.main', mb: 1 }} />
+                                     </Box>
+                                     <Typography variant="body1" fontWeight={600} sx={{ mb: 1, textAlign: 'center' }}>
+                                       Insurance Card
+                                     </Typography>
+                                     <Box sx={{ mb: 2, p: 1, backgroundColor: 'info.100', borderRadius: 1 }}>
+                                       <Typography variant="caption" color="info.dark" sx={{ fontWeight: 600, display: 'block' }}>
+                                         📄 DOCUMENT ON FILE - Click to View
+                                       </Typography>
+                                       <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                         <strong>Content:</strong> Egyptian General Insurance Card - Active Coverage
+                                       </Typography>
+                                       <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                         <strong>Type:</strong> Scanned PDF Document
+                                       </Typography>
+                                       <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                         <strong>Status:</strong> Active Coverage
+                                       </Typography>
+                                       <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                         <strong>Uploaded By:</strong> Reception
+                                       </Typography>
+                                     </Box>
+                                     <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
+                                       <Chip label="On File" size="small" color="info" />
+                                       <Chip label="active" size="small" variant="outlined" color="success" />
+                                     </Box>
+                                   </Card>
+                                 </Grid>
+                               </>
+                             )}
                          
+                         {/* Empty state for patients with no documents */}
+                         {(!selectedPatient.medicalRequirements || selectedPatient.medicalRequirements.filter((req: any) => req.status === 'completed').length === 0) && 
+                          (!selectedPatient.documents || selectedPatient.documents.length === 0) && 
+                          selectedPatient.id !== 'patient-1' && (
+                           <Grid item xs={12}>
+                             <Card sx={{ p: 4, textAlign: 'center', backgroundColor: 'grey.50' }}>
+                               <AttachFile sx={{ fontSize: 64, color: 'grey.400', mb: 2 }} />
+                               <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
+                                 No Documents Available
+                               </Typography>
+                               <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                                 No completed medical documents, lab results, or uploaded files for this patient yet.
+                               </Typography>
+                               <Button 
+                                 variant="outlined" 
+                                 startIcon={<Add />}
+                                 onClick={() => setAddRequirementOpen(true)}
+                               >
+                                 Add Medical Requirement
+                               </Button>
+                             </Card>
+                           </Grid>
+                         )}
+
                          {/* Uploaded documents */}
                          {selectedPatient.documents?.map((doc: any) => (
                            <Grid item xs={12} sm={6} md={4} key={doc.id}>
@@ -6845,10 +7385,35 @@ const PatientListPage: React.FC = () => {
                                <Typography variant="caption" color="text.secondary">
                                  {doc.fileName} • {doc.uploadDate}
                                </Typography>
+                                  <Chip label="Uploaded" size="small" color="success" sx={{ mt: 1 }} />
                              </Card>
                            </Grid>
                          ))}
+
+                            {/* No Documents Message */}
+                            {(!selectedPatient.documents || selectedPatient.documents.length === 0) && (
+                              <Grid item xs={12}>
+                                <Card sx={{ p: 4, textAlign: 'center', backgroundColor: 'grey.50' }}>
+                                  <AttachFile sx={{ fontSize: 64, color: 'grey.400', mb: 2 }} />
+                                  <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
+                                    No Documents Uploaded
+                                  </Typography>
+                                  <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                                    Upload completed test results, reports, and other medical documents.
+                                  </Typography>
+                                  <Button 
+                                    variant="outlined" 
+                                    startIcon={<AttachFile />}
+                                    onClick={() => setUploadDocumentOpen(true)}
+                                  >
+                                    Upload First Document
+                                  </Button>
+                                </Card>
+                              </Grid>
+                            )}
                        </Grid>
+                        </Box>
+                      )}
                     </Box>
                   )}
                 </DialogContent>
@@ -8369,9 +8934,764 @@ const PatientListPage: React.FC = () => {
             {successMessage}
           </Alert>
         </Snackbar>
-    </React.Fragment>
-  );
-};
+
+        {/* Add Medical Requirement Dialog */}
+        <Dialog
+          open={addRequirementOpen}
+          onClose={() => setAddRequirementOpen(false)}
+          maxWidth="md"
+          fullWidth
+        >
+          <DialogTitle>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Assignment color="primary" />
+              <Typography variant="h6">Add Medical Requirement</Typography>
+            </Box>
+          </DialogTitle>
+          <DialogContent>
+            <Box sx={{ mt: 2 }}>
+              <EnhancedMedicalRequirementSelector
+                value={newRequirement}
+                onChange={(value) => setNewRequirement(value)}
+                label="Medical Requirement"
+                placeholder="Select or add a medical requirement"
+                helperText="Choose from our database of common medical tests and procedures"
+              />
+            </Box>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setAddRequirementOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="contained"
+              onClick={() => {
+                if (!newRequirement.title.trim()) return;
+                
+                // Add requirement to patient's medicalRequirements array
+                const requirement = {
+                  id: Date.now(),
+                  ...newRequirement,
+                  status: 'pending',
+                  dateOrdered: new Date().toISOString().split('T')[0],
+                  orderedBy: userProfile?.firstName + ' ' + userProfile?.lastName || 'Doctor'
+                };
+                
+                const updatedPatient = {
+                  ...selectedPatient,
+                  medicalRequirements: [...(selectedPatient.medicalRequirements || []), requirement]
+                };
+                
+                // Update the enhanced patients state
+                const updatedPatients = enhancedPatients.map(patient => 
+                  patient.id === selectedPatient.id ? updatedPatient : patient
+                );
+                setEnhancedPatients(updatedPatients);
+                setSelectedPatient(updatedPatient);
+                
+                // Reset form
+                setNewRequirement({
+                  type: '',
+                  title: '',
+                  description: '',
+                  priority: 'normal',
+                  dueDate: '',
+                  status: 'pending'
+                });
+                setAddRequirementOpen(false);
+              }}
+              disabled={!newRequirement.title.trim()}
+              startIcon={<Add />}
+            >
+              Add Requirement
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Document Viewer Dialog */}
+        <Dialog
+          open={documentViewerOpen}
+          onClose={() => setDocumentViewerOpen(false)}
+          maxWidth="md"
+          fullWidth
+          PaperProps={{
+            sx: { minHeight: '70vh' }
+          }}
+        >
+          <DialogTitle>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'space-between' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                {selectedDocument?.type === 'lab' && <Science color="primary" />}
+                {selectedDocument?.type === 'imaging' && <Assignment color="success" />}
+                {selectedDocument?.type === 'cardiac' && <LocalHospital color="error" />}
+                <Typography variant="h6">{selectedDocument?.title || 'Medical Document'}</Typography>
+              </Box>
+              <IconButton onClick={() => setDocumentViewerOpen(false)}>
+                <Close />
+              </IconButton>
+            </Box>
+          </DialogTitle>
+          <DialogContent>
+            {selectedDocument && (
+              <Box>
+                {/* Document Info */}
+                <Card sx={{ mb: 3, p: 2, backgroundColor: 'success.50' }}>
+                  <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 1 }}>
+                    📋 Document Information
+                  </Typography>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="caption" color="text.secondary">
+                        <strong>Content:</strong> {selectedDocument.content}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="caption" color="text.secondary">
+                        <strong>File Type:</strong> {selectedDocument.fileType}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="caption" color="text.secondary">
+                        <strong>Date:</strong> {selectedDocument.completedDate ? new Date(selectedDocument.completedDate).toLocaleDateString() : 'Recently'}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                                             <Typography variant="caption" color="text.secondary">
+                         <strong>Ordered By:</strong> {selectedDocument.orderedBy || 'Medical Staff'}
+                       </Typography>
+                     </Grid>
+                     {selectedDocument.uploadedFiles && selectedDocument.uploadedFiles.length > 1 && (
+                       <Grid item xs={12}>
+                         <Typography variant="caption" color="text.secondary">
+                           <strong>Multiple Files:</strong> {selectedDocument.uploadedFiles.length} files uploaded
+                         </Typography>
+                       </Grid>
+                     )}
+                   </Grid>
+                 </Card>
+
+                 {/* Multiple Files Navigation */}
+                 {selectedDocument.uploadedFiles && selectedDocument.uploadedFiles.length > 1 && (
+                   <Card sx={{ mb: 3, p: 2, backgroundColor: 'warning.50' }}>
+                     <Typography variant="subtitle2" sx={{ mb: 2 }}>
+                       📁 Multiple Files ({selectedDocument.uploadedFiles.length} files)
+                     </Typography>
+                     <Grid container spacing={1}>
+                       {selectedDocument.uploadedFiles.map((file: any, index: number) => (
+                         <Grid item key={index}>
+                           <Button
+                             variant={selectedDocument.fileUrl === file.url ? 'contained' : 'outlined'}
+                             size="small"
+                             onClick={() => {
+                               setSelectedDocument({
+                                 ...selectedDocument,
+                                 fileUrl: file.url,
+                                 fileType: file.type
+                               });
+                             }}
+                           >
+                             {file.name || `File ${index + 1}`}
+                           </Button>
+                         </Grid>
+                       ))}
+                     </Grid>
+                   </Card>
+                 )}
+
+                                                                  {/* Original Content Viewer - PDF only for download */}
+                 <Box sx={{ border: '2px solid', borderColor: 'grey.300', borderRadius: 1, overflow: 'hidden', minHeight: '500px' }}>
+                   <Typography variant="subtitle2" sx={{ p: 2, borderBottom: '1px solid', borderColor: 'grey.300', backgroundColor: 'primary.50', display: 'flex', alignItems: 'center', gap: 1 }}>
+                     {selectedDocument.fileUrl && (selectedDocument.fileUrl.includes('image') || selectedDocument.fileUrl.includes('placeholder')) ? (
+                       <Image color="success" />
+                     ) : (
+                       <Description color="info" />
+                     )}
+                     📄 Document Viewer - {selectedDocument.title}
+                   </Typography>
+                   
+                   {/* Show original content directly in site */}
+                   {selectedDocument.fileUrl && (selectedDocument.fileUrl.includes('image') || selectedDocument.fileUrl.includes('placeholder') || selectedDocument.type === 'imaging' || selectedDocument.fileUrl.startsWith('blob:')) ? (
+                     selectedDocument.uploadedFiles && selectedDocument.uploadedFiles.length > 0 ? (
+                       <Box sx={{ p: 2 }}>
+                         <Typography variant="subtitle2" sx={{ mb: 2, textAlign: 'center' }}>
+                           📁 Uploaded Files Preview ({selectedDocument.uploadedFiles.length} files)
+                         </Typography>
+                         
+                         {/* Show first file as main preview */}
+                         {selectedDocument.uploadedFiles.map((file: any, index: number) => (
+                           <Box key={index} sx={{ mb: 3 }}>
+                             <Typography variant="body2" sx={{ mb: 1, fontWeight: 600 }}>
+                               📄 {file.name || `File ${index + 1}`}
+                             </Typography>
+                             
+                             {/* Image file preview */}
+                             {file.type && file.type.startsWith('image/') ? (
+                               <Box sx={{ 
+                                 display: 'flex', 
+                                 justifyContent: 'center', 
+                                 alignItems: 'center',
+                                 width: '100%',
+                                 height: '300px',
+                                 backgroundColor: 'grey.100',
+                                 borderRadius: 1,
+                                 overflow: 'hidden',
+                                 border: '2px solid',
+                                 borderColor: 'primary.light',
+                                 mb: 2
+                               }}>
+                                 <img 
+                                   src={file.url} 
+                                   alt={file.name || 'Uploaded image'} 
+                                   style={{ 
+                                     maxWidth: '100%', 
+                                     maxHeight: '100%',
+                                     width: 'auto',
+                                     height: 'auto',
+                                     objectFit: 'contain',
+                                     border: '1px solid #ddd',
+                                     borderRadius: '4px',
+                                     backgroundColor: 'white'
+                                   }} 
+                                   onError={(e) => {
+                                     console.error('Image failed to load:', file.url);
+                                     e.currentTarget.style.display = 'none';
+                                   }}
+                                 />
+                               </Box>
+                             ) : file.type && file.type === 'application/pdf' ? (
+                               /* PDF file preview */
+                               <Box sx={{ height: '400px', width: '100%', mb: 2 }}>
+                                 <iframe
+                                   src={file.url}
+                                   style={{ 
+                                     width: '100%', 
+                                     height: '100%', 
+                                     border: '2px solid #ddd',
+                                     borderRadius: '4px'
+                                   }}
+                                   title={file.name || 'PDF Document'}
+                                 />
+                               </Box>
+                             ) : (
+                               /* Other file types */
+                               <Box sx={{ p: 2, backgroundColor: 'grey.100', borderRadius: 1, mb: 2 }}>
+                                 <Typography variant="body2">
+                                   📎 File Type: {file.type || 'Unknown'}
+                                 </Typography>
+                                 <Typography variant="body2">
+                                   📊 Size: {file.size ? `${(file.size / 1024).toFixed(2)} KB` : 'Unknown'}
+                                 </Typography>
+                                 <Typography variant="caption" color="text.secondary">
+                                   Preview not available for this file type. Will be converted to PDF on download.
+                                 </Typography>
+                               </Box>
+                             )}
+                           </Box>
+                         ))}
+                         
+                         <Alert severity="info" sx={{ mt: 2 }}>
+                           📄 All files will be converted to PDF format when downloading or sharing.
+                         </Alert>
+                       </Box>
+                     ) : (
+                       /* Single image/file preview */
+                       <Box sx={{ textAlign: 'center', p: 2 }}>
+                         <Typography variant="subtitle2" sx={{ mb: 2 }}>
+                           {selectedDocument.type === 'imaging' ? 'Medical Imaging Results' : 'Document Preview'}
+                         </Typography>
+                         <Box sx={{ 
+                           display: 'flex', 
+                           justifyContent: 'center', 
+                           alignItems: 'center',
+                           width: '100%',
+                           height: '400px',
+                           backgroundColor: 'grey.100',
+                           borderRadius: 1,
+                           overflow: 'hidden',
+                           border: '2px solid',
+                           borderColor: 'primary.light',
+                           position: 'relative'
+                         }}>
+                           <img 
+                             src={selectedDocument.fileUrl} 
+                             alt={selectedDocument.title || 'Document'} 
+                             style={{ 
+                               maxWidth: '100%', 
+                               maxHeight: '100%',
+                               width: 'auto',
+                               height: 'auto',
+                               objectFit: 'contain',
+                               border: '1px solid #ddd',
+                               borderRadius: '4px',
+                               backgroundColor: 'white',
+                               cursor: 'zoom-in',
+                               transition: 'transform 0.3s ease',
+                               boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                             }} 
+                             onError={(e) => {
+                               console.error('Image failed to load:', selectedDocument.fileUrl);
+                               e.currentTarget.style.display = 'none';
+                               e.currentTarget.parentElement.nextElementSibling.style.display = 'block';
+                             }}
+                           />
+                         </Box>
+                         <Box sx={{ display: 'none', mt: 2, p: 2, backgroundColor: 'error.50', borderRadius: 1 }}>
+                           <Typography variant="body2" color="error.main">
+                             Image failed to load. File may be corrupted or in an unsupported format.
+                           </Typography>
+                         </Box>
+                         <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center', gap: 2 }}>
+                           <Button 
+                             variant="outlined" 
+                             size="small"
+                             onClick={() => window.open(selectedDocument.fileUrl, '_blank')}
+                           >
+                             🔍 View Full Size
+                           </Button>
+                           <Button 
+                             variant="outlined" 
+                             size="small"
+                             onClick={() => {
+                               const img = document.querySelector(`img[src="${selectedDocument.fileUrl}"]`) as HTMLImageElement;
+                               if (img) {
+                                 if (img.style.transform === 'scale(1.5)') {
+                                   img.style.transform = 'scale(1)';
+                                   img.style.cursor = 'zoom-in';
+                                 } else {
+                                   img.style.transform = 'scale(1.5)';
+                                   img.style.cursor = 'zoom-out';
+                                   img.style.transformOrigin = 'center';
+                                   img.style.transition = 'transform 0.3s ease';
+                                 }
+                               }
+                             }}
+                           >
+                             🔍 Zoom In/Out
+                           </Button>
+                         </Box>
+                         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1, textAlign: 'center' }}>
+                           Original file displayed. PDF conversion happens only on download/share.
+                         </Typography>
+                       </Box>
+                     )
+                   ) : (
+                     <Box sx={{ p: 3 }}>
+                       <Typography variant="body1" sx={{ mb: 2, fontWeight: 600 }}>
+                         📋 Document Content:
+                       </Typography>
+                       <Box sx={{ p: 2, backgroundColor: 'grey.50', borderRadius: 1, mb: 2 }}>
+                         <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>
+                           {selectedDocument.content}
+                         </Typography>
+                       </Box>
+                       <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                         <Typography variant="caption" color="text.secondary">
+                           <strong>Type:</strong> {selectedDocument.fileType}
+                         </Typography>
+                         <Typography variant="caption" color="text.secondary">
+                           <strong>Date:</strong> {selectedDocument.completedDate}
+                         </Typography>
+                         <Typography variant="caption" color="text.secondary">
+                           <strong>By:</strong> {selectedDocument.orderedBy}
+                         </Typography>
+                       </Box>
+                       <Alert severity="info" sx={{ mt: 2 }}>
+                         📄 This content will be converted to PDF format when you download it.
+                       </Alert>
+                     </Box>
+                   )}
+                 </Box>
+              </Box>
+            )}
+          </DialogContent>
+                     <DialogActions>
+             <Button onClick={() => {
+               setDocumentViewerOpen(false);
+               setPdfDataUrl('');
+             }} variant="outlined">
+               Close
+             </Button>
+             <Button 
+               onClick={async () => {
+                 try {
+                   setIsGeneratingPdf(true);
+                   console.log('🔄 Generating PDF for download:', selectedDocument.title);
+                   
+                   const documentData: DocumentData = {
+                     title: selectedDocument.title,
+                     content: selectedDocument.content,
+                     type: selectedDocument.type,
+                     completedDate: selectedDocument.completedDate,
+                     orderedBy: selectedDocument.orderedBy,
+                     fileType: selectedDocument.fileType,
+                     fileUrl: selectedDocument.fileUrl,
+                     patientName: selectedPatient?.name || 'Sample Patient'
+                   };
+                   
+                   const pdfUrl = await convertDocumentToPDF(documentData);
+                   
+                   if (pdfUrl && pdfUrl.length > 0) {
+                     console.log('✅ PDF generated for download');
+                     const filename = `${selectedDocument.title.replace(/[^a-z0-9]/gi, '_')}_${new Date().toISOString().split('T')[0]}`;
+                     downloadPDF(pdfUrl, filename);
+                   } else {
+                     throw new Error('PDF generation failed');
+                   }
+                 } catch (error) {
+                   console.error('❌ Error generating PDF for download:', error);
+                   alert('Error generating PDF for download. Please try again.');
+                 } finally {
+                   setIsGeneratingPdf(false);
+                 }
+               }}
+               variant="contained"
+               color="primary"
+               disabled={isGeneratingPdf}
+             >
+               {isGeneratingPdf ? 'Generating PDF...' : '📄 Download as PDF'}
+             </Button>
+           </DialogActions>
+                 </Dialog>
+
+         {/* File Upload Dialog */}
+         <Dialog
+           open={uploadDialogOpen}
+           onClose={() => {
+             setUploadDialogOpen(false);
+             setSelectedRequirementForUpload(null);
+             setUploadedFiles([]);
+           }}
+           maxWidth="md"
+           fullWidth
+         >
+           <DialogTitle>
+             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'space-between' }}>
+               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                 {selectedRequirementForUpload?.type === 'lab' && <Science color="primary" />}
+                 {selectedRequirementForUpload?.type === 'imaging' && <Assignment color="success" />}
+                 {selectedRequirementForUpload?.type === 'cardiac' && <LocalHospital color="error" />}
+                 <Typography variant="h6">
+                   Upload Documents: {selectedRequirementForUpload?.title}
+                 </Typography>
+               </Box>
+               <IconButton onClick={() => {
+                 setUploadDialogOpen(false);
+                 setSelectedRequirementForUpload(null);
+                 setUploadedFiles([]);
+               }}>
+                 <Close />
+               </IconButton>
+             </Box>
+           </DialogTitle>
+           <DialogContent>
+             {selectedRequirementForUpload && (
+               <Box>
+                 {/* Requirement Info */}
+                 <Card sx={{ mb: 3, p: 2, backgroundColor: 'info.50' }}>
+                   <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 1 }}>
+                     📋 Requirement Details
+                   </Typography>
+                   <Grid container spacing={2}>
+                     <Grid item xs={12} sm={6}>
+                       <Typography variant="caption" color="text.secondary">
+                         <strong>Required:</strong> {selectedRequirementForUpload.description}
+                       </Typography>
+                     </Grid>
+                     <Grid item xs={12} sm={6}>
+                       <Typography variant="caption" color="text.secondary">
+                         <strong>Priority:</strong> {selectedRequirementForUpload.priority || 'normal'}
+                       </Typography>
+                     </Grid>
+                     <Grid item xs={12} sm={6}>
+                       <Typography variant="caption" color="text.secondary">
+                         <strong>Ordered:</strong> {selectedRequirementForUpload.dateOrdered ? new Date(selectedRequirementForUpload.dateOrdered).toLocaleDateString() : 'Recently'}
+                       </Typography>
+                     </Grid>
+                     <Grid item xs={12} sm={6}>
+                       <Typography variant="caption" color="text.secondary">
+                         <strong>Ordered By:</strong> {selectedRequirementForUpload.orderedBy || 'Medical Staff'}
+                       </Typography>
+                     </Grid>
+                   </Grid>
+                 </Card>
+
+                 {/* File Upload Area */}
+                 <Box sx={{ mb: 3 }}>
+                   <Typography variant="subtitle2" sx={{ mb: 2 }}>
+                     📤 Upload Documents (Multiple files allowed)
+                   </Typography>
+                   <input
+                     type="file"
+                     multiple
+                     accept=".pdf,.jpg,.jpeg,.png,.dicom,.dcm"
+                     onChange={(e) => {
+                       if (e.target.files) {
+                         setUploadedFiles(Array.from(e.target.files));
+                       }
+                     }}
+                     style={{ display: 'none' }}
+                     id="file-upload"
+                   />
+                   <label htmlFor="file-upload">
+                     <Card 
+                       sx={{ 
+                         p: 4, 
+                         textAlign: 'center', 
+                         cursor: 'pointer',
+                         border: '2px dashed',
+                         borderColor: 'primary.main',
+                         '&:hover': { backgroundColor: 'primary.50' }
+                       }}
+                     >
+                       <AttachFile sx={{ fontSize: 48, color: 'primary.main', mb: 2 }} />
+                       <Typography variant="h6" color="primary.main" sx={{ mb: 1 }}>
+                         Click to Select Files
+                       </Typography>
+                       <Typography variant="body2" color="text.secondary">
+                         Supported formats: PDF, JPG, PNG, DICOM
+                       </Typography>
+                       <Typography variant="caption" color="text.secondary">
+                         You can select multiple files at once
+                       </Typography>
+                     </Card>
+                   </label>
+                 </Box>
+
+                 {/* Selected Files List */}
+                 {uploadedFiles.length > 0 && (
+                   <Box sx={{ mb: 3 }}>
+                     <Typography variant="subtitle2" sx={{ mb: 2 }}>
+                       📁 Selected Files ({uploadedFiles.length})
+                     </Typography>
+                     <Grid container spacing={2}>
+                       {uploadedFiles.map((file, index) => (
+                         <Grid item xs={12} key={index}>
+                           <Card sx={{ p: 2, backgroundColor: 'success.50' }}>
+                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                 {file.type.includes('image') ? (
+                                   <Image color="success" />
+                                 ) : file.type.includes('pdf') ? (
+                                   <PictureAsPdf color="error" />
+                                 ) : (
+                                   <AttachFile color="info" />
+                                 )}
+                                 <Box>
+                                   <Typography variant="body2" fontWeight={600}>
+                                     {file.name}
+                                   </Typography>
+                                   <Typography variant="caption" color="text.secondary">
+                                     {(file.size / 1024 / 1024).toFixed(2)} MB • {file.type || 'Unknown type'}
+                                   </Typography>
+                                 </Box>
+                               </Box>
+                               <IconButton 
+                                 size="small" 
+                                 onClick={() => {
+                                   setUploadedFiles(uploadedFiles.filter((_, i) => i !== index));
+                                 }}
+                               >
+                                 <Close />
+                               </IconButton>
+                             </Box>
+                           </Card>
+                         </Grid>
+                       ))}
+                     </Grid>
+                   </Box>
+                 )}
+               </Box>
+             )}
+           </DialogContent>
+           <DialogActions>
+             <Button 
+               onClick={() => {
+                 setUploadDialogOpen(false);
+                 setSelectedRequirementForUpload(null);
+                 setUploadedFiles([]);
+               }} 
+               variant="outlined"
+             >
+               Cancel
+             </Button>
+             <Button 
+               onClick={() => {
+                 if (uploadedFiles.length > 0) {
+                   // Mark requirement as completed and add uploaded files
+                   const updatedRequirements = selectedPatient.medicalRequirements.map((req: any) => 
+                     req.id === selectedRequirementForUpload.id 
+                       ? { 
+                           ...req, 
+                           status: 'completed', 
+                           completedDate: new Date().toISOString().split('T')[0],
+                           uploadedFiles: uploadedFiles.map(file => ({
+                             name: file.name,
+                             size: file.size,
+                             type: file.type,
+                             uploadDate: new Date().toISOString(),
+                             // In real implementation, this would be the actual file URL after upload
+                             url: URL.createObjectURL(file)
+                           }))
+                         }
+                       : req
+                   );
+                   
+                   const updatedPatient = { ...selectedPatient, medicalRequirements: updatedRequirements };
+                   setSelectedPatient(updatedPatient);
+                   
+                   const updatedPatients = enhancedPatients.map(patient => 
+                     patient.id === selectedPatient.id ? updatedPatient : patient
+                   );
+                   setEnhancedPatients(updatedPatients);
+                   
+                   // Close dialog
+                   setUploadDialogOpen(false);
+                   setSelectedRequirementForUpload(null);
+                   setUploadedFiles([]);
+                   
+                   alert(`Successfully uploaded ${uploadedFiles.length} file(s) for ${selectedRequirementForUpload.title}`);
+                 }
+               }}
+               variant="contained"
+               color="primary"
+               disabled={uploadedFiles.length === 0}
+             >
+               Upload {uploadedFiles.length > 0 ? `${uploadedFiles.length} File(s)` : 'Files'}
+             </Button>
+           </DialogActions>
+                    </Dialog>
+
+          {/* WhatsApp Share Dialog */}
+          <Dialog
+            open={whatsappDialogOpen}
+            onClose={() => setWhatsappDialogOpen(false)}
+            maxWidth="md"
+            fullWidth
+          >
+            <DialogTitle>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'space-between' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <WhatsApp sx={{ color: '#25D366' }} />
+                  <Typography variant="h6">
+                    Share via WhatsApp
+                  </Typography>
+                </Box>
+                <IconButton onClick={() => setWhatsappDialogOpen(false)}>
+                  <Close />
+                </IconButton>
+              </Box>
+            </DialogTitle>
+            <DialogContent>
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
+                  📄 Documents to Share ({selectedDocumentsForShare.length})
+                </Typography>
+                <Grid container spacing={2}>
+                  {selectedDocumentsForShare.map((doc, index) => (
+                    <Grid item xs={12} sm={6} key={index}>
+                      <Card sx={{ p: 2, backgroundColor: 'success.50', border: '1px solid', borderColor: 'success.light' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                          <PictureAsPdf color="error" />
+                          <Typography variant="body2" fontWeight={600}>
+                            {doc.title}
+                          </Typography>
+                        </Box>
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                          <strong>Type:</strong> {doc.fileType}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                          <strong>Date:</strong> {doc.completedDate}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          <strong>By:</strong> {doc.orderedBy}
+                        </Typography>
+                      </Card>
+                    </Grid>
+                  ))}
+                </Grid>
+              </Box>
+
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                  💬 WhatsApp Message
+                </Typography>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={4}
+                  value={whatsappMessage}
+                  onChange={(e) => setWhatsappMessage(e.target.value)}
+                  placeholder="Enter your message..."
+                  variant="outlined"
+                />
+              </Box>
+
+              <Alert severity="info" sx={{ mb: 2 }}>
+                📱 This will open WhatsApp with your message. The documents will be converted to PDF format and you can attach them manually.
+              </Alert>
+            </DialogContent>
+            <DialogActions>
+              <Button
+                onClick={() => setWhatsappDialogOpen(false)}
+                variant="outlined"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={async () => {
+                  try {
+                    // Generate PDFs for all selected documents
+                    setIsGeneratingPdf(true);
+                    console.log('🔄 Generating PDFs for WhatsApp sharing...');
+                    
+                    const pdfPromises = selectedDocumentsForShare.map(async (doc) => {
+                      const documentData: DocumentData = {
+                        title: doc.title,
+                        content: doc.content,
+                        type: doc.type,
+                        completedDate: doc.completedDate,
+                        orderedBy: doc.orderedBy,
+                        fileType: doc.fileType,
+                        fileUrl: doc.fileUrl,
+                        patientName: selectedPatient?.name || 'Sample Patient'
+                      };
+                      
+                      const pdfUrl = await convertDocumentToPDF(documentData);
+                      const filename = `${doc.title.replace(/[^a-z0-9]/gi, '_')}_${new Date().toISOString().split('T')[0]}`;
+                      
+                      // Download each PDF
+                      downloadPDF(pdfUrl, filename);
+                      
+                      return filename;
+                    });
+                    
+                    await Promise.all(pdfPromises);
+                    
+                    // Open WhatsApp with message
+                    const encodedMessage = encodeURIComponent(whatsappMessage);
+                    const whatsappUrl = `https://wa.me/?text=${encodedMessage}`;
+                    window.open(whatsappUrl, '_blank');
+                    
+                    setWhatsappDialogOpen(false);
+                    console.log('✅ PDFs generated and WhatsApp opened');
+                  } catch (error) {
+                    console.error('❌ Error sharing via WhatsApp:', error);
+                    alert('Error generating PDFs for sharing. Please try again.');
+                  } finally {
+                    setIsGeneratingPdf(false);
+                  }
+                }}
+                variant="contained"
+                disabled={isGeneratingPdf || selectedDocumentsForShare.length === 0}
+                sx={{ backgroundColor: '#25D366', '&:hover': { backgroundColor: '#1DA851' } }}
+              >
+                {isGeneratingPdf ? 'Generating PDFs...' : `📱 Open WhatsApp & Download PDFs`}
+              </Button>
+            </DialogActions>
+          </Dialog>
+                   </React.Fragment>
+                 );
+               };
 
 export default PatientListPage;
 
