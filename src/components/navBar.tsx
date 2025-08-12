@@ -1,8 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { signOut } from 'firebase/auth';
-import { auth } from '../api/firebase';
+import { authHelpers } from '../api/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { useUser } from '../contexts/UserContext';
 import { useNotifications } from '../contexts/NotificationContext';
@@ -29,6 +28,8 @@ import {
   useTheme,
   Paper,
   useMediaQuery,
+  MenuList,
+  Popper,
 } from '@mui/material';
 import {
   Search,
@@ -61,7 +62,8 @@ const NavBar: React.FC = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const isTablet = useMediaQuery(theme.breakpoints.between('md', 'lg'));
   const isDesktop = useMediaQuery(theme.breakpoints.up('lg'));
-  
+  const langBtnRef = React.useRef<HTMLButtonElement | null>(null);
+
   // Language menu state
   const [languageAnchorEl, setLanguageAnchorEl] = React.useState<null | HTMLElement>(null);
   
@@ -78,9 +80,9 @@ const NavBar: React.FC = () => {
     setLanguageAnchorEl(event.currentTarget);
   };
 
-  const handleLanguageMenuClose = () => {
-    setLanguageAnchorEl(null);
-  };
+  const handleLanguageMenuClose = () => setLanguageAnchorEl(null);
+ 
+  
 
   const handleUserMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setUserAnchorEl(event.currentTarget);
@@ -89,6 +91,7 @@ const NavBar: React.FC = () => {
   const handleUserMenuClose = () => {
     setUserAnchorEl(null);
   };
+  
 
   const handleNotificationClick = () => {
     navigate('/notifications');
@@ -102,7 +105,7 @@ const NavBar: React.FC = () => {
   const handleSignOut = async () => {
     try {
       setUserAnchorEl(null);
-      await signOut(auth);
+      await authHelpers.signOut();
       navigate('/login');
     } catch (error) {
       console.error('Error signing out:', error);
@@ -167,7 +170,7 @@ const NavBar: React.FC = () => {
       <Toolbar sx={{ 
         justifyContent: 'space-between', 
         py: { xs: 0.5, sm: 1, md: 1.5, lg: 2 }, 
-        px: { xs: 1.5, sm: 2, md: 3, lg: 4 }, 
+        px: { xs: 2, sm: 3, md: 4, lg: 4 }, 
         position: 'relative',
         minHeight: { xs: '56px', sm: '60px', md: '64px', lg: '68px' },
         maxWidth: '100%',
@@ -393,51 +396,43 @@ const NavBar: React.FC = () => {
         }}>
           {/* Language Switcher */}
           <Tooltip title={t('change_language')}>
-            <IconButton
-              onClick={handleLanguageMenuOpen}
-              sx={{
-                width: { xs: 32, sm: 36, md: 40, lg: 42 },
-                height: { xs: 32, sm: 36, md: 40, lg: 42 },
-                borderRadius: { xs: '10px', md: '12px' },
-                background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.03) 0%, rgba(0, 0, 0, 0.06) 100%)',
-                color: 'text.secondary',
-                border: '1px solid rgba(0, 0, 0, 0.05)',
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                '&:hover': {
-                  background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(59, 130, 246, 0.05) 100%)',
-                  color: 'primary.main',
-                  transform: 'translateY(-1px)',
-                  boxShadow: '0 4px 12px rgba(99, 102, 241, 0.15)',
-                  border: '1px solid rgba(99, 102, 241, 0.2)',
-                },
-              }}
-            >
-              <Language sx={{ fontSize: { xs: 16, sm: 18, md: 19 } }} />
-            </IconButton>
-          </Tooltip>
-          <Menu
-            anchorEl={languageAnchorEl}
-            open={Boolean(languageAnchorEl)}
-            onClose={handleLanguageMenuClose}
-            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-            transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-            PaperProps={{
-              sx: {
-                mt: 1,
-                borderRadius: '12px',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
-                background: 'rgba(255, 255, 255, 0.95)',
-                backdropFilter: 'blur(20px)',
-              },
-            }}
-          >
-            <MenuItem onClick={() => changeLanguage('en')} selected={i18n.language === 'en'}>
-              English
-            </MenuItem>
-            <MenuItem onClick={() => changeLanguage('ar')} selected={i18n.language === 'ar'}>
-              العربية
-            </MenuItem>
-          </Menu>
+        <IconButton
+          ref={langBtnRef}              // <-- attach ref here
+          onClick={handleLanguageMenuOpen}
+          sx={{
+            width: { xs: 32, sm: 36, md: 40, lg: 42 },
+            height: { xs: 32, sm: 36, md: 40, lg: 42 },
+            borderRadius: { xs: '10px', md: '12px' },
+            background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.03) 0%, rgba(0, 0, 0, 0.06) 100%)',
+            color: 'text.secondary',
+            border: '1px solid rgba(0, 0, 0, 0.05)',
+            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            '&:hover': {
+              background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(59, 130, 246, 0.05) 100%)',
+              color: 'primary.main',
+              transform: 'translateY(-1px)',
+              boxShadow: '0 4px 12px rgba(99, 102, 241, 0.15)',
+              border: '1px solid rgba(99, 102, 241, 0.2)',
+            },
+          }}
+        >
+          <Language sx={{ fontSize: { xs: 16, sm: 18, md: 19, lg: 20 } }} />
+        </IconButton>
+      </Tooltip>
+
+      <Popper
+  open={Boolean(languageAnchorEl)}
+  anchorEl={languageAnchorEl}
+  placement="bottom-end"
+  modifiers={[{ name: 'offset', options: { offset: [0, 8] } }]}
+>
+  <Paper elevation={3}>
+    <MenuList autoFocusItem>
+      <MenuItem onClick={() => changeLanguage('en')} selected={i18n.language === 'en'}>English</MenuItem>
+      <MenuItem onClick={() => changeLanguage('ar')} selected={i18n.language === 'ar'}>العربية</MenuItem>
+    </MenuList>
+  </Paper>
+</Popper>
 
           {/* Notifications */}
           <Tooltip title={t('notifications')}>
@@ -612,11 +607,12 @@ const NavBar: React.FC = () => {
               anchorEl={userAnchorEl}
               open={Boolean(userAnchorEl)}
               onClose={handleUserMenuClose}
-              anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-              transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+              anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+              transformOrigin={{ vertical: 'top', horizontal: 'center' }}
+              data-menu="user"
               PaperProps={{
                 sx: {
-                  mt: 1,
+                  mt: 0.5,
                   minWidth: 280,
                   borderRadius: '16px',
                   boxShadow: '0 8px 32px rgba(0,0,0,0.12)',

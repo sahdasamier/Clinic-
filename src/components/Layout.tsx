@@ -199,8 +199,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         position: 'relative',
         // Smooth transition when sidebar toggles
         transition: 'margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-        // Adjust margin for collapsed sidebar on desktop
-        marginLeft: isMobile ? 0 : isCollapsed ? '80px' : '0px',
+        // Adjust margin for collapsed sidebar on desktop - no margin needed as sidebar is permanent drawer
+        marginLeft: 0,
       }}>
         {/* Header */}
         <Header />
@@ -213,9 +213,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             overflow: 'auto',
             // Responsive padding with safe area support
             p: { 
-              xs: 'max(env(safe-area-inset-top, 0px), 16px) max(env(safe-area-inset-right, 0px), 16px) max(env(safe-area-inset-bottom, 0px), 16px) max(env(safe-area-inset-left, 0px), 16px)',
-              sm: 'max(env(safe-area-inset-top, 0px), 24px) max(env(safe-area-inset-right, 0px), 24px) max(env(safe-area-inset-bottom, 0px), 24px) max(env(safe-area-inset-left, 0px), 24px)',
-              md: 'max(env(safe-area-inset-top, 0px), 32px) max(env(safe-area-inset-right, 0px), 32px) max(env(safe-area-inset-bottom, 0px), 32px) max(env(safe-area-inset-left, 0px), 32px)'
+              xs: 2,
+              sm: 3,
+              md: 4,
+              lg: 4
             },
             minHeight: 0, // Prevent flex item from growing beyond container
             position: 'relative',

@@ -1,5 +1,42 @@
 /* Global Styles for Enhanced UI - Clinic Application */
 
+/* MENU POSITIONING FIX - Override any transform interference */
+.MuiMenu-root .MuiMenu-paper {
+  transform-origin: top center !important;
+}
+
+.MuiMenu-root .MuiPaper-root {
+  position: absolute !important;
+}
+
+/* Language Menu - Force center positioning */
+.MuiMenu-root[data-menu="language"] .MuiPaper-root {
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  transform-origin: top center !important;
+}
+
+/* User Menu - Force right positioning */
+.MuiMenu-root[data-menu="user"] .MuiPaper-root {
+  right: 0 !important;
+  transform: translateX(-25%) !important;
+  transform-origin: top right !important;
+}
+
+/* Ensure all Popover/Menu positioning is not affected by global transforms */
+.MuiPopover-root .MuiPaper-root {
+  transform-origin: inherit !important;
+}
+
+/* Override any conflicting transform rules for Menu components */
+.MuiMenu-root * {
+  transform: none !important;
+}
+
+.MuiMenu-root .MuiPaper-root {
+  transform: initial !important;
+}
+
 /* Ensure all buttons have minimum touch target size */
 .MuiButton-root {
   min-height: 48px !important;

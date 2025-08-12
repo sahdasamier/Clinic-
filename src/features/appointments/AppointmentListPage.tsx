@@ -300,7 +300,7 @@ const AppointmentListPage: React.FC = () => {
   const { t } = useTranslation();
   const { user, loading: authLoading, initialized } = useAuth();
   const { userProfile } = useUser();
-
+  
   // ✅ NEW: Use real-time data hooks
   const {
     appointments,
@@ -660,7 +660,7 @@ const AppointmentListPage: React.FC = () => {
     }
   }, [newAppointment.doctor, newAppointment.date]);
 
-  // ✅ NEW: Listen for appointment payment status sync events
+    // ✅ NEW: Listen for appointment payment status sync events
   useEffect(() => {
     const handleAppointmentPaymentStatusSync = (event: CustomEvent) => {
       console.log('💚 APPOINTMENT PAGE: Payment status synced from payment page');
@@ -737,51 +737,51 @@ const AppointmentListPage: React.FC = () => {
   useEffect(() => {
     // ✅ FIXED: Restructure to avoid early returns and prevent hooks count mismatch
     console.log('🔥 Setting up Firebase Data Manager...');
-    
+
     let dataManager: any = null;
     let paymentUpdateCleanup: (() => void) | null = null;
 
     if (userProfile?.clinicId) {
-      console.log('🔥 Initializing Firebase Data Manager for appointments...');
-      
-      // Initialize Firebase Data Manager
+    console.log('🔥 Initializing Firebase Data Manager for appointments...');
+    
+    // Initialize Firebase Data Manager
       dataManager = firebaseDataManager.initialize({
-        clinicId: userProfile.clinicId,
-        userId: userProfile.id
-      });
+      clinicId: userProfile.clinicId,
+      userId: userProfile.id
+    });
+    
+    // Listen to real-time appointment updates
+    dataManager.addEventListener('appointments', (firebaseAppointments: FirebaseAppointment[]) => {
+      console.log(`🔥 REALTIME: Received ${firebaseAppointments.length} appointments from Firebase Data Manager`);
+      setFirebaseAppointments(firebaseAppointments);
       
-      // Listen to real-time appointment updates
-      dataManager.addEventListener('appointments', (firebaseAppointments: FirebaseAppointment[]) => {
-        console.log(`🔥 REALTIME: Received ${firebaseAppointments.length} appointments from Firebase Data Manager`);
-        setFirebaseAppointments(firebaseAppointments);
-        
-        // Convert Firebase appointments to local format for UI compatibility
-        const convertedAppointments = firebaseAppointments.map(convertFirebaseAppointmentToLocal);
+      // Convert Firebase appointments to local format for UI compatibility
+      const convertedAppointments = firebaseAppointments.map(convertFirebaseAppointmentToLocal);
         setAppointmentList(normalizeAppointments(convertedAppointments));
-        setDataLoading(false);
-        setFirebaseConnected(true);
-      });
+      setDataLoading(false);
+      setFirebaseConnected(true);
+    });
+    
+    // Listen to payment-related events from other pages
+    const handlePaymentUpdated = (event: CustomEvent) => {
+      const { updates, appointmentId } = event.detail;
+      console.log('🔄 Cross-page event: Payment updated from payments page', event.detail);
       
-      // Listen to payment-related events from other pages
-      const handlePaymentUpdated = (event: CustomEvent) => {
-        const { updates, appointmentId } = event.detail;
-        console.log('🔄 Cross-page event: Payment updated from payments page', event.detail);
-        
-        if (appointmentId) {
-          // Update appointment payment status based on payment status
-          setAppointmentList(prev => prev.map(apt => 
-            apt.id === appointmentId 
-              ? { ...apt, paymentStatus: updates.status || apt.paymentStatus }
-              : apt
-          ));
-        }
-      };
-      
-      // Add browser event listeners
-      window.addEventListener('paymentUpdated', handlePaymentUpdated as EventListener);
-      
+      if (appointmentId) {
+        // Update appointment payment status based on payment status
+        setAppointmentList(prev => prev.map(apt => 
+          apt.id === appointmentId 
+            ? { ...apt, paymentStatus: updates.status || apt.paymentStatus }
+            : apt
+        ));
+      }
+    };
+    
+    // Add browser event listeners
+    window.addEventListener('paymentUpdated', handlePaymentUpdated as EventListener);
+    
       paymentUpdateCleanup = () => {
-        window.removeEventListener('paymentUpdated', handlePaymentUpdated as EventListener);
+      window.removeEventListener('paymentUpdated', handlePaymentUpdated as EventListener);
       };
     } else {
       console.log('🔥 Firebase Data Manager: No clinic ID available, skipping initialization');
@@ -1011,10 +1011,10 @@ const AppointmentListPage: React.FC = () => {
       setAvailableDoctors([]);
     });
 
-        return () => {
-          console.log('🔄 AppointmentListPage: Cleaning up doctor listener');
-          unsub();
-        };
+    return () => {
+      console.log('🔄 AppointmentListPage: Cleaning up doctor listener');
+      unsub();
+    };
       } catch (error) {
         console.error('❌ AppointmentListPage: Failed to setup Firebase listener:', error);
         setAvailableDoctors([]);
@@ -1339,7 +1339,7 @@ const AppointmentListPage: React.FC = () => {
       try {
         console.log('💰 Attempting to update or create payment record...');
         const { updateOrCreatePaymentForAppointment } = await import('../../utils/paymentUtils');
-        
+
         // Map appointment payment status to payment status
         const mappedStatus = mapAppointmentPaymentStatusToPaymentStatus(newPaymentStatus);
         console.log('🔄 Mapped payment status:', {
@@ -1562,43 +1562,43 @@ const AppointmentListPage: React.FC = () => {
         const { getAppointmentPaymentAmount } = await import('../../utils/paymentUtils');
         const appointmentAmount = getAppointmentPaymentAmount(appointment.type);
         
-        const paymentData = {
-          clinicId: userProfile!.clinicId,
-          patient: appointment.patient,
-          doctor: appointment.doctor,
-          appointmentId: appointment.id,
+      const paymentData = {
+        clinicId: userProfile!.clinicId,
+        patient: appointment.patient,
+        doctor: appointment.doctor,
+        appointmentId: appointment.id,
           amount: appointmentAmount,
-          currency: 'EGP',
-          status: 'paid' as const,
-          date: new Date().toISOString().split('T')[0],
-          dueDate: appointment.date,
-          method: 'cash',
+        currency: 'EGP',
+        status: 'paid' as const,
+        date: new Date().toISOString().split('T')[0],
+        dueDate: appointment.date,
+        method: 'cash',
           description: `Payment for completed ${appointment.type || 'unknown'} appointment`,
           category: appointment.type ? appointment.type.toLowerCase() : 'general',
-          invoiceId: `INV-${Date.now()}-${appointment.id.slice(-6)}`,
+        invoiceId: `INV-${Date.now()}-${appointment.id.slice(-6)}`,
           paidAmount: appointmentAmount,
-          includeVAT: false,
-          vatRate: 0,
-          vatAmount: 0,
+        includeVAT: false,
+        vatRate: 0,
+        vatAmount: 0,
           totalAmountWithVAT: appointmentAmount,
           baseAmount: appointmentAmount,
-          insurance: 'No' as const,
-          insuranceAmount: 0,
-          isActive: true
-        };
+        insurance: 'No' as const,
+        insuranceAmount: 0,
+        isActive: true
+      };
 
         const paymentId = await dataManager.createPayment(paymentData);
         console.log(`✅ Appointment completed and new payment ${paymentId} created and marked as PAID`);
-          
-        // Dispatch custom event to notify Payment Management about new revenue
-        window.dispatchEvent(new CustomEvent('appointmentCompletedWithPayment', {
-          detail: {
-            appointment,
-            payment: paymentData,
+        
+      // Dispatch custom event to notify Payment Management about new revenue
+      window.dispatchEvent(new CustomEvent('appointmentCompletedWithPayment', {
+        detail: {
+          appointment,
+          payment: paymentData,
             revenue: paymentData.amount,
             created: true
-          }
-        }));
+        }
+      }));
       }
     } catch (error) {
       console.error('❌ Error handling appointment completion:', error);
@@ -1802,8 +1802,8 @@ const AppointmentListPage: React.FC = () => {
             baseAmount: appointmentAmount,
             insurance: 'No' as const,
             insuranceAmount: 0,
-            isActive: true
-          };
+          isActive: true
+        };
 
           const paymentRecord = createPayment(paymentData);
           console.log('✅ Payment created for appointment:', paymentRecord.invoiceId);
@@ -3366,15 +3366,15 @@ const AppointmentListPage: React.FC = () => {
                                  </Box>
                                </Box>
                              </TableCell>
-                                                         <TableCell>
+                             <TableCell>
                               <InlineEditableField
                                 appointment={appointment}
                                 field="date"
                                 displayValue={formatSafeDate(appointment.date)}
                                 secondaryValue={formatSafeDate(appointment.date, { weekday: 'short' })}
                               />
-                            </TableCell>
-                                                         <TableCell>
+                             </TableCell>
+                             <TableCell>
                               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                                 <InlineEditableField
                                   appointment={appointment}
@@ -3386,8 +3386,8 @@ const AppointmentListPage: React.FC = () => {
                                   field="duration"
                                   displayValue={`${appointment.duration} ${t('minutes')}`}
                                 />
-                              </Box>
-                            </TableCell>
+                               </Box>
+                             </TableCell>
                              <TableCell>
                                <Tooltip title={t('click_to_change_type')} arrow>
                                  <Chip
@@ -3425,24 +3425,24 @@ const AppointmentListPage: React.FC = () => {
                                  </Typography>
                                </Box>
                              </TableCell>
-                                                         <TableCell>
-                              <Tooltip title={t('click_to_change_payment_status')} arrow>
-                                <Chip
-                                  label={t((appointment as any).paymentStatus || 'pending')}
-                                  size="small"
-                                  variant="filled"
-                                  onClick={(e) => handleQuickPaymentStatusEdit(appointment, e)}
-                                  sx={{ 
-                                    minWidth: 80,
-                                    fontWeight: 600,
-                                    textTransform: 'capitalize',
-                                    cursor: 'pointer',
+                             <TableCell>
+                               <Tooltip title={t('click_to_change_payment_status')} arrow>
+                                 <Chip
+                                   label={t((appointment as any).paymentStatus || 'pending')}
+                                   size="small"
+                                   variant="filled"
+                                   onClick={(e) => handleQuickPaymentStatusEdit(appointment, e)}
+                                   sx={{ 
+                                     minWidth: 80,
+                                     fontWeight: 600,
+                                     textTransform: 'capitalize',
+                                     cursor: 'pointer',
                                     transition: 'all 0.2s ease',
                                     ...getPaymentStatusStyles((appointment as any).paymentStatus || 'pending')
-                                  }}
-                                />
-                              </Tooltip>
-                            </TableCell>
+                                   }}
+                                 />
+                               </Tooltip>
+                             </TableCell>
                              <TableCell>
                                <Tooltip title={t('click_to_change_status')} arrow>
                                  <Chip
@@ -4553,18 +4553,18 @@ const AppointmentListPage: React.FC = () => {
                    onTimeSlotSelect={(timeSlot) => {
                      // Parse timeSlot (HH:MM format) and set hour, minute, and time display
                      const [hour, minute] = timeSlot.split(':');
-                     const hourNum = parseInt(hour);
-                     const displayHour = hourNum > 12 ? hourNum - 12 : hourNum === 0 ? 12 : hourNum;
-                     const ampm = hourNum >= 12 ? 'PM' : 'AM';
+                         const hourNum = parseInt(hour);
+                         const displayHour = hourNum > 12 ? hourNum - 12 : hourNum === 0 ? 12 : hourNum;
+                         const ampm = hourNum >= 12 ? 'PM' : 'AM';
                      const timeDisplay = `${displayHour}:${minute} ${ampm}`;
                      
-                     setNewAppointment(prev => ({
-                       ...prev,
+                       setNewAppointment(prev => ({ 
+                         ...prev, 
                        hour: hour,
                        minute: minute,
-                       time: timeDisplay
-                     }));
-                   }}
+                         time: timeDisplay
+                       }));
+                     }}
                  />
                </Grid>
 
@@ -4572,11 +4572,11 @@ const AppointmentListPage: React.FC = () => {
                <Grid item xs={12} md={6}>
                  <FormControl fullWidth>
                    <InputLabel>{t('appointment_type')}</InputLabel>
-                                     <Select 
-                    label={t('appointment_type')}
+                   <Select 
+                     label={t('appointment_type')}
                     value={normalizeAppointmentType(newAppointment.type)}
-                    onChange={(e) => setNewAppointment(prev => ({ ...prev, type: e.target.value }))}
-                  >
+                     onChange={(e) => setNewAppointment(prev => ({ ...prev, type: e.target.value }))}
+                   >
                      <MenuItem value="Consultation">
                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                          <MedicalServices fontSize="small" color="primary" />

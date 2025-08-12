@@ -144,15 +144,15 @@ const FirebaseErrorBoundary: React.FC<{
           <Typography variant="h6" component="div">
             <ErrorOutline sx={{ mr: 1, verticalAlign: 'middle' }} />
             Firebase Connection Issue
-          </Typography>
+      </Typography>
           <Typography variant="body2" sx={{ mt: 1 }}>
             There was an issue connecting to the database. Using cached data where available.
           </Typography>
           {error && (
             <Typography variant="caption" sx={{ mt: 1, display: 'block', fontFamily: 'monospace' }}>
               {error.message}
-            </Typography>
-          )}
+        </Typography>
+      )}
         </Box>
       </Alert>
     );
@@ -242,11 +242,11 @@ const DashboardPage: React.FC = () => {
         }
       });
 
-      return () => {
+    return () => {
         unsubscribeDataUpdate();
         unsubscribeConnection();
       };
-    } catch (error) {
+      } catch (error) {
       console.error('❌ Error setting up dashboard listeners:', error);
       handleFirebaseError(error as Error);
     }
@@ -299,10 +299,10 @@ const DashboardPage: React.FC = () => {
         payment?.createdAt && new Date(payment.createdAt) >= thisMonth
       );
 
-      return {
+             return {
         totalPatients: safePatients.length,
         totalAppointments: safeAppointments.length,
-        todayAppointments: todayAppointments.length,
+      todayAppointments: todayAppointments.length,
         completedAppointments: safeAppointments.filter(apt => apt?.status === 'completed').length,
         pendingAppointments: safeAppointments.filter(apt => apt?.status === 'scheduled').length,
         totalRevenue: safePayments.reduce((sum, payment) => sum + (payment?.amount || 0), 0),
@@ -314,7 +314,7 @@ const DashboardPage: React.FC = () => {
           return createdDate >= thisMonth;
         }).length
       };
-    } catch (error) {
+        } catch (error) {
       console.error('❌ Error calculating dashboard metrics:', error);
       // Return safe fallback metrics
       return {
@@ -334,8 +334,8 @@ const DashboardPage: React.FC = () => {
   // Enhanced manual refresh with Firebase restart capability
   const handleManualRefresh = async () => {
     try {
-      setRefreshKey(prev => prev + 1);
-      
+        setRefreshKey(prev => prev + 1);
+        
       // If there are persistent errors, try restarting the Firebase manager
       if (firebaseError && connectionRetries > 2) {
         console.log('🔄 Attempting to restart Firebase manager due to persistent errors...');
@@ -345,7 +345,7 @@ const DashboardPage: React.FC = () => {
           setConnectionRetries(0);
         }
       }
-    } catch (error) {
+      } catch (error) {
       console.error('❌ Error during manual refresh:', error);
       handleFirebaseError(error as Error);
     }
@@ -393,7 +393,7 @@ const DashboardPage: React.FC = () => {
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
           <Typography variant="h4" component="h1" gutterBottom>
             {t('dashboard.title')}
-          </Typography>
+                  </Typography>
           <Box display="flex" alignItems="center" gap={2}>
             {/* Connection Status */}
             <Chip
@@ -418,22 +418,24 @@ const DashboardPage: React.FC = () => {
             {lastUpdate && (
               <Typography variant="caption" color="textSecondary">
                 Last update: {lastUpdate.toLocaleTimeString()}
-              </Typography>
+                  </Typography>
             )}
 
             {/* Manual Refresh */}
             <Tooltip title={firebaseError ? "Restart Firebase Connection" : "Refresh Data"}>
-              <IconButton 
-                onClick={handleManualRefresh}
-                disabled={isLoading}
-                color={firebaseError ? "error" : "default"}
-              >
-                <Refresh />
-              </IconButton>
+              <span>
+                <IconButton 
+                  onClick={handleManualRefresh}
+                  disabled={isLoading}
+                  color={firebaseError ? "error" : "default"}
+                >
+                  <Refresh />
+                </IconButton>
+              </span>
             </Tooltip>
-          </Box>
-        </Box>
-
+                </Box>
+              </Box>
+            
         {/* Enhanced Error Display */}
         {hasErrors && (
           <Alert 
@@ -484,7 +486,7 @@ const DashboardPage: React.FC = () => {
                       </Typography>
                     </Box>
                     <People fontSize="large" />
-                  </Box>
+                    </Box>
                 </CardContent>
               </Card>
             </Grid>
@@ -497,19 +499,19 @@ const DashboardPage: React.FC = () => {
                     <Box>
                       <Typography variant="h6" component="div">
                         {t('dashboard.todayAppointments')}
-                      </Typography>
+                          </Typography>
                       <Typography variant="h4" component="div">
                         {dashboardMetrics.todayAppointments}
-                      </Typography>
+                          </Typography>
                       <Typography variant="body2">
                         {dashboardMetrics.totalAppointments} total
-                      </Typography>
-                    </Box>
+                          </Typography>
+                        </Box>
                     <CalendarToday fontSize="large" />
-                  </Box>
+                </Box>
                 </CardContent>
               </Card>
-            </Grid>
+          </Grid>
 
             {/* Revenue */}
             <Grid item xs={12} sm={6} md={3}>
@@ -519,16 +521,16 @@ const DashboardPage: React.FC = () => {
                     <Box>
                       <Typography variant="h6" component="div">
                         {t('dashboard.totalRevenue')}
-                      </Typography>
+                  </Typography>
                       <Typography variant="h4" component="div">
                         ${dashboardMetrics.totalRevenue.toLocaleString()}
                       </Typography>
                       <Typography variant="body2">
                         ${dashboardMetrics.thisMonthRevenue.toLocaleString()} this month
                       </Typography>
-                    </Box>
+                </Box>
                     <TrendingUp fontSize="large" />
-                  </Box>
+                </Box>
                 </CardContent>
               </Card>
             </Grid>
@@ -541,7 +543,7 @@ const DashboardPage: React.FC = () => {
                     <Box>
                       <Typography variant="h6" component="div">
                         {t('dashboard.completionRate')}
-                      </Typography>
+                </Typography>
                       <Typography variant="h4" component="div">
                         {dashboardMetrics.totalAppointments > 0 
                           ? Math.round((dashboardMetrics.completedAppointments / dashboardMetrics.totalAppointments) * 100)
@@ -552,7 +554,7 @@ const DashboardPage: React.FC = () => {
                       </Typography>
                     </Box>
                     <CheckCircle fontSize="large" />
-                  </Box>
+                </Box>
                 </CardContent>
               </Card>
             </Grid>
@@ -577,7 +579,7 @@ const DashboardPage: React.FC = () => {
                 <CardContent>
                   <Typography variant="h6" gutterBottom>
                     Recent Appointments
-                  </Typography>
+                    </Typography>
                   <TableContainer>
                     <Table size="small">
                       <TableHead>
@@ -601,7 +603,7 @@ const DashboardPage: React.FC = () => {
                                   appointment?.status === 'completed' ? 'success' :
                                   appointment?.status === 'cancelled' ? 'error' : 'default'
                                 }
-                                size="small"
+                                size="small" 
                               />
                             </TableCell>
                           </TableRow>
@@ -628,7 +630,7 @@ const DashboardPage: React.FC = () => {
                 <CardContent>
                   <Typography variant="h6" gutterBottom>
                     Recent Payments
-                  </Typography>
+                              </Typography>
                   <TableContainer>
                     <Table size="small">
                       <TableHead>
@@ -700,9 +702,9 @@ const DashboardPage: React.FC = () => {
             </Alert>
           </Box>
         )}
-      </Container>
+        </Container>
     </FirebaseErrorBoundary>
   );
 };
 
-export default DashboardPage; 
+export default DashboardPage;

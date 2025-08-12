@@ -2,7 +2,7 @@ const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 
 // Initialize Firebase Admin SDK
-admin.initializeApp();
+  admin.initializeApp();
 const db = admin.firestore();
 
 // ✅ APPOINTMENT TRIGGERS
@@ -136,7 +136,7 @@ exports.onAppointmentUpdated = functions.https.onCall(async (data, context) => {
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
             isActive: true
           });
-        }
+    }
       }
 
       if (updates.status === 'completed') {
@@ -259,8 +259,8 @@ exports.onPatientDeleted = functions.https.onCall(async (data, context) => {
     }
 
     console.log('✅ Patient deletion processing completed');
-    return { 
-      success: true, 
+    return {
+      success: true,
       appointmentsCancelled: futureAppointments.size,
       paymentsArchived: payments.size 
     };
@@ -322,7 +322,7 @@ exports.checkLowStock = functions.pubsub.schedule('every 6 hours').onRun(async (
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
             isActive: true
           });
-        }
+  }
 
         if (lowStockItems.length > 0) {
           const notificationRef = db.collection('notifications').doc();
@@ -376,7 +376,7 @@ exports.onPaymentProcessed = functions.firestore
             paymentId: paymentId,
             updatedAt: admin.firestore.FieldValue.serverTimestamp()
           });
-        }
+  }
 
         // Create receipt notification
         if (afterData.patientId) {
@@ -556,7 +556,7 @@ exports.healthCheck = functions.https.onRequest(async (req, res) => {
           return { collection: collectionName, status: 'ok', count: snapshot.size };
         } catch (error) {
           return { collection: collectionName, status: 'error', error: error.message };
-        }
+          }
       })
     );
 
@@ -573,6 +573,6 @@ exports.healthCheck = functions.https.onRequest(async (req, res) => {
       status: 'unhealthy',
       error: error.message,
       timestamp: new Date().toISOString()
-    });
-  }
-}); 
+      });
+    }
+  }); 
