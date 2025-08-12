@@ -48,6 +48,8 @@ import {
 import { safeFirestore } from '../../api/firebaseDirect';
 import { useAuth } from '../../contexts/AuthContext';
 import { useUser } from '../../contexts/UserContext';
+import EnhancedMedicalConditionSelector from '../../components/EnhancedMedicalConditionSelector';
+import EnhancedMedicationSelector from '../../components/EnhancedMedicationSelector';
 
 // ✅ NEW: Use the new real-time data hooks instead of legacy systems
 import {
@@ -1323,12 +1325,19 @@ const PatientListPage: React.FC = () => {
       
       const updatedMedications = [...(selectedPatient.medications || []), medication];
       
-      // ✅ NEW: Use Firestore service instead of manual state update
+      // ✅ Immediately update the selectedPatient state for instant UI update
+      const updatedSelectedPatient = {
+        ...selectedPatient,
+        medications: updatedMedications
+      };
+      setSelectedPatient(updatedSelectedPatient);
+      
+      // ✅ NEW: Use Firestore service to persist changes
       await PatientService.updatePatient(selectedPatient.id, {
         medications: updatedMedications
       });
       
-      // ✅ State updates automatically via real-time listener!
+      // ✅ Reset form
       setNewMedication(defaultMedicationData);
       console.log('✅ Medication added successfully');
     } catch (error) {
@@ -1395,7 +1404,7 @@ const PatientListPage: React.FC = () => {
         return patient;
       });
       
-      setPatients(updatedPatients as any);
+      setEnhancedPatients(updatedPatients as any);
       setEditMedicationOpen(false);
       setEditingMedication(null);
     }
@@ -1579,7 +1588,7 @@ const PatientListPage: React.FC = () => {
     if (!pendingMedication || !selectedPatient) return;
 
     // Update the medication in the patient's medications list
-    const updatedPatients = patients.map(patient => {
+    const updatedPatients = enhancedPatients.map(patient => {
       if (patient.id === selectedPatient.id) {
         const updatedMedications = patient.medications?.map((med: any) => 
           med.id === pendingMedication.id 
@@ -1598,7 +1607,7 @@ const PatientListPage: React.FC = () => {
       return patient;
     });
 
-    setPatients(updatedPatients);
+    setEnhancedPatients(updatedPatients);
 
     // Update selectedPatient separately to ensure UI updates immediately
     const updatedSelectedPatient = {
@@ -1816,12 +1825,12 @@ const PatientListPage: React.FC = () => {
       };
 
       // Add medication to patient's list
-      const updatedPatients = patients.map(p => 
+      const updatedPatients = enhancedPatients.map(p => 
         p.id === selectedPatient?.id 
           ? { ...p, medications: [...(p.medications || []), newMedication] }
           : p
       );
-      setPatients(updatedPatients);
+      setEnhancedPatients(updatedPatients);
 
       // Update selectedPatient to reflect the new medication immediately
       const updatedSelectedPatient = {
@@ -1861,7 +1870,7 @@ const PatientListPage: React.FC = () => {
     };
     
     // Update patients array with medical history
-    const updatedPatients = patients.map(patient => {
+    const updatedPatients = enhancedPatients.map(patient => {
       if (patient.id === selectedPatient.id) {
         const updatedPatient = {
           ...patient,
@@ -1873,7 +1882,7 @@ const PatientListPage: React.FC = () => {
       return patient;
     });
     
-    setPatients(updatedPatients);
+    setEnhancedPatients(updatedPatients);
 
     // Reset all form states
     setAddMedicalHistoryOpen(false);
@@ -6437,12 +6446,13 @@ const PatientListPage: React.FC = () => {
                                   onChange={(e) => setNewMedicalHistory({ ...newMedicalHistory, date: e.target.value })}
                                   InputLabelProps={{ shrink: true }}
                                 />
-                                <TextField
-                                  fullWidth
-                                  label="Medical Condition"
+                                <EnhancedMedicalConditionSelector 
                                   value={newMedicalHistory.condition}
-                                  onChange={(e) => setNewMedicalHistory({ ...newMedicalHistory, condition: e.target.value })}
-                                  placeholder="e.g., Diabetes Type 2, Hypertension"
+                                  onChange={(value) => setNewMedicalHistory({ ...newMedicalHistory, condition: value })}
+                                  label="Medical Condition"
+                                  placeholder="Select or type a medical condition"
+                                  helperText="Choose from our database or add a new condition"
+                                  fullWidth
                                 />
                                 <Typography variant="body2" color="primary.main" sx={{ mb: 1 }}>
                                   Treatment: {treatmentType === 'existing' ? 'Select from medications' : treatmentType === 'new' ? 'Add new medication' : 'Custom treatment'}
@@ -6464,8 +6474,8 @@ const PatientListPage: React.FC = () => {
                                       size="small"
                                     >
                                       {selectedPatient?.medications?.length > 0 && (
-                                        selectedPatient.medications.map((medication: any) => (
-                                          <MenuItem key={medication.id} value={medication.name}>
+                                        selectedPatient.medications.map((medication: any, index: number) => (
+                                          <MenuItem key={medication.id || `quick-medication-${index}`} value={medication.name}>
                                             <Box>
                                               <Typography variant="body2">{medication.name}</Typography>
                                               <Typography variant="caption" color="text.secondary">
@@ -6475,7 +6485,7 @@ const PatientListPage: React.FC = () => {
                                           </MenuItem>
                                         ))
                                       )}
-                                      <MenuItem value="__ADD_NEW__" sx={{ borderTop: '1px solid #e0e0e0', mt: 1 }}>
+                                      <MenuItem key="quick-add-new" value="__ADD_NEW__" sx={{ borderTop: '1px solid #e0e0e0', mt: 1 }}>
                                         <Box sx={{ display: 'flex', alignItems: 'center', color: 'primary.main' }}>
                                           <Add sx={{ fontSize: 16, mr: 1 }} />
                                           <Typography variant="body2" fontWeight={600}>
@@ -6484,7 +6494,7 @@ const PatientListPage: React.FC = () => {
                                         </Box>
                                       </MenuItem>
                                       {selectedPatient?.medications?.length === 0 && (
-                                        <MenuItem disabled>
+                                        <MenuItem key="quick-no-medications" disabled>
                                           <Typography variant="caption" color="text.secondary">
                                             No medications. Click "Add New..." to create one.
                                           </Typography>
@@ -6577,33 +6587,17 @@ const PatientListPage: React.FC = () => {
                         <Typography variant="h6" sx={{ fontWeight: 600 }}>
                           Current Medications ({selectedPatient.medications?.length || 0})
                         </Typography>
-                        <Box sx={{ display: 'flex', gap: 1 }}>
-                          <Button 
-                            variant="text" 
-                            size="small"
-                            onClick={() => {
-                              // Refresh selected patient data
-                              const currentPatient = patients.find(p => p.id === selectedPatient.id);
-                              if (currentPatient) {
-                                setSelectedPatient(currentPatient);
- 
-                              }
-                            }}
-                          >
-                            🔄 Refresh
-                          </Button>
-                          <Button 
-                            variant="outlined" 
-                            startIcon={<Add />}
-                            onClick={() => {
-                              // Open add medication form
-                              setNewMedication({ name: '', dosage: '', frequency: '', duration: '' });
-                              // You could open a dialog here or switch to add mode
-                            }}
-                          >
-                            Add Medication
-                          </Button>
-                        </Box>
+                                                <Button 
+                          variant="outlined" 
+                          startIcon={<Add />}
+                          onClick={() => {
+                            // Open add medication form
+                            setNewMedication({ name: '', dosage: '', frequency: '', duration: '' });
+                            // You could open a dialog here or switch to add mode
+                          }}
+                        >
+                          Add Medication
+                        </Button>
                       </Box>
                       
                       <Grid container spacing={3}>
@@ -6669,29 +6663,24 @@ const PatientListPage: React.FC = () => {
                                 Add New Medication
                               </Typography>
                               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                                <TextField
-                                  fullWidth
-                                  label="Medication Name"
-                                  value={newMedication.name}
-                                  onChange={(e) => setNewMedication({ ...newMedication, name: e.target.value })}
-                                />
-                                <TextField
-                                  fullWidth
-                                  label="Dosage"
-                                  value={newMedication.dosage}
-                                  onChange={(e) => setNewMedication({ ...newMedication, dosage: e.target.value })}
-                                />
-                                <TextField
-                                  fullWidth
-                                  label="Frequency"
-                                  value={newMedication.frequency}
-                                  onChange={(e) => setNewMedication({ ...newMedication, frequency: e.target.value })}
-                                />
-                                <TextField
-                                  fullWidth
-                                  label="Duration"
-                                  value={newMedication.duration}
-                                  onChange={(e) => setNewMedication({ ...newMedication, duration: e.target.value })}
+                                <EnhancedMedicationSelector
+                                  value={{
+                                    name: newMedication.name,
+                                    dosage: newMedication.dosage,
+                                    frequency: newMedication.frequency,
+                                    duration: newMedication.duration
+                                  }}
+                                  onChange={(value) => setNewMedication({
+                                    ...newMedication,
+                                    name: value.name,
+                                    dosage: value.dosage || '',
+                                    frequency: value.frequency || '',
+                                    duration: value.duration || ''
+                                  })}
+                                  label="Medication"
+                                  placeholder="Select or type a medication name"
+                                  helperText="Choose from our database or add new medications"
+                                  showDosageAndFrequency={true}
                                 />
                                 <Button
                                   variant="contained"
@@ -7679,13 +7668,13 @@ const PatientListPage: React.FC = () => {
                   />
                 </Grid>
                 <Grid item xs={12}>
-                  <TextField 
-                    fullWidth 
-                    label="Medical Condition" 
+                  <EnhancedMedicalConditionSelector 
                     value={newMedicalHistory.condition}
-                    onChange={(e) => setNewMedicalHistory({ ...newMedicalHistory, condition: e.target.value })}
-                    placeholder="e.g., Diabetes Type 2, Hypertension, Asthma, Heart Disease"
-                    helperText="Enter the diagnosed medical condition"
+                    onChange={(value) => setNewMedicalHistory({ ...newMedicalHistory, condition: value })}
+                    label="Medical Condition"
+                    placeholder="Select or type a medical condition"
+                    helperText="Choose from common conditions or add a new one"
+                    fullWidth
                   />
                 </Grid>
                 <Grid item xs={12}>
@@ -7735,8 +7724,8 @@ const PatientListPage: React.FC = () => {
                             label="Select Medication"
                           >
                             {selectedPatient?.medications?.length > 0 && (
-                              selectedPatient.medications.map((medication: any) => (
-                                <MenuItem key={medication.id} value={medication.name}>
+                              selectedPatient.medications.map((medication: any, index: number) => (
+                                <MenuItem key={medication.id || `medication-${index}`} value={medication.name}>
                                   <Box>
                                     <Typography variant="body2">{medication.name}</Typography>
                                     <Typography variant="caption" color="text.secondary">
@@ -7746,7 +7735,7 @@ const PatientListPage: React.FC = () => {
                                 </MenuItem>
                               ))
                             )}
-                            <MenuItem value="__ADD_NEW__" sx={{ borderTop: '1px solid #e0e0e0', mt: 1 }}>
+                            <MenuItem key="__ADD_NEW__" value="__ADD_NEW__" sx={{ borderTop: '1px solid #e0e0e0', mt: 1 }}>
                               <Box sx={{ display: 'flex', alignItems: 'center', color: 'primary.main' }}>
                                 <Add sx={{ fontSize: 18, mr: 1 }} />
                                 <Typography variant="body2" fontWeight={600}>
@@ -7755,7 +7744,7 @@ const PatientListPage: React.FC = () => {
                               </Box>
                             </MenuItem>
                             {selectedPatient?.medications?.length === 0 && (
-                              <MenuItem disabled>
+                              <MenuItem key="no-medications" disabled>
                                 <Typography variant="caption" color="text.secondary">
                                   No medications found. Click "Add New Medication..." to create one.
                                 </Typography>
@@ -7769,49 +7758,30 @@ const PatientListPage: React.FC = () => {
                     {treatmentType === 'new' && (
                       <Grid container spacing={2}>
                         <Grid item xs={12}>
-                          <TextField 
-                            fullWidth 
-                            label="Medication Name *" 
-                            value={newTreatmentMedication.name}
-                            onChange={(e) => setNewTreatmentMedication({ ...newTreatmentMedication, name: e.target.value })}
-                            placeholder="e.g., Metformin, Aspirin, Insulin"
-                            helperText="Required: Enter the medication name"
-                          />
-                        </Grid>
-                        <Grid item xs={12} md={4}>
-                          <TextField 
-                            fullWidth 
-                            label="Dosage (Optional)" 
-                            value={newTreatmentMedication.dosage}
-                            onChange={(e) => setNewTreatmentMedication({ ...newTreatmentMedication, dosage: e.target.value })}
-                            placeholder="e.g., 500mg, 10ml"
-                            helperText="Can be completed later"
-                          />
-                        </Grid>
-                        <Grid item xs={12} md={4}>
-                          <TextField 
-                            fullWidth 
-                            label="Frequency (Optional)" 
-                            value={newTreatmentMedication.frequency}
-                            onChange={(e) => setNewTreatmentMedication({ ...newTreatmentMedication, frequency: e.target.value })}
-                            placeholder="e.g., Twice daily, Once daily"
-                            helperText="Can be completed later"
-                          />
-                        </Grid>
-                        <Grid item xs={12} md={4}>
-                          <TextField 
-                            fullWidth 
-                            label="Duration (Optional)" 
-                            value={newTreatmentMedication.duration}
-                            onChange={(e) => setNewTreatmentMedication({ ...newTreatmentMedication, duration: e.target.value })}
-                            placeholder="e.g., 30 days, 3 months"
-                            helperText="Can be completed later"
+                          <EnhancedMedicationSelector
+                            value={{
+                              name: newTreatmentMedication.name,
+                              dosage: newTreatmentMedication.dosage,
+                              frequency: newTreatmentMedication.frequency,
+                              duration: newTreatmentMedication.duration
+                            }}
+                            onChange={(value) => setNewTreatmentMedication({
+                              ...newTreatmentMedication,
+                              name: value.name,
+                              dosage: value.dosage || '',
+                              frequency: value.frequency || '',
+                              duration: value.duration || ''
+                            })}
+                            label="Medication *"
+                            placeholder="Select or type a medication name"
+                            helperText="Choose from common medications or add a new one"
+                            showDosageAndFrequency={true}
                           />
                         </Grid>
                         <Grid item xs={12}>
                           <Alert severity="success" sx={{ mt: 1 }}>
-                            <strong>Quick Add Mode:</strong> Just enter the medication name and submit. 
-                            You'll get a popup to complete the dosage and frequency details afterward.
+                            <strong>Enhanced Mode:</strong> Select from our medication database with automatic dosage and frequency suggestions, 
+                            or add new medications to expand the database.
                           </Alert>
                         </Grid>
                       </Grid>
