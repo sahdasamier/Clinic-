@@ -598,7 +598,7 @@ const DoctorSchedulingPage: React.FC = () => {
   // Save edited appointment
   const handleSaveEdit = async () => {
     if (!formData.time || !selectedAppointment) {
-      alert(t('please_fill_all_fields'));
+      console.warn(t('please_fill_all_fields'));
       return;
     }
 
@@ -611,7 +611,7 @@ const DoctorSchedulingPage: React.FC = () => {
     );
 
     if (existingAppointment) {
-      alert(t('time_slot_already_reserved', { time: formData.time }));
+              console.warn(t('time_slot_already_reserved', { time: formData.time }));
       return;
     }
 

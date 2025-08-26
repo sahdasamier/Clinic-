@@ -471,7 +471,7 @@ const AppointmentListPage: React.FC = () => {
       console.log(`✅ Updated appointment ${inlineEditingField.field}: ${inlineEditingField.value}`);
     } catch (error) {
       console.error('❌ Error updating appointment field:', error);
-      alert('Failed to update appointment. Please try again.');
+              console.error('Failed to update appointment. Please try again.');
     }
   };
 
@@ -1296,7 +1296,7 @@ const AppointmentListPage: React.FC = () => {
       setStatusEditAppointment(null);
     } catch (error) {
       console.error('❌ Error updating appointment status:', error);
-      alert('Failed to update appointment status. Please try again.');
+              console.error('Failed to update appointment status. Please try again.');
     }
   };
 
@@ -1470,7 +1470,7 @@ const AppointmentListPage: React.FC = () => {
 
   const handleSaveReschedule = async () => {
     if (!rescheduleAppointment || !rescheduleData.date || !rescheduleData.time) {
-      alert('Please fill in both date and time');
+      console.warn('Please fill in both date and time');
       return;
     }
 
@@ -1508,7 +1508,7 @@ const AppointmentListPage: React.FC = () => {
       FirebaseDataBridge.refreshAll(userProfile?.clinicId || 'demo-clinic');
     } catch (error) {
       console.error('❌ Error rescheduling appointment:', error);
-      alert('Failed to reschedule appointment. Please try again.');
+              console.error('Failed to reschedule appointment. Please try again.');
     }
   };
 
@@ -1607,7 +1607,7 @@ const AppointmentListPage: React.FC = () => {
 
   const handleSaveAppointment = async () => {
     if (!newAppointment.patient || !newAppointment.doctor || !newAppointment.date || !newAppointment.time || !userProfile?.clinicId) {
-      alert(t('fill_required_fields'));
+      console.warn(t('fill_required_fields'));
       return;
     }
 
@@ -1845,16 +1845,16 @@ const AppointmentListPage: React.FC = () => {
       });
       setSelectedAppointment(null);
 
-      alert('✅ Appointment saved successfully!');
+              console.log('✅ Appointment saved successfully!');
     } catch (error) {
       console.error('❌ Error saving appointment:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       
       // ✅ Enhanced error handling for conflict scenarios
       if (errorMessage.includes('Conflict') || errorMessage.includes('conflicts with')) {
-        alert(`🚫 ${t('appointment_conflict_title')}\n\n${errorMessage}\n\n${t('please_select_different_time')}`);
+                  console.error(`🚫 ${t('appointment_conflict_title')}: ${errorMessage}`);
       } else {
-        alert(`❌ ${t('failed_to_save_appointment')}: ${errorMessage}\n\n${t('please_try_again')}`);
+                  console.error(`❌ ${t('failed_to_save_appointment')}: ${errorMessage}`);
       }
     }
   };

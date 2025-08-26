@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { signOut, createUserWithEmailAndPassword, updateProfile, getAuth, signInWithEmailAndPassword, deleteUser, sendPasswordResetEmail } from 'firebase/auth';
 import { initializeApp, deleteApp } from 'firebase/app';
+import { auth } from '../../api/firebase';
 import { createUserWithSecondaryApp, verifyAdminAuthentication, CreateUserData } from '../../api/adminAuth';
 import FirebaseHealthCheck from '../../components/FirebaseHealthCheck';
 import { 

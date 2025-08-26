@@ -56,6 +56,13 @@ const initializeServices = async () => {
     _internalStorage = getOptimizedStorage();
     _internalFunctions = getOptimizedFunctions();
     
+    // Assign to proxy variables
+    _app = _internalApp;
+    _firestore = _internalFirestore;
+    _auth = _internalAuth;
+    _storage = _internalStorage;
+    _functions = _internalFunctions;
+    
     servicesReady = true;
     console.log('✅ All Firebase services initialized and ready');
   } catch (error) {

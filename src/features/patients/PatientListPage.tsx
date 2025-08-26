@@ -808,7 +808,7 @@ const PatientListPage: React.FC = () => {
         
         // Show error to user
         setTimeout(() => {
-          alert(`❌ Firebase Connection Test Failed:\n\n${error}\n\nPlease check:\n1. Internet connection\n2. Firebase configuration\n3. Browser console for details`);
+          console.error(`❌ Firebase Connection Test Failed: ${error}`);
         }, 1000);
       }
     };
@@ -1203,7 +1203,7 @@ const PatientListPage: React.FC = () => {
       
       if (!results) {
         setSyncStatus('completed');
-        alert('💚 Sync completed - no sync needed or no appointments found.');
+        console.log('💚 Sync completed - no sync needed or no appointments found.');
         return;
       }
       
@@ -1217,7 +1217,7 @@ const PatientListPage: React.FC = () => {
     } catch (error) {
       console.error('❌ Firebase-friendly sync failed:', error);
       setSyncStatus('error');
-      alert('Sync failed. Please try again later.');
+              console.error('Sync failed. Please try again later.');
     } finally {
       // Ensure status is not left in syncing state if early returned
       if (syncStatus === 'syncing') {
@@ -1273,7 +1273,7 @@ const PatientListPage: React.FC = () => {
     );
     
     if (patientsWithPhones.length === 0) {
-      alert('No patients with valid phone numbers found.');
+      console.warn('No patients with valid phone numbers found.');
       return;
     }
 
@@ -1293,7 +1293,7 @@ const PatientListPage: React.FC = () => {
     });
     
     // Show confirmation message
-    alert(`Opening WhatsApp for ${patientsWithPhones.length} patients. Please allow pop-ups if prompted.`);
+    console.log(`Opening WhatsApp for ${patientsWithPhones.length} patients.`);
   };
 
   const handleOpenPatientProfile = (patient: Patient) => {
@@ -1339,7 +1339,7 @@ const PatientListPage: React.FC = () => {
       console.log('✅ Visit note added successfully');
     } catch (error) {
       console.error('❌ Error adding visit note:', error);
-      alert('Failed to add visit note. Please try again.');
+      console.error('Failed to add visit note. Please try again.');
     }
   };
 
@@ -1374,7 +1374,7 @@ const PatientListPage: React.FC = () => {
       console.log('✅ Medication added successfully');
     } catch (error) {
       console.error('❌ Error adding medication:', error);
-      alert('Failed to add medication. Please try again.');
+      console.error('Failed to add medication. Please try again.');
     }
   };
 
@@ -1401,10 +1401,10 @@ const PatientListPage: React.FC = () => {
       console.log('✅ Patient updated successfully');
       
       // ✅ ENHANCED: Show success message
-      alert(`Patient "${editingPatient.name}" updated successfully!`);
+      console.log(`Patient "${editingPatient.name}" updated successfully!`);
     } catch (error) {
       console.error('❌ Error updating patient:', error);
-      alert('Failed to update patient. Please try again.');
+      console.error('Failed to update patient. Please try again.');
     }
   };
 
@@ -1565,12 +1565,12 @@ const PatientListPage: React.FC = () => {
 
   const handleAddNewPatient = async () => {
     if (!newPatientData.name.trim() || !newPatientData.phone.trim()) {
-      alert('Please fill in at least the name and phone number');
+      console.warn('Please fill in at least the name and phone number');
       return;
     }
 
     if (!userProfile?.clinicId) {
-      alert('Unable to determine clinic. Please try again.');
+      console.error('Unable to determine clinic. Please try again.');
       return;
     }
 
@@ -1609,10 +1609,10 @@ const PatientListPage: React.FC = () => {
         triggerAutomaticSync.patient(patientData, 'create');
       });
       
-      alert('Patient added successfully!');
+      console.log('Patient added successfully!');
     } catch (error) {
       console.error('❌ Error creating patient:', error);
-      alert('Failed to add patient. Please try again.');
+      console.error('Failed to add patient. Please try again.');
     }
   };
 
@@ -1683,7 +1683,7 @@ const PatientListPage: React.FC = () => {
 
   const handleSaveAppointment = async () => {
     if (!appointmentData.date || !appointmentData.time || !appointmentData.doctor || !appointmentPatient || !userProfile?.clinicId) {
-      alert('Please fill in the date, time, and select a doctor');
+      console.warn('Please fill in the date, time, and select a doctor');
       return;
     }
 
@@ -1693,7 +1693,7 @@ const PatientListPage: React.FC = () => {
       // ✅ Use selected doctor from form
       const selectedDoctor = availableDoctors.find(d => d.id === appointmentData.doctor);
       if (!selectedDoctor) {
-        alert('Selected doctor not found. Please select a valid doctor.');
+        console.error('Selected doctor not found. Please select a valid doctor.');
         return;
       }
 
@@ -1764,13 +1764,13 @@ const PatientListPage: React.FC = () => {
       });
       
       // ✅ State updates automatically via real-time listeners!
-      alert(`✅ Appointment scheduled successfully for ${appointmentPatient.name}!`);
+      console.log(`✅ Appointment scheduled successfully for ${appointmentPatient.name}!`);
       console.log('✅ Appointment created via Firestore service with tracked input date');
 
     } catch (error) {
       console.error('❌ Error saving appointment:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      alert(`Error scheduling appointment: ${errorMessage}. Please try again.`);
+      console.error(`Error scheduling appointment: ${errorMessage}. Please try again.`);
     }
   };
 
@@ -1812,7 +1812,7 @@ const PatientListPage: React.FC = () => {
       
     } catch (error) {
       console.error('❌ Error updating patient status:', error);
-      alert(`Error updating patient status: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error(`Error updating patient status: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -1828,7 +1828,7 @@ const PatientListPage: React.FC = () => {
 
   const handleAddMedicalHistory = () => {
     if (!newMedicalHistory.condition.trim() || !selectedPatient) {
-      alert('Please fill in the condition field');
+      console.warn('Please fill in the condition field');
       return;
     }
 
@@ -1841,7 +1841,7 @@ const PatientListPage: React.FC = () => {
       treatmentText = medication ? `${medication.name} - ${medication.dosage}, ${medication.frequency}` : selectedMedication;
     } else if (treatmentType === 'new') {
       if (!newTreatmentMedication.name.trim()) {
-        alert('Please enter the medication name');
+        console.warn('Please enter the medication name');
         return;
       }
 
@@ -1880,17 +1880,17 @@ const PatientListPage: React.FC = () => {
       treatmentText = `${newTreatmentMedication.name} (Added to medications - details pending completion)`;
     } else if (treatmentType === 'custom') {
       if (!newMedicalHistory.treatment.trim()) {
-        alert('Please enter the custom treatment details');
+        console.warn('Please enter the custom treatment details');
         return;
       }
       treatmentText = newMedicalHistory.treatment;
     } else if (treatmentType === 'existing' && !selectedMedication) {
-      alert('Please select a medication from the dropdown or choose a different treatment type');
+              console.warn('Please select a medication from the dropdown or choose a different treatment type');
       return;
     }
 
     if (!treatmentText) {
-      alert('Please specify a treatment');
+      console.warn('Please specify a treatment');
       return;
     }
 
@@ -8503,7 +8503,7 @@ const PatientListPage: React.FC = () => {
                   const notesInput = document.getElementById('notes-input') as HTMLInputElement;
                   
                   if (!dosageInput?.value.trim() || !frequencyInput?.value.trim()) {
-                    alert('Please enter at least the dosage and frequency');
+                    console.warn('Please enter at least the dosage and frequency');
                     return;
                   }
                   
@@ -9334,7 +9334,7 @@ const PatientListPage: React.FC = () => {
                    }
                  } catch (error) {
                    console.error('❌ Error generating PDF for download:', error);
-                   alert('Error generating PDF for download. Please try again.');
+                   console.error('Error generating PDF for download. Please try again.');
                  } finally {
                    setIsGeneratingPdf(false);
                  }
@@ -9544,7 +9544,7 @@ const PatientListPage: React.FC = () => {
                    setSelectedRequirementForUpload(null);
                    setUploadedFiles([]);
                    
-                   alert(`Successfully uploaded ${uploadedFiles.length} file(s) for ${selectedRequirementForUpload.title}`);
+                   console.log(`Successfully uploaded ${uploadedFiles.length} file(s) for ${selectedRequirementForUpload.title}`);
                  }
                }}
                variant="contained"
@@ -9671,7 +9671,7 @@ const PatientListPage: React.FC = () => {
                     console.log('✅ PDFs generated and WhatsApp opened');
                   } catch (error) {
                     console.error('❌ Error sharing via WhatsApp:', error);
-                    alert('Error generating PDFs for sharing. Please try again.');
+                    console.error('Error generating PDFs for sharing. Please try again.');
                   } finally {
                     setIsGeneratingPdf(false);
                   }

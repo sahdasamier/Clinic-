@@ -109,9 +109,9 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ isOpen, onClose, is
       
       // ✅ Enhanced error handling for conflict scenarios
       if (errorMessage.includes('Conflict') || errorMessage.includes('conflicts with')) {
-        alert(`🚫 Appointment Conflict Detected\n\n${errorMessage}\n\nPlease select a different time slot.`);
+        console.error(`🚫 Appointment Conflict Detected: ${errorMessage}`);
       } else {
-        alert(`❌ Failed to create appointment: ${errorMessage}`);
+                  console.error(`❌ Failed to create appointment: ${errorMessage}`);
       }
     }
   };
