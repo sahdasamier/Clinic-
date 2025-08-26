@@ -916,7 +916,7 @@ const PatientListPage: React.FC = () => {
       console.log('💚 Patient page: Appointment payment status changed:', event.detail);
       
       // Force refresh to get updated appointment data
-      FirebaseDataBridge.refreshAll(userProfile.clinicId || 'demo-clinic');
+      FirebaseDataBridge.refreshAll(userProfile?.clinicId ?? 'demo-clinic');
       
       // Show notification about the change
       const { patient, oldStatus, newStatus } = event.detail;
@@ -928,7 +928,7 @@ const PatientListPage: React.FC = () => {
       console.log('💚 Patient page: Appointment completed with payment:', event.detail);
       
       // Force refresh to get updated appointment and payment data
-      FirebaseDataBridge.refreshAll(userProfile.clinicId || 'demo-clinic');
+      FirebaseDataBridge.refreshAll(userProfile?.clinicId ?? 'demo-clinic');
       
       const { appointment, payment, revenue } = event.detail;
       console.log(`💰 Patient page: ${appointment.patient} completed appointment, revenue: ${revenue}`);
@@ -939,7 +939,7 @@ const PatientListPage: React.FC = () => {
       console.log('💚 Patient page: Payment status changed:', event.detail);
       
       // Force refresh to get updated data
-      FirebaseDataBridge.refreshAll(userProfile.clinicId || 'demo-clinic');
+      FirebaseDataBridge.refreshAll(userProfile?.clinicId ?? 'demo-clinic');
       
       const { patient, oldStatus, newStatus, invoiceId } = event.detail;
       console.log(`💰 Patient page synced: ${patient}'s payment ${invoiceId} status ${oldStatus} → ${newStatus}`);
@@ -950,7 +950,7 @@ const PatientListPage: React.FC = () => {
       console.log('💚 Patient page: Payment status synced:', event.detail);
       
       // Force refresh to get updated patient data
-      FirebaseDataBridge.refreshAll(userProfile.clinicId || 'demo-clinic');
+      FirebaseDataBridge.refreshAll(userProfile?.clinicId ?? 'demo-clinic');
       
       const { appointmentId, patient, paymentId, newStatus } = event.detail;
       console.log(`💰 Patient page synced: Patient ${patient} payment ${paymentId} status → ${newStatus}`);
@@ -977,8 +977,8 @@ const PatientListPage: React.FC = () => {
     // Listen for user data clearing
     const handleUserDataCleared = () => {
       // Reset to default state
-      setPatients([]);
-      setAppointments([]);
+      setEnhancedPatients([]);
+      // setAppointments is not available - appointments come from useAppointments hook
       setTabValue(0);
       setSearchQuery('');
       setActiveFilters({
@@ -1213,16 +1213,16 @@ const PatientListPage: React.FC = () => {
       console.log('✅ Firebase-friendly sync completed:', results);
       
       // Show success message
-      if (results.patientsCreated > 0) {
-        alert(`💚 Firebase-Friendly Sync Complete!\n\n✅ Created ${results.patientsCreated} patients\n✅ Minimal Firebase usage\n✅ Free tier optimized\n\nYour patient list is now ready!`);
-      } else {
-        alert('💚 Sync completed - all patients already exist.');
-      }
       
     } catch (error) {
       console.error('❌ Firebase-friendly sync failed:', error);
       setSyncStatus('error');
-      alert(`❌ Sync failed: ${error}\n\nThis might be due to Firebase quota limits. Try again later.`);
+      alert('Sync failed. Please try again later.');
+    } finally {
+      // Ensure status is not left in syncing state if early returned
+      if (syncStatus === 'syncing') {
+        setSyncStatus('completed');
+      }
     }
   };
 
@@ -1469,7 +1469,7 @@ const PatientListPage: React.FC = () => {
         return patient;
       });
       
-      setPatients(updatedPatients);
+      setEnhancedPatients(updatedPatients);
       setEditNoteOpen(false);
       setEditingNote(null);
     }
@@ -1492,7 +1492,7 @@ const PatientListPage: React.FC = () => {
         return patient;
       });
       
-      setPatients(updatedPatients);
+      setEnhancedPatients(updatedPatients);
     }
   };
 
@@ -1672,6 +1672,7 @@ const PatientListPage: React.FC = () => {
     setAppointmentData({
       date: '',
       time: '',
+      doctor: '',
       type: 'Follow-up',
       duration: '20',
       notes: '',
@@ -1715,7 +1716,7 @@ const PatientListPage: React.FC = () => {
         priority: (appointmentData.priority?.toLowerCase() as 'normal' | 'high' | 'urgent') || 'normal',
         location: 'Main Clinic',
         notes: appointmentData.notes || '',
-        status: 'scheduled' as const,
+        status: 'pending' as const,
         paymentStatus: 'pending' as const,
         isActive: true,
         isAvailableSlot: false  // ✅ FIXED: Explicitly mark as reserved appointment
@@ -2406,7 +2407,7 @@ const PatientListPage: React.FC = () => {
         : patient
     );
 
-    setPatients(updatedPatients);
+    setEnhancedPatients(updatedPatients);
 
     // Update selectedPatient if it's the same patient
     if (selectedPatient?.id === editLastVisitPatient.id) {
@@ -2442,14 +2443,14 @@ const PatientListPage: React.FC = () => {
       try {
         const updatedPatients = await getPatientsByDoctor(userProfile.id, userProfile.clinicId);
         setDoctorPatients(updatedPatients);
-        setPatients(updatedPatients);
+        setEnhancedPatients(updatedPatients);
         console.log('✅ Patient data refreshed after assignment change');
       } catch (error) {
         console.error('❌ Error refreshing patient data after assignment:', error);
       }
     } else {
       // For management, use default patients (localStorage removed)
-      setPatients(initialPatients);
+      setEnhancedPatients(initialPatients);
     }
   };
 
@@ -2647,23 +2648,6 @@ const PatientListPage: React.FC = () => {
           </Box>
 
 
-
-
-
-                      {/* Sync Status Alert */}
-            {syncResults && syncStatus === 'completed' && (
-              <Alert 
-                severity="success" 
-                sx={{ 
-                  mb: 2,
-                  borderRadius: 3,
-                  '& .MuiAlert-message': { fontWeight: 600 }
-                }}
-                onClose={() => setSyncResults(null)}
-              >
-                🎉 Sync completed! Created {syncResults.patientsCreated} new patients, linked {syncResults.patientsLinked} existing patients from {syncResults.totalAppointments} appointments.
-              </Alert>
-            )}
 
             {/* Enhanced Main Content */}
           <Card sx={{ 
@@ -5231,6 +5215,9 @@ const PatientListPage: React.FC = () => {
                                   </Typography>
                                   <WhatsApp sx={{ fontSize: 14, color: '#25D366' }} />
                                 </Box>
+                                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                  Doctor: {getPatientDoctorName(patient)}
+                                </Typography>
                                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                                   Condition: {translatePatientData(patient.condition)}
                                 </Typography>
@@ -8952,7 +8939,13 @@ const PatientListPage: React.FC = () => {
             <Box sx={{ mt: 2 }}>
               <EnhancedMedicalRequirementSelector
                 value={newRequirement}
-                onChange={(value) => setNewRequirement(value)}
+                onChange={(value) =>
+                  setNewRequirement((prev: any) => ({
+                    ...prev,
+                    ...value,
+                    status: (value as any)?.status ?? prev?.status ?? 'pending',
+                  }))
+                }
                 label="Medical Requirement"
                 placeholder="Select or add a medical requirement"
                 helperText="Choose from our database of common medical tests and procedures"
@@ -9228,11 +9221,13 @@ const PatientListPage: React.FC = () => {
                                transition: 'transform 0.3s ease',
                                boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
                              }} 
-                             onError={(e) => {
-                               console.error('Image failed to load:', selectedDocument.fileUrl);
-                               e.currentTarget.style.display = 'none';
-                               e.currentTarget.parentElement.nextElementSibling.style.display = 'block';
-                             }}
+                                                           onError={(e) => {
+                                console.error('Image failed to load:', selectedDocument.fileUrl);
+                                e.currentTarget.style.display = 'none';
+                                const parent = e.currentTarget.parentElement;
+                                const fallback = parent?.nextElementSibling as HTMLElement;
+                                if (fallback) fallback.style.display = 'block';
+                              }}
                            />
                          </Box>
                          <Box sx={{ display: 'none', mt: 2, p: 2, backgroundColor: 'error.50', borderRadius: 1 }}>
@@ -9689,9 +9684,8 @@ const PatientListPage: React.FC = () => {
               </Button>
             </DialogActions>
           </Dialog>
-                   </React.Fragment>
-                 );
-               };
+        </React.Fragment>
+              ); };
 
 export default PatientListPage;
 
