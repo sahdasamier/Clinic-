@@ -37,6 +37,9 @@ import {
   LocalHospital,
   Schedule,
   Report,
+  Science,
+  MedicalServices,
+  Biotech,
 } from '@mui/icons-material';
 
 const drawerWidth = 300;
@@ -89,8 +92,8 @@ const navLinks: NavLink[] = [
   },
   { 
     to: '/inventory', 
-    text: 'inventory', 
-    icon: <Inventory />, 
+    text: 'laboratory_radiology', 
+    icon: <Science />, 
     permission: 'inventory',
     minLevel: 'read',
     group: 'business'

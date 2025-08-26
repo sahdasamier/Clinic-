@@ -53,6 +53,7 @@ import EnhancedMedicalConditionSelector from '../../components/EnhancedMedicalCo
 import EnhancedMedicationSelector from '../../components/EnhancedMedicationSelector';
 import EnhancedMedicalRequirementSelector from '../../components/EnhancedMedicalRequirementSelector';
 import { convertDocumentToPDF, downloadPDF, DocumentData } from '../../utils/pdfUtils';
+import MedicalRequirementsService from '../../services/MedicalRequirementsService';
 
 // ✅ NEW: Use the new real-time data hooks instead of legacy systems
 import {
@@ -259,7 +260,9 @@ const PatientListPage: React.FC = () => {
     description: '',
     priority: 'normal',
     dueDate: '',
-    status: 'pending'
+    status: 'pending',
+    estimatedTime: '',
+    preparations: []
   });
   const [documentsTab, setDocumentsTab] = useState(0);
   const [documentViewerOpen, setDocumentViewerOpen] = useState(false);
@@ -461,6 +464,151 @@ const PatientListPage: React.FC = () => {
     
     setupListener();
   }, [userProfile?.clinicId]);
+
+  // ✅ NEW: Medical requirements state and fetching
+  const [patientRequirements, setPatientRequirements] = useState<Map<string, number>>(new Map());
+
+  // Function to get medical requirements count for a patient
+  const getMedicalRequirementsCount = (patientId: string): number => {
+    return patientRequirements.get(patientId) || 0;
+  };
+
+  // ✅ ENHANCED: Real-time medical requirements listener with immediate sync
+  useEffect(() => {
+    if (!userProfile?.clinicId) return;
+
+    console.log('🔄 Setting up real-time medical requirements listener...');
+
+    // Initial fetch
+    const fetchMedicalRequirements = async () => {
+      if (enhancedPatients.length === 0) return;
+
+      try {
+        const requirementsMap = new Map<string, number>();
+        
+        // Fetch requirements for each patient
+        await Promise.all(
+          enhancedPatients.map(async (patient) => {
+            try {
+              const requirements = await MedicalRequirementsService.getOrdersByPatient(
+                userProfile.clinicId,
+                patient.id
+              );
+              requirementsMap.set(patient.id, requirements.length);
+            } catch (error) {
+              console.error(`❌ Error fetching requirements for patient ${patient.name}:`, error);
+              requirementsMap.set(patient.id, 0);
+            }
+          })
+        );
+
+        setPatientRequirements(requirementsMap);
+        console.log('✅ Medical requirements loaded for all patients');
+      } catch (error) {
+        console.error('❌ Error fetching medical requirements:', error);
+      }
+    };
+
+    fetchMedicalRequirements();
+
+    // ✅ NEW: Set up real-time Firestore listener for medical requirements
+    const setupRealtimeListener = async () => {
+      try {
+        const { safeFirestore } = await import('../../api/firebaseDirect');
+        const requirementsCollection = safeFirestore.collection(`clinics/${userProfile.clinicId}/medicalRequirements`);
+        
+        const unsubscribe = safeFirestore.onSnapshot(requirementsCollection, (snapshot: any) => {
+          console.log('🔄 Medical requirements collection changed, updating counts...');
+          
+          // Recalculate requirements count for all patients
+          const requirementsMap = new Map<string, number>();
+          
+          // Group requirements by patient ID
+          snapshot.docs.forEach((doc: any) => {
+            const data = doc.data();
+            if (data.isActive && data.patientId) {
+              const currentCount = requirementsMap.get(data.patientId) || 0;
+              requirementsMap.set(data.patientId, currentCount + 1);
+            }
+          });
+
+          // Ensure all current patients have entries (even if 0)
+          enhancedPatients.forEach(patient => {
+            if (!requirementsMap.has(patient.id)) {
+              requirementsMap.set(patient.id, 0);
+            }
+          });
+
+          setPatientRequirements(requirementsMap);
+          console.log('✅ Real-time medical requirements updated:', Array.from(requirementsMap.entries()));
+        }, (error: any) => {
+          console.error('❌ Error in medical requirements real-time listener:', error);
+        });
+
+        return unsubscribe;
+      } catch (error) {
+        console.error('❌ Failed to setup real-time listener:', error);
+        return null;
+      }
+    };
+
+    // Setup listener and cleanup
+    let unsubscribe: (() => void) | null = null;
+    setupRealtimeListener().then(unsub => {
+      unsubscribe = unsub;
+    });
+
+    return () => {
+      if (unsubscribe) {
+        console.log('🔄 Cleaning up medical requirements real-time listener');
+        unsubscribe();
+      }
+    };
+  }, [userProfile?.clinicId, enhancedPatients.length]);
+
+  // ✅ NEW: Listen for medical requirement creation events from patient profile
+  useEffect(() => {
+    const handleMedicalRequirementAdded = (event: CustomEvent) => {
+      const { patientId, requirementData } = event.detail;
+      console.log('📋 Medical requirement added, updating count for patient:', patientId);
+      
+      // Immediately update the count for this patient
+      const currentCount = patientRequirements.get(patientId) || 0;
+      const newRequirements = new Map(patientRequirements);
+      newRequirements.set(patientId, currentCount + 1);
+      setPatientRequirements(newRequirements);
+      
+      console.log(`✅ Updated requirements count for patient ${patientId}: ${currentCount} → ${currentCount + 1}`);
+    };
+
+    const handleMedicalRequirementUpdated = (event: CustomEvent) => {
+      const { patientId } = event.detail;
+      console.log('📋 Medical requirement updated, refreshing count for patient:', patientId);
+      
+      // Refresh count for this specific patient
+      if (userProfile?.clinicId) {
+        MedicalRequirementsService.getOrdersByPatient(userProfile.clinicId, patientId)
+          .then(requirements => {
+            const newRequirements = new Map(patientRequirements);
+            newRequirements.set(patientId, requirements.length);
+            setPatientRequirements(newRequirements);
+            console.log(`✅ Refreshed requirements count for patient ${patientId}: ${requirements.length}`);
+          })
+          .catch(error => {
+            console.error('❌ Error refreshing requirements count:', error);
+          });
+      }
+    };
+
+    // Add event listeners
+    window.addEventListener('medicalRequirementAdded', handleMedicalRequirementAdded as EventListener);
+    window.addEventListener('medicalRequirementUpdated', handleMedicalRequirementUpdated as EventListener);
+
+    return () => {
+      window.removeEventListener('medicalRequirementAdded', handleMedicalRequirementAdded as EventListener);
+      window.removeEventListener('medicalRequirementUpdated', handleMedicalRequirementUpdated as EventListener);
+    };
+  }, [patientRequirements, userProfile?.clinicId]);
 
   // ✅ Enhanced Debug and Fix Functions
   useEffect(() => {
@@ -3250,6 +3398,7 @@ const PatientListPage: React.FC = () => {
                             <TableCell sx={{ fontWeight: 600 }}>Today's Appointment</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>{t('next_appointment')}</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>{t('condition')}</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Medical Requirements</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>{t('status')}</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>{t('actions')}</TableCell>
                           </TableRow>
@@ -3257,7 +3406,7 @@ const PatientListPage: React.FC = () => {
                         <TableBody>
                           {filteredPatients.length === 0 && getActiveFilterCount() > 0 ? (
                             <TableRow>
-                              <TableCell colSpan={9} sx={{ textAlign: 'center', py: 6 }}>
+                              <TableCell colSpan={10} sx={{ textAlign: 'center', py: 6 }}>
                                 <Box>
                                   <FilterList sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
                                   <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
@@ -3278,7 +3427,7 @@ const PatientListPage: React.FC = () => {
                             </TableRow>
                           ) : filteredPatients.length === 0 ? (
                             <TableRow>
-                              <TableCell colSpan={9} sx={{ textAlign: 'center', py: 6 }}>
+                              <TableCell colSpan={10} sx={{ textAlign: 'center', py: 6 }}>
                                 <Box>
                                   <People sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
                                   <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
@@ -3454,6 +3603,29 @@ const PatientListPage: React.FC = () => {
                                 <Typography variant="body2">{translatePatientData(patient.condition)}</Typography>
                               </TableCell>
                               <TableCell>
+                                {(() => {
+                                  const requirementsCount = getMedicalRequirementsCount(patient.id);
+                                  return requirementsCount > 0 ? (
+                                    <Chip
+                                      label={`Yes (${requirementsCount})`}
+                                      color="primary"
+                                      size="small"
+                                      variant="filled"
+                                      sx={{ 
+                                        fontSize: '0.75rem',
+                                        fontWeight: 600,
+                                        backgroundColor: '#2196f3',
+                                        color: 'white'
+                                      }}
+                                    />
+                                  ) : (
+                                    <Typography variant="body2" color="text.secondary">
+                                      No
+                                    </Typography>
+                                  );
+                                })()}
+                              </TableCell>
+                              <TableCell>
                                 <Tooltip title="Click to change status" arrow>
                                   <Chip
                                     label={translatePatientData(patient.status)}
@@ -3545,6 +3717,7 @@ const PatientListPage: React.FC = () => {
                             <TableCell sx={{ fontWeight: 600 }}>{t('last_visit')}</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>{t('next_appointment')}</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>{t('condition')}</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Medical Requirements</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>{t('status')}</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>{t('actions')}</TableCell>
                           </TableRow>
@@ -3552,7 +3725,7 @@ const PatientListPage: React.FC = () => {
                         <TableBody>
                           {filteredPatients.length === 0 ? (
                             <TableRow>
-                              <TableCell colSpan={8} sx={{ textAlign: 'center', py: 6 }}>
+                              <TableCell colSpan={9} sx={{ textAlign: 'center', py: 6 }}>
                                 <Box>
                                   <People sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
                                   <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
@@ -3622,6 +3795,29 @@ const PatientListPage: React.FC = () => {
                               </TableCell>
                               <TableCell>
                                 <Typography variant="body2">{translatePatientData(patient.condition)}</Typography>
+                              </TableCell>
+                              <TableCell>
+                                {(() => {
+                                  const requirementsCount = getMedicalRequirementsCount(patient.id);
+                                  return requirementsCount > 0 ? (
+                                    <Chip
+                                      label={`Yes (${requirementsCount})`}
+                                      color="primary"
+                                      size="small"
+                                      variant="filled"
+                                      sx={{ 
+                                        fontSize: '0.75rem',
+                                        fontWeight: 600,
+                                        backgroundColor: '#2196f3',
+                                        color: 'white'
+                                      }}
+                                    />
+                                  ) : (
+                                    <Typography variant="body2" color="text.secondary">
+                                      No
+                                    </Typography>
+                                  );
+                                })()}
                               </TableCell>
                               <TableCell>
                                 <Tooltip title="Click to change status" arrow>
@@ -8958,7 +9154,7 @@ const PatientListPage: React.FC = () => {
             </Button>
             <Button
               variant="contained"
-              onClick={() => {
+              onClick={async () => {
                 if (!newRequirement.title.trim()) return;
                 
                 // Add requirement to patient's medicalRequirements array
@@ -8981,6 +9177,62 @@ const PatientListPage: React.FC = () => {
                 );
                 setEnhancedPatients(updatedPatients);
                 setSelectedPatient(updatedPatient);
+
+                // ✅ NEW: Also create an order in the Medical Requirements Processing Center
+                try {
+                  if (userProfile?.clinicId) {
+                    await MedicalRequirementsService.createOrderFromPatientRequirement(
+                      userProfile.clinicId,
+                      {
+                        id: requirement.id.toString(),
+                        patientId: selectedPatient.id,
+                        patientName: selectedPatient.name,
+                        type: newRequirement.type,
+                        title: newRequirement.title,
+                        description: newRequirement.description,
+                        priority: newRequirement.priority,
+                        dueDate: newRequirement.dueDate,
+                        orderedBy: userProfile?.firstName + ' ' + userProfile?.lastName || 'Doctor',
+                        estimatedTime: newRequirement.estimatedTime || undefined,
+                        preparations: newRequirement.preparations || undefined,
+                        // ✅ Enhanced patient data
+                        patientAge: selectedPatient.age,
+                        patientGender: selectedPatient.gender,
+                        patientPhone: selectedPatient.phone,
+                        patientEmail: selectedPatient.email,
+                        patientBloodType: selectedPatient.bloodType,
+                        patientAllergies: selectedPatient.allergies,
+                        patientCondition: selectedPatient.condition,
+                        patientInsurance: selectedPatient.insuranceProvider,
+                        doctorId: userProfile?.id,
+                        doctorName: userProfile?.firstName + ' ' + userProfile?.lastName,
+                        doctorRole: userProfile?.role,
+                      }
+                    );
+                    console.log('✅ Test order sent to Laboratory & Radiology Center');
+                    
+                    // ✅ NEW: Dispatch event for immediate table update
+                    window.dispatchEvent(new CustomEvent('medicalRequirementAdded', {
+                      detail: {
+                        patientId: selectedPatient.id,
+                        requirementData: requirement
+                      }
+                    }));
+                    console.log('🔄 Dispatched medicalRequirementAdded event for immediate sync');
+                  }
+                } catch (error) {
+                  console.error('❌ Error sending order to Laboratory & Radiology Center:', error);
+                  // Continue anyway - the requirement was added to patient successfully
+                  
+                  // ✅ Even if order creation fails, dispatch event for local requirement
+                  window.dispatchEvent(new CustomEvent('medicalRequirementAdded', {
+                    detail: {
+                      patientId: selectedPatient.id,
+                      requirementData: requirement
+                    }
+                  }));
+                  console.log('🔄 Dispatched medicalRequirementAdded event (fallback after error)');
+                }
                 
                 // Reset form
                 setNewRequirement({
@@ -8989,7 +9241,9 @@ const PatientListPage: React.FC = () => {
                   description: '',
                   priority: 'normal',
                   dueDate: '',
-                  status: 'pending'
+                  status: 'pending',
+                  estimatedTime: '',
+                  preparations: []
                 });
                 setAddRequirementOpen(false);
               }}

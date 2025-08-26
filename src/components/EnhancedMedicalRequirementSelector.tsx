@@ -38,6 +38,8 @@ interface EnhancedMedicalRequirementSelectorProps {
     description: string;
     priority: string;
     dueDate: string;
+    estimatedTime?: string;
+    preparations?: string[];
   };
   onChange: (value: {
     type: string;
@@ -45,6 +47,8 @@ interface EnhancedMedicalRequirementSelectorProps {
     description: string;
     priority: string;
     dueDate: string;
+    estimatedTime?: string;
+    preparations?: string[];
   }) => void;
   label?: string;
   placeholder?: string;
@@ -106,7 +110,9 @@ const EnhancedMedicalRequirementSelector: React.FC<EnhancedMedicalRequirementSel
         title: requirement.title,
         description: requirement.description,
         priority: requirement.priority,
-        dueDate: value.dueDate || ''
+        dueDate: value.dueDate || '',
+        estimatedTime: requirement.estimatedTime || '',
+        preparations: requirement.preparations || []
       });
     } else {
       onChange({
@@ -114,7 +120,9 @@ const EnhancedMedicalRequirementSelector: React.FC<EnhancedMedicalRequirementSel
         title: '',
         description: '',
         priority: 'normal',
-        dueDate: ''
+        dueDate: '',
+        estimatedTime: '',
+        preparations: []
       });
     }
   };
@@ -195,7 +203,22 @@ const EnhancedMedicalRequirementSelector: React.FC<EnhancedMedicalRequirementSel
             options={filteredOptions}
             getOptionLabel={(option) => typeof option === 'string' ? option : option.title}
             value={allRequirements.find(requirement => requirement.title === value.title) || null}
-            onChange={(event, newValue) => handleRequirementSelect(newValue)}
+            onChange={(event, newValue) => {
+              if (typeof newValue === 'string') {
+                // Handle free text input
+                onChange({
+                  type: 'other',
+                  title: newValue,
+                  description: '',
+                  priority: 'normal',
+                  dueDate: value.dueDate || '',
+                  estimatedTime: '',
+                  preparations: []
+                });
+              } else {
+                handleRequirementSelect(newValue);
+              }
+            }}
             inputValue={inputValue}
             onInputChange={(event, newInputValue) => {
               setInputValue(newInputValue);
