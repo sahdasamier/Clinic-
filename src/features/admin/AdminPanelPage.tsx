@@ -344,6 +344,10 @@ const AdminPanelPage: React.FC = () => {
   // Secure password reset function for admins
   const sendPasswordReset = async (userEmail: string, userName: string) => {
     try {
+      if (!isOptimizedFirebaseReady()) {
+        throw new Error('Firebase not ready');
+      }
+      const auth = getOptimizedAuth();
       await sendPasswordResetEmail(auth, userEmail);
       showSnackbar(`Password reset email sent to ${userName} (${userEmail})`);
     } catch (error: any) {
