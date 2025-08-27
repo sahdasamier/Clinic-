@@ -1,1 +1,1 @@
-// TODO: Implement inventory-related API functions (e.g., fetch inventory, add item) 
+// TODO: Implement laboratoryRadiology-related API functions (e.g., fetch laboratoryRadiology, add item) 

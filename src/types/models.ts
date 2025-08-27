@@ -142,7 +142,7 @@ export interface Appointment {
 // Notification types
 export interface Notification {
   id: string;
-  type: 'appointment' | 'payment' | 'inventory' | 'system';
+  type: 'appointment' | 'payment' | 'laboratoryRadiology' | 'system';
   title: string;
   message: string;
   time: string;
@@ -159,7 +159,7 @@ export interface Notification {
 export interface NotificationSettings {
   appointments: boolean;
   payments: boolean;
-  inventory: boolean;
+  laboratoryRadiology: boolean;
   system: boolean;
 }
 

@@ -2,7 +2,7 @@ import { PatientService } from '../services/PatientService';
 import MedicalRequirementsService, { MedicalRequirementOrder } from '../services/MedicalRequirementsService';
 
 /**
- * Synchronizes completed medical requirements from the inventory system back to patient records
+ * Synchronizes completed medical requirements from the laboratoryRadiology system back to patient records
  */
 export const syncCompletedRequirementToPatient = async (
   clinicId: string,

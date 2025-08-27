@@ -208,9 +208,9 @@ export const MessagingService = {
   createInventoryLowStockNotification: (itemData: any): NotificationPayload => ({
     title: 'Low Stock Alert',
     body: `${itemData.name} is running low (${itemData.quantity} remaining)`,
-    icon: '/icons/inventory.png',
+    icon: '/icons/laboratoryRadiology.png',
     data: {
-      type: 'inventory_low_stock',
+      type: 'laboratoryRadiology_low_stock',
       itemId: itemData.id,
       action: 'restock_item'
     }

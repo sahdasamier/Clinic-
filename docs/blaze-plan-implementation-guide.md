@@ -278,15 +278,15 @@ exports.generateDailyStats = functions.pubsub.schedule('every day 23:59').onRun(
   await db.collection('daily_stats').doc(today).set(stats);
 });
 
-// Weekly inventory check
+// Weekly laboratoryRadiology check
 exports.weeklyInventoryCheck = functions.pubsub.schedule('every monday 09:00').onRun(async (context) => {
-  const inventorySnapshot = await db.collection('inventory')
-    .where('quantity', '<=', db.collection('inventory').doc().data().minQuantity)
+  const laboratoryRadiologySnapshot = await db.collection('laboratoryRadiology')
+    .where('quantity', '<=', db.collection('laboratoryRadiology').doc().data().minQuantity)
     .get();
   
-  if (!inventorySnapshot.empty) {
+  if (!laboratoryRadiologySnapshot.empty) {
     // Send low stock alerts
-    const lowStockItems = inventorySnapshot.docs.map(doc => doc.data());
+    const lowStockItems = laboratoryRadiologySnapshot.docs.map(doc => doc.data());
     await sendLowStockAlert(lowStockItems);
   }
 });

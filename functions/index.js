@@ -276,14 +276,14 @@ exports.checkLowStock = functions.pubsub.schedule('every 6 hours').onRun(async (
   try {
     console.log('🔍 Checking for low stock items...');
 
-    const inventorySnapshot = await db.collection('inventory')
+    const laboratoryRadiologySnapshot = await db.collection('laboratoryRadiology')
       .where('isActive', '==', true)
       .get();
 
     const lowStockItems = [];
     const outOfStockItems = [];
 
-    inventorySnapshot.docs.forEach(doc => {
+    laboratoryRadiologySnapshot.docs.forEach(doc => {
       const item = doc.data();
       const currentStock = item.currentStock || 0;
       const minStock = item.minStock || 0;
@@ -312,7 +312,7 @@ exports.checkLowStock = functions.pubsub.schedule('every 6 hours').onRun(async (
           const notificationRef = db.collection('notifications').doc();
           batch.set(notificationRef, {
             userId: admin.id,
-            type: 'inventory_out_of_stock',
+            type: 'laboratoryRadiology_out_of_stock',
             title: 'Items Out of Stock',
             message: `${outOfStockItems.length} items are out of stock and need restocking`,
             data: { items: outOfStockItems.map(item => ({ id: item.id, name: item.name })) },
@@ -328,7 +328,7 @@ exports.checkLowStock = functions.pubsub.schedule('every 6 hours').onRun(async (
           const notificationRef = db.collection('notifications').doc();
           batch.set(notificationRef, {
             userId: admin.id,
-            type: 'inventory_low_stock',
+            type: 'laboratoryRadiology_low_stock',
             title: 'Low Stock Alert',
             message: `${lowStockItems.length} items are running low on stock`,
             data: { items: lowStockItems.map(item => ({ id: item.id, name: item.name, currentStock: item.currentStock, minStock: item.minStock })) },
@@ -348,7 +348,7 @@ exports.checkLowStock = functions.pubsub.schedule('every 6 hours').onRun(async (
     return { lowStockItems: lowStockItems.length, outOfStockItems: outOfStockItems.length };
 
   } catch (error) {
-    console.error('❌ Error checking inventory:', error);
+    console.error('❌ Error checking laboratoryRadiology:', error);
     throw error;
   }
 });
@@ -548,7 +548,7 @@ exports.healthCheck = functions.https.onRequest(async (req, res) => {
     const testDoc = await db.collection('health_check').doc('test').get();
     
     // Check if all required collections exist
-    const collections = ['appointments', 'patients', 'payments', 'inventory', 'notifications'];
+    const collections = ['appointments', 'patients', 'payments', 'laboratoryRadiology', 'notifications'];
     const collectionChecks = await Promise.all(
       collections.map(async (collectionName) => {
         try {

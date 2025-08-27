@@ -11,14 +11,14 @@ interface GlobalDataState {
   appointments: Appointment[];
   patients: Patient[];
   payments: Payment[];
-  inventory: InventoryItem[];
+  laboratoryRadiology: InventoryItem[];
   notifications: Notification[];
   clinics: Clinic[];
   loading: {
     appointments: boolean;
     patients: boolean;
     payments: boolean;
-    inventory: boolean;
+    laboratoryRadiology: boolean;
     notifications: boolean;
     clinics: boolean;
   };
@@ -26,7 +26,7 @@ interface GlobalDataState {
     appointments: string | null;
     patients: string | null;
     payments: string | null;
-    inventory: string | null;
+    laboratoryRadiology: string | null;
     notifications: string | null;
     clinics: string | null;
   };
@@ -34,7 +34,7 @@ interface GlobalDataState {
     appointments: Date | null;
     patients: Date | null;
     payments: Date | null;
-    inventory: Date | null;
+    laboratoryRadiology: Date | null;
     notifications: Date | null;
     clinics: Date | null;
   };
@@ -86,14 +86,14 @@ const initialState: GlobalDataState = {
   appointments: [],
   patients: [],
   payments: [],
-  inventory: [],
+  laboratoryRadiology: [],
   notifications: [],
   clinics: [],
   loading: {
     appointments: true,
     patients: true,
     payments: true,
-    inventory: true,
+    laboratoryRadiology: true,
     notifications: true,
     clinics: true,
   },
@@ -101,7 +101,7 @@ const initialState: GlobalDataState = {
     appointments: null,
     patients: null,
     payments: null,
-    inventory: null,
+    laboratoryRadiology: null,
     notifications: null,
     clinics: null,
   },
@@ -109,7 +109,7 @@ const initialState: GlobalDataState = {
     appointments: null,
     patients: null,
     payments: null,
-    inventory: null,
+    laboratoryRadiology: null,
     notifications: null,
     clinics: null,
   },
@@ -190,7 +190,7 @@ export const GlobalDataProvider: React.FC<GlobalDataProviderProps> = ({ children
               appointments: false,
               patients: false,
               payments: false,
-              inventory: false,
+              laboratoryRadiology: false,
               notifications: false,
               clinics: false,
             },
@@ -199,7 +199,7 @@ export const GlobalDataProvider: React.FC<GlobalDataProviderProps> = ({ children
               appointments: 'Firebase offline - using cached data',
               patients: 'Firebase offline - using cached data',
               payments: 'Firebase offline - using cached data',
-              inventory: 'Firebase offline - using cached data',
+              laboratoryRadiology: 'Firebase offline - using cached data',
               notifications: 'Firebase offline - using cached data',
               clinics: 'Firebase offline - using cached data',
             }
@@ -262,7 +262,7 @@ export const GlobalDataProvider: React.FC<GlobalDataProviderProps> = ({ children
               appointments: false,
               patients: false,
               payments: false,
-              inventory: false,
+              laboratoryRadiology: false,
               notifications: false,
               clinics: false,
             },
@@ -299,7 +299,7 @@ export const GlobalDataProvider: React.FC<GlobalDataProviderProps> = ({ children
             appointments: `Firebase offline: ${errorMessage}`,
             patients: `Firebase offline: ${errorMessage}`,
             payments: `Firebase offline: ${errorMessage}`,
-            inventory: `Firebase offline: ${errorMessage}`,
+            laboratoryRadiology: `Firebase offline: ${errorMessage}`,
             notifications: `Firebase offline: ${errorMessage}`,
             clinics: `Firebase offline: ${errorMessage}`,
           },
@@ -307,7 +307,7 @@ export const GlobalDataProvider: React.FC<GlobalDataProviderProps> = ({ children
             appointments: false,
             patients: false,
             payments: false,
-            inventory: false,
+            laboratoryRadiology: false,
             notifications: false,
             clinics: false,
           },
@@ -366,12 +366,12 @@ export const GlobalDataProvider: React.FC<GlobalDataProviderProps> = ({ children
       ).length,
       totalPatients: state.patients.length,
       totalRevenue: state.payments.reduce((sum, payment) => sum + (payment.amount || 0), 0),
-      lowStockItems: state.inventory.filter(item => 
+      lowStockItems: state.laboratoryRadiology.filter(item => 
         (item.quantity || 0) <= (item.minQuantity || 0)
       ).length,
       unreadNotifications: state.notifications.filter(notif => !notif.read).length,
     };
-  }, [state.appointments, state.patients, state.payments, state.inventory, state.notifications]);
+  }, [state.appointments, state.patients, state.payments, state.laboratoryRadiology, state.notifications]);
 
   // Data operations
   const refreshData = useCallback(async (collections?: string[]) => {
@@ -432,17 +432,17 @@ export const GlobalDataProvider: React.FC<GlobalDataProviderProps> = ({ children
 
   const addInventoryItem = useCallback(async (item: Omit<InventoryItem, 'id'>) => {
     if (!realtimeManager) throw new Error('Realtime manager not initialized');
-    return await realtimeManager.addDocument('inventory', item);
+    return await realtimeManager.addDocument('laboratoryRadiology', item);
   }, [realtimeManager]);
 
   const updateInventoryItem = useCallback(async (id: string, updates: Partial<InventoryItem>) => {
     if (!realtimeManager) throw new Error('Realtime manager not initialized');
-    await realtimeManager.updateDocument('inventory', id, updates);
+    await realtimeManager.updateDocument('laboratoryRadiology', id, updates);
   }, [realtimeManager]);
 
   const deleteInventoryItem = useCallback(async (id: string) => {
     if (!realtimeManager) throw new Error('Realtime manager not initialized');
-    await realtimeManager.deleteDocument('inventory', id);
+    await realtimeManager.deleteDocument('laboratoryRadiology', id);
   }, [realtimeManager]);
 
   const markNotificationAsRead = useCallback(async (id: string) => {

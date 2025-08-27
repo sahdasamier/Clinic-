@@ -104,7 +104,7 @@ async function createFirestoreIndexes() {
     },
     // Inventory - Real-time Listener
     {
-      collection: 'inventory',
+      collection: 'laboratoryRadiology',
       fields: [
         { fieldPath: 'clinicId', order: 'ASCENDING' },
         { fieldPath: 'name', order: 'ASCENDING' },
@@ -113,7 +113,7 @@ async function createFirestoreIndexes() {
     },
     // Inventory - Fetch with isActive
     {
-      collection: 'inventory',
+      collection: 'laboratoryRadiology',
       fields: [
         { fieldPath: 'clinicId', order: 'ASCENDING' },
         { fieldPath: 'isActive', order: 'ASCENDING' },
@@ -205,7 +205,7 @@ async function createIndexesViaHTTP() {
     'patients?field_1=clinicId&dir_1=ASCENDING&field_2=createdAt&dir_2=DESCENDING&field_3=__name__&dir_3=ASCENDING',
     'payments?field_1=clinicId&dir_1=ASCENDING&field_2=createdAt&dir_2=DESCENDING&field_3=__name__&dir_3=ASCENDING',
     'notifications?field_1=clinicId&dir_1=ASCENDING&field_2=createdAt&dir_2=DESCENDING&field_3=__name__&dir_3=ASCENDING',
-    'inventory?field_1=clinicId&dir_1=ASCENDING&field_2=name&dir_2=ASCENDING&field_3=__name__&dir_3=ASCENDING',
+    'laboratoryRadiology?field_1=clinicId&dir_1=ASCENDING&field_2=name&dir_2=ASCENDING&field_3=__name__&dir_3=ASCENDING',
     'clinics?field_1=clinicId&dir_1=ASCENDING&field_2=name&dir_2=ASCENDING&field_3=__name__&dir_3=ASCENDING'
   ];
 

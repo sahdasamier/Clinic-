@@ -136,7 +136,7 @@ Use `PermissionGuard` to protect specific UI elements:
 import PermissionGuard from '../components/PermissionGuard';
 
 // Hide button completely if no access
-<PermissionGuard feature="inventory_management" showFallback={false}>
+<PermissionGuard feature="laboratoryRadiology_management" showFallback={false}>
   <Button onClick={addInventoryItem}>Add Item</Button>
 </PermissionGuard>
 

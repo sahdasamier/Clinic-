@@ -165,7 +165,7 @@
       ]
     },
     {
-      "collectionGroup": "inventory",
+      "collectionGroup": "laboratoryRadiology",
       "queryScope": "COLLECTION",
       "fields": [
         {
@@ -443,7 +443,7 @@
       ]
     },
     {
-      "collectionGroup": "inventory",
+      "collectionGroup": "laboratoryRadiology",
       "queryScope": "COLLECTION",
       "fields": [
         {
@@ -461,7 +461,7 @@
       ]
     },
     {
-      "collectionGroup": "inventory",
+      "collectionGroup": "laboratoryRadiology",
       "queryScope": "COLLECTION",
       "fields": [
         {
@@ -493,6 +493,68 @@
         {
           "fieldPath": "__name__",
           "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "medicalRequirementOrders",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "clinicId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "isActive",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "dateOrdered",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "medicalRequirementOrders",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "clinicId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "patientId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "isActive",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "dateOrdered",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "medicalRequirementOrders",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "clinicId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "isActive",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "dateOrdered",
+          "order": "DESCENDING"
         }
       ]
     }

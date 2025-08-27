@@ -64,7 +64,7 @@ export class FirebaseRealtimeManager {
     { name: 'appointments', enableRealtime: true, cacheDuration: 300000 },
     { name: 'patients', enableRealtime: true, cacheDuration: 600000 },
     { name: 'payments', enableRealtime: true, cacheDuration: 300000 },
-    { name: 'inventory', enableRealtime: true, cacheDuration: 900000 },
+    { name: 'laboratoryRadiology', enableRealtime: true, cacheDuration: 900000 },
     { name: 'notifications', enableRealtime: true, cacheDuration: 60000 },
   ];
 

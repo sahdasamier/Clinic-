@@ -132,7 +132,7 @@ service cloud.firestore {
     }
     
     // 🔒 Inventory collection - Clinic-based access
-    match /inventory/{inventoryId} {
+    match /laboratoryRadiology/{laboratoryRadiologyId} {
       allow read, write: if request.auth != null && 
                         (isAdmin() || 
                          resource.data.clinicId == getUserClinicId());

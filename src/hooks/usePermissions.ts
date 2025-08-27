@@ -76,7 +76,7 @@ export const usePermissions = (): UsePermissionsReturn => {
   // Permission feature groups
   const permissionGroups = useMemo(() => ({
     core: ['dashboard', 'patients', 'appointments'] as PermissionKey[],
-    business: ['payments', 'inventory', 'reports'] as PermissionKey[],
+    business: ['payments', 'laboratoryRadiology', 'reports'] as PermissionKey[],
     advanced: ['doctor_scheduling', 'notifications', 'settings'] as PermissionKey[],
     admin: ['user_management', 'clinic_settings'] as PermissionKey[],
   }), []);

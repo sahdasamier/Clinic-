@@ -4,7 +4,7 @@
  */
 
 /**
- * Re-enable real-time listeners for inventory and notifications
+ * Re-enable real-time listeners for laboratoryRadiology and notifications
  * Call this function after creating the Firebase indexes
  */
 export const enableAllRealtimeListeners = () => {

@@ -133,7 +133,7 @@ service firebase.storage {
     }
     
     // Inventory item images - staff members
-    match /inventory/{clinicId}/{itemId}/{fileName} {
+    match /laboratoryRadiology/{clinicId}/{itemId}/{fileName} {
       allow read: if isAuthenticated() && 
         (isAdmin() || isSameClinic(clinicId));
       allow write: if isAuthenticated() && 

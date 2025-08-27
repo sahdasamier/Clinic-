@@ -25,7 +25,7 @@ async function createDemoClinic() {
       name: 'Demo Clinic',
       isActive: true,
       settings: {
-        allowedFeatures: ['patients', 'appointments', 'payments', 'inventory', 'notifications', 'settings'],
+        allowedFeatures: ['patients', 'appointments', 'payments', 'laboratoryRadiology', 'notifications', 'settings'],
         maxUsers: 50,
         subscriptionPlan: 'premium',
       },

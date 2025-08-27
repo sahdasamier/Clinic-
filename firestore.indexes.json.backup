@@ -417,7 +417,7 @@
       ]
     },
     {
-      "collectionGroup": "inventory",
+      "collectionGroup": "laboratoryRadiology",
       "queryScope": "COLLECTION",
       "fields": [
         {

@@ -166,10 +166,10 @@ const RealtimeDataDashboard: React.FC = () => {
   } = usePayments();
 
   const {
-    inventory,
-    stats: inventoryStats,
-    loading: inventoryLoading,
-    error: inventoryError,
+    laboratoryRadiology,
+    stats: laboratoryRadiologyStats,
+    loading: laboratoryRadiologyLoading,
+    error: laboratoryRadiologyError,
   } = useInventory();
 
   const {
@@ -218,8 +218,8 @@ const RealtimeDataDashboard: React.FC = () => {
   }, [onDataUpdate, onError, onConnectionChange]);
 
   // Check for any errors
-  const hasErrors = appointmentsError || patientsError || paymentsError || inventoryError || notificationsError;
-  const isLoading = appointmentsLoading || patientsLoading || paymentsLoading || inventoryLoading || notificationsLoading;
+  const hasErrors = appointmentsError || patientsError || paymentsError || laboratoryRadiologyError || notificationsError;
+  const isLoading = appointmentsLoading || patientsLoading || paymentsLoading || laboratoryRadiologyLoading || notificationsLoading;
 
   return (
     <Box p={3}>
@@ -305,12 +305,12 @@ const RealtimeDataDashboard: React.FC = () => {
         <Grid item xs={12} sm={6} md={2.4}>
           <StatsCard
             title="Inventory"
-            value={inventoryStats.total}
-            subtitle={`$${inventoryStats.totalValue.toLocaleString()} total value`}
+            value={laboratoryRadiologyStats.total}
+            subtitle={`$${laboratoryRadiologyStats.totalValue.toLocaleString()} total value`}
             icon={<InventoryIcon fontSize="large" />}
             color="warning"
-            loading={inventoryLoading}
-            badge={inventoryStats.lowStock + inventoryStats.outOfStock}
+            loading={laboratoryRadiologyLoading}
+            badge={laboratoryRadiologyStats.lowStock + laboratoryRadiologyStats.outOfStock}
           />
         </Grid>
 
@@ -369,7 +369,7 @@ const RealtimeDataDashboard: React.FC = () => {
                 <Box display="flex" justifyContent="space-between" alignItems="center">
                   <Typography variant="body2">Low Stock:</Typography>
                   <Chip 
-                    label={inventoryStats.lowStock} 
+                    label={laboratoryRadiologyStats.lowStock} 
                     size="small" 
                     color="warning"
                     icon={<WarningIcon />} 
@@ -378,7 +378,7 @@ const RealtimeDataDashboard: React.FC = () => {
                 <Box display="flex" justifyContent="space-between" alignItems="center">
                   <Typography variant="body2">Out of Stock:</Typography>
                   <Chip 
-                    label={inventoryStats.outOfStock} 
+                    label={laboratoryRadiologyStats.outOfStock} 
                     size="small" 
                     color="error"
                     icon={<ErrorIcon />} 
@@ -386,7 +386,7 @@ const RealtimeDataDashboard: React.FC = () => {
                 </Box>
                 <Box display="flex" justifyContent="space-between">
                   <Typography variant="body2">Categories:</Typography>
-                  <Typography variant="body2">{inventoryStats.categories.length}</Typography>
+                  <Typography variant="body2">{laboratoryRadiologyStats.categories.length}</Typography>
                 </Box>
               </Box>
             </CardContent>

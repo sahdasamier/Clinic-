@@ -274,19 +274,19 @@ const generatePatientNotifications = (patients: any[]): Notification[] => {
   return notifications;
 };
 
-const generateInventoryNotifications = (inventory: any[]): Notification[] => {
+const generateInventoryNotifications = (laboratoryRadiology: any[]): Notification[] => {
   const notifications: Notification[] = [];
   const now = new Date();
 
-  inventory.forEach(item => {
+  laboratoryRadiology.forEach(item => {
     const updatedDate = new Date(item.lastUpdated || now);
     const timeAgo = getTimeAgo(updatedDate);
 
     // Low stock alerts
     if (item.quantity <= item.minQuantity && item.quantity > 0) {
       notifications.push({
-        id: `inventory-low-${item.id}`,
-        type: 'inventory',
+        id: `laboratoryRadiology-low-${item.id}`,
+        type: 'laboratoryRadiology',
         title: 'low_stock_alert_title',
         message: `low_stock_message|||${item.name}|||${item.quantity}|||${item.minQuantity}`,
         time: timeAgo,
@@ -302,8 +302,8 @@ const generateInventoryNotifications = (inventory: any[]): Notification[] => {
     // Out of stock alerts
     if (item.quantity === 0) {
       notifications.push({
-        id: `inventory-out-${item.id}`,
-        type: 'inventory',
+        id: `laboratoryRadiology-out-${item.id}`,
+        type: 'laboratoryRadiology',
         title: 'out_of_stock_alert_title',
         message: `out_of_stock_message|||${item.name}|||${item.supplier}`,
         time: timeAgo,
@@ -367,13 +367,13 @@ const aggregateAllNotifications = (): Notification[] => {
   const appointments = loadDataFromStorage(STORAGE_KEYS.APPOINTMENTS, getDefaultNotificationAppointments());
   const payments = loadDataFromStorage(STORAGE_KEYS.PAYMENTS, getDefaultNotificationPayments());
   const patients = loadDataFromStorage(STORAGE_KEYS.PATIENTS, getDefaultNotificationPatients());
-  const inventory = loadDataFromStorage(STORAGE_KEYS.INVENTORY, getDefaultInventory());
+  const laboratoryRadiology = loadDataFromStorage(STORAGE_KEYS.INVENTORY, getDefaultInventory());
 
   // Generate notifications from each module
   const appointmentNotifications = generateAppointmentNotifications(appointments);
   const paymentNotifications = generatePaymentNotifications(payments);
   const patientNotifications = generatePatientNotifications(patients);
-  const inventoryNotifications = generateInventoryNotifications(inventory);
+  const laboratoryRadiologyNotifications = generateInventoryNotifications(laboratoryRadiology);
   const systemNotifications = generateSystemNotifications();
 
   // Combine all notifications
@@ -381,7 +381,7 @@ const aggregateAllNotifications = (): Notification[] => {
     ...appointmentNotifications,
     ...paymentNotifications,
     ...patientNotifications,
-    ...inventoryNotifications,
+    ...laboratoryRadiologyNotifications,
     ...systemNotifications
   ];
 
@@ -517,7 +517,7 @@ export const notificationsApi = {
 const defaultSettings: NotificationSettings = {
   appointments: true,
   payments: true,
-  inventory: true,
+  laboratoryRadiology: true,
   system: true,
 };
 

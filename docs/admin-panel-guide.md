@@ -62,7 +62,7 @@ The admin panel provides super admin functionality to manage multiple clinics an
 
 ### Data Protection
 - All collections include `clinicId` for isolation
-- Patients, appointments, payments, inventory are clinic-specific
+- Patients, appointments, payments, laboratoryRadiology are clinic-specific
 - Cross-clinic data access is prevented at the database level
 
 ## Business Workflow

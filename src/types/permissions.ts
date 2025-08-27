@@ -4,7 +4,7 @@ export type PermissionKey =
   | 'patients'
   | 'appointments' 
   | 'payments'
-  | 'inventory'
+  | 'laboratoryRadiology'
   | 'reports'
   | 'settings'
   | 'notifications'
@@ -12,7 +12,7 @@ export type PermissionKey =
   | 'patient_details'
   | 'appointment_calendar'
   | 'payment_management'
-  | 'inventory_management'
+  | 'laboratoryRadiology_management'
   | 'user_management'
   | 'clinic_settings';
 
@@ -31,7 +31,7 @@ export const DEFAULT_PERMISSIONS: Record<string, UserPermissions> = {
     patients: 'full',
     appointments: 'full',
     payments: 'full',
-    inventory: 'full',
+    laboratoryRadiology: 'full',
     reports: 'full',
     settings: 'full',
     notifications: 'full',
@@ -39,7 +39,7 @@ export const DEFAULT_PERMISSIONS: Record<string, UserPermissions> = {
     patient_details: 'full',
     appointment_calendar: 'full',
     payment_management: 'full',
-    inventory_management: 'full',
+    laboratoryRadiology_management: 'full',
     user_management: 'write',
     clinic_settings: 'write'
   },
@@ -48,7 +48,7 @@ export const DEFAULT_PERMISSIONS: Record<string, UserPermissions> = {
     patients: 'full',
     appointments: 'full',
     payments: 'read',
-    inventory: 'read',
+    laboratoryRadiology: 'read',
     reports: 'read',
     settings: 'read',
     notifications: 'full',
@@ -56,7 +56,7 @@ export const DEFAULT_PERMISSIONS: Record<string, UserPermissions> = {
     patient_details: 'full',
     appointment_calendar: 'full',
     payment_management: 'none',
-    inventory_management: 'none',
+    laboratoryRadiology_management: 'none',
     user_management: 'none',
     clinic_settings: 'none'
   },
@@ -65,7 +65,7 @@ export const DEFAULT_PERMISSIONS: Record<string, UserPermissions> = {
     patients: 'write',
     appointments: 'full',
     payments: 'write',
-    inventory: 'read',
+    laboratoryRadiology: 'read',
     reports: 'read',
     settings: 'none',
     notifications: 'read',
@@ -73,7 +73,7 @@ export const DEFAULT_PERMISSIONS: Record<string, UserPermissions> = {
     patient_details: 'write',
     appointment_calendar: 'write',
     payment_management: 'write',
-    inventory_management: 'none',
+    laboratoryRadiology_management: 'none',
     user_management: 'none',
     clinic_settings: 'none'
   }
@@ -85,7 +85,7 @@ export const PERMISSION_DESCRIPTIONS: Record<PermissionKey, string> = {
   patients: 'Patient management and records',
   appointments: 'Appointment scheduling and management',
   payments: 'Payment processing and billing',
-  inventory: 'Inventory and supplies management',
+  laboratoryRadiology: 'Laboratory and Radiology management',
   reports: 'Reports and analytics',
   settings: 'System settings and configuration',
   notifications: 'Notifications and alerts',
@@ -93,7 +93,7 @@ export const PERMISSION_DESCRIPTIONS: Record<PermissionKey, string> = {
   patient_details: 'Detailed patient information',
   appointment_calendar: 'Calendar view and scheduling',
   payment_management: 'Advanced payment features',
-  inventory_management: 'Inventory control and ordering',
+  laboratoryRadiology_management: 'Laboratory and Radiology control and ordering',
   user_management: 'User management within clinic',
   clinic_settings: 'Clinic-specific settings'
 };

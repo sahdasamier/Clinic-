@@ -98,9 +98,9 @@ const PermissionsManager: React.FC<PermissionsManagerProps> = ({
   // Group permissions by category
   const permissionGroups = {
     'Core Features': ['dashboard', 'patients', 'appointments'] as PermissionKey[],
-    'Business Operations': ['payments', 'inventory', 'reports'] as PermissionKey[],
+    'Business Operations': ['payments', 'laboratoryRadiology', 'reports'] as PermissionKey[],
     'Advanced Features': ['doctor_scheduling', 'notifications', 'settings'] as PermissionKey[],
-    'Detailed Access': ['patient_details', 'appointment_calendar', 'payment_management', 'inventory_management'] as PermissionKey[],
+    'Detailed Access': ['patient_details', 'appointment_calendar', 'payment_management', 'laboratoryRadiology_management'] as PermissionKey[],
     'Administrative': ['user_management', 'clinic_settings'] as PermissionKey[],
   };
 

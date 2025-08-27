@@ -115,11 +115,11 @@ const SystemIntegrationTest: React.FC = () => {
   } = usePayments();
 
   const {
-    inventory,
+    laboratoryRadiology,
     addInventoryItem,
     updateInventoryItem,
     deleteInventoryItem,
-    stats: inventoryStats
+    stats: laboratoryRadiologyStats
   } = useInventory();
 
   const {
@@ -816,9 +816,9 @@ const SystemIntegrationTest: React.FC = () => {
                 </TableRow>
                 <TableRow>
                   <TableCell>Inventory</TableCell>
-                  <TableCell align="right">{inventory.length}</TableCell>
-                  <TableCell align="right">{receivedUpdates.inventory || 0}</TableCell>
-                  <TableCell align="right">{inventoryStats.lastUpdated?.toLocaleTimeString() || 'Never'}</TableCell>
+                  <TableCell align="right">{laboratoryRadiology.length}</TableCell>
+                  <TableCell align="right">{receivedUpdates.laboratoryRadiology || 0}</TableCell>
+                  <TableCell align="right">{laboratoryRadiologyStats.lastUpdated?.toLocaleTimeString() || 'Never'}</TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell>Notifications</TableCell>

@@ -78,8 +78,8 @@ self.addEventListener('notificationclick', (event) => {
       case 'payment_reminder':
         urlToOpen = `/payments/${notificationData.paymentId}`;
         break;
-      case 'inventory_low_stock':
-        urlToOpen = `/inventory/${notificationData.itemId}`;
+      case 'laboratoryRadiology_low_stock':
+        urlToOpen = `/laboratoryRadiology/${notificationData.itemId}`;
         break;
       default:
         urlToOpen = '/dashboard';

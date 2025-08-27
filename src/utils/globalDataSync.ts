@@ -44,7 +44,7 @@ function checkForInfiniteLoop(functionName: string): boolean {
 // This system automatically synchronizes data across all pages without user intervention
 
 interface SyncEventDetail {
-  type: 'patient' | 'appointment' | 'payment' | 'inventory';
+  type: 'patient' | 'appointment' | 'payment' | 'laboratoryRadiology';
   action: 'create' | 'update' | 'delete';
   data: any;
   source: string;

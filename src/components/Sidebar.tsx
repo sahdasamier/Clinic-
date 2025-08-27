@@ -91,12 +91,12 @@ const navLinks: NavLink[] = [
     group: 'business'
   },
   { 
-    to: '/inventory', 
-    text: 'laboratory_radiology', 
+    to: '/laboratoryRadiology', 
+    text: 'laboratoryRadiology', 
     icon: <Science />, 
-    permission: 'inventory',
+    permission: 'laboratoryRadiology',
     minLevel: 'read',
-    group: 'business'
+    group: 'core'
   },
   { 
     to: '/notifications', 
@@ -140,21 +140,37 @@ const Sidebar: React.FC = () => {
 
   // Filter navigation links based on user permissions
   const getFilteredNavLinks = (): NavLink[] => {
+    console.log('🔍 Debug - isAdmin:', isAdmin, 'userPermissions:', userPermissions);
+    
     if (isAdmin) {
       // Super admins see everything
+      console.log('🔍 Admin user - showing all items');
       return navLinks;
     }
     
     if (!userPermissions) {
       // No permissions loaded yet, show core items only
+      console.log('🔍 No permissions loaded - showing core items only');
       return navLinks.filter(link => link.group === 'core');
     }
 
     // Filter based on actual permissions
-    return navLinks.filter(link => {
+    const filtered = navLinks.filter(link => {
       const hasAccess = hasPermission(userPermissions, link.permission, link.minLevel || 'read');
+      if (link.permission === 'laboratoryRadiology') {
+        console.log('🔍 LaboratoryRadiology permission check:', {
+          permission: link.permission,
+          userPermissionLevel: userPermissions[link.permission],
+          minLevel: link.minLevel,
+          hasAccess,
+          allUserPermissions: userPermissions
+        });
+      }
       return hasAccess;
     });
+    
+    console.log('🔍 Filtered nav links:', filtered.map(link => ({ text: link.text, permission: link.permission, group: link.group })));
+    return filtered;
   };
 
   const filteredNavLinks = getFilteredNavLinks();

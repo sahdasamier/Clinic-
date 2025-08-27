@@ -95,7 +95,7 @@ cat > firestore.indexes.json << 'EOF'
       ]
     },
     {
-      "collectionGroup": "inventory",
+      "collectionGroup": "laboratoryRadiology",
       "queryScope": "COLLECTION",
       "fields": [
         {"fieldPath": "clinicId", "order": "ASCENDING"},
@@ -104,7 +104,7 @@ cat > firestore.indexes.json << 'EOF'
       ]
     },
     {
-      "collectionGroup": "inventory",
+      "collectionGroup": "laboratoryRadiology",
       "queryScope": "COLLECTION",
       "fields": [
         {"fieldPath": "clinicId", "order": "ASCENDING"},

@@ -272,19 +272,19 @@ export function usePayments(options?: {
   };
 }
 
-// Specialized hook for inventory with low stock alerts
+// Specialized hook for laboratoryRadiology with low stock alerts
 export function useInventory(options?: {
   search?: string;
   category?: string;
   lowStockOnly?: boolean;
   outOfStockOnly?: boolean;
 }) {
-  const { inventory, loading, errors, addInventoryItem, updateInventoryItem, deleteInventoryItem } = useGlobalData();
+  const { laboratoryRadiology, loading, errors, addInventoryItem, updateInventoryItem, deleteInventoryItem } = useGlobalData();
 
   const filteredInventory = useMemo(() => {
-    if (!options) return inventory;
+    if (!options) return laboratoryRadiology;
 
-    return inventory.filter((item) => {
+    return laboratoryRadiology.filter((item) => {
       // Search filter
       if (options.search) {
         const searchLower = options.search.toLowerCase();
@@ -321,9 +321,9 @@ export function useInventory(options?: {
 
       return true;
     });
-  }, [inventory, options]);
+  }, [laboratoryRadiology, options]);
 
-  const inventoryStats = useMemo(() => {
+  const laboratoryRadiologyStats = useMemo(() => {
     return {
       total: filteredInventory.length,
       lowStock: filteredInventory.filter(item => 
@@ -340,10 +340,10 @@ export function useInventory(options?: {
   }, [filteredInventory]);
 
   return {
-    inventory: filteredInventory,
-    stats: inventoryStats,
-    loading: loading.inventory,
-    error: errors.inventory,
+    laboratoryRadiology: filteredInventory,
+    stats: laboratoryRadiologyStats,
+    loading: loading.laboratoryRadiology,
+    error: errors.laboratoryRadiology,
     addInventoryItem,
     updateInventoryItem,
     deleteInventoryItem,

@@ -82,7 +82,7 @@ This guide helps you test and verify that the granular permissions system is wor
 /appointments - Requires 'appointments' permission
 /appointments/calendar - Requires 'appointment_calendar' permission
 /payments - Requires 'payments' permission
-/inventory - Requires 'inventory' permission
+/laboratoryRadiology - Requires 'laboratoryRadiology' permission
 /notifications - Requires 'notifications' permission
 /doctor-scheduling - Requires 'doctor_scheduling' permission
 /settings - Requires 'settings' permission

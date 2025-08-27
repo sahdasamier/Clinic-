@@ -11,7 +11,7 @@ export const SUBSCRIPTION_FEATURES = {
     'patients',
     'appointments', 
     'payments',
-    'inventory',
+    'laboratoryRadiology',
     'advanced_reports',
     'notifications'
   ],
@@ -19,7 +19,7 @@ export const SUBSCRIPTION_FEATURES = {
     'patients',
     'appointments',
     'payments', 
-    'inventory',
+    'laboratoryRadiology',
     'advanced_reports',
     'notifications',
     'api_access',

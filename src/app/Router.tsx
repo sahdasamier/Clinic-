@@ -19,7 +19,7 @@ import PatientDetailPage from "../features/patients/PatientDetailPage";
 import AppointmentListPage from "../features/appointments/AppointmentListPage";
 import AppointmentCalendarPage from "../features/appointments/AppointmentCalendarPage";
 import PaymentListPage from "../features/payments/PaymentListPage";
-import InventoryPage from "../features/inventory/InventoryPage";
+import LaboratoryRadiologyCenterPage from "../features/LaboratoryRadiologyCenterPage/LaboratoryRadiologyCenterPage";
 import NotificationsPage from "../features/notifications/NotificationsPage";
 import SettingsPage from "../features/settings/SettingsPage";
 
@@ -155,12 +155,12 @@ const Router: React.FC = () => {
           </ProtectedRoute>
         } />
         
-        <Route path="/inventory" element={
+        <Route path="/laboratoryRadiology" element={
           <ProtectedRoute>
             <ClinicAccessGuard>
               <Layout>
-                <EnhancedRouteGuard feature="inventory" level="read">
-                  <InventoryPage />
+                <EnhancedRouteGuard feature="laboratoryRadiology" level="read">
+                  <LaboratoryRadiologyCenterPage />
                 </EnhancedRouteGuard>
               </Layout>
             </ClinicAccessGuard>

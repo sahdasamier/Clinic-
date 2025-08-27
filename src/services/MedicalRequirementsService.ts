@@ -16,8 +16,8 @@ import { safeFirestore } from '../api/firebaseDirect';
 
 const COLLECTION_NAME = 'medicalRequirementOrders';
 
-const getMedicalRequirementsCollection = (clinicId: string) => {
-  const db = safeFirestore();
+const getMedicalRequirementsCollection = async (clinicId: string) => {
+  const db = await safeFirestore.getDb();
   if (!db) throw new Error('Firestore not initialized');
   
   return collection(db, COLLECTION_NAME);
@@ -112,7 +112,7 @@ export const MedicalRequirementsService = {
     orderData: Omit<MedicalRequirementOrder, 'id' | 'createdAt' | 'updatedAt' | 'clinicId' | 'isActive'>
   ): Promise<string> {
     try {
-      const ordersCollection = getMedicalRequirementsCollection(clinicId);
+      const ordersCollection = await getMedicalRequirementsCollection(clinicId);
       
       const newOrder = {
         ...orderData,
@@ -134,7 +134,7 @@ export const MedicalRequirementsService = {
   // Get all orders for a clinic
   async getOrdersByClinic(clinicId: string): Promise<MedicalRequirementOrder[]> {
     try {
-      const ordersCollection = getMedicalRequirementsCollection(clinicId);
+      const ordersCollection = await getMedicalRequirementsCollection(clinicId);
       const q = query(
         ordersCollection,
         where('clinicId', '==', clinicId),
@@ -156,7 +156,7 @@ export const MedicalRequirementsService = {
   // Get orders for a specific patient
   async getOrdersByPatient(clinicId: string, patientId: string): Promise<MedicalRequirementOrder[]> {
     try {
-      const ordersCollection = getMedicalRequirementsCollection(clinicId);
+      const ordersCollection = await getMedicalRequirementsCollection(clinicId);
       const q = query(
         ordersCollection,
         where('clinicId', '==', clinicId),
@@ -179,7 +179,7 @@ export const MedicalRequirementsService = {
   // Get orders by status
   async getOrdersByStatus(clinicId: string, status: string): Promise<MedicalRequirementOrder[]> {
     try {
-      const ordersCollection = getMedicalRequirementsCollection(clinicId);
+      const ordersCollection = await getMedicalRequirementsCollection(clinicId);
       const q = query(
         ordersCollection,
         where('clinicId', '==', clinicId),
@@ -206,7 +206,7 @@ export const MedicalRequirementsService = {
     updates: Partial<MedicalRequirementOrder>
   ): Promise<void> {
     try {
-      const db = safeFirestore();
+      const db = await safeFirestore.getDb();
       if (!db) throw new Error('Firestore not initialized');
       
       const orderRef = doc(db, COLLECTION_NAME, orderId);
@@ -302,7 +302,7 @@ export const MedicalRequirementsService = {
   // Get single order by ID
   async getOrderById(clinicId: string, orderId: string): Promise<MedicalRequirementOrder | null> {
     try {
-      const db = safeFirestore();
+      const db = await safeFirestore.getDb();
       if (!db) throw new Error('Firestore not initialized');
       
       const orderRef = doc(db, COLLECTION_NAME, orderId);

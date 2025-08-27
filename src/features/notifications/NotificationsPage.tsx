@@ -86,7 +86,7 @@ const getNotificationIcon = (type: string) => {
       return <Schedule />;
     case 'payment':
       return <Payment />;
-    case 'inventory':
+    case 'laboratoryRadiology':
       return <Warning />;
     case 'system':
       return <Info />;
@@ -109,7 +109,7 @@ const getPriorityColor = (type: string) => {
         light: '#F0FDF4',
         gradient: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)'
       };
-    case 'inventory':
+    case 'laboratoryRadiology':
       return {
         main: '#F59E0B',
         light: '#FFFBEB',
@@ -179,7 +179,7 @@ const NotificationsPage: React.FC = () => {
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>({
     appointments: true,
     payments: true,
-    inventory: true,
+    laboratoryRadiology: true,
     system: true,
   });
   const [updating, setUpdating] = useState(false);
@@ -873,9 +873,9 @@ const NotificationsPage: React.FC = () => {
                           label={
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                               <Warning fontSize="small" />
-                              <span>{t('notification_type_inventory')}</span>
+                              <span>{t('notification_type_laboratoryRadiology')}</span>
                               <Chip 
-                                label={getNotificationsByType('inventory').length} 
+                                label={getNotificationsByType('laboratoryRadiology').length} 
                                 size="small" 
                                 sx={{ 
                                   height: 20, 
@@ -921,7 +921,7 @@ const NotificationsPage: React.FC = () => {
                     </TabPanel>
 
                     <TabPanel value={tabValue} index={3}>
-                      {renderNotificationList(getNotificationsByType('inventory'))}
+                      {renderNotificationList(getNotificationsByType('laboratoryRadiology'))}
                     </TabPanel>
 
                     <TabPanel value={tabValue} index={4}>
@@ -1002,7 +1002,7 @@ const NotificationsPage: React.FC = () => {
                           {[
                             { key: 'appointments', label: t('appointment_notifications'), icon: <Schedule />, color: '#3B82F6' },
                             { key: 'payments', label: t('payment_notifications'), icon: <Payment />, color: '#10B981' },
-                            { key: 'inventory', label: t('inventory_alerts'), icon: <Warning />, color: '#F59E0B' },
+                            { key: 'laboratoryRadiology', label: t('laboratoryRadiology_alerts'), icon: <Warning />, color: '#F59E0B' },
                             { key: 'system', label: t('system_updates'), icon: <Info />, color: '#8B5CF6' }
                           ].map((setting) => (
                             <Box 

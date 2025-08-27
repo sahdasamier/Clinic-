@@ -93,7 +93,7 @@ const ReceptionistDashboard: React.FC = () => {
   // State management for dashboard data
   const [todayAppointments, setTodayAppointments] = useState(receptionistDashboardTodayAppointments);
   const [paymentsDue, setPaymentsDue] = useState(receptionistDashboardPaymentsDue);
-  const [inventoryAlerts, setInventoryAlerts] = useState(receptionistDashboardInventoryAlerts);
+  const [laboratoryRadiologyAlerts, setInventoryAlerts] = useState(receptionistDashboardInventoryAlerts);
 
   // Reset functionality
   useEffect(() => {
@@ -170,7 +170,7 @@ const ReceptionistDashboard: React.FC = () => {
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
               <StatCard
-                title={t('inventory_alerts')}
+                title={t('laboratoryRadiology_alerts')}
                 value="5"
                 icon={<Warning />}
                 color="#EF4444"
@@ -301,10 +301,10 @@ const ReceptionistDashboard: React.FC = () => {
                 <Card>
                   <CardContent sx={{ p: 3 }}>
                     <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
-                      {t('inventory_alerts')}
+                      {t('laboratoryRadiology_alerts')}
                     </Typography>
                     <List sx={{ p: 0 }}>
-                      {inventoryAlerts.map((item) => (
+                      {laboratoryRadiologyAlerts.map((item) => (
                         <ListItem key={item.id} sx={{ px: 0, py: 1, flexDirection: 'column', alignItems: 'flex-start' }}>
                           <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', mb: 1 }}>
                             <Avatar sx={{ width: 32, height: 32, backgroundColor: item.status === 'critical' ? 'error.main' : 'warning.main', mr: 1.5 }}>
@@ -335,7 +335,7 @@ const ReceptionistDashboard: React.FC = () => {
                       ))}
                     </List>
                     <Button variant="text" size="small" fullWidth sx={{ mt: 1 }}>
-                      {t('manage_inventory')}
+                      {t('manage_laboratoryRadiology')}
                     </Button>
                   </CardContent>
                 </Card>

@@ -37,7 +37,7 @@ echo "https://console.firebase.google.com/project/clinic-d9c0a/firestore/indexes
 echo ""
 
 echo "6. 📦 INVENTORY Real-time:"
-echo "https://console.firebase.google.com/project/clinic-d9c0a/firestore/indexes?create_composite=true&collection=inventory&field_1=clinicId&dir_1=ASCENDING&field_2=name&dir_2=ASCENDING&field_3=__name__&dir_3=ASCENDING"
+echo "https://console.firebase.google.com/project/clinic-d9c0a/firestore/indexes?create_composite=true&collection=laboratoryRadiology&field_1=clinicId&dir_1=ASCENDING&field_2=name&dir_2=ASCENDING&field_3=__name__&dir_3=ASCENDING"
 echo ""
 
 echo -e "${YELLOW}⚡ INSTANT SETUP:${NC}"

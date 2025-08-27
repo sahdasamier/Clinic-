@@ -13,7 +13,7 @@ import {
 } from 'firebase/firestore';
 import { getOptimizedFirestore, firebaseManager } from '../api/firebaseOptimized';
 
-const COLLECTION_NAME = 'inventory';
+const COLLECTION_NAME = 'laboratoryRadiology';
 
 // Safe collection reference that waits for Firebase to be ready
 const getInventoryCollection = () => {
@@ -94,7 +94,7 @@ export interface InventoryItem {
 }
 
 export const InventoryService = {
-  // Create a new inventory item
+  // Create a new laboratoryRadiology item
   async createItem(clinicId: string, itemData: Omit<InventoryItem, 'id' | 'createdAt' | 'updatedAt' | 'clinicId' | 'alerts' | 'status'>): Promise<string> {
     const id = crypto.randomUUID();
     
@@ -131,7 +131,7 @@ export const InventoryService = {
     return id;
   },
 
-  // Update an inventory item
+  // Update an laboratoryRadiology item
   async updateItem(itemId: string, updates: Partial<InventoryItem>): Promise<void> {
     const itemRef = doc(getInventoryCollection(), itemId);
     
@@ -163,7 +163,7 @@ export const InventoryService = {
     console.log('✅ Inventory item updated:', itemId);
   },
 
-  // Get a single inventory item
+  // Get a single laboratoryRadiology item
   async getItem(itemId: string): Promise<InventoryItem | null> {
     const q = query(getInventoryCollection(), where('__name__', '==', itemId));
     const snapshot = await getDocs(q);
@@ -178,13 +178,13 @@ export const InventoryService = {
     } as InventoryItem;
   },
 
-  // Delete an inventory item
+  // Delete an laboratoryRadiology item
   async deleteItem(itemId: string): Promise<void> {
     await this.updateItem(itemId, { isActive: false });
     console.log('✅ Inventory item soft deleted:', itemId);
   },
 
-  // Listen to inventory for a specific clinic
+  // Listen to laboratoryRadiology for a specific clinic
   listenInventory(clinicId: string, callback: (items: InventoryItem[]) => void): () => void {
     const q = query(
       getInventoryCollection(),
@@ -202,7 +202,7 @@ export const InventoryService = {
       console.log(`📦 Inventory updated: ${items.length} active items`);
       callback(items);
     }, (error) => {
-      console.error('❌ Error listening to inventory:', error);
+      console.error('❌ Error listening to laboratoryRadiology:', error);
       callback([]);
     });
   },
@@ -349,7 +349,7 @@ export const InventoryService = {
     })) as InventoryItem[];
   },
 
-  // Search inventory items
+  // Search laboratoryRadiology items
   async searchItems(clinicId: string, searchTerm: string): Promise<InventoryItem[]> {
     const q = query(
       getInventoryCollection(),
@@ -374,7 +374,7 @@ export const InventoryService = {
     );
   },
 
-  // Get inventory statistics
+  // Get laboratoryRadiology statistics
   async getInventoryStats(clinicId: string): Promise<{
     totalItems: number;
     totalValue: number;

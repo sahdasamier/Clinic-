@@ -127,11 +127,11 @@ export const AnalyticsService = {
     }
   },
 
-  // Track inventory events
+  // Track laboratoryRadiology events
   trackInventoryLowStock: (itemId: string, itemName: string, currentQuantity: number, minQuantity: number) => {
     const analyticsInstance = getAnalyticsInstance();
     if (analyticsInstance) {
-      logEvent(analyticsInstance, 'inventory_low_stock', {
+      logEvent(analyticsInstance, 'laboratoryRadiology_low_stock', {
         item_id: itemId,
         item_name: itemName,
         current_quantity: currentQuantity,
@@ -143,7 +143,7 @@ export const AnalyticsService = {
   trackInventoryRestocked: (itemId: string, itemName: string, quantityAdded: number, newTotal: number) => {
     const analyticsInstance = getAnalyticsInstance();
     if (analyticsInstance) {
-      logEvent(analyticsInstance, 'inventory_restocked', {
+      logEvent(analyticsInstance, 'laboratoryRadiology_restocked', {
         item_id: itemId,
         item_name: itemName,
         quantity_added: quantityAdded,
@@ -186,7 +186,7 @@ export const AnalyticsService = {
   },
 
   // Track search and filter usage
-  trackSearch: (searchTerm: string, searchType: 'patients' | 'appointments' | 'inventory', resultsCount: number) => {
+  trackSearch: (searchTerm: string, searchType: 'patients' | 'appointments' | 'laboratoryRadiology', resultsCount: number) => {
     const analyticsInstance = getAnalyticsInstance();
     if (analyticsInstance) {
       logEvent(analyticsInstance, 'search', {

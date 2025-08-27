@@ -558,7 +558,7 @@ export const STORAGE_KEYS_DATA = {
   APPOINTMENTS: 'clinic_appointments_data',
   PAYMENTS: 'clinic_payments_data', 
   PATIENTS: 'clinic_patients_data',
-  INVENTORY: 'clinic_inventory_data',
+  INVENTORY: 'clinic_laboratoryRadiology_data',
   SETTINGS: 'clinic_notification_settings'
 };
 

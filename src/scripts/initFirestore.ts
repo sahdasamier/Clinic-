@@ -41,7 +41,7 @@ export const initializeFirestore = async () => {
       name: 'Demo Clinic',
       isActive: true,
       settings: {
-        allowedFeatures: ['patients', 'appointments', 'payments', 'inventory'],
+        allowedFeatures: ['patients', 'appointments', 'payments', 'laboratoryRadiology'],
         maxUsers: 50,
         subscriptionPlan: 'premium',
       },
@@ -56,7 +56,7 @@ export const initializeFirestore = async () => {
     console.log('✅ Demo clinic created successfully');
 
     // Create some sample data collections structure (only if needed)
-    const collections = ['patients', 'appointments', 'inventory'];
+    const collections = ['patients', 'appointments', 'laboratoryRadiology'];
     
     for (const collectionName of collections) {
       try {
@@ -157,7 +157,7 @@ export const ensureDemoClinicActive = async (): Promise<boolean> => {
       name: 'Demo Clinic',
       isActive: true, // Force active
       settings: {
-        allowedFeatures: ['patients', 'appointments', 'payments', 'inventory'],
+        allowedFeatures: ['patients', 'appointments', 'payments', 'laboratoryRadiology'],
         maxUsers: 50,
         subscriptionPlan: 'premium',
       },
