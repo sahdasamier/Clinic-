@@ -117,6 +117,15 @@ const LaboratoryRadiologyPage: React.FC = () => {
       
       try {
         setLoading(true);
+        
+        // ✅ ADDED: Try to sync localStorage with Firebase first
+        try {
+          await MedicalRequirementsService.syncLocalStorageWithFirebase(userProfile.clinicId);
+          console.log('✅ localStorage synced with Firebase');
+        } catch (syncError) {
+          console.warn('⚠️ localStorage sync failed, continuing with normal load:', syncError);
+        }
+        
         const orders = await MedicalRequirementsService.getOrdersByClinic(userProfile.clinicId);
         setMedicalOrders(orders);
         setError(null);
@@ -132,6 +141,44 @@ const LaboratoryRadiologyPage: React.FC = () => {
 
     loadOrders();
   }, [userProfile?.clinicId]);
+
+  // ✅ ADDED: Handle adding new medical requirements with localStorage backup
+  const handleAddNewRequirement = async (requirementData: any) => {
+    if (!userProfile?.clinicId) return;
+    
+    try {
+      console.log('🔄 Adding new medical requirement:', requirementData);
+      
+      const orderId = await MedicalRequirementsService.createOrder(
+        userProfile.clinicId,
+        requirementData
+      );
+      
+      console.log('✅ New medical requirement created with ID:', orderId);
+      
+      // Reload orders to show the new one
+      const updatedOrders = await MedicalRequirementsService.getOrdersByClinic(userProfile.clinicId);
+      setMedicalOrders(updatedOrders);
+      
+      // Show success message
+      setError(null);
+      
+      // ✅ NEW: Dispatch event for immediate table update in patient list
+      window.dispatchEvent(new CustomEvent('medicalRequirementAdded', {
+        detail: {
+          patientId: requirementData.patientId,
+          requirementId: orderId,
+          status: 'pending'
+        }
+      }));
+      
+      console.log('🔄 Dispatched medicalRequirementAdded event for patient:', requirementData.patientId);
+      
+    } catch (error) {
+      console.error('❌ Error adding new medical requirement:', error);
+      setError('Failed to add new medical requirement. Please try again.');
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {

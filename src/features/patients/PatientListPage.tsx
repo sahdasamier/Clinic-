@@ -98,6 +98,7 @@ import {
   Description,
   CheckCircle,
   Schedule,
+  Refresh,
   Science,
   LocalHospital,
   Bloodtype,
@@ -468,9 +469,38 @@ const PatientListPage: React.FC = () => {
   // ✅ NEW: Medical requirements state and fetching
   const [patientRequirements, setPatientRequirements] = useState<Map<string, number>>(new Map());
 
+  // ✅ NEW: Snackbar state for notifications
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean;
+    message: string;
+    severity: 'success' | 'error' | 'warning' | 'info';
+  }>({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
+
   // Function to get medical requirements count for a patient
   const getMedicalRequirementsCount = (patientId: string): number => {
-    return patientRequirements.get(patientId) || 0;
+    // ✅ FIXED: First try to get count from patient's embedded medicalRequirements array
+    const patient = enhancedPatients.find(p => p.id === patientId);
+    if (patient && patient.medicalRequirements && Array.isArray(patient.medicalRequirements)) {
+      const embeddedCount = patient.medicalRequirements.filter((req: any) => req.status === 'pending').length;
+      if (embeddedCount > 0) {
+        console.log(`📊 Patient ${patientId}: ${embeddedCount} pending requirements from embedded array`);
+        return embeddedCount;
+      }
+    }
+    
+    // Fall back to the state map
+    const count = patientRequirements.get(patientId);
+    if (count === undefined || count === null) {
+      console.warn(`⚠️ No medical requirements count found for patient ${patientId}, defaulting to 0`);
+      console.log('🔍 Current patientRequirements state:', Array.from(patientRequirements.entries()));
+      return 0;
+    }
+    console.log(`📊 Patient ${patientId}: ${count} medical requirements from state map`);
+    return count;
   };
 
   // ✅ ENHANCED: Real-time medical requirements listener with immediate sync
@@ -487,20 +517,34 @@ const PatientListPage: React.FC = () => {
         const requirementsMap = new Map<string, number>();
         
         // Fetch requirements for each patient
-        await Promise.all(
-          enhancedPatients.map(async (patient) => {
-            try {
-              const requirements = await MedicalRequirementsService.getOrdersByPatient(
-                userProfile.clinicId,
-                patient.id
-              );
-              requirementsMap.set(patient.id, requirements.length);
-            } catch (error) {
-              console.error(`❌ Error fetching requirements for patient ${patient.name}:`, error);
-              requirementsMap.set(patient.id, 0);
-            }
-          })
-        );
+        console.log(`🔄 Fetching requirements for ${enhancedPatients.length} patients...`);
+        
+        const fetchPromises = enhancedPatients.map(async (patient) => {
+          try {
+            // ✅ OPTIMIZED: Use dedicated method for pending requirements
+            const requirements = await MedicalRequirementsService.getPendingOrdersByPatient(
+              userProfile.clinicId,
+              patient.id
+            );
+            const count = requirements.length; // Already filtered for pending only
+            requirementsMap.set(patient.id, count);
+            console.log(`✅ Patient ${patient.name} (${patient.id}): ${count} pending requirements`);
+            return { patientId: patient.id, count, success: true };
+          } catch (error) {
+            console.error(`❌ Error fetching requirements for patient ${patient.name} (${patient.id}):`, error);
+            requirementsMap.set(patient.id, 0);
+            return { patientId: patient.id, count: 0, success: false, error };
+          }
+        });
+        
+        const results = await Promise.allSettled(fetchPromises);
+        console.log('📊 Fetch results:', results.map((result, index) => {
+          if (result.status === 'fulfilled') {
+            return result.value;
+          } else {
+            return { patientId: enhancedPatients[index]?.id, success: false, error: result.reason };
+          }
+        }));
 
         setPatientRequirements(requirementsMap);
         console.log('✅ Medical requirements loaded for all patients');
@@ -511,39 +555,61 @@ const PatientListPage: React.FC = () => {
 
     fetchMedicalRequirements();
 
-    // ✅ NEW: Set up real-time Firestore listener for medical requirements
-    const setupRealtimeListener = async () => {
-      try {
-        const { safeFirestore } = await import('../../api/firebaseDirect');
-        const requirementsCollection = safeFirestore.collection(`clinics/${userProfile.clinicId}/medicalRequirements`);
-        
-        const unsubscribe = safeFirestore.onSnapshot(requirementsCollection, (snapshot: any) => {
-          console.log('🔄 Medical requirements collection changed, updating counts...');
-          
-          // Recalculate requirements count for all patients
-          const requirementsMap = new Map<string, number>();
-          
-          // Group requirements by patient ID
-          snapshot.docs.forEach((doc: any) => {
-            const data = doc.data();
-            if (data.isActive && data.patientId) {
-              const currentCount = requirementsMap.get(data.patientId) || 0;
-              requirementsMap.set(data.patientId, currentCount + 1);
-            }
-          });
+            // ✅ FIXED: Set up real-time Firestore listener for medical requirements using correct collection
+        const setupRealtimeListener = async () => {
+          try {
+            const { collection, query, where, onSnapshot } = await import('firebase/firestore');
+            const { safeFirestore } = await import('../../api/firebaseDirect');
+            const db = await safeFirestore.getDb();
+            if (!db) throw new Error('Firestore not initialized');
+            
+            // ✅ FIXED: Use the correct collection name 'medicalRequirementOrders'
+            const requirementsCollection = collection(db, 'medicalRequirementOrders');
+            
+            // ✅ ENHANCED: Query only active orders for this clinic
+            const q = query(
+              requirementsCollection,
+              where('clinicId', '==', userProfile.clinicId),
+              where('isActive', '==', true)
+            );
+            
+            const unsubscribe = onSnapshot(q, (snapshot: any) => {
+              try {
+                console.log('🔄 Medical requirements collection changed, updating counts...');
+                console.log(`📊 Snapshot contains ${snapshot.docs.length} documents`);
+                
+                // Recalculate requirements count for all patients
+                const requirementsMap = new Map<string, number>();
+                
+                // Group requirements by patient ID - ONLY COUNT PENDING ORDERS
+                snapshot.docs.forEach((doc: any) => {
+                  try {
+                    const data = doc.data();
+                    if (data.isActive && data.patientId && data.status === 'pending') {
+                      const currentCount = requirementsMap.get(data.patientId) || 0;
+                      requirementsMap.set(data.patientId, currentCount + 1);
+                      console.log(`📋 Patient ${data.patientId}: ${currentCount + 1} pending requirements`);
+                    }
+                  } catch (docError) {
+                    console.error('❌ Error processing document:', docError, doc);
+                  }
+                });
 
-          // Ensure all current patients have entries (even if 0)
-          enhancedPatients.forEach(patient => {
-            if (!requirementsMap.has(patient.id)) {
-              requirementsMap.set(patient.id, 0);
-            }
-          });
+                // Ensure all current patients have entries (even if 0)
+                enhancedPatients.forEach(patient => {
+                  if (!requirementsMap.has(patient.id)) {
+                    requirementsMap.set(patient.id, 0);
+                  }
+                });
 
-          setPatientRequirements(requirementsMap);
-          console.log('✅ Real-time medical requirements updated:', Array.from(requirementsMap.entries()));
-        }, (error: any) => {
-          console.error('❌ Error in medical requirements real-time listener:', error);
-        });
+                setPatientRequirements(requirementsMap);
+                console.log('✅ Real-time medical requirements updated:', Array.from(requirementsMap.entries()));
+              } catch (snapshotError) {
+                console.error('❌ Error processing snapshot:', snapshotError);
+              }
+            }, (error: any) => {
+              console.error('❌ Error in medical requirements real-time listener:', error);
+            });
 
         return unsubscribe;
       } catch (error) {
@@ -554,15 +620,51 @@ const PatientListPage: React.FC = () => {
 
     // Setup listener and cleanup
     let unsubscribe: (() => void) | null = null;
-    setupRealtimeListener().then(unsub => {
-      unsubscribe = unsub;
-    });
+    
+    // Add delay to ensure Firebase is fully initialized
+    setTimeout(async () => {
+      try {
+        const unsub = await setupRealtimeListener();
+        if (unsub) {
+          unsubscribe = unsub;
+          console.log('✅ Real-time listener setup completed successfully');
+        } else {
+          console.warn('⚠️ Real-time listener setup returned null, falling back to manual fetch');
+          fetchMedicalRequirements();
+        }
+      } catch (error) {
+        console.error('❌ Failed to setup real-time listener:', error);
+        // Fallback to one-time fetch
+        fetchMedicalRequirements();
+      }
+    }, 1000);
 
     return () => {
       if (unsubscribe) {
         console.log('🔄 Cleaning up medical requirements real-time listener');
         unsubscribe();
       }
+    };
+  }, [userProfile?.clinicId, enhancedPatients.length]);
+
+  // ✅ ADDED: Fallback periodic refresh as backup to real-time listener
+  useEffect(() => {
+    if (!userProfile?.clinicId || enhancedPatients.length === 0) return;
+
+    const intervalId = setInterval(async () => {
+      try {
+        console.log('🔄 Fallback: Periodic refresh of medical requirements counts...');
+        const countsMap = await MedicalRequirementsService.getAllPatientRequirementsCounts(userProfile.clinicId);
+        setPatientRequirements(countsMap);
+        console.log('✅ Fallback refresh completed');
+      } catch (error) {
+        console.warn('⚠️ Fallback refresh failed:', error);
+      }
+    }, 30000); // Refresh every 30 seconds as backup
+
+    return () => {
+      clearInterval(intervalId);
+      console.log('🔄 Fallback periodic refresh stopped');
     };
   }, [userProfile?.clinicId, enhancedPatients.length]);
 
@@ -587,12 +689,13 @@ const PatientListPage: React.FC = () => {
       
       // Refresh count for this specific patient
       if (userProfile?.clinicId) {
-        MedicalRequirementsService.getOrdersByPatient(userProfile.clinicId, patientId)
+        MedicalRequirementsService.getPendingOrdersByPatient(userProfile.clinicId, patientId)
           .then(requirements => {
             const newRequirements = new Map(patientRequirements);
-            newRequirements.set(patientId, requirements.length);
+            const pendingCount = requirements.length; // Already filtered for pending only
+            newRequirements.set(patientId, pendingCount);
             setPatientRequirements(newRequirements);
-            console.log(`✅ Refreshed requirements count for patient ${patientId}: ${requirements.length}`);
+            console.log(`✅ Refreshed requirements count for patient ${patientId}: ${pendingCount} pending`);
           })
           .catch(error => {
             console.error('❌ Error refreshing requirements count:', error);
@@ -600,15 +703,242 @@ const PatientListPage: React.FC = () => {
       }
     };
 
+    // ✅ ADDED: Listen for count refresh events
+    const handleMedicalRequirementCountRefreshed = (event: CustomEvent) => {
+      const { patientId, count } = event.detail;
+      console.log(`📋 Medical requirement count refreshed for patient ${patientId}: ${count}`);
+      
+      setPatientRequirements(prev => {
+        const newMap = new Map(prev);
+        newMap.set(patientId, count);
+        return newMap;
+      });
+    };
+
+    const handleAllMedicalRequirementCountsRefreshed = (event: CustomEvent) => {
+      const { counts } = event.detail;
+      console.log('📋 All medical requirement counts refreshed:', counts);
+      
+      const newMap = new Map();
+      Object.entries(counts).forEach(([patientId, count]) => {
+        newMap.set(patientId, count as number);
+      });
+      
+      setPatientRequirements(newMap);
+    };
+
     // Add event listeners
     window.addEventListener('medicalRequirementAdded', handleMedicalRequirementAdded as EventListener);
     window.addEventListener('medicalRequirementUpdated', handleMedicalRequirementUpdated as EventListener);
+    window.addEventListener('medicalRequirementCountRefreshed', handleMedicalRequirementCountRefreshed as EventListener);
+    window.addEventListener('allMedicalRequirementCountsRefreshed', handleAllMedicalRequirementCountsRefreshed as EventListener);
 
     return () => {
       window.removeEventListener('medicalRequirementAdded', handleMedicalRequirementAdded as EventListener);
       window.removeEventListener('medicalRequirementUpdated', handleMedicalRequirementUpdated as EventListener);
+      window.removeEventListener('medicalRequirementCountRefreshed', handleMedicalRequirementCountRefreshed as EventListener);
+      window.removeEventListener('allMedicalRequirementCountsRefreshed', handleAllMedicalRequirementCountsRefreshed as EventListener);
     };
   }, [patientRequirements, userProfile?.clinicId]);
+
+  // ✅ ADDED: Manual refresh function for debugging
+  const manualRefreshMedicalRequirementsCounts = async () => {
+    if (!userProfile?.clinicId) {
+      console.error('❌ No clinic ID available for manual refresh');
+      return;
+    }
+    
+    try {
+      console.log('🔄 Manual refresh of medical requirements counts started...');
+      
+      // Force refresh all counts
+      await MedicalRequirementsService.forceRefreshAllCounts(userProfile.clinicId);
+      
+      // Also refresh the local state
+      const countsMap = await MedicalRequirementsService.getAllPatientRequirementsCounts(userProfile.clinicId);
+      setPatientRequirements(countsMap);
+      
+      console.log('✅ Manual refresh completed successfully');
+      
+      // Show success message
+      setSnackbar({
+        open: true,
+        message: 'Medical requirements counts refreshed successfully',
+        severity: 'success'
+      });
+      
+    } catch (error) {
+      console.error('❌ Manual refresh failed:', error);
+      
+      // Show error message
+      setSnackbar({
+        open: true,
+        message: 'Failed to refresh medical requirements counts',
+        severity: 'error'
+      });
+    }
+  };
+
+  // ✅ ADDED: Debug function to check current state
+  const debugMedicalRequirementsState = () => {
+    console.log('🔍 DEBUG: Current medical requirements state:', {
+      patientRequirements: Array.from(patientRequirements.entries()),
+      totalPatients: enhancedPatients.length,
+      clinicId: userProfile?.clinicId,
+      samplePatients: enhancedPatients.slice(0, 3).map(p => ({
+        id: p.id,
+        name: p.name,
+        requirementsCount: patientRequirements.get(p.id) || 0
+      }))
+    });
+  };
+
+  // ✅ ADDED: Function to check if medical requirements data is being fetched correctly
+  const checkMedicalRequirementsData = async () => {
+    if (!userProfile?.clinicId) {
+      console.error('❌ No clinic ID available for data check');
+      return;
+    }
+    
+    try {
+      console.log('🔍 Checking medical requirements data...');
+      
+      // Check if we have patients
+      if (enhancedPatients.length === 0) {
+        console.warn('⚠️ No patients available for requirements check');
+        return;
+      }
+      
+      // Check a sample patient
+      const samplePatient = enhancedPatients[0];
+      console.log('🔍 Sample patient:', {
+        id: samplePatient.id,
+        name: samplePatient.name
+      });
+      
+      // ✅ OPTIMIZED: Use dedicated method for pending requirements
+      const requirements = await MedicalRequirementsService.getPendingOrdersByPatient(
+        userProfile.clinicId,
+        samplePatient.id
+      );
+      console.log(`✅ Sample patient requirements: ${requirements.length} pending`, requirements);
+      
+      // Check if the count matches our state
+      const storedCount = patientRequirements.get(samplePatient.id) || 0;
+      console.log(`📊 Stored count vs actual pending count: ${storedCount} vs ${requirements.length}`);
+      
+      if (storedCount !== requirements.length) {
+        console.warn('⚠️ Count mismatch detected! Updating state...');
+        const newRequirements = new Map(patientRequirements);
+        newRequirements.set(samplePatient.id, requirements.length);
+        setPatientRequirements(newRequirements);
+      }
+      
+      // Check all patients
+      const allCounts = await MedicalRequirementsService.getAllPatientRequirementsCounts(userProfile.clinicId);
+      console.log('📊 All patient counts from service:', allCounts);
+      
+      // Update our state with the service data
+      const newRequirements = new Map();
+      Object.entries(allCounts).forEach(([patientId, count]) => {
+        newRequirements.set(patientId, count as number);
+      });
+      setPatientRequirements(newRequirements);
+      
+      console.log('✅ Medical requirements data check completed');
+      
+    } catch (error) {
+      console.error('❌ Error checking medical requirements data:', error);
+    }
+  };
+
+  // ✅ ADDED: Force immediate refresh and debug
+  const forceRefreshAndDebug = async () => {
+    console.log('🚀 FORCE REFRESH AND DEBUG STARTED');
+    
+    // Clear current state
+    setPatientRequirements(new Map());
+    console.log('🧹 Cleared current patient requirements state');
+    
+    // Wait a moment
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // Force refresh
+    await manualRefreshMedicalRequirementsCounts();
+    
+    // Debug current state
+    debugMedicalRequirementsState();
+    
+    console.log('🚀 FORCE REFRESH AND DEBUG COMPLETED');
+  };
+
+  // ✅ ADDED: Expose function to window for console debugging
+  useEffect(() => {
+    (window as any).refreshMedicalRequirementsCounts = manualRefreshMedicalRequirementsCounts;
+    (window as any).forceRefreshAndDebug = forceRefreshAndDebug;
+    (window as any).debugMedicalRequirements = () => {
+      console.log('🔍 MEDICAL REQUIREMENTS DEBUG:', {
+        patientRequirements: Array.from(patientRequirements.entries()),
+        totalPatients: enhancedPatients.length,
+        clinicId: userProfile?.clinicId,
+        userRole: userProfile?.role,
+        patientRequirementsSize: patientRequirements.size,
+        samplePatientData: enhancedPatients.slice(0, 3).map(p => ({
+          id: p.id,
+          name: p.name,
+          requirementsCount: patientRequirements.get(p.id) || 0
+        }))
+      });
+    };
+    (window as any).debugMedicalRequirementsState = debugMedicalRequirementsState;
+    (window as any).checkMedicalRequirementsData = checkMedicalRequirementsData;
+    
+    (window as any).testMedicalRequirementsConnection = async () => {
+      if (!userProfile?.clinicId) {
+        console.error('❌ No clinic ID available');
+        return;
+      }
+      
+      try {
+        console.log('🧪 Testing medical requirements connection...');
+        
+        // Test 1: Check if service is available
+        console.log('✅ MedicalRequirementsService available:', !!MedicalRequirementsService);
+        
+        // Test 2: Try to get orders by clinic
+        const clinicOrders = await MedicalRequirementsService.getOrdersByClinic(userProfile.clinicId);
+        console.log('✅ Clinic orders fetched:', clinicOrders.length);
+        
+        // Test 3: Check specific patient requirements
+        if (enhancedPatients.length > 0) {
+          const testPatient = enhancedPatients[0];
+          // ✅ OPTIMIZED: Use dedicated method for pending requirements
+          const patientRequirements = await MedicalRequirementsService.getPendingOrdersByPatient(
+            userProfile.clinicId, 
+            testPatient.id
+          );
+          console.log(`✅ Patient ${testPatient.name} requirements: ${patientRequirements.length} pending`);
+        }
+        
+        // Test 4: Check localStorage backup
+        const localStorageKey = `clinic_medical_requirements_data_${userProfile.clinicId}`;
+        const localStorageData = localStorage.getItem(localStorageKey);
+        console.log('✅ LocalStorage backup:', localStorageData ? 'Available' : 'Not found');
+        
+        console.log('🎉 Medical requirements connection test completed!');
+      } catch (error) {
+        console.error('❌ Medical requirements connection test failed:', error);
+      }
+    };
+    console.log('🔧 Debug functions exposed to window.refreshMedicalRequirementsCounts and window.debugMedicalRequirements');
+    
+    return () => {
+      delete (window as any).refreshMedicalRequirementsCounts;
+      delete (window as any).debugMedicalRequirements;
+      delete (window as any).debugMedicalRequirementsState;
+      delete (window as any).testMedicalRequirementsConnection;
+    };
+  }, [userProfile?.clinicId, patientRequirements, enhancedPatients]);
 
   // ✅ Enhanced Debug and Fix Functions
   useEffect(() => {
@@ -2918,6 +3248,31 @@ const PatientListPage: React.FC = () => {
                       flexWrap: 'wrap',
                       alignItems: 'center'
                     }}>
+                      {/* Debug Button for Medical Requirements */}
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={forceRefreshAndDebug}
+                        startIcon={<Refresh />}
+                        sx={{
+                          borderRadius: 2,
+                          fontWeight: 600,
+                          fontSize: '0.8rem',
+                          px: 2,
+                          minWidth: 'fit-content',
+                          borderColor: 'warning.main',
+                          color: 'warning.main',
+                          '&:hover': {
+                            borderColor: 'warning.dark',
+                            backgroundColor: 'warning.light',
+                            color: 'warning.dark',
+                            transform: 'translateY(-1px)',
+                          },
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
+                        🔧 Debug MR
+                      </Button>
                       <Typography 
                         variant="body2" 
                         sx={{ 
@@ -3062,6 +3417,59 @@ const PatientListPage: React.FC = () => {
                           {t('cards')}
                         </Button>
                       </Card>
+                    </Box>
+                  </Grid>
+                  
+                  {/* ✅ NEW: Medical Requirements Refresh Button */}
+                  <Grid item xs={12}>
+                    <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+                      <Button
+                        variant="outlined"
+                        startIcon={<Refresh />}
+                        onClick={manualRefreshMedicalRequirementsCounts}
+                        sx={{
+                          borderRadius: 3,
+                          fontWeight: 600,
+                          backgroundColor: 'white',
+                          boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                          border: '1px solid rgba(0,0,0,0.05)',
+                          minWidth: 200,
+                          '&:hover': {
+                            transform: 'translateY(-1px)',
+                            boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
+                            backgroundColor: 'rgba(102, 126, 234, 0.05)',
+                          },
+                          transition: 'all 0.3s ease',
+                          color: 'primary.main'
+                        }}
+                      >
+                        🔄 Refresh Medical Requirements Counts
+                      </Button>
+                      
+                      {/* ✅ NEW: Test Connection Button */}
+                      <Button
+                        variant="outlined"
+                        startIcon={<Science />}
+                        onClick={checkMedicalRequirementsData}
+                        sx={{
+                          ml: 2,
+                          borderRadius: 3,
+                          fontWeight: 600,
+                          backgroundColor: 'white',
+                          boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                          border: '1px solid rgba(0,0,0,0.05)',
+                          minWidth: 180,
+                          '&:hover': {
+                            transform: 'translateY(-1px)',
+                            boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
+                            backgroundColor: 'rgba(76, 175, 80, 0.05)',
+                          },
+                          transition: 'all 0.3s ease',
+                          color: 'success.main'
+                        }}
+                      >
+                        🧪 Test Connection
+                      </Button>
                     </Box>
                   </Grid>
                 </Grid>
@@ -3604,7 +4012,17 @@ const PatientListPage: React.FC = () => {
                               </TableCell>
                               <TableCell>
                                 {(() => {
-                                  const requirementsCount = getMedicalRequirementsCount(patient.id);
+                                  // ✅ ENHANCED: Check if patient has pendingRequirementsCount field first
+                                  let requirementsCount = 0;
+                                  
+                                  if (patient.pendingRequirementsCount !== undefined && patient.pendingRequirementsCount !== null) {
+                                    // Use the field directly from patient object if available
+                                    requirementsCount = patient.pendingRequirementsCount;
+                                  } else {
+                                    // Fall back to the existing method using the state map
+                                    requirementsCount = getMedicalRequirementsCount(patient.id);
+                                  }
+                                  
                                   return requirementsCount > 0 ? (
                                     <Chip
                                       label={`Yes (${requirementsCount})`}
@@ -3798,7 +4216,17 @@ const PatientListPage: React.FC = () => {
                               </TableCell>
                               <TableCell>
                                 {(() => {
-                                  const requirementsCount = getMedicalRequirementsCount(patient.id);
+                                  // ✅ ENHANCED: Check if patient has pendingRequirementsCount field first
+                                  let requirementsCount = 0;
+                                  
+                                  if (patient.pendingRequirementsCount !== undefined && patient.pendingRequirementsCount !== null) {
+                                    // Use the field directly from patient object if available
+                                    requirementsCount = patient.pendingRequirementsCount;
+                                  } else {
+                                    // Fall back to the existing method using the state map
+                                    requirementsCount = getMedicalRequirementsCount(patient.id);
+                                  }
+                                  
                                   return requirementsCount > 0 ? (
                                     <Chip
                                       label={`Yes (${requirementsCount})`}
@@ -7320,7 +7748,7 @@ const PatientListPage: React.FC = () => {
                                      </IconButton>
                                      <IconButton
                                        size="small"
-                                       onClick={(e) => {
+                                       onClick={async (e) => {
                                          e.stopPropagation();
                                          if (confirm(`Are you sure you want to delete "${requirement.title}"?`)) {
                                            // Remove from patient's requirements
@@ -7333,6 +7761,23 @@ const PatientListPage: React.FC = () => {
                                              patient.id === selectedPatient.id ? updatedPatient : patient
                                            );
                                            setEnhancedPatients(updatedPatients);
+
+                                           // ✅ CRITICAL FIX: Save the updated patient to Firebase to persist deletion
+                                           try {
+                                             const { safeFirestore } = await import('../../api/firebaseDirect');
+                                             const db = await safeFirestore.getDb();
+                                             if (db) {
+                                               const { doc, setDoc } = await import('firebase/firestore');
+                                               const patientRef = doc(db, 'patients', selectedPatient.id);
+                                               await setDoc(patientRef, {
+                                                 ...updatedPatient,
+                                                 updatedAt: new Date().toISOString()
+                                               }, { merge: true });
+                                               console.log('✅ Patient medical requirement deletion saved to Firebase:', selectedPatient.id);
+                                             }
+                                           } catch (error) {
+                                             console.error('❌ Error saving patient deletion to Firebase:', error);
+                                           }
                                          }
                                        }}
                                        sx={{ 
@@ -7540,7 +7985,7 @@ const PatientListPage: React.FC = () => {
                          {selectedPatient.documents?.map((doc: any) => (
                            <Grid item xs={12} sm={6} md={4} key={doc.id}>
                              <Card 
-                               sx={{ p: 3, textAlign: 'center', cursor: 'pointer', '&:hover': { boxShadow: 4 } }}
+                               sx={{ p: 3, textAlign: 'center', cursor: 'pointer', "&:hover": { boxShadow: 4 } }}
                                onClick={() => handleViewDocument(doc)}
                              >
                                {doc.type === 'image' ? (
@@ -7568,7 +8013,7 @@ const PatientListPage: React.FC = () => {
                                <Typography variant="caption" color="text.secondary">
                                  {doc.fileName} • {doc.uploadDate}
                                </Typography>
-                                  <Chip label="Uploaded" size="small" color="success" sx={{ mt: 1 }} />
+                               <Chip label="Uploaded" size="small" color="success" sx={{ mt: 1 }} />
                              </Card>
                            </Grid>
                          ))}
@@ -7594,15 +8039,15 @@ const PatientListPage: React.FC = () => {
                                 </Card>
                               </Grid>
                             )}
-                       </Grid>
+                          </Grid>
                         </Box>
                       )}
                     </Box>
                   )}
                 </DialogContent>
-              </>
-            )}
-          </Dialog>
+                </>
+              )}
+            </Dialog>
 
           {/* Enhanced Add Patient Dialog */}
           <Dialog
@@ -9178,6 +9623,23 @@ const PatientListPage: React.FC = () => {
                 setEnhancedPatients(updatedPatients);
                 setSelectedPatient(updatedPatient);
 
+                // ✅ CRITICAL FIX: Save the updated patient to Firebase to persist medical requirements
+                try {
+                  const { safeFirestore } = await import('../../api/firebaseDirect');
+                  const db = await safeFirestore.getDb();
+                  if (db) {
+                    const { doc, setDoc } = await import('firebase/firestore');
+                    const patientRef = doc(db, 'patients', selectedPatient.id);
+                    await setDoc(patientRef, {
+                      ...updatedPatient,
+                      updatedAt: new Date().toISOString()
+                    }, { merge: true });
+                    console.log('✅ Patient medical requirements saved to Firebase:', selectedPatient.id);
+                  }
+                } catch (error) {
+                  console.error('❌ Error saving patient to Firebase:', error);
+                }
+
                 // ✅ NEW: Also create an order in the Medical Requirements Processing Center
                 try {
                   if (userProfile?.clinicId) {
@@ -9253,562 +9715,7 @@ const PatientListPage: React.FC = () => {
               Add Requirement
             </Button>
           </DialogActions>
-        </Dialog>
-
-        {/* Document Viewer Dialog */}
-        <Dialog
-          open={documentViewerOpen}
-          onClose={() => setDocumentViewerOpen(false)}
-          maxWidth="md"
-          fullWidth
-          PaperProps={{
-            sx: { minHeight: '70vh' }
-          }}
-        >
-          <DialogTitle>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'space-between' }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                {selectedDocument?.type === 'lab' && <Science color="primary" />}
-                {selectedDocument?.type === 'imaging' && <Assignment color="success" />}
-                {selectedDocument?.type === 'cardiac' && <LocalHospital color="error" />}
-                <Typography variant="h6">{selectedDocument?.title || 'Medical Document'}</Typography>
-              </Box>
-              <IconButton onClick={() => setDocumentViewerOpen(false)}>
-                <Close />
-              </IconButton>
-            </Box>
-          </DialogTitle>
-          <DialogContent>
-            {selectedDocument && (
-              <Box>
-                {/* Document Info */}
-                <Card sx={{ mb: 3, p: 2, backgroundColor: 'success.50' }}>
-                  <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 1 }}>
-                    📋 Document Information
-                  </Typography>
-                  <Grid container spacing={2}>
-                    <Grid item xs={12} sm={6}>
-                      <Typography variant="caption" color="text.secondary">
-                        <strong>Content:</strong> {selectedDocument.content}
-                      </Typography>
-                    </Grid>
-                    <Grid item xs={12} sm={6}>
-                      <Typography variant="caption" color="text.secondary">
-                        <strong>File Type:</strong> {selectedDocument.fileType}
-                      </Typography>
-                    </Grid>
-                    <Grid item xs={12} sm={6}>
-                      <Typography variant="caption" color="text.secondary">
-                        <strong>Date:</strong> {selectedDocument.completedDate ? new Date(selectedDocument.completedDate).toLocaleDateString() : 'Recently'}
-                      </Typography>
-                    </Grid>
-                    <Grid item xs={12} sm={6}>
-                                             <Typography variant="caption" color="text.secondary">
-                         <strong>Ordered By:</strong> {selectedDocument.orderedBy || 'Medical Staff'}
-                       </Typography>
-                     </Grid>
-                     {selectedDocument.uploadedFiles && selectedDocument.uploadedFiles.length > 1 && (
-                       <Grid item xs={12}>
-                         <Typography variant="caption" color="text.secondary">
-                           <strong>Multiple Files:</strong> {selectedDocument.uploadedFiles.length} files uploaded
-                         </Typography>
-                       </Grid>
-                     )}
-                   </Grid>
-                 </Card>
-
-                 {/* Multiple Files Navigation */}
-                 {selectedDocument.uploadedFiles && selectedDocument.uploadedFiles.length > 1 && (
-                   <Card sx={{ mb: 3, p: 2, backgroundColor: 'warning.50' }}>
-                     <Typography variant="subtitle2" sx={{ mb: 2 }}>
-                       📁 Multiple Files ({selectedDocument.uploadedFiles.length} files)
-                     </Typography>
-                     <Grid container spacing={1}>
-                       {selectedDocument.uploadedFiles.map((file: any, index: number) => (
-                         <Grid item key={index}>
-                           <Button
-                             variant={selectedDocument.fileUrl === file.url ? 'contained' : 'outlined'}
-                             size="small"
-                             onClick={() => {
-                               setSelectedDocument({
-                                 ...selectedDocument,
-                                 fileUrl: file.url,
-                                 fileType: file.type
-                               });
-                             }}
-                           >
-                             {file.name || `File ${index + 1}`}
-                           </Button>
-                         </Grid>
-                       ))}
-                     </Grid>
-                   </Card>
-                 )}
-
-                                                                  {/* Original Content Viewer - PDF only for download */}
-                 <Box sx={{ border: '2px solid', borderColor: 'grey.300', borderRadius: 1, overflow: 'hidden', minHeight: '500px' }}>
-                   <Typography variant="subtitle2" sx={{ p: 2, borderBottom: '1px solid', borderColor: 'grey.300', backgroundColor: 'primary.50', display: 'flex', alignItems: 'center', gap: 1 }}>
-                     {selectedDocument.fileUrl && (selectedDocument.fileUrl.includes('image') || selectedDocument.fileUrl.includes('placeholder')) ? (
-                       <Image color="success" />
-                     ) : (
-                       <Description color="info" />
-                     )}
-                     📄 Document Viewer - {selectedDocument.title}
-                   </Typography>
-                   
-                   {/* Show original content directly in site */}
-                   {selectedDocument.fileUrl && (selectedDocument.fileUrl.includes('image') || selectedDocument.fileUrl.includes('placeholder') || selectedDocument.type === 'imaging' || selectedDocument.fileUrl.startsWith('blob:')) ? (
-                     selectedDocument.uploadedFiles && selectedDocument.uploadedFiles.length > 0 ? (
-                       <Box sx={{ p: 2 }}>
-                         <Typography variant="subtitle2" sx={{ mb: 2, textAlign: 'center' }}>
-                           📁 Uploaded Files Preview ({selectedDocument.uploadedFiles.length} files)
-                         </Typography>
-                         
-                         {/* Show first file as main preview */}
-                         {selectedDocument.uploadedFiles.map((file: any, index: number) => (
-                           <Box key={index} sx={{ mb: 3 }}>
-                             <Typography variant="body2" sx={{ mb: 1, fontWeight: 600 }}>
-                               📄 {file.name || `File ${index + 1}`}
-                             </Typography>
-                             
-                             {/* Image file preview */}
-                             {file.type && file.type.startsWith('image/') ? (
-                               <Box sx={{ 
-                                 display: 'flex', 
-                                 justifyContent: 'center', 
-                                 alignItems: 'center',
-                                 width: '100%',
-                                 height: '300px',
-                                 backgroundColor: 'grey.100',
-                                 borderRadius: 1,
-                                 overflow: 'hidden',
-                                 border: '2px solid',
-                                 borderColor: 'primary.light',
-                                 mb: 2
-                               }}>
-                                 <img 
-                                   src={file.url} 
-                                   alt={file.name || 'Uploaded image'} 
-                                   style={{ 
-                                     maxWidth: '100%', 
-                                     maxHeight: '100%',
-                                     width: 'auto',
-                                     height: 'auto',
-                                     objectFit: 'contain',
-                                     border: '1px solid #ddd',
-                                     borderRadius: '4px',
-                                     backgroundColor: 'white'
-                                   }} 
-                                   onError={(e) => {
-                                     console.error('Image failed to load:', file.url);
-                                     e.currentTarget.style.display = 'none';
-                                   }}
-                                 />
-                               </Box>
-                             ) : file.type && file.type === 'application/pdf' ? (
-                               /* PDF file preview */
-                               <Box sx={{ height: '400px', width: '100%', mb: 2 }}>
-                                 <iframe
-                                   src={file.url}
-                                   style={{ 
-                                     width: '100%', 
-                                     height: '100%', 
-                                     border: '2px solid #ddd',
-                                     borderRadius: '4px'
-                                   }}
-                                   title={file.name || 'PDF Document'}
-                                 />
-                               </Box>
-                             ) : (
-                               /* Other file types */
-                               <Box sx={{ p: 2, backgroundColor: 'grey.100', borderRadius: 1, mb: 2 }}>
-                                 <Typography variant="body2">
-                                   📎 File Type: {file.type || 'Unknown'}
-                                 </Typography>
-                                 <Typography variant="body2">
-                                   📊 Size: {file.size ? `${(file.size / 1024).toFixed(2)} KB` : 'Unknown'}
-                                 </Typography>
-                                 <Typography variant="caption" color="text.secondary">
-                                   Preview not available for this file type. Will be converted to PDF on download.
-                                 </Typography>
-                               </Box>
-                             )}
-                           </Box>
-                         ))}
-                         
-                         <Alert severity="info" sx={{ mt: 2 }}>
-                           📄 All files will be converted to PDF format when downloading or sharing.
-                         </Alert>
-                       </Box>
-                     ) : (
-                       /* Single image/file preview */
-                       <Box sx={{ textAlign: 'center', p: 2 }}>
-                         <Typography variant="subtitle2" sx={{ mb: 2 }}>
-                           {selectedDocument.type === 'imaging' ? 'Medical Imaging Results' : 'Document Preview'}
-                         </Typography>
-                         <Box sx={{ 
-                           display: 'flex', 
-                           justifyContent: 'center', 
-                           alignItems: 'center',
-                           width: '100%',
-                           height: '400px',
-                           backgroundColor: 'grey.100',
-                           borderRadius: 1,
-                           overflow: 'hidden',
-                           border: '2px solid',
-                           borderColor: 'primary.light',
-                           position: 'relative'
-                         }}>
-                           <img 
-                             src={selectedDocument.fileUrl} 
-                             alt={selectedDocument.title || 'Document'} 
-                             style={{ 
-                               maxWidth: '100%', 
-                               maxHeight: '100%',
-                               width: 'auto',
-                               height: 'auto',
-                               objectFit: 'contain',
-                               border: '1px solid #ddd',
-                               borderRadius: '4px',
-                               backgroundColor: 'white',
-                               cursor: 'zoom-in',
-                               transition: 'transform 0.3s ease',
-                               boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-                             }} 
-                                                           onError={(e) => {
-                                console.error('Image failed to load:', selectedDocument.fileUrl);
-                                e.currentTarget.style.display = 'none';
-                                const parent = e.currentTarget.parentElement;
-                                const fallback = parent?.nextElementSibling as HTMLElement;
-                                if (fallback) fallback.style.display = 'block';
-                              }}
-                           />
-                         </Box>
-                         <Box sx={{ display: 'none', mt: 2, p: 2, backgroundColor: 'error.50', borderRadius: 1 }}>
-                           <Typography variant="body2" color="error.main">
-                             Image failed to load. File may be corrupted or in an unsupported format.
-                           </Typography>
-                         </Box>
-                         <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center', gap: 2 }}>
-                           <Button 
-                             variant="outlined" 
-                             size="small"
-                             onClick={() => window.open(selectedDocument.fileUrl, '_blank')}
-                           >
-                             🔍 View Full Size
-                           </Button>
-                           <Button 
-                             variant="outlined" 
-                             size="small"
-                             onClick={() => {
-                               const img = document.querySelector(`img[src="${selectedDocument.fileUrl}"]`) as HTMLImageElement;
-                               if (img) {
-                                 if (img.style.transform === 'scale(1.5)') {
-                                   img.style.transform = 'scale(1)';
-                                   img.style.cursor = 'zoom-in';
-                                 } else {
-                                   img.style.transform = 'scale(1.5)';
-                                   img.style.cursor = 'zoom-out';
-                                   img.style.transformOrigin = 'center';
-                                   img.style.transition = 'transform 0.3s ease';
-                                 }
-                               }
-                             }}
-                           >
-                             🔍 Zoom In/Out
-                           </Button>
-                         </Box>
-                         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1, textAlign: 'center' }}>
-                           Original file displayed. PDF conversion happens only on download/share.
-                         </Typography>
-                       </Box>
-                     )
-                   ) : (
-                     <Box sx={{ p: 3 }}>
-                       <Typography variant="body1" sx={{ mb: 2, fontWeight: 600 }}>
-                         📋 Document Content:
-                       </Typography>
-                       <Box sx={{ p: 2, backgroundColor: 'grey.50', borderRadius: 1, mb: 2 }}>
-                         <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>
-                           {selectedDocument.content}
-                         </Typography>
-                       </Box>
-                       <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-                         <Typography variant="caption" color="text.secondary">
-                           <strong>Type:</strong> {selectedDocument.fileType}
-                         </Typography>
-                         <Typography variant="caption" color="text.secondary">
-                           <strong>Date:</strong> {selectedDocument.completedDate}
-                         </Typography>
-                         <Typography variant="caption" color="text.secondary">
-                           <strong>By:</strong> {selectedDocument.orderedBy}
-                         </Typography>
-                       </Box>
-                       <Alert severity="info" sx={{ mt: 2 }}>
-                         📄 This content will be converted to PDF format when you download it.
-                       </Alert>
-                     </Box>
-                   )}
-                 </Box>
-              </Box>
-            )}
-          </DialogContent>
-                     <DialogActions>
-             <Button onClick={() => {
-               setDocumentViewerOpen(false);
-               setPdfDataUrl('');
-             }} variant="outlined">
-               Close
-             </Button>
-             <Button 
-               onClick={async () => {
-                 try {
-                   setIsGeneratingPdf(true);
-                   console.log('🔄 Generating PDF for download:', selectedDocument.title);
-                   
-                   const documentData: DocumentData = {
-                     title: selectedDocument.title,
-                     content: selectedDocument.content,
-                     type: selectedDocument.type,
-                     completedDate: selectedDocument.completedDate,
-                     orderedBy: selectedDocument.orderedBy,
-                     fileType: selectedDocument.fileType,
-                     fileUrl: selectedDocument.fileUrl,
-                     patientName: selectedPatient?.name || 'Sample Patient'
-                   };
-                   
-                   const pdfUrl = await convertDocumentToPDF(documentData);
-                   
-                   if (pdfUrl && pdfUrl.length > 0) {
-                     console.log('✅ PDF generated for download');
-                     const filename = `${selectedDocument.title.replace(/[^a-z0-9]/gi, '_')}_${new Date().toISOString().split('T')[0]}`;
-                     downloadPDF(pdfUrl, filename);
-                   } else {
-                     throw new Error('PDF generation failed');
-                   }
-                 } catch (error) {
-                   console.error('❌ Error generating PDF for download:', error);
-                   console.error('Error generating PDF for download. Please try again.');
-                 } finally {
-                   setIsGeneratingPdf(false);
-                 }
-               }}
-               variant="contained"
-               color="primary"
-               disabled={isGeneratingPdf}
-             >
-               {isGeneratingPdf ? 'Generating PDF...' : '📄 Download as PDF'}
-             </Button>
-           </DialogActions>
-                 </Dialog>
-
-         {/* File Upload Dialog */}
-         <Dialog
-           open={uploadDialogOpen}
-           onClose={() => {
-             setUploadDialogOpen(false);
-             setSelectedRequirementForUpload(null);
-             setUploadedFiles([]);
-           }}
-           maxWidth="md"
-           fullWidth
-         >
-           <DialogTitle>
-             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'space-between' }}>
-               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                 {selectedRequirementForUpload?.type === 'lab' && <Science color="primary" />}
-                 {selectedRequirementForUpload?.type === 'imaging' && <Assignment color="success" />}
-                 {selectedRequirementForUpload?.type === 'cardiac' && <LocalHospital color="error" />}
-                 <Typography variant="h6">
-                   Upload Documents: {selectedRequirementForUpload?.title}
-                 </Typography>
-               </Box>
-               <IconButton onClick={() => {
-                 setUploadDialogOpen(false);
-                 setSelectedRequirementForUpload(null);
-                 setUploadedFiles([]);
-               }}>
-                 <Close />
-               </IconButton>
-             </Box>
-           </DialogTitle>
-           <DialogContent>
-             {selectedRequirementForUpload && (
-               <Box>
-                 {/* Requirement Info */}
-                 <Card sx={{ mb: 3, p: 2, backgroundColor: 'info.50' }}>
-                   <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 1 }}>
-                     📋 Requirement Details
-                   </Typography>
-                   <Grid container spacing={2}>
-                     <Grid item xs={12} sm={6}>
-                       <Typography variant="caption" color="text.secondary">
-                         <strong>Required:</strong> {selectedRequirementForUpload.description}
-                       </Typography>
-                     </Grid>
-                     <Grid item xs={12} sm={6}>
-                       <Typography variant="caption" color="text.secondary">
-                         <strong>Priority:</strong> {selectedRequirementForUpload.priority || 'normal'}
-                       </Typography>
-                     </Grid>
-                     <Grid item xs={12} sm={6}>
-                       <Typography variant="caption" color="text.secondary">
-                         <strong>Ordered:</strong> {selectedRequirementForUpload.dateOrdered ? new Date(selectedRequirementForUpload.dateOrdered).toLocaleDateString() : 'Recently'}
-                       </Typography>
-                     </Grid>
-                     <Grid item xs={12} sm={6}>
-                       <Typography variant="caption" color="text.secondary">
-                         <strong>Ordered By:</strong> {selectedRequirementForUpload.orderedBy || 'Medical Staff'}
-                       </Typography>
-                     </Grid>
-                   </Grid>
-                 </Card>
-
-                 {/* File Upload Area */}
-                 <Box sx={{ mb: 3 }}>
-                   <Typography variant="subtitle2" sx={{ mb: 2 }}>
-                     📤 Upload Documents (Multiple files allowed)
-                   </Typography>
-                   <input
-                     type="file"
-                     multiple
-                     accept=".pdf,.jpg,.jpeg,.png,.dicom,.dcm"
-                     onChange={(e) => {
-                       if (e.target.files) {
-                         setUploadedFiles(Array.from(e.target.files));
-                       }
-                     }}
-                     style={{ display: 'none' }}
-                     id="file-upload"
-                   />
-                   <label htmlFor="file-upload">
-                     <Card 
-                       sx={{ 
-                         p: 4, 
-                         textAlign: 'center', 
-                         cursor: 'pointer',
-                         border: '2px dashed',
-                         borderColor: 'primary.main',
-                         '&:hover': { backgroundColor: 'primary.50' }
-                       }}
-                     >
-                       <AttachFile sx={{ fontSize: 48, color: 'primary.main', mb: 2 }} />
-                       <Typography variant="h6" color="primary.main" sx={{ mb: 1 }}>
-                         Click to Select Files
-                       </Typography>
-                       <Typography variant="body2" color="text.secondary">
-                         Supported formats: PDF, JPG, PNG, DICOM
-                       </Typography>
-                       <Typography variant="caption" color="text.secondary">
-                         You can select multiple files at once
-                       </Typography>
-                     </Card>
-                   </label>
-                 </Box>
-
-                 {/* Selected Files List */}
-                 {uploadedFiles.length > 0 && (
-                   <Box sx={{ mb: 3 }}>
-                     <Typography variant="subtitle2" sx={{ mb: 2 }}>
-                       📁 Selected Files ({uploadedFiles.length})
-                     </Typography>
-                     <Grid container spacing={2}>
-                       {uploadedFiles.map((file, index) => (
-                         <Grid item xs={12} key={index}>
-                           <Card sx={{ p: 2, backgroundColor: 'success.50' }}>
-                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                 {file.type.includes('image') ? (
-                                   <Image color="success" />
-                                 ) : file.type.includes('pdf') ? (
-                                   <PictureAsPdf color="error" />
-                                 ) : (
-                                   <AttachFile color="info" />
-                                 )}
-                                 <Box>
-                                   <Typography variant="body2" fontWeight={600}>
-                                     {file.name}
-                                   </Typography>
-                                   <Typography variant="caption" color="text.secondary">
-                                     {(file.size / 1024 / 1024).toFixed(2)} MB • {file.type || 'Unknown type'}
-                                   </Typography>
-                                 </Box>
-                               </Box>
-                               <IconButton 
-                                 size="small" 
-                                 onClick={() => {
-                                   setUploadedFiles(uploadedFiles.filter((_, i) => i !== index));
-                                 }}
-                               >
-                                 <Close />
-                               </IconButton>
-                             </Box>
-                           </Card>
-                         </Grid>
-                       ))}
-                     </Grid>
-                   </Box>
-                 )}
-               </Box>
-             )}
-           </DialogContent>
-           <DialogActions>
-             <Button 
-               onClick={() => {
-                 setUploadDialogOpen(false);
-                 setSelectedRequirementForUpload(null);
-                 setUploadedFiles([]);
-               }} 
-               variant="outlined"
-             >
-               Cancel
-             </Button>
-             <Button 
-               onClick={() => {
-                 if (uploadedFiles.length > 0) {
-                   // Mark requirement as completed and add uploaded files
-                   const updatedRequirements = selectedPatient.medicalRequirements.map((req: any) => 
-                     req.id === selectedRequirementForUpload.id 
-                       ? { 
-                           ...req, 
-                           status: 'completed', 
-                           completedDate: new Date().toISOString().split('T')[0],
-                           uploadedFiles: uploadedFiles.map(file => ({
-                             name: file.name,
-                             size: file.size,
-                             type: file.type,
-                             uploadDate: new Date().toISOString(),
-                             // In real implementation, this would be the actual file URL after upload
-                             url: URL.createObjectURL(file)
-                           }))
-                         }
-                       : req
-                   );
-                   
-                   const updatedPatient = { ...selectedPatient, medicalRequirements: updatedRequirements };
-                   setSelectedPatient(updatedPatient);
-                   
-                   const updatedPatients = enhancedPatients.map(patient => 
-                     patient.id === selectedPatient.id ? updatedPatient : patient
-                   );
-                   setEnhancedPatients(updatedPatients);
-                   
-                   // Close dialog
-                   setUploadDialogOpen(false);
-                   setSelectedRequirementForUpload(null);
-                   setUploadedFiles([]);
-                   
-                   console.log(`Successfully uploaded ${uploadedFiles.length} file(s) for ${selectedRequirementForUpload.title}`);
-                 }
-               }}
-               variant="contained"
-               color="primary"
-               disabled={uploadedFiles.length === 0}
-             >
-               Upload {uploadedFiles.length > 0 ? `${uploadedFiles.length} File(s)` : 'Files'}
-             </Button>
-           </DialogActions>
-                    </Dialog>
+         </Dialog>
 
           {/* WhatsApp Share Dialog */}
           <Dialog
@@ -9938,6 +9845,36 @@ const PatientListPage: React.FC = () => {
               </Button>
             </DialogActions>
           </Dialog>
+
+          {/* ✅ NEW: Snackbar for medical requirements notifications */}
+          <Snackbar
+            open={snackbar.open}
+            autoHideDuration={4000}
+            onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+            anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+            sx={{ 
+              zIndex: 9999,
+              mt: 8
+            }}
+          >
+            <Alert 
+              onClose={() => setSnackbar(prev => ({ ...prev, open: false }))} 
+              severity={snackbar.severity} 
+              variant="filled"
+              sx={{ 
+                width: '100%',
+                fontSize: '1.1rem',
+                fontWeight: 600,
+                '& .MuiAlert-icon': {
+                  fontSize: '1.8rem'
+                },
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+                borderRadius: 2
+              }}
+            >
+              {snackbar.message}
+            </Alert>
+          </Snackbar>
         </React.Fragment>
               ); };
 

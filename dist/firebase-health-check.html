@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firebase Health Check</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .warning { background-color: #fff3cd; color: #856404; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background-color: #0056b3; }
+        button:disabled { background-color: #6c757d; cursor: not-allowed; }
+        .log {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔥 Firebase Health Check</h1>
+        <p>This page tests your Firebase integration to identify any issues.</p>
+        
+        <div id="status"></div>
+        
+        <div>
+            <button onclick="runHealthCheck()">Run Health Check</button>
+            <button onclick="clearLog()">Clear Log</button>
+            <button onclick="testFirestore()">Test Firestore</button>
+            <button onclick="testAuth()">Test Auth</button>
+        </div>
+        
+        <h3>Test Results:</h3>
+        <div id="log" class="log"></div>
+    </div>
+
+    <script type="module">
+        let logElement;
+        let statusElement;
+        
+        // Simple logging function
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = `status ${type}`;
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            logElement.appendChild(logEntry);
+            logElement.scrollTop = logElement.scrollTop + 1000;
+            console.log(message);
+        }
+        
+        // Update status
+        function updateStatus(message, type = 'info') {
+            statusElement.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+        
+        // Health check function
+        async function runHealthCheck() {
+            log('🚀 Starting Firebase health check...', 'info');
+            updateStatus('Running health check...', 'info');
+            
+            try {
+                // Test 1: Check if Firebase modules can be imported
+                log('📦 Testing Firebase module imports...', 'info');
+                const { firebaseManager } = await import('../src/api/firebaseOptimized.js');
+                log('✅ Firebase modules imported successfully', 'success');
+                
+                // Test 2: Check Firebase initialization status
+                log('🔍 Checking Firebase initialization status...', 'info');
+                const status = firebaseManager.getStatus();
+                log(`📊 Firebase status: ${status}`, 'info');
+                
+                if (status === 'ready') {
+                    log('✅ Firebase is ready', 'success');
+                } else if (status === 'initializing') {
+                    log('⏳ Firebase is still initializing...', 'warning');
+                    // Wait for initialization
+                    let attempts = 0;
+                    while (status !== 'ready' && attempts < 20) {
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                        attempts++;
+                        log(`⏳ Waiting for Firebase... (${attempts}/20)`, 'info');
+                    }
+                } else {
+                    log('🔄 Attempting to initialize Firebase...', 'warning');
+                    await firebaseManager.initialize();
+                    log('✅ Firebase initialized successfully', 'success');
+                }
+                
+                // Test 3: Check individual services
+                log('🔧 Testing individual Firebase services...', 'info');
+                
+                try {
+                    const firestore = firebaseManager.getFirestore();
+                    log('✅ Firestore service ready', 'success');
+                } catch (e) {
+                    log(`❌ Firestore service failed: ${e.message}`, 'error');
+                }
+                
+                try {
+                    const auth = firebaseManager.getAuth();
+                    log('✅ Auth service ready', 'success');
+                } catch (e) {
+                    log(`❌ Auth service failed: ${e.message}`, 'error');
+                }
+                
+                try {
+                    const storage = firebaseManager.getStorage();
+                    log('✅ Storage service ready', 'success');
+                } catch (e) {
+                    log(`❌ Storage service failed: ${e.message}`, 'error');
+                }
+                
+                // Test 4: Check environment variables
+                log('🔐 Checking Firebase configuration...', 'info');
+                const requiredEnvVars = [
+                    'VITE_FIREBASE_API_KEY',
+                    'VITE_FIREBASE_AUTH_DOMAIN',
+                    'VITE_FIREBASE_PROJECT_ID',
+                    'VITE_FIREBASE_STORAGE_BUCKET',
+                    'VITE_FIREBASE_MESSAGING_SENDER_ID',
+                    'VITE_FIREBASE_APP_ID'
+                ];
+                
+                const missingVars = requiredEnvVars.filter(varName => !import.meta.env[varName]);
+                if (missingVars.length === 0) {
+                    log('✅ All required environment variables are set', 'success');
+                } else {
+                    log(`❌ Missing environment variables: ${missingVars.join(', ')}`, 'error');
+                }
+                
+                updateStatus('Health check completed successfully!', 'success');
+                log('🎉 Firebase health check completed successfully!', 'success');
+                
+            } catch (error) {
+                log(`❌ Health check failed: ${error.message}`, 'error');
+                updateStatus(`Health check failed: ${error.message}`, 'error');
+            }
+        }
+        
+        // Test Firestore specifically
+        async function testFirestore() {
+            log('🔥 Testing Firestore operations...', 'info');
+            
+            try {
+                const { firebaseManager } = await import('../src/api/firebaseOptimized.js');
+                
+                if (!firebaseManager.isReady()) {
+                    log('❌ Firebase not ready for Firestore test', 'error');
+                    return;
+                }
+                
+                const firestore = firebaseManager.getFirestore();
+                
+                // Test basic Firestore operations
+                log('📝 Testing Firestore read operation...', 'info');
+                const { collection, getDocs } = await import('firebase/firestore');
+                
+                // Try to read from a test collection (this will test permissions)
+                const testCollection = collection(firestore, 'test-health-check');
+                const snapshot = await getDocs(testCollection);
+                log(`✅ Firestore read successful: ${snapshot.docs.length} documents`, 'success');
+                
+            } catch (error) {
+                log(`❌ Firestore test failed: ${error.message}`, 'error');
+                
+                // Check for specific error types
+                if (error.code === 'permission-denied') {
+                    log('🔒 Permission denied - check Firestore security rules', 'warning');
+                } else if (error.code === 'unavailable') {
+                    log('🌐 Service unavailable - check internet connection', 'warning');
+                } else if (error.message.includes('Firebase')) {
+                    log('🔥 Firebase-specific error detected', 'error');
+                }
+            }
+        }
+        
+        // Test Auth specifically
+        async function testAuth() {
+            log('🔐 Testing Firebase Auth...', 'info');
+            
+            try {
+                const { firebaseManager } = await import('../src/api/firebaseOptimized.js');
+                
+                if (!firebaseManager.isReady()) {
+                    log('❌ Firebase not ready for Auth test', 'error');
+                    return;
+                }
+                
+                const auth = firebaseManager.getAuth();
+                log('✅ Auth service accessible', 'success');
+                
+                // Check current user
+                const currentUser = auth.currentUser;
+                if (currentUser) {
+                    log(`👤 Current user: ${currentUser.email}`, 'success');
+                } else {
+                    log('👤 No user currently signed in', 'info');
+                }
+                
+                // Check auth state
+                log('📊 Auth state check completed', 'success');
+                
+            } catch (error) {
+                log(`❌ Auth test failed: ${error.message}`, 'error');
+            }
+        }
+        
+        // Clear log
+        function clearLog() {
+            logElement.innerHTML = '';
+        }
+        
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', () => {
+            logElement = document.getElementById('log');
+            statusElement = document.getElementById('status');
+            
+            log('📱 Firebase Health Check page loaded', 'info');
+            log('Click "Run Health Check" to test your Firebase integration', 'info');
+            
+            // Auto-run health check after a short delay
+            setTimeout(() => {
+                log('🔄 Auto-running health check in 2 seconds...', 'info');
+                setTimeout(runHealthCheck, 2000);
+            }, 1000);
+        });
+        
+        // Make functions globally available
+        window.runHealthCheck = runHealthCheck;
+        window.clearLog = clearLog;
+        window.testFirestore = testFirestore;
+        window.testAuth = testAuth;
+    </script>
+</body>
+</html> 

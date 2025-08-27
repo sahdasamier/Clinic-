@@ -1,307 +1,225 @@
-import React, { useState } from 'react';
-import {
-  Box,
-  Button,
-  Card,
-  CardContent,
-  Typography,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
-  CircularProgress,
-  Alert,
-  Collapse,
-  IconButton,
-} from '@mui/material';
-import {
-  CheckCircle,
-  Error,
-  Warning,
-  Info,
-  PlayArrow,
-  ExpandMore,
-  ExpandLess,
-  Refresh,
-} from '@mui/icons-material';
-import { auth, firebaseConfig } from '../api/firebase';
-import { getOptimizedFirestore, firebaseManager } from '../api/firebaseOptimized';
-import { initializeApp, deleteApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { collection, getDocs, limit, query, doc, setDoc } from 'firebase/firestore';
+import React, { useState, useEffect } from 'react';
+import { Box, Typography, Button, Paper, Alert, CircularProgress } from '@mui/material';
+import { CheckCircle, Error, Warning, Info } from '@mui/icons-material';
+import { useUser } from '../contexts/UserContext';
+import { useGlobalData } from '../contexts/GlobalDataContext';
+import MedicalRequirementsService from '../services/MedicalRequirementsService';
 
-interface TestResult {
-  name: string;
-  status: 'passed' | 'failed' | 'warning' | 'info';
+interface HealthStatus {
+  status: 'healthy' | 'warning' | 'error' | 'loading';
   message: string;
   details?: string;
 }
 
 const FirebaseHealthCheck: React.FC = () => {
-  const [isRunning, setIsRunning] = useState(false);
-  const [results, setResults] = useState<TestResult[]>([]);
-  const [summary, setSummary] = useState<{passed: number; failed: number; warnings: number} | null>(null);
-  const [expanded, setExpanded] = useState(false);
+  const { userProfile } = useUser();
+  const { connectionStatus, onDataUpdate, onConnectionChange, onError } = useGlobalData();
+  const [healthStatus, setHealthStatus] = useState<HealthStatus>({ status: 'loading', message: 'Checking Firebase health...' });
+  const [localStorageTest, setLocalStorageTest] = useState<any>(null);
 
-  const addResult = (name: string, status: TestResult['status'], message: string, details?: string) => {
-    setResults(prev => [...prev, { name, status, message, details }]);
-  };
-
-  const getStatusIcon = (status: TestResult['status']) => {
-    switch (status) {
-      case 'passed': return <CheckCircle sx={{ color: 'success.main' }} />;
-      case 'failed': return <Error sx={{ color: 'error.main' }} />;
-      case 'warning': return <Warning sx={{ color: 'warning.main' }} />;
-      case 'info': return <Info sx={{ color: 'info.main' }} />;
-    }
-  };
-
-  const runHealthCheck = async () => {
-    setIsRunning(true);
-    setResults([]);
-    setSummary(null);
-
+  // Test localStorage persistence for medical requirements
+  const testLocalStoragePersistence = async () => {
+    if (!userProfile?.clinicId) return;
+    
     try {
-      // Test 1: Firebase App Initialization
-      try {
-        const app = auth.app;
-        addResult(
-          'Firebase App',
-          'passed',
-          `Initialized: ${app.name}`,
-          `Project ID: ${app.options.projectId}`
-        );
-      } catch (error: any) {
-        addResult('Firebase App', 'failed', 'Initialization failed', error.message);
-      }
-
-      // Test 2: Authentication Service
-      try {
-        const currentUser = auth.currentUser;
-        if (currentUser) {
-          addResult(
-            'Authentication',
-            'passed',
-            `User logged in: ${currentUser.email}`,
-            `UID: ${currentUser.uid}`
-          );
-
-          // Test admin claims
-          try {
-            const idTokenResult = await currentUser.getIdTokenResult();
-            const isAdmin = idTokenResult.claims.admin === true;
-            addResult(
-              'Admin Claims',
-              isAdmin ? 'passed' : 'info',
-              isAdmin ? 'Admin privileges verified' : 'Regular user (no admin claims)',
-              `Claims: ${JSON.stringify(idTokenResult.claims, null, 2)}`
-            );
-          } catch (error: any) {
-            addResult('Admin Claims', 'warning', 'Could not verify claims', error.message);
-          }
-        } else {
-          addResult('Authentication', 'info', 'No user currently logged in');
-        }
-      } catch (error: any) {
-        addResult('Authentication', 'failed', 'Auth service unavailable', error.message);
-      }
-
-      // Test 3: Firestore Connection
-      try {
-        if (!firebaseManager.isReady()) {
-          throw new Error('Firebase not ready yet');
-        }
-        const db = getOptimizedFirestore();
-        const clinicsQuery = query(collection(db, 'clinics'), limit(1));
-        const snapshot = await getDocs(clinicsQuery);
-        addResult(
-          'Firestore',
-          'passed',
-          `Database connected`,
-          `Found ${snapshot.size} clinic document(s)`
-        );
-      } catch (error: any) {
-        addResult('Firestore', 'failed', 'Database connection failed', error.message);
-      }
-
-      // Test 4: Security Rules (try unauthorized write)
-      try {
-        // This should fail for non-admin users
-        await setDoc(doc(db, 'users', 'security-test'), {
-          test: 'unauthorized-write-attempt',
-          timestamp: new Date()
-        });
-        
-        // If we get here, either user is admin or security rules are weak
-        if (auth.currentUser) {
-          const idTokenResult = await auth.currentUser.getIdTokenResult();
-          if (idTokenResult.claims.admin === true) {
-            addResult('Security Rules', 'passed', 'Admin write access confirmed');
-          } else {
-            addResult('Security Rules', 'failed', 'SECURITY BREACH: Regular user can write!');
-          }
-        }
-      } catch (error: any) {
-        // This is expected for non-admin users
-        if (error.code === 'permission-denied') {
-          addResult('Security Rules', 'passed', 'Unauthorized write blocked (good!)');
-        } else {
-          addResult('Security Rules', 'warning', 'Unexpected security test error', error.message);
-        }
-      }
-
-      // Test 5: Secondary App Creation
-      try {
-        const secondaryAppName = `HealthCheck-${Date.now()}`;
-        const secondaryApp = initializeApp(firebaseConfig, secondaryAppName);
-        const secondaryAuth = getAuth(secondaryApp);
-        
-        addResult(
-          'Secondary App',
-          'passed',
-          'Created successfully',
-          `App name: ${secondaryApp.name}`
-        );
-
-        // Clean up
-        await deleteApp(secondaryApp);
-        addResult('Secondary App Cleanup', 'passed', 'Cleanup successful');
-      } catch (error: any) {
-        addResult('Secondary App', 'failed', 'Creation/cleanup failed', error.message);
-      }
-
-      // Test 6: Network Performance
-      try {
-        if (!firebaseManager.isReady()) {
-          throw new Error('Firebase not ready yet');
-        }
-        const db = getOptimizedFirestore();
-        const startTime = performance.now();
-        await getDocs(query(collection(db, 'clinics'), limit(1)));
-        const responseTime = performance.now() - startTime;
-        
-        const status = responseTime < 1000 ? 'passed' : responseTime < 3000 ? 'warning' : 'failed';
-        addResult(
-          'Performance',
-          status,
-          `Response time: ${responseTime.toFixed(0)}ms`,
-          responseTime < 1000 ? 'Excellent' : responseTime < 3000 ? 'Acceptable' : 'Slow connection'
-        );
-      } catch (error: any) {
-        addResult('Performance', 'failed', 'Performance test failed', error.message);
-      }
-
-    } catch (error: any) {
-      addResult('Health Check', 'failed', 'Unexpected error during health check', error.message);
+      console.log('🧪 Testing localStorage persistence for medical requirements...');
+      
+      // Test data
+      const testData = {
+        id: 'test-' + Date.now(),
+        clinicId: userProfile.clinicId,
+        patientId: 'test-patient',
+        patientName: 'Test Patient',
+        requirementType: 'lab' as const,
+        title: 'Test Lab Requirement',
+        description: 'Test description',
+        category: 'test',
+        priority: 'normal' as const,
+        status: 'pending' as const,
+        workflow_stage: 'ordered' as const,
+        dateOrdered: new Date().toISOString(),
+        orderedBy: 'Test User',
+        orderedByRole: 'doctor',
+        isActive: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      
+      // Test localStorage save
+      const key = `clinic_medical_requirements_data_${userProfile.clinicId}`;
+      localStorage.setItem(key, JSON.stringify({
+        data: [testData],
+        lastUpdated: new Date().toISOString(),
+        clinicId: userProfile.clinicId
+      }));
+      
+      // Test localStorage load
+      const stored = localStorage.getItem(key);
+      const parsed = stored ? JSON.parse(stored) : null;
+      
+      setLocalStorageTest({
+        saved: testData,
+        loaded: parsed,
+        success: parsed && parsed.data && parsed.data.length > 0
+      });
+      
+      console.log('✅ localStorage persistence test completed:', parsed);
+      
+      // Clean up test data
+      localStorage.removeItem(key);
+      
+    } catch (error) {
+      console.error('❌ localStorage persistence test failed:', error);
+      setLocalStorageTest({ error: error.message });
     }
-
-    // Calculate summary
-    setIsRunning(false);
   };
 
-  React.useEffect(() => {
-    if (results.length > 0) {
-      const passed = results.filter(r => r.status === 'passed').length;
-      const failed = results.filter(r => r.status === 'failed').length;
-      const warnings = results.filter(r => r.status === 'warning').length;
-      setSummary({ passed, failed, warnings });
-    }
-  }, [results]);
+  useEffect(() => {
+    const checkHealth = async () => {
+      try {
+        // Check connection status
+        if (connectionStatus === 'connected') {
+          setHealthStatus({
+            status: 'healthy',
+            message: 'Firebase connection is healthy',
+            details: 'Real-time listeners are working properly'
+          });
+        } else if (connectionStatus === 'reconnecting') {
+          setHealthStatus({
+            status: 'warning',
+            message: 'Firebase is reconnecting',
+            details: 'Attempting to restore connection...'
+          });
+        } else if (connectionStatus === 'disconnected') {
+          setHealthStatus({
+            status: 'error',
+            message: 'Firebase connection lost',
+            details: 'Real-time listeners are not working'
+          });
+        } else {
+          setHealthStatus({
+            status: 'loading',
+            message: 'Checking Firebase status...'
+          });
+        }
+      } catch (error) {
+        setHealthStatus({
+          status: 'error',
+          message: 'Health check failed',
+          details: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    };
 
-  const getSeverityFromStatus = (status: TestResult['status']) => {
-    switch (status) {
-      case 'passed': return 'success';
-      case 'failed': return 'error';
-      case 'warning': return 'warning';
-      case 'info': return 'info';
-      default: return 'info';
+    checkHealth();
+  }, [connectionStatus]);
+
+  const getStatusIcon = () => {
+    switch (healthStatus.status) {
+      case 'healthy': return <CheckCircle color="success" />;
+      case 'warning': return <Warning color="warning" />;
+      case 'error': return <Error color="error" />;
+      default: return <Info color="info" />;
+    }
+  };
+
+  const getStatusColor = () => {
+    switch (healthStatus.status) {
+      case 'healthy': return 'success.main';
+      case 'warning': return 'warning.main';
+      case 'error': return 'error.main';
+      default: return 'info.main';
     }
   };
 
   return (
-    <Card sx={{ mb: 3 }}>
-      <CardContent>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-          <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            🔥 Firebase Health Check
-          </Typography>
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <Button
-              variant="contained"
-              startIcon={isRunning ? <CircularProgress size={16} color="inherit" /> : <PlayArrow />}
-              onClick={runHealthCheck}
-              disabled={isRunning}
-              sx={{ backgroundColor: '#7C3AED' }}
-            >
-              {isRunning ? 'Running...' : 'Run Health Check'}
-            </Button>
-            {results.length > 0 && (
-              <IconButton onClick={() => setExpanded(!expanded)}>
-                {expanded ? <ExpandLess /> : <ExpandMore />}
-              </IconButton>
+    <Paper sx={{ p: 3, mb: 3 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+        {getStatusIcon()}
+        <Typography variant="h6" sx={{ ml: 1, color: getStatusColor() }}>
+          Firebase Health Check
+        </Typography>
+      </Box>
+      
+      <Typography variant="body1" sx={{ mb: 2 }}>
+        {healthStatus.message}
+      </Typography>
+      
+      {healthStatus.details && (
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          {healthStatus.details}
+        </Typography>
+      )}
+      
+      <Box sx={{ mb: 2 }}>
+        <Typography variant="subtitle2" sx={{ mb: 1 }}>
+          Connection Status: <strong>{connectionStatus}</strong>
+        </Typography>
+      </Box>
+      
+      {/* localStorage Persistence Test */}
+      <Box sx={{ mt: 3, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+        <Typography variant="subtitle2" sx={{ mb: 1 }}>
+          localStorage Persistence Test
+        </Typography>
+        
+        <Button 
+          variant="outlined" 
+          size="small" 
+          onClick={testLocalStoragePersistence}
+          sx={{ mb: 2 }}
+        >
+          Test localStorage
+        </Button>
+        
+        {localStorageTest && (
+          <Box sx={{ mt: 1 }}>
+            {localStorageTest.success ? (
+              <Alert severity="success" sx={{ mb: 1 }}>
+                localStorage persistence test passed
+              </Alert>
+            ) : localStorageTest.error ? (
+              <Alert severity="error" sx={{ mb: 1 }}>
+                localStorage persistence test failed: {localStorageTest.error}
+              </Alert>
+            ) : (
+              <Alert severity="info" sx={{ mb: 1 }}>
+                localStorage persistence test completed
+              </Alert>
             )}
+            
+            <Typography variant="caption" component="div" sx={{ fontFamily: 'monospace', fontSize: '0.7rem' }}>
+              {JSON.stringify(localStorageTest, null, 2)}
+            </Typography>
           </Box>
+        )}
+      </Box>
+      
+      {/* Real-time Status */}
+      <Box sx={{ mt: 2 }}>
+        <Typography variant="subtitle2" sx={{ mb: 1 }}>
+          Real-time Listeners:
+        </Typography>
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+          {['appointments', 'patients', 'payments', 'laboratoryRadiology', 'notifications'].map((collection) => (
+            <Box
+              key={collection}
+              sx={{
+                px: 1,
+                py: 0.5,
+                borderRadius: 1,
+                backgroundColor: connectionStatus === 'connected' ? 'success.light' : 'error.light',
+                color: connectionStatus === 'connected' ? 'success.contrastText' : 'error.contrastText',
+                fontSize: '0.75rem',
+                fontWeight: 500
+              }}
+            >
+              {collection}
+            </Box>
+          ))}
         </Box>
-
-        {summary && (
-          <Alert 
-            severity={summary.failed > 0 ? 'error' : summary.warnings > 0 ? 'warning' : 'success'}
-            sx={{ mb: 2 }}
-          >
-            <Typography variant="body2" sx={{ fontWeight: 600 }}>
-              Health Check Results: {summary.passed} passed, {summary.failed} failed, {summary.warnings} warnings
-            </Typography>
-            <Typography variant="body2">
-              {summary.failed === 0 && summary.warnings === 0 
-                ? '🎉 All Firebase services are working correctly!' 
-                : summary.failed > 0 
-                ? '⚠️ Critical issues found. Check details below.'
-                : 'ℹ️ Minor issues detected. Review warnings below.'}
-            </Typography>
-          </Alert>
-        )}
-
-        <Collapse in={expanded && results.length > 0}>
-          <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
-            Detailed Results:
-          </Typography>
-          <List dense>
-            {results.map((result, index) => (
-              <ListItem key={index} sx={{ py: 0.5 }}>
-                <ListItemIcon sx={{ minWidth: 36 }}>
-                  {getStatusIcon(result.status)}
-                </ListItemIcon>
-                <ListItemText
-                  primary={
-                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                      {result.name}: {result.message}
-                    </Typography>
-                  }
-                  secondary={result.details && (
-                    <Typography variant="caption" sx={{ fontFamily: 'monospace', fontSize: '0.7rem' }}>
-                      {result.details}
-                    </Typography>
-                  )}
-                />
-              </ListItem>
-            ))}
-          </List>
-        </Collapse>
-
-        {!expanded && results.length > 0 && (
-          <Typography variant="caption" color="text.secondary">
-            Click the expand button to see detailed results
-          </Typography>
-        )}
-
-        {results.length === 0 && !isRunning && (
-          <Alert severity="info">
-            Click "Run Health Check" to verify all Firebase services are working correctly.
-            This will test authentication, database connectivity, security rules, and admin features.
-          </Alert>
-        )}
-      </CardContent>
-    </Card>
+      </Box>
+    </Paper>
   );
 };
 

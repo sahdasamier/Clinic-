@@ -66,6 +66,9 @@ class OptimizedFirebaseManager {
   private messaging: Messaging | null = null;
   private functions: Functions | null = null;
   private isInitialized = false;
+  private initializationPromise: Promise<void> | null = null;
+  private retryCount = 0;
+  private maxRetries = 3;
 
   private constructor() {}
 
@@ -77,17 +80,31 @@ class OptimizedFirebaseManager {
   }
 
   async initialize(): Promise<void> {
+    // If already initialized, return immediately
     if (this.isInitialized) {
       return;
     }
 
+    // If initialization is in progress, wait for it
+    if (this.initializationPromise) {
+      return this.initializationPromise;
+    }
+
+    // Start initialization
+    this.initializationPromise = this.performInitialization();
+    return this.initializationPromise;
+  }
+
+  private async performInitialization(): Promise<void> {
     try {
+      console.log("🚀 Starting Firebase initialization...");
       const config = validateFirebaseConfig();
       
       // Initialize or reuse existing app
       this.app = getApps().length ? getApp() : initializeApp(config);
+      console.log("✅ Firebase app initialized");
       
-      // Initialize services in optimal order
+      // Initialize services in optimal order with better error handling
       await this.initializeFirestore();
       this.initializeAuth();
       this.initializeStorage();
@@ -101,12 +118,40 @@ class OptimizedFirebaseManager {
       }
 
       this.isInitialized = true;
+      this.retryCount = 0; // Reset retry count on success
       console.log("🔥 Optimized Firebase initialized successfully");
       
     } catch (error) {
       console.error("❌ Firebase initialization failed:", error);
-      throw error;
+      
+      // Implement retry logic for transient failures
+      if (this.retryCount < this.maxRetries) {
+        this.retryCount++;
+        console.log(`🔄 Retrying Firebase initialization (${this.retryCount}/${this.maxRetries})...`);
+        
+        // Wait before retry
+        await new Promise(resolve => setTimeout(resolve, 1000 * this.retryCount));
+        
+        // Reset state and retry
+        this.resetState();
+        return this.performInitialization();
+      }
+      
+      // Final failure
+      this.initializationPromise = null;
+      throw new Error(`Firebase initialization failed after ${this.maxRetries} attempts: ${error}`);
     }
+  }
+
+  private resetState(): void {
+    this.app = null;
+    this.firestore = null;
+    this.auth = null;
+    this.storage = null;
+    this.analytics = null;
+    this.messaging = null;
+    this.functions = null;
+    this.isInitialized = false;
   }
 
   private async initializeFirestore(): Promise<void> {
@@ -274,7 +319,7 @@ class OptimizedFirebaseManager {
     }
   }
 
-  // Getters for services
+  // Getters for services with better error handling
   getApp(): FirebaseApp {
     if (!this.app) throw new Error("Firebase not initialized");
     return this.app;
@@ -310,6 +355,19 @@ class OptimizedFirebaseManager {
 
   isReady(): boolean {
     return this.isInitialized;
+  }
+
+  // New method to check if initialization is in progress
+  isInitializing(): boolean {
+    return this.initializationPromise !== null && !this.isInitialized;
+  }
+
+  // New method to get initialization status
+  getStatus(): 'not_started' | 'initializing' | 'ready' | 'failed' {
+    if (this.isInitialized) return 'ready';
+    if (this.isInitializing()) return 'initializing';
+    if (this.initializationPromise === null) return 'not_started';
+    return 'failed';
   }
 }
 

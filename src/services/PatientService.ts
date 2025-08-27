@@ -9,7 +9,9 @@ import {
   getDocs,
   orderBy,
   serverTimestamp,
-  writeBatch
+  writeBatch,
+  updateDoc,
+  increment
 } from 'firebase/firestore';
 import { getOptimizedFirestore, firebaseManager } from '../api/firebaseOptimized';
 
@@ -98,16 +100,24 @@ export interface Patient {
   allCompletedVisits?: Array<{
     date: any;
     time: any;
-    type: any;
     doctor: any;
     notes: any;
-    appointmentId: any;
+    status: any;
   }>;
-  todayAppointment?: string;
-  // For backward compatibility with different id types
-  _appointmentCount?: number;
-  _completedCount?: number;
-  _pendingCount?: number;
+  // Medical requirements tracking
+  pendingRequirementsCount?: number;
+  hasPendingRequirements?: boolean;
+  medicalRequirements?: Array<{
+    id: string | number;
+    title: string;
+    type: string;
+    status: 'pending' | 'in_progress' | 'completed' | 'cancelled' | 'on_hold';
+    dateOrdered: string;
+    dueDate?: string;
+    priority: 'low' | 'normal' | 'high' | 'urgent';
+    description?: string;
+    orderedBy?: string;
+  }>;
 }
 
 export const PatientService = {
@@ -310,6 +320,88 @@ export const PatientService = {
       followUp: patients.filter(p => p.status === 'follow-up').length,
       admitted: patients.filter(p => p.status === 'admitted').length,
     };
+  },
+
+  // Update medical requirement counts for a patient
+  async updateRequirementCounts(patientId: string, increment: boolean = true): Promise<void> {
+    try {
+      const patientRef = doc(getPatientsCollection(), patientId);
+      
+      if (increment) {
+        // Increment the count and set the flag
+        await updateDoc(patientRef, {
+          pendingRequirementsCount: increment(1),
+          hasPendingRequirements: true,
+          updatedAt: serverTimestamp(),
+        });
+        console.log('✅ Incremented pending requirements count for patient:', patientId);
+      } else {
+        // Decrement the count and check if we should unset the flag
+        await updateDoc(patientRef, {
+          pendingRequirementsCount: increment(-1),
+          updatedAt: serverTimestamp(),
+        });
+        
+        // Check if count is now 0 and update flag accordingly
+        const patientSnapshot = await getDocs(query(getPatientsCollection(), where('__name__', '==', patientId)));
+        if (!patientSnapshot.empty) {
+          const currentPatient = patientSnapshot.docs[0].data() as Patient;
+          const newCount = (currentPatient.pendingRequirementsCount || 0) - 1;
+          
+          if (newCount <= 0) {
+            await updateDoc(patientRef, {
+              pendingRequirementsCount: 0,
+              hasPendingRequirements: false,
+              updatedAt: serverTimestamp(),
+            });
+            console.log('✅ Reset pending requirements count and flag for patient:', patientId);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error updating requirement counts for patient:', patientId, error);
+      throw error;
+    }
+  },
+
+  // Set specific requirement count for a patient
+  async setRequirementCount(patientId: string, count: number): Promise<void> {
+    try {
+      const patientRef = doc(getPatientsCollection(), patientId);
+      
+      await updateDoc(patientRef, {
+        pendingRequirementsCount: count,
+        hasPendingRequirements: count > 0,
+        updatedAt: serverTimestamp(),
+      });
+      
+      console.log(`✅ Set pending requirements count to ${count} for patient:`, patientId);
+    } catch (error) {
+      console.error('❌ Error setting requirement count for patient:', patientId, error);
+      throw error;
+    }
+  },
+
+  // Recalculate and update requirement counts for a patient
+  async recalculateRequirementCounts(patientId: string): Promise<void> {
+    try {
+      const patientSnapshot = await getDocs(query(getPatientsCollection(), where('__name__', '==', patientId)));
+      if (patientSnapshot.empty) {
+        console.warn('⚠️ Patient not found for requirement count recalculation:', patientId);
+        return;
+      }
+      
+      const currentPatient = patientSnapshot.docs[0].data() as Patient;
+      const pendingCount = (currentPatient.medicalRequirements || []).filter(
+        (req: any) => req.status === 'pending'
+      ).length;
+      
+      await this.setRequirementCount(patientId, pendingCount);
+      console.log(`✅ Recalculated requirement counts for patient ${patientId}: ${pendingCount} pending`);
+    } catch (error) {
+      console.error('❌ Error recalculating requirement counts for patient:', patientId, error);
+      throw error;
+    }
   }
 };
 

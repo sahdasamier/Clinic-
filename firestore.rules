@@ -153,6 +153,17 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
     
+    // 🔒 Medical Requirements collection - Clinic-based access
+    match /clinics/{clinicId}/medicalRequirements/{requirementId} {
+      allow read, write: if request.auth != null && 
+                        (isAdmin() || 
+                         clinicId == getUserClinicId());
+      allow create: if request.auth != null && 
+                   (isAdmin() || 
+                    clinicId == getUserClinicId());
+      allow delete: if isAdmin();
+    }
+    
     // 🔒 Default deny for any other collections
     match /{document=**} {
       allow read: if request.auth != null;

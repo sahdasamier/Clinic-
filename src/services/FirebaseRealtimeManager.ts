@@ -289,6 +289,34 @@ export class FirebaseRealtimeManager {
         async (error) => {
           console.error(`❌ Realtime listener error for ${name}:`, error);
           
+          // ✅ FIXED: Handle custom Promise object error specifically
+          if (error.message && error.message.includes("Expected type 'ct' but it was: a custom Promise object")) {
+            console.error(`❌ Firebase type error for ${name}: Custom Promise object received`);
+            console.log('🔄 Attempting to recover from Firebase type error...');
+            
+            // Try to reinitialize the listener with a fresh Firestore instance
+            try {
+              // Clear the current listener
+              if (this.unsubscribes.has(name)) {
+                this.unsubscribes.get(name)!();
+                this.unsubscribes.delete(name);
+              }
+              
+              // Reset the database instance
+              this._db = null;
+              
+              // Wait a bit and retry
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              
+              if (retryCount < maxRetries) {
+                console.log(`🔄 Retrying listener setup for ${name} after type error recovery`);
+                return this.setupCollectionListener(collectionConfig, retryCount + 1);
+              }
+            } catch (recoveryError) {
+              console.error(`❌ Failed to recover from type error for ${name}:`, recoveryError);
+            }
+          }
+          
           // Handle specific error types
           if (error.code === 'permission-denied') {
             console.error(`❌ Permission denied for ${name}. Check Firestore rules.`);
