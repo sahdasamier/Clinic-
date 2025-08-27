@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useUser } from '../contexts/UserContext';
 import { useSidebar } from '../contexts/SidebarContext';
 import { useClinicSettings } from '../hooks/useClinicSettings';
-import { getUserPermissions, hasPermission, PermissionKey } from '../types/permissions';
+import { getUserPermissions, hasPermission, PermissionKey, DEFAULT_PERMISSIONS } from '../types/permissions';
 import {
   Box,
   Drawer,
@@ -141,6 +141,8 @@ const Sidebar: React.FC = () => {
   // Filter navigation links based on user permissions
   const getFilteredNavLinks = (): NavLink[] => {
     console.log('🔍 Debug - isAdmin:', isAdmin, 'userPermissions:', userPermissions);
+    console.log('🔍 Debug - userProfile:', userProfile);
+    console.log('🔍 Debug - userProfile?.role:', userProfile?.role);
     
     if (isAdmin) {
       // Super admins see everything
@@ -163,7 +165,9 @@ const Sidebar: React.FC = () => {
           userPermissionLevel: userPermissions[link.permission],
           minLevel: link.minLevel,
           hasAccess,
-          allUserPermissions: userPermissions
+          allUserPermissions: userPermissions,
+          userRole: userProfile?.role,
+          defaultPermissionsForRole: userProfile?.role ? DEFAULT_PERMISSIONS[userProfile.role] : 'No role'
         });
       }
       return hasAccess;

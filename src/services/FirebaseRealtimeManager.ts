@@ -248,11 +248,25 @@ export class FirebaseRealtimeManager {
 
     try {
       const collectionRef = collection(this.db, name);
-      const q = query(
-        collectionRef,
-        where('clinicId', '==', this.config.clinicId),
-        orderBy('createdAt', 'desc')
-      );
+      
+      // Create appropriate query based on collection type
+      let q;
+      if (name === 'laboratoryRadiology') {
+        // laboratoryRadiology collection has isActive field, use the existing index
+        q = query(
+          collectionRef,
+          where('clinicId', '==', this.config.clinicId),
+          where('isActive', '==', true),
+          orderBy('createdAt', 'desc')
+        );
+      } else {
+        // Other collections use the standard pattern
+        q = query(
+          collectionRef,
+          where('clinicId', '==', this.config.clinicId),
+          orderBy('createdAt', 'desc')
+        );
+      }
 
       const unsubscribe = onSnapshot(
         q,
@@ -339,11 +353,25 @@ export class FirebaseRealtimeManager {
 
   private async fetchCollectionOnce(collectionName: string): Promise<any[]> {
     const collectionRef = collection(this.db, collectionName);
-    const q = query(
-      collectionRef,
-      where('clinicId', '==', this.config.clinicId),
-      orderBy('createdAt', 'desc')
-    );
+    
+    // Create appropriate query based on collection type
+    let q;
+    if (collectionName === 'laboratoryRadiology') {
+      // laboratoryRadiology collection has isActive field, use the existing index
+      q = query(
+        collectionRef,
+        where('clinicId', '==', this.config.clinicId),
+        where('isActive', '==', true),
+        orderBy('createdAt', 'desc')
+      );
+    } else {
+      // Other collections use the standard pattern
+      q = query(
+        collectionRef,
+        where('clinicId', '==', this.config.clinicId),
+        orderBy('createdAt', 'desc')
+      );
+    }
 
     const snapshot = await getDocs(q);
     const data = snapshot.docs.map(doc => ({
