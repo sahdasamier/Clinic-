@@ -1,9 +1,5 @@
 import { Notification, NotificationSettings } from '../types/models';
 import {
-  getDefaultNotificationAppointments,
-  getDefaultNotificationPayments,
-  getDefaultNotificationPatients,
-  getDefaultInventory,
   STORAGE_KEYS_DATA,
   type NotificationAppointment,
   type NotificationPayment,
@@ -364,10 +360,10 @@ const getTimeAgo = (date: Date): string => {
 // Main notification aggregator
 const aggregateAllNotifications = (): Notification[] => {
   // Load data from all modules
-  const appointments = loadDataFromStorage(STORAGE_KEYS.APPOINTMENTS, getDefaultNotificationAppointments());
-  const payments = loadDataFromStorage(STORAGE_KEYS.PAYMENTS, getDefaultNotificationPayments());
-  const patients = loadDataFromStorage(STORAGE_KEYS.PATIENTS, getDefaultNotificationPatients());
-  const laboratoryRadiology = loadDataFromStorage(STORAGE_KEYS.INVENTORY, getDefaultInventory());
+  const appointments = loadDataFromStorage(STORAGE_KEYS.APPOINTMENTS, []);
+  const payments = loadDataFromStorage(STORAGE_KEYS.PAYMENTS, []);
+  const patients = loadDataFromStorage(STORAGE_KEYS.PATIENTS, []);
+  const laboratoryRadiology = loadDataFromStorage(STORAGE_KEYS.INVENTORY, []);
 
   // Generate notifications from each module
   const appointmentNotifications = generateAppointmentNotifications(appointments);

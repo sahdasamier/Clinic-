@@ -77,8 +77,6 @@ import {
 } from '@mui/icons-material';
 
 import {
-  generateDefaultPayments,
-  samplePaymentPatients,
   paymentCategories,
   paymentMethods,
   paymentStatuses,
@@ -401,7 +399,7 @@ const PaymentListPage: React.FC = () => {
   React.useEffect(() => {
     // Initialize with default data if needed
     if (payments.length === 0 && !paymentsLoading) {
-      const defaultPayments = generateDefaultPayments();
+      const defaultPayments = [];
       setPayments(defaultPayments);
       console.log('✅ PaymentListPage: Initialized with default payments data');
     }
@@ -770,7 +768,7 @@ const PaymentListPage: React.FC = () => {
     setDataLoading(true);
 
     try {
-      const loadedPayments = generateDefaultPayments();
+      const loadedPayments = [];
       setPayments(loadedPayments);
       setIsDataLoaded(true);
       console.log('✅ PaymentListPage: Payment data loaded successfully');
@@ -788,7 +786,7 @@ const PaymentListPage: React.FC = () => {
     // Listen for user data clearing
     const handleUserDataCleared = () => {
       // Reset to default state
-      setPayments(generateDefaultPayments());
+      setPayments([]);
       setTabValue(0);
       setSearchQuery('');
       setActiveFilter('all');
