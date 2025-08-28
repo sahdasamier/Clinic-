@@ -21,7 +21,7 @@ const getFunctionsInstance = () => {
   }
 };
 
-export interface BlazePlanFeatures {
+export interface FirebaseFeatures {
   analytics: {
     initialized: boolean;
     trackEvent: typeof AnalyticsService.trackCustomEvent;
@@ -45,12 +45,12 @@ export interface BlazePlanFeatures {
   };
 }
 
-export const useBlazePlanFeatures = (): BlazePlanFeatures => {
+export const useFirebaseFeatures = (): FirebaseFeatures => {
   const { user } = useAuth();
   const { userProfile } = useUser();
   const [initialized, setInitialized] = useState(false);
   const [messagingToken, setMessagingToken] = useState<string | null>(null);
-  const [features, setFeatures] = useState<BlazePlanFeatures>({
+  const [features, setFeatures] = useState<FirebaseFeatures>({
     analytics: {
       initialized: false,
       trackEvent: AnalyticsService.trackCustomEvent,

@@ -5,8 +5,8 @@ import './index.css'
 import './styles/globalStyles.css'
 import './i18n';
 
-// Blaze plan features
-import BlazePlanInitializer from './components/BlazePlanInitializer';
+// Firebase service initializer
+import FirebaseServiceInitializer from './components/FirebaseServiceInitializer';
 
 // Initialize optimized Firebase first
 import { initializeOptimizedServices } from './api/firebase';
@@ -210,9 +210,9 @@ const startApp = async () => {
             onClick={() => {
               // Continue with limited functionality
               root.render(
-                <BlazePlanInitializer>
+                <FirebaseServiceInitializer>
                   <App />
-                </BlazePlanInitializer>
+                </FirebaseServiceInitializer>
               );
             }}
             style={{
@@ -237,9 +237,9 @@ const startApp = async () => {
     // Render the actual app
     console.log('🎨 Rendering React application...');
     root.render(
-      <BlazePlanInitializer>
+      <FirebaseServiceInitializer>
         <App />
-      </BlazePlanInitializer>
+      </FirebaseServiceInitializer>
     );
     
   } catch (error) {
