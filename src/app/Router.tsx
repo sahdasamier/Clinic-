@@ -23,12 +23,7 @@ import LaboratoryRadiologyCenterPage from "../features/LaboratoryRadiologyCenter
 import NotificationsPage from "../features/notifications/NotificationsPage";
 import SettingsPage from "../features/settings/SettingsPage";
 
-// Test Components
-import SystemIntegrationTest from "../components/SystemIntegrationTest";
-import CrossPageTestComponent from "../components/CrossPageTestComponent";
-import RealtimeDataDashboard from "../components/RealtimeDataDashboard";
-import DoctorSchedulingPage from "../features/DoctorScheduling";
-import SystemImprovementAnalysis from "../components/SystemImprovementAnalysis";
+
 
 const Router: React.FC = () => {
   return (
@@ -192,17 +187,7 @@ const Router: React.FC = () => {
           </ProtectedRoute>
         } />
 
-        <Route path="/system-analysis" element={
-          <ProtectedRoute>
-            <ClinicAccessGuard>
-              <Layout>
-                <EnhancedRouteGuard feature="settings" level="read">
-                  <SystemImprovementAnalysis />
-                </EnhancedRouteGuard>
-              </Layout>
-            </ClinicAccessGuard>
-          </ProtectedRoute>
-        } />
+
         
         {/* Administrative Routes */}
         <Route path="/settings" element={
@@ -217,36 +202,7 @@ const Router: React.FC = () => {
           </ProtectedRoute>
         } />
 
-        {/* Development/Testing Routes */}
-        <Route path="/test/integration" element={
-          <ProtectedRoute>
-            <ClinicAccessGuard>
-              <Layout>
-                <SystemIntegrationTest />
-              </Layout>
-            </ClinicAccessGuard>
-          </ProtectedRoute>
-        } />
-        
-        <Route path="/test/cross-page" element={
-          <ProtectedRoute>
-            <ClinicAccessGuard>
-              <Layout>
-                <CrossPageTestComponent />
-              </Layout>
-            </ClinicAccessGuard>
-          </ProtectedRoute>
-        } />
-        
-        <Route path="/test/realtime-dashboard" element={
-          <ProtectedRoute>
-            <ClinicAccessGuard>
-              <Layout>
-                <RealtimeDataDashboard />
-              </Layout>
-            </ClinicAccessGuard>
-          </ProtectedRoute>
-        } />
+
 
         {/* Catch-all route for 404 or unauthorized access attempts */}
         <Route path="*" element={
