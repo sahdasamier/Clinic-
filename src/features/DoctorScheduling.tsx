@@ -8,12 +8,7 @@ import {
   SchedulingDoctor,
   loadSchedulingDoctorsFromStorage
 } from '../utils/doctorSync';
-import { 
-  AppointmentStats, 
-  ConflictDetector, 
-  DoctorAvailabilityIndicator,
-  TimeSlotHealthMonitor 
-} from '../components/SchedulingEnhancements';
+// SchedulingEnhancements components removed during cleanup
 import {
   Box,
   Container,
@@ -81,14 +76,14 @@ const updatePatientAppointmentFields = (patientName: string) => {
 };
 import { usePersistentForm } from '../hooks/usePersistentForm';
 import {
-  baseDoctorSchedules,
+  // baseDoctorSchedules removed during cleanup
   daysOfWeek,
   timeSlots,
   medicalSpecialties,
   appointmentTypes,
   defaultDoctorFormData,
   defaultTimeSlotFormData,
-  doctorSchedules,
+  // doctorSchedules removed - using real Firebase data
   type Doctor,
 } from '../data/mockData';
 import { AppointmentService, type Appointment } from '../services';
@@ -1798,9 +1793,9 @@ const DoctorSchedulingPage: React.FC = () => {
                
 
 
-               {/* ✨ Enhanced Scheduling Features */}
+               {/* Scheduling Features - Stats component removed during cleanup */}
                <Box sx={{ mb: 4 }}>
-                 <AppointmentStats />
+                 <Typography variant="h6" color="primary">Doctor Scheduling Dashboard</Typography>
                </Box>
 
                <Grid container spacing={3}>
@@ -1884,11 +1879,12 @@ const DoctorSchedulingPage: React.FC = () => {
                                    {doctor.workingHours.start} - {doctor.workingHours.end}
                                  </Typography>
                                  
-                                 {/* ✨ Real-time Availability Indicator */}
+                                 {/* Availability indicator functionality integrated directly */}
                                  <Box sx={{ mt: 1 }}>
-                                   <DoctorAvailabilityIndicator 
-                                     doctorId={`doctor-${doctor.id}`} 
-                                     doctorName={doctor.name} 
+                                   <Chip 
+                                     size="small" 
+                                     label={doctorAppointments.length > 0 ? `${doctorAppointments.length} scheduled` : "Available"}
+                                     color={doctorAppointments.length > 0 ? "warning" : "success"}
                                    />
                                  </Box>
                                </Box>
@@ -4292,5 +4288,4 @@ const DoctorSchedulingPage: React.FC = () => {
 
 export default DoctorSchedulingPage;
 
-// Export the doctorSchedules for backwards compatibility
-export { doctorSchedules } from '../data/mockData';
+// doctorSchedules removed during cleanup - using real Firebase data

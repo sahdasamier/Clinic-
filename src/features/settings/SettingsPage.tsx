@@ -76,7 +76,7 @@ import {
 
 import ClinicPaymentSettingsComponent from './components/ClinicPaymentSettings';
 
-import { sendSupportEmail, sendFeedbackEmail, getSetupInstructions, type SupportEmailData } from '../../services/emailService';
+// Email service removed - using manual contact methods
 
 
 
@@ -779,42 +779,9 @@ const SettingsPage: React.FC = () => {
       const ticketId = `TICKET-${Date.now().toString().slice(-6)}`;
       const submittedAt = new Date().toLocaleString();
       
-      // Prepare email data
-      const emailData: SupportEmailData = {
-        fullName: contactForm.name,
-        email: contactForm.email,
-        subject: contactForm.subject,
-        message: contactForm.message,
-        supportType: contactForm.supportType,
-        ticketId,
-        submittedAt,
-        browserInfo: navigator.userAgent
-      };
-  
-      // Try to send email using EmailJS service
-      const emailSent = await sendSupportEmail(emailData);
-  
-      if (emailSent) {
-        // ✅ EMAIL SENT SUCCESSFULLY
-        setConfirmMessage(`
-  ✅ Message sent successfully!
-  
-  📧 Your support request has been sent to our team
-  📋 Support Ticket: ${ticketId}
-  🕒 Submitted: ${submittedAt}
-  
-  We'll respond to your email within 24 hours during business days.
-  For urgent matters, you can also contact us via WhatsApp
-        `);
-        showSnackbar('Message sent successfully to drsuperclinic@gmail.com!', 'success');
-      } else {
-        // ❌ EMAIL FAILED - Show fallback options
-        setConfirmMessage(`
-  🔧 EmailJS Setup Required
-  
-  ${getSetupInstructions()}
-  
-  📧 Meanwhile, please send your support request manually:
+      // Show manual contact instructions
+      setConfirmMessage(`
+  📧 Please send your support request manually:
   
   TO: drsuperclinic@gmail.com
   SUBJECT: ClinicCare Support: [${contactForm.supportType.toUpperCase()}] ${contactForm.subject}
@@ -834,37 +801,29 @@ const SettingsPage: React.FC = () => {
   Sent via ClinicCare Contact Form
   
   📱 OR WhatsApp: +201147299675
-        `);
-        showSnackbar('EmailJS not configured. Please see setup instructions above.', 'warning');
-      }
+      `);
+      showSnackbar('Please send support request manually to drsuperclinic@gmail.com', 'info');
       
       setConfirmAction(() => {
         setConfirmDialogOpen(false);
-        if (emailSent) {
-          // If email was sent successfully, just close the dialog
-          showSnackbar('Thank you for contacting us!', 'success');
-        } else {
-          // If email failed, copy email to clipboard as backup
-          navigator.clipboard.writeText('drsuperclinic@gmail.com').then(() => {
-            showSnackbar('Support email copied to clipboard', 'info');
-          }).catch(() => {
-            // Silent fail for clipboard
-          });
-        }
+        // Copy email to clipboard as backup
+        navigator.clipboard.writeText('drsuperclinic@gmail.com').then(() => {
+          showSnackbar('Support email copied to clipboard', 'info');
+        }).catch(() => {
+          // Silent fail for clipboard
+        });
       });
       
       setConfirmDialogOpen(true);
       
-      // Reset form only if email was sent successfully
-      if (emailSent) {
-        setContactForm({
-          name: '',
-          email: '',
-          subject: '',
-          message: '',
-          supportType: 'general',
-        });
-      }
+      // Reset form
+      setContactForm({
+        name: '',
+        email: '',
+        subject: '',
+        message: '',
+        supportType: 'general',
+      });
       
     } catch (error) {
       console.error('Contact form error:', error);
@@ -4571,35 +4530,9 @@ const SettingsPage: React.FC = () => {
                     variant="contained" 
                     fullWidth
                     sx={{ backgroundColor: 'white', color: 'warning.main', '&:hover': { backgroundColor: 'grey.100' } }}
-                    onClick={async () => {
-                      // Use EmailJS to send feedback email
-                      const feedbackSent = await sendFeedbackEmail({
-                        name: profile.name || 'User',
-                        email: profile.email || '',
-                        feedback: 'User requested to send feedback via the feedback button. Please follow up with them for their detailed feedback.',
-                        rating: 'Pending'
-                      });
-
-                      if (feedbackSent) {
-                        setConfirmMessage(`
-✅ Feedback request sent successfully!
-
-📧 We've notified our team at drsuperclinic@gmail.com
-📱 You can also reach us via WhatsApp: +201147299675
-
-We'd love to hear about:
-• Your overall experience with ClinicCare
-• Features you find most helpful
-• Areas for improvement
-• Suggestions for new features
-• Technical performance feedback
-• User interface comments
-
-We'll reach out to you soon for your detailed feedback!
-                        `);
-                        showSnackbar('Feedback request sent to drsuperclinic@gmail.com!', 'success');
-                      } else {
-                        setConfirmMessage(`
+                    onClick={() => {
+                      // Show manual feedback instructions
+                      setConfirmMessage(`
 📝 We'd love to hear from you!
 
 Please send your feedback directly to:
@@ -4616,9 +4549,8 @@ Include these details in your message:
 • User interface comments
 
 Your feedback helps us improve ClinicCare for everyone!
-                        `);
-                        showSnackbar('Please send feedback using the contact details above', 'info');
-                      }
+                      `);
+                      showSnackbar('Please send feedback using the contact details above', 'info');
 
                       setConfirmAction(() => {
                         setConfirmDialogOpen(false);

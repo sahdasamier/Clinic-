@@ -5,12 +5,11 @@ import './index.css'
 import './styles/globalStyles.css'
 import './i18n';
 
-// Blaze plan features
-import BlazePlanInitializer from './components/BlazePlanInitializer';
+// Firebase service initializer
+import FirebaseServiceInitializer from './components/FirebaseServiceInitializer';
 
 // Initialize optimized Firebase first
 import { initializeOptimizedServices } from './api/firebase';
-import { initializeEmailJS } from './services/emailService';
 
 // ✅ IMPROVED: More robust service initialization with better error handling
 const initializeServices = async () => {
@@ -30,8 +29,6 @@ const initializeServices = async () => {
       (window.Element.prototype.attachShadow as any)._guarded = true;
     }
     
-    // Initialize EmailJS for email sending functionality
-    await initializeEmailJS();
 
     // ✅ CRITICAL: Initialize optimized Firebase services FIRST
     try {
@@ -210,9 +207,9 @@ const startApp = async () => {
             onClick={() => {
               // Continue with limited functionality
               root.render(
-                <BlazePlanInitializer>
+                <FirebaseServiceInitializer>
                   <App />
-                </BlazePlanInitializer>
+                </FirebaseServiceInitializer>
               );
             }}
             style={{
@@ -237,9 +234,9 @@ const startApp = async () => {
     // Render the actual app
     console.log('🎨 Rendering React application...');
     root.render(
-      <BlazePlanInitializer>
+      <FirebaseServiceInitializer>
         <App />
-      </BlazePlanInitializer>
+      </FirebaseServiceInitializer>
     );
     
   } catch (error) {

@@ -3,8 +3,6 @@ import {
   BusinessExpense, 
   ExpenseCategory, 
   VATAdjustment,
-  defaultEmployees,
-  defaultBusinessExpenses,
   defaultExpenseCategories 
 } from '../data/mockData';
 
@@ -28,7 +26,7 @@ export const loadEmployeesFromStorage = (): Employee[] => {
   }
   
   console.log('📝 loadEmployeesFromStorage: Using default employees');
-  return defaultEmployees;
+  return [];
 };
 
 export const saveEmployeesToStorage = (employees: Employee[]) => {
@@ -62,7 +60,7 @@ export const loadBusinessExpensesFromStorage = (): BusinessExpense[] => {
   }
   
   console.log('📝 loadBusinessExpensesFromStorage: Using default business expenses');
-  return defaultBusinessExpenses;
+  return [];
 };
 
 export const saveBusinessExpensesToStorage = (expenses: BusinessExpense[]) => {

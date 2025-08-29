@@ -1,9 +1,9 @@
-// Mock data for the clinic application
+// Static configuration data for the clinic application
 
 // Days of the week
 export const daysOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
-// Available time slots
+// Available time slots for appointments
 export const timeSlots = [
   '08:00', '08:30', '09:00', '09:30', '10:00', '10:30',
   '11:00', '11:30', '12:00', '12:30', '13:00', '13:30',
@@ -11,9 +11,6 @@ export const timeSlots = [
   '17:00', '17:30', '18:00', '18:30', '19:00', '19:30',
   '20:00', '20:30', '21:00', '21:30', '22:00'
 ];
-
-// Base doctor schedules data - Empty for clean deployment
-export const baseDoctorSchedules: Doctor[] = [];
 
 // Medical specialties
 export const medicalSpecialties = [
@@ -93,8 +90,7 @@ export interface Appointment {
   isAvailableSlot?: boolean; // New field to distinguish available slots from actual appointments
 }
 
-// Export the base doctor schedules for use in other components
-export const doctorSchedules = baseDoctorSchedules;
+// Doctor schedules removed during cleanup - using real Firebase data
 
 // Patient-related interfaces and data
 export interface MedicalHistory {
@@ -162,9 +158,6 @@ export interface Patient {
   vitalSigns: VitalSign[];
   documents: Document[];
 }
-
-// Initial patients data - Empty for clean deployment
-export const initialPatients: Patient[] = [];
 
 // Default patient form data
 export const defaultNewPatientData = {
@@ -275,10 +268,7 @@ export interface AppointmentData {
   createdAt: string;
 }
 
-// Default appointments data - Empty for clean deployment
-export const getDefaultAppointments = (): AppointmentData[] => {
-  return [];
-};
+
 
 // Payment-related data
 export interface PaymentData {
@@ -306,13 +296,7 @@ export interface PaymentData {
   baseAmount?: number; // Amount before VAT
 }
 
-// Sample patient names for payments - Empty for clean deployment
-export const samplePaymentPatients = [];
 
-// Default payment data generator - Empty for clean deployment
-export const generateDefaultPayments = (): PaymentData[] => {
-  return [];
-};
 
 // Notification-related data
 export interface NotificationAppointment {
@@ -365,20 +349,7 @@ export interface InventoryItem {
   status: string;
 }
 
-// Default notification data generators - Empty for clean deployment
-export const getDefaultNotificationAppointments = (): NotificationAppointment[] => {
-  return [];
-};
 
-export const getDefaultNotificationPayments = (): NotificationPayment[] => {
-  return [];
-};
-
-export const getDefaultNotificationPatients = (): NotificationPatient[] => {
-  return [];
-};
-
-export const getDefaultInventory = (): InventoryItem[] => [];
 
 // VAT Settings
 export interface VATSettings {
@@ -468,71 +439,9 @@ export const priorityLevels = [
   { value: 'urgent', key: 'urgent' },
 ];
 
-// Doctor Dashboard related data - Empty for clean deployment
-export const doctorDashboardPatientsData = [
-  { name: 'Mon', patients: 0 },
-  { name: 'Tue', patients: 0 },
-  { name: 'Wed', patients: 0 },
-  { name: 'Thu', patients: 0 },
-  { name: 'Fri', patients: 0 },
-  { name: 'Sat', patients: 0 },
-  { name: 'Sun', patients: 0 },
-];
 
-export const doctorDashboardMyPatients: Array<{
-  id: number;
-  name: string;
-  age: number;
-  condition: string;
-  lastVisit: string;
-  nextAppointment: string;
-  avatar: string;
-  status: string;
-}> = [];
 
-export const doctorDashboardTodaysAppointments: Array<{
-  id: number;
-  time: string;
-  patient: string;
-  type: string;
-  duration: string;
-  avatar: string;
-}> = [];
 
-export const doctorDashboardRecentActivity: Array<{
-  id: number;
-  type: string;
-  patient: string;
-  timeAgo: string;
-  icon: string;
-  color: string;
-}> = [];
-
-// Receptionist Dashboard related data - Empty for clean deployment
-export const receptionistDashboardTodayAppointments: Array<{
-  id: number;
-  time: string;
-  patient: string;
-  doctor: string;
-  status: string;
-  avatar: string;
-  duration: number;
-}> = [];
-
-export const receptionistDashboardPaymentsDue: Array<{
-  id: number;
-  patient: string;
-  amount: string;
-  dueDate: string;
-}> = [];
-
-export const receptionistDashboardInventoryAlerts: Array<{
-  id: number;
-  item: string;
-  stock: number;
-  minStock: number;
-  status: string;
-}> = [];
 
 // Scheduling API - Default doctor schedules
 export interface DoctorScheduleData {
@@ -548,9 +457,7 @@ export interface DoctorScheduleData {
   consultationDuration: number;
 }
 
-export const getDefaultDoctorSchedulesData = (): DoctorScheduleData[] => {
-  return [];
-};
+
 
 // Storage keys for different modules
 export const STORAGE_KEYS_DATA = {
@@ -721,8 +628,4 @@ export const defaultExpenseCategories: ExpenseCategory[] = [
   { id: '10', name: 'Maintenance', description: 'Equipment and facility maintenance', color: '#FFC107', icon: '🔧', vatApplicable: true },
 ];
 
-// Default employees (empty by default)
-export const defaultEmployees: Employee[] = [];
-
-// Default business expenses (empty by default)
-export const defaultBusinessExpenses: BusinessExpense[] = []; 
+ 

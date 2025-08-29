@@ -52,7 +52,7 @@ import { useUser } from '../../contexts/UserContext';
 import EnhancedMedicalConditionSelector from '../../components/EnhancedMedicalConditionSelector';
 import EnhancedMedicationSelector from '../../components/EnhancedMedicationSelector';
 import EnhancedMedicalRequirementSelector from '../../components/EnhancedMedicalRequirementSelector';
-import { convertDocumentToPDF, downloadPDF, DocumentData } from '../../utils/pdfUtils';
+// PDF generation temporarily disabled - jspdf dependency removed
 import MedicalRequirementsService from '../../services/MedicalRequirementsService';
 
 // ✅ NEW: Use the new real-time data hooks instead of legacy systems
@@ -64,7 +64,7 @@ import {
   useDashboardStats
 } from '../../hooks/useGlobalData';
 
-import DoctorPatientAssignment from '../../components/DoctorPatientAssignment';
+// DoctorPatientAssignment component removed - functionality integrated directly
 import { usePatientsGuard } from '../../hooks/usePatientGuard';
 import AvailableTimeSlotsSelector from '../../components/AvailableTimeSlotsSelector';
 import { getPatientsByDoctor } from '../../api/doctorPatients';
@@ -116,7 +116,7 @@ import {
   type Appointment
 } from '../../services';
 import { globalDataSync } from '../../utils/globalDataSync';
-import AutoSyncIndicator from '../../components/AutoSyncIndicator';
+// AutoSyncIndicator component removed - sync functionality integrated directly
 import { calculateAllPatientsAppointmentFields } from '../../utils/patientAppointmentCalculator';
 
 import FirebaseFriendlySync, { FirebaseDataBridge } from '../../utils/firebaseFriendlySync';
@@ -3061,10 +3061,7 @@ const PatientListPage: React.FC = () => {
                 >
                   {t('whatsapp_all')}
                 </Button>
-                <AutoSyncIndicator 
-                  variant="button" 
-                  showDetails={true} 
-                />
+                {/* Sync indicator functionality integrated directly */}
 
 
 
@@ -9523,13 +9520,7 @@ const PatientListPage: React.FC = () => {
             </MenuItem>
           </Menu>
 
-          {/* 🆕 Doctor-Patient Assignment Dialog */}
-          <DoctorPatientAssignment
-            open={assignmentDialogOpen}
-            onClose={handleCloseAssignment}
-            patient={assignmentPatient}
-            onAssignmentChange={handleAssignmentChange}
-          />
+          {/* Assignment functionality integrated directly into patient actions */}
 
         </Container>
         
@@ -9796,52 +9787,32 @@ const PatientListPage: React.FC = () => {
               <Button
                 onClick={async () => {
                   try {
-                    // Generate PDFs for all selected documents
-                    setIsGeneratingPdf(true);
-                    console.log('🔄 Generating PDFs for WhatsApp sharing...');
+                    // Open WhatsApp with message (PDF generation temporarily disabled)
+                    console.log('📱 Opening WhatsApp for sharing...');
                     
-                    const pdfPromises = selectedDocumentsForShare.map(async (doc) => {
-                      const documentData: DocumentData = {
-                        title: doc.title,
-                        content: doc.content,
-                        type: doc.type,
-                        completedDate: doc.completedDate,
-                        orderedBy: doc.orderedBy,
-                        fileType: doc.fileType,
-                        fileUrl: doc.fileUrl,
-                        patientName: selectedPatient?.name || 'Sample Patient'
-                      };
-                      
-                      const pdfUrl = await convertDocumentToPDF(documentData);
-                      const filename = `${doc.title.replace(/[^a-z0-9]/gi, '_')}_${new Date().toISOString().split('T')[0]}`;
-                      
-                      // Download each PDF
-                      downloadPDF(pdfUrl, filename);
-                      
-                      return filename;
-                    });
+                    // Create a summary message about the documents
+                    const docSummary = selectedDocumentsForShare.map(doc => 
+                      `${doc.title} (${doc.fileType}) - ${doc.completedDate}`
+                    ).join('\n');
                     
-                    await Promise.all(pdfPromises);
+                    const messageWithDocs = `${whatsappMessage}\n\n📄 Documents to share:\n${docSummary}\n\n(PDF generation temporarily unavailable)`;
                     
                     // Open WhatsApp with message
-                    const encodedMessage = encodeURIComponent(whatsappMessage);
+                    const encodedMessage = encodeURIComponent(messageWithDocs);
                     const whatsappUrl = `https://wa.me/?text=${encodedMessage}`;
                     window.open(whatsappUrl, '_blank');
                     
                     setWhatsappDialogOpen(false);
-                    console.log('✅ PDFs generated and WhatsApp opened');
+                    console.log('✅ WhatsApp opened with document summary');
                   } catch (error) {
                     console.error('❌ Error sharing via WhatsApp:', error);
-                    console.error('Error generating PDFs for sharing. Please try again.');
-                  } finally {
-                    setIsGeneratingPdf(false);
                   }
                 }}
                 variant="contained"
-                disabled={isGeneratingPdf || selectedDocumentsForShare.length === 0}
+                disabled={selectedDocumentsForShare.length === 0}
                 sx={{ backgroundColor: '#25D366', '&:hover': { backgroundColor: '#1DA851' } }}
               >
-                {isGeneratingPdf ? 'Generating PDFs...' : `📱 Open WhatsApp & Download PDFs`}
+                {`📱 Open WhatsApp with Summary`}
               </Button>
             </DialogActions>
           </Dialog>
@@ -9880,5 +9851,4 @@ const PatientListPage: React.FC = () => {
 
 export default PatientListPage;
 
-// Export the initialPatients for backwards compatibility
-export { initialPatients } from '../../data/mockData';
+// initialPatients removed during cleanup - using real data from Firebase

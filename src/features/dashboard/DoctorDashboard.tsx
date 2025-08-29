@@ -44,12 +44,7 @@ import {
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, LineChart, Line } from 'recharts';
 
 
-import {
-  doctorDashboardPatientsData,
-  doctorDashboardMyPatients,
-  doctorDashboardTodaysAppointments,
-  doctorDashboardRecentActivity,
-} from '../../data/mockData';
+
 
 
 
@@ -103,20 +98,36 @@ const StatCard: React.FC<{
 const DoctorDashboard: React.FC = () => {
   const { t } = useTranslation();
   
-  // State management for dashboard data
-  const [patientsData, setPatientsData] = useState(doctorDashboardPatientsData);
-  const [myPatients, setMyPatients] = useState(doctorDashboardMyPatients);
-  const [todaysAppointments, setTodaysAppointments] = useState(doctorDashboardTodaysAppointments);
-  const [recentActivity, setRecentActivity] = useState(doctorDashboardRecentActivity);
+  // State management for dashboard data - using empty arrays for production
+  const [patientsData, setPatientsData] = useState([
+    { name: 'Mon', patients: 0 },
+    { name: 'Tue', patients: 0 },
+    { name: 'Wed', patients: 0 },
+    { name: 'Thu', patients: 0 },
+    { name: 'Fri', patients: 0 },
+    { name: 'Sat', patients: 0 },
+    { name: 'Sun', patients: 0 },
+  ]);
+  const [myPatients, setMyPatients] = useState([]);
+  const [todaysAppointments, setTodaysAppointments] = useState([]);
+  const [recentActivity, setRecentActivity] = useState([]);
 
   // Reset functionality
   useEffect(() => {
     const handleUserDataCleared = () => {
       // Reset to default data
-      setPatientsData(doctorDashboardPatientsData);
-      setMyPatients(doctorDashboardMyPatients);
-      setTodaysAppointments(doctorDashboardTodaysAppointments);
-      setRecentActivity(doctorDashboardRecentActivity);
+      setPatientsData([
+        { name: 'Mon', patients: 0 },
+        { name: 'Tue', patients: 0 },
+        { name: 'Wed', patients: 0 },
+        { name: 'Thu', patients: 0 },
+        { name: 'Fri', patients: 0 },
+        { name: 'Sat', patients: 0 },
+        { name: 'Sun', patients: 0 },
+      ]);
+      setMyPatients([]);
+      setTodaysAppointments([]);
+      setRecentActivity([]);
       console.log('✅ Doctor Dashboard reset to default state');
     };
 

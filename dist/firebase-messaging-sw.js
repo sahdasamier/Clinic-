@@ -1,16 +1,31 @@
+// Firebase Cloud Messaging Service Worker
+// 
+// IMPORTANT: To enable notifications, replace the placeholder values below with your actual Firebase config:
+// 1. Go to Firebase Console > Project Settings > General > Your apps
+// 2. Find your web app configuration 
+// 3. Replace the placeholder values with your actual Firebase config values
+// 4. The config should match the values in your .env file (but without process.env references)
+//
+// Example:
+// apiKey: "AIzaSyC...",
+// authDomain: "your-project.firebaseapp.com",
+// projectId: "your-project-id",
+// etc.
+
 // Import Firebase scripts for service worker
 importScripts('https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/9.0.0/firebase-messaging-compat.js');
 
 // Initialize the Firebase app in the service worker
-// Note: Replace these with your actual Firebase config values
+// Note: These values should be replaced with actual Firebase config during build
+// For development, you can temporarily hardcode your values here
 firebase.initializeApp({
-  apiKey: process.env.VITE_FIREBASE_API_KEY || "your-api-key",
-  authDomain: process.env.VITE_FIREBASE_AUTH_DOMAIN || "your-auth-domain", 
-  projectId: process.env.VITE_FIREBASE_PROJECT_ID || "your-project-id",
-  storageBucket: process.env.VITE_FIREBASE_STORAGE_BUCKET || "your-storage-bucket",
-  messagingSenderId: process.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "your-messaging-sender-id",
-  appId: process.env.VITE_FIREBASE_APP_ID || "your-app-id"
+  apiKey: "your-api-key-here",
+  authDomain: "your-project-id.firebaseapp.com", 
+  projectId: "your-project-id",
+  storageBucket: "your-project-id.appspot.com",
+  messagingSenderId: "your-messaging-sender-id",
+  appId: "your-app-id"
 });
 
 // Retrieve an instance of Firebase Messaging

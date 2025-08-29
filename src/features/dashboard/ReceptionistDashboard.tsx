@@ -39,11 +39,7 @@ import {
 } from '@mui/icons-material';
 
 
-import {
-  receptionistDashboardTodayAppointments,
-  receptionistDashboardPaymentsDue,
-  receptionistDashboardInventoryAlerts,
-} from '../../data/mockData';
+
 
 
 
@@ -91,17 +87,17 @@ const ReceptionistDashboard: React.FC = () => {
   const { t } = useTranslation();
   
   // State management for dashboard data
-  const [todayAppointments, setTodayAppointments] = useState(receptionistDashboardTodayAppointments);
-  const [paymentsDue, setPaymentsDue] = useState(receptionistDashboardPaymentsDue);
-  const [laboratoryRadiologyAlerts, setInventoryAlerts] = useState(receptionistDashboardInventoryAlerts);
+  const [todayAppointments, setTodayAppointments] = useState([]);
+  const [paymentsDue, setPaymentsDue] = useState([]);
+  const [laboratoryRadiologyAlerts, setInventoryAlerts] = useState([]);
 
   // Reset functionality
   useEffect(() => {
     const handleUserDataCleared = () => {
       // Reset to default data
-      setTodayAppointments(receptionistDashboardTodayAppointments);
-      setPaymentsDue(receptionistDashboardPaymentsDue);
-      setInventoryAlerts(receptionistDashboardInventoryAlerts);
+      setTodayAppointments([]);
+      setPaymentsDue([]);
+      setInventoryAlerts([]);
       console.log('✅ Receptionist Dashboard reset to default state');
     };
 

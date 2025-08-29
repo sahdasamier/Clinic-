@@ -36,7 +36,7 @@ import {
   FILE_SIZE_LIMITS,
   type UploadResult 
 } from '../api/storage';
-import { useBlazePlanFeatures } from '../hooks/useBlazePlanFeatures';
+import { useFirebaseFeatures } from '../hooks/useFirebaseFeatures';
 
 interface FileUploadComponentProps {
   uploadType: 'patient_document' | 'patient_avatar' | 'prescription' | 'clinic_logo' | 'medical_image';
@@ -61,7 +61,7 @@ const FileUploadComponent: React.FC<FileUploadComponentProps> = ({
   existingFiles = []
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { storage, analytics } = useBlazePlanFeatures();
+  const { storage, analytics } = useFirebaseFeatures();
   
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
