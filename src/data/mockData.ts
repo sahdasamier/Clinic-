@@ -90,8 +90,7 @@ export interface Appointment {
   isAvailableSlot?: boolean; // New field to distinguish available slots from actual appointments
 }
 
-// Export the base doctor schedules for use in other components
-export const doctorSchedules = baseDoctorSchedules;
+// Doctor schedules removed during cleanup - using real Firebase data
 
 // Patient-related interfaces and data
 export interface MedicalHistory {

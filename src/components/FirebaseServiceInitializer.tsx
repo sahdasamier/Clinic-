@@ -44,8 +44,12 @@ const FirebaseServiceInitializer: React.FC<FirebaseServiceInitializerProps> = ({
           console.log('✅ Service Worker registered:', registration);
         })
         .catch((error) => {
-          console.error('❌ Service Worker registration failed:', error);
+          console.warn('⚠️ Service Worker registration failed:', error);
+          console.info('💡 Note: Make sure to configure Firebase settings in firebase-messaging-sw.js for notifications to work');
+          // Don't throw error - app should work without service worker
         });
+    } else {
+      console.info('ℹ️ Service Worker not supported in this browser');
     }
   }, []);
 

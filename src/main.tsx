@@ -10,7 +10,6 @@ import FirebaseServiceInitializer from './components/FirebaseServiceInitializer'
 
 // Initialize optimized Firebase first
 import { initializeOptimizedServices } from './api/firebase';
-import { initializeEmailJS } from './services/emailService';
 
 // ✅ IMPROVED: More robust service initialization with better error handling
 const initializeServices = async () => {
@@ -30,8 +29,6 @@ const initializeServices = async () => {
       (window.Element.prototype.attachShadow as any)._guarded = true;
     }
     
-    // Initialize EmailJS for email sending functionality
-    await initializeEmailJS();
 
     // ✅ CRITICAL: Initialize optimized Firebase services FIRST
     try {

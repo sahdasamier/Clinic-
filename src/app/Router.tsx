@@ -21,6 +21,7 @@ import AppointmentCalendarPage from "../features/appointments/AppointmentCalenda
 import PaymentListPage from "../features/payments/PaymentListPage";
 import LaboratoryRadiologyCenterPage from "../features/LaboratoryRadiologyCenterPage/LaboratoryRadiologyCenterPage";
 import NotificationsPage from "../features/notifications/NotificationsPage";
+import DoctorSchedulingPage from "../features/DoctorScheduling";
 import SettingsPage from "../features/settings/SettingsPage";
 
 

@@ -106,7 +106,7 @@ import {
   type FinancialSummary 
 } from '../../utils/expenseUtils';
 import InvoiceGenerator from './InvoiceGenerator';
-import { doctorSchedules } from '../../data/mockData';
+// doctorSchedules import removed - using real Firebase data
 import { loadAppointmentsFromStorage } from '../appointments/AppointmentListPage';
 import { 
   paymentSync, 
