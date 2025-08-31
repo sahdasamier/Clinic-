@@ -72,6 +72,7 @@ import {
   Delete,
   Email,
   Phone,
+  Web,
 } from '@mui/icons-material';
 
 import ClinicPaymentSettingsComponent from '@features/settings/components/ClinicPaymentSettings';
@@ -2703,9 +2704,12 @@ const SettingsPage: React.FC = () => {
                                     <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
                                       Website
                                     </Typography>
-                                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                                      {clinicSettings.website || 'Not specified'}
-                                    </Typography>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                      <Web sx={{ fontSize: 20, color: 'primary.main' }} />
+                                      <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                                        {clinicSettings.website || 'Not specified'}
+                                      </Typography>
+                                    </Box>
                                   </Box>
                           </Grid>
                               </Grid>

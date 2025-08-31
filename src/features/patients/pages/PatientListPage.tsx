@@ -4256,18 +4256,6 @@ const PatientListPage: React.FC = () => {
                                       <CalendarToday fontSize="small" />
                                     </IconButton>
                                   </Tooltip>
-                                  {/* 🆕 Doctor Assignment Button - Only for Management */}
-                                  {!isDoctor && userProfile?.role === 'management' && (
-                                    <Tooltip title="Assign to Doctor">
-                                      <IconButton 
-                                        size="small" 
-                                        color="secondary"
-                                        onClick={() => handleOpenAssignment(patient)}
-                                      >
-                                        <AssignmentIcon fontSize="small" />
-                                      </IconButton>
-                                    </Tooltip>
-                                  )}
                                 </Box>
                               </TableCell>
                             </TableRow>
