@@ -1,4 +1,4 @@
-import { addNewItemToStorage, markAsRecentlyUpdated } from '../api/notifications';
+import { addNewItemToStorage, markAsRecentlyUpdated } from '@lib/api/notifications';
 
 // Storage keys (matching the ones in notifications.ts)
 export const STORAGE_KEYS = {

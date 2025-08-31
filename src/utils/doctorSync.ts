@@ -1,7 +1,7 @@
-import { getDoctorsByClinic } from '../api/doctorPatients';
-import { UserData } from '../api/auth';
-import { AppointmentService } from '../services/AppointmentService';
-import { PatientService } from '../services/PatientService';
+import { getDoctorsByClinic } from '@lib/api/doctorPatients';
+import { UserData } from '@lib/api/auth';
+import { AppointmentService } from '@/services/AppointmentService';
+import { PatientService } from '@/services/PatientService';
 // Legacy utility commented out for clean build
 // import { updatePatientAppointmentFields, syncDoctorInformationForAllPatients } from './appointmentPatientSync';
 import { FirebaseFriendlySync } from './firebaseFriendlySync';
@@ -91,8 +91,7 @@ export const syncFirebaseDoctorsToScheduling = async (clinicId: string): Promise
     const manualDoctors = existingDoctors.filter(d => !d.firebaseId);
     const finalDoctors = [...syncedDoctors, ...manualDoctors];
     
-    // Note: localStorage persistence intentionally disabled
-    // Data is managed through Firebase real-time sync instead
+    // Using Firebase real-time sync instead of localStorage for data consistency
     
     console.log(`🎉 Successfully synced ${syncedDoctors.length} doctors for clinic ${clinicId}`);
     return finalDoctors.filter(d => d.isActive);  // Return only active doctors
@@ -104,20 +103,20 @@ export const syncFirebaseDoctorsToScheduling = async (clinicId: string): Promise
 };
 
 /**
- * Load scheduling doctors - UPDATED: No localStorage persistence
+ * Load scheduling doctors - Uses Firebase real-time data instead of localStorage
  */
 export const loadSchedulingDoctorsFromStorage = (clinicId: string): SchedulingDoctor[] => {
-  console.warn(`⚠️ loadSchedulingDoctorsFromStorage: localStorage persistence disabled for clinic ${clinicId} - returning empty array`);
+  console.log(`🔄 loadSchedulingDoctorsFromStorage: Using Firebase real-time sync for clinic ${clinicId} - returning empty array as fallback`);
   return [];
 };
 
 /**
- * Save scheduling doctors - UPDATED: No localStorage persistence
- * Data is managed through Firebase real-time sync instead
+ * Save scheduling doctors - Uses Firebase real-time sync instead of localStorage
+ * Data is managed through Firebase real-time sync for consistency across sessions
  */
 export const saveSchedulingDoctorsToStorage = (clinicId: string, doctors: SchedulingDoctor[]): void => {
-  // Intentionally disabled - using Firebase real-time sync instead of localStorage
-  // This prevents storage conflicts and ensures data consistency across sessions
+  // Using Firebase real-time sync instead of localStorage
+  // This ensures data consistency across sessions and devices
 };
 
 /**
@@ -142,11 +141,11 @@ export const getFirebaseIdFromSchedulingDoctor = (
 };
 
 /**
- * Auto-sync doctors - UPDATED: No localStorage caching
+ * Auto-sync doctors - Uses Firebase real-time data for consistency
  */
 export const autoSyncDoctorsIfNeeded = async (clinicId: string): Promise<SchedulingDoctor[]> => {
   try {
-    console.warn('⚠️ autoSyncDoctorsIfNeeded: localStorage caching disabled - always syncing fresh data');
+    console.log(`🔄 autoSyncDoctorsIfNeeded: Using Firebase real-time sync for clinic ${clinicId}`);
     const doctors = await syncFirebaseDoctorsToScheduling(clinicId);
     return doctors;
   } catch (error) {
@@ -156,11 +155,11 @@ export const autoSyncDoctorsIfNeeded = async (clinicId: string): Promise<Schedul
 };
 
 /**
- * Force sync doctors - UPDATED: No localStorage sync timestamps
+ * Force sync doctors - Uses Firebase real-time data for consistency
  */
 export const forceSyncDoctors = async (clinicId: string): Promise<SchedulingDoctor[]> => {
-  console.log('🔄 Force syncing doctors...');
-  console.warn('⚠️ forceSyncDoctors: localStorage sync timestamps disabled');
+  console.log(`🔄 Force syncing doctors for clinic ${clinicId}...`);
+  console.log('🔄 forceSyncDoctors: Using Firebase real-time sync');
   const doctors = await syncFirebaseDoctorsToScheduling(clinicId);
   return doctors;
 };

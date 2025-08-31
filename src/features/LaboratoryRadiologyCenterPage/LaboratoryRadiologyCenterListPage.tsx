@@ -41,8 +41,8 @@ import {
   Refresh,
   Download,
 } from '@mui/icons-material';
-import Header from '../../components/NavBar';
-import Sidebar from '../../components/Sidebar';
+import { NavBar } from '@components/NavBar';
+import { Sidebar } from '@components/Sidebar';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -156,7 +156,7 @@ const InventoryListPage: React.FC = () => {
     <Box sx={{ display: 'flex', height: '100vh', backgroundColor: 'background.default' }}>
       <Sidebar />
       <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <Header />
+        <NavBar />
         <Container maxWidth="xl" sx={{ mt: 4, mb: 4, flex: 1, overflow: 'auto' }}>
           {/* Header Section */}
           <Box sx={{ 

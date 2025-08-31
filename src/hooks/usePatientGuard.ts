@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useUser } from '../contexts/UserContext';
+import { useUser } from '@store/auth';
 
 interface Patient {
   id: string;

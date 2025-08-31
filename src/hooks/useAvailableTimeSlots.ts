@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { AppointmentConflictService } from '../services/AppointmentConflictService';
+import { AppointmentConflictService } from '@/services/AppointmentConflictService';
 
 interface UseAvailableTimeSlotsProps {
   doctorId?: string;

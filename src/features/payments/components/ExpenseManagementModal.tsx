@@ -58,9 +58,6 @@ import {
   Employee,
   BusinessExpense,
   ExpenseCategory,
-  defaultExpenseCategories,
-} from '../../../data/mockData';
-import {
   loadEmployeesFromStorage,
   saveEmployeesToStorage,
   loadBusinessExpensesFromStorage,
@@ -72,7 +69,8 @@ import {
   deleteBusinessExpense,
   calculateFinancialSummary,
   type FinancialSummary,
-} from '../../../utils/expenseUtils';
+} from '@utils/expenseUtils';
+import { DEFAULT_EXPENSE_CATEGORIES } from '@config/constants';
 
 interface ExpenseManagementModalProps {
   open: boolean;
@@ -128,7 +126,7 @@ const ExpenseManagementModal: React.FC<ExpenseManagementModalProps> = ({
 
   // State for business expenses
   const [businessExpenses, setBusinesExpenses] = useState<BusinessExpense[]>([]);
-  const [expenseCategories] = useState<ExpenseCategory[]>(defaultExpenseCategories);
+  const [expenseCategories] = useState<ExpenseCategory[]>(DEFAULT_EXPENSE_CATEGORIES);
   const [newExpense, setNewExpense] = useState({
     category: '',
     description: '',

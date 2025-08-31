@@ -1,5 +1,5 @@
-import PatientService from '../services/PatientService';
-import { MedicalRequirementOrder } from '../services/MedicalRequirementsService';
+import PatientService from '@/services/PatientService';
+import { MedicalRequirementOrder } from '@/services/MedicalRequirementsService';
 
 /**
  * Interface for requirement count updates

@@ -5,7 +5,7 @@ import {
   getDocs,
   Timestamp 
 } from 'firebase/firestore';
-import { getOptimizedFirestore, firebaseManager } from '../api/firebaseOptimized';
+import { getOptimizedFirestore, firebaseManager } from '@lib/firebase/legacy-compat';
 
 interface AppointmentConflict {
   hasConflict: boolean;

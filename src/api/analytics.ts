@@ -1,5 +1,5 @@
 import { getAnalytics, logEvent, setUserProperties, setUserId } from 'firebase/analytics';
-import { firebaseManager } from './firebaseOptimized';
+import { firebaseManager } from './../lib/firebase/legacy-compat';
 
 // Lazy initialization of analytics
 let analytics: any = null;

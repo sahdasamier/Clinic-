@@ -37,21 +37,43 @@ import {
   Settings as SettingsIcon
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '../../../contexts/AuthContext';
-import { useUser } from '../../../contexts/UserContext';
+import { useAuth } from '@store/auth';
+import { useUser } from '@store/auth';
 import {
   loadClinicPaymentSettings,
   saveClinicPaymentSettings,
   loadVATSettings
-} from '../../../utils/paymentUtils';
-import {
-  AppointmentTypeSettings,
-  ClinicPaymentSettings,
-  paymentMethods,
-  paymentCategories
-} from '../../../data/mockData';
-import { PaymentService, AppointmentService } from '../../../services';
-import FirebaseFriendlySync, { FirebaseDataBridge } from '../../../utils/firebaseFriendlySync';
+} from '@utils/paymentUtils';
+import { PAYMENT_METHODS, PAYMENT_CATEGORIES } from '@config/constants';
+import { PaymentService, AppointmentService } from '@/services';
+import FirebaseFriendlySync, { FirebaseDataBridge } from '@utils/firebaseFriendlySync';
+
+// Type definitions
+interface AppointmentTypeSettings {
+  type: string;
+  cost: number;
+  currency: string;
+  description: string;
+  category: string;
+  includeVAT: boolean;
+}
+
+interface ClinicPaymentSettings {
+  autoCreatePaymentOnCompletion: boolean;
+  defaultPaymentMethod: string;
+  defaultPaymentDueDays: number;
+  appointmentTypes: AppointmentTypeSettings[];
+  paymentMethods: {
+    cash: boolean;
+    card: boolean;
+    insurance: boolean;
+    bank: boolean;
+  };
+}
+
+// Use constants instead of mockData
+const paymentMethods = PAYMENT_METHODS;
+const paymentCategories = PAYMENT_CATEGORIES;
 
 const ClinicPaymentSettingsComponent: React.FC = () => {
   const { t } = useTranslation();
@@ -537,7 +559,7 @@ const ClinicPaymentSettingsComponent: React.FC = () => {
                   onChange={(e) => handleAppointmentTypeFormChange('category', e.target.value)}
                   label={t('category')}
                 >
-                  {paymentCategories.map(category => (
+                  {PAYMENT_CATEGORIES.map(category => (
                     <MenuItem key={category} value={category}>
                       {t(category)}
                     </MenuItem>

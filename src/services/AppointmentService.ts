@@ -13,7 +13,7 @@ import {
   Timestamp,
   limit
 } from 'firebase/firestore';
-import { getOptimizedFirestore, firebaseManager } from '../api/firebaseOptimized';
+import { getOptimizedFirestore, firebaseManager } from '@lib/firebase/legacy-compat';
 import { AppointmentConflictService } from './AppointmentConflictService';
 
 // ✅ Utility function for generating IDs (with fallback for older browsers)
@@ -31,12 +31,51 @@ const generateId = (): string => {
 
 const COLLECTION_NAME = 'appointments';
 
-// Safe collection reference that waits for Firebase to be ready
+// Safe collection reference that provides both sync and async access patterns
 const getAppointmentsCollection = () => {
-  if (!firebaseManager.isReady()) {
+  // Try synchronous cached version first
+  if (firebaseManager.isReadySync()) {
+    try {
+      const db = firebaseManager.getFirestoreSync();
+      return collection(db, COLLECTION_NAME);
+    } catch (error) {
+      console.warn('⚠️ Sync access failed:', error);
+      throw new Error('Firebase not ready - please wait for initialization');
+    }
+  }
+  
+  throw new Error('Firebase not ready - please wait for initialization');
+};
+
+// Async version with retry logic for use in async contexts
+const getAppointmentsCollectionAsync = async () => {
+  // Try synchronous cached version first
+  if (firebaseManager.isReadySync()) {
+    try {
+      const db = firebaseManager.getFirestoreSync();
+      return collection(db, COLLECTION_NAME);
+    } catch (error) {
+      console.warn('⚠️ Sync access failed, falling back to async:', error);
+    }
+  }
+  
+  // Fallback to async version with proper retry logic
+  let retries = 0;
+  while (!firebaseManager.isReadySync() && retries < 20) {
+    await new Promise(resolve => setTimeout(resolve, 250));
+    retries++;
+  }
+  
+  if (!firebaseManager.isReadySync()) {
     throw new Error('Firebase not ready - please wait for initialization');
   }
-  const db = getOptimizedFirestore();
+  
+  // Ensure instances are cached
+  await firebaseManager.cacheInstances();
+  
+  const db = await getOptimizedFirestore();
+  if (!db) throw new Error('Firestore not initialized');
+  
   return collection(db, COLLECTION_NAME);
 };
 
@@ -51,7 +90,7 @@ export interface Appointment {
   time: string; // HH:MM format 
   timeSlot: string; // HH:MM format for scheduling
   duration: number; // minutes
-  type: string; // consultation, check_up, surgery, etc.
+  type: 'follow-up' | 'consultation' | 'surgery' | 'emergency' | 'check_up' | 'procedure' | 'vaccination' | 'lab_test' | 'imaging' | 'other';
   status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'no-show' | 'rescheduled';
   priority: 'normal' | 'high' | 'urgent';
   location?: string; // room number, etc.
@@ -291,7 +330,8 @@ export const AppointmentService = {
       
       while (saveAttempts < maxAttempts) {
         try {
-          await setDoc(doc(getAppointmentsCollection(), id), appointment);
+          const appointmentsCollection = await getAppointmentsCollectionAsync();
+          await setDoc(doc(appointmentsCollection, id), appointment);
           console.log('✅ Appointment saved to Firebase:', id, patientId ? `with linked patient: ${patientId}` : 'without patient link');
           break; // Success, exit retry loop
         } catch (saveError) {
@@ -303,9 +343,17 @@ export const AppointmentService = {
             console.log('🔄 Trying backup save method...');
             try {
               // Use alternative Firebase Data Manager as backup
-              const { firebaseDataManager } = await import('../utils/firebaseDataManager');
+              const { firebaseDataManager } = await import('@utils/firebaseDataManager');
               const dataManager = firebaseDataManager.initialize({ clinicId });
-              await dataManager.createAppointment(appointment);
+              // Remove the id, createdAt, and updatedAt fields for the backup method
+              const { id, createdAt, updatedAt, ...appointmentForBackup } = appointment;
+              // Ensure required fields are strings for the backup method
+              const appointmentWithRequiredFields: any = {
+                ...appointmentForBackup,
+                patientId: appointmentForBackup.patientId || '',
+                doctorId: appointmentForBackup.doctorId || ''
+              };
+              await dataManager.createAppointment(appointmentWithRequiredFields);
               console.log('✅ Appointment saved via backup method');
               break;
             } catch (backupError) {
@@ -373,7 +421,8 @@ export const AppointmentService = {
       }
     }
 
-    const appointmentRef = doc(getAppointmentsCollection(), appointmentId);
+    const appointmentsCollection = await getAppointmentsCollectionAsync();
+    const appointmentRef = doc(appointmentsCollection, appointmentId);
     
     // Handle backward compatibility for completed field
     const updateData = {
@@ -399,7 +448,8 @@ export const AppointmentService = {
 
   // Hard delete an appointment
   async hardDeleteAppointment(appointmentId: string): Promise<void> {
-    await deleteDoc(doc(getAppointmentsCollection(), appointmentId));
+    const appointmentsCollection = await getAppointmentsCollectionAsync();
+    await deleteDoc(doc(appointmentsCollection, appointmentId));
     console.log('✅ Appointment permanently deleted:', appointmentId);
   },
 
@@ -535,8 +585,9 @@ export const AppointmentService = {
   async getTodaysAppointments(clinicId: string): Promise<Appointment[]> {
     const today = new Date().toISOString().split('T')[0];
     
+    const appointmentsCollection = await getAppointmentsCollectionAsync();
     const q = query(
-      getAppointmentsCollection(),
+      appointmentsCollection,
       where('clinicId', '==', clinicId),
       where('date', '==', today),
       where('isActive', '==', true),
@@ -550,10 +601,29 @@ export const AppointmentService = {
     })) as Appointment[];
   },
 
+  // Get recent appointments (last 10)
+  async getRecentAppointments(clinicId: string, limitCount: number = 10): Promise<Appointment[]> {
+    const appointmentsCollection = await getAppointmentsCollectionAsync();
+    const q = query(
+      appointmentsCollection,
+      where('clinicId', '==', clinicId),
+      where('isActive', '==', true),
+      orderBy('createdAt', 'desc'),
+      limit(limitCount)
+    );
+
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })) as Appointment[];
+  },
+
   // Search appointments by patient name or phone
   async searchAppointments(clinicId: string, searchTerm: string): Promise<Appointment[]> {
+    const appointmentsCollection = await getAppointmentsCollectionAsync();
     const q = query(
-      getAppointmentsCollection(),
+      appointmentsCollection,
       where('clinicId', '==', clinicId),
       where('isActive', '==', true)
     );
@@ -600,7 +670,7 @@ export const AppointmentService = {
     
     // ✅ NEW: Trigger cross-page sync after rescheduling
     console.log('✅ Appointment rescheduled, triggering automatic sync');
-    import('../utils/globalDataSync').then(({ triggerAutomaticSync }) => {
+    import('@utils/globalDataSync').then(({ triggerAutomaticSync }) => {
       triggerAutomaticSync.appointment({ 
         id: appointmentId, 
         date: newDate, 
@@ -632,11 +702,19 @@ export const AppointmentService = {
 
   // Batch create appointments (for scheduling)
   async batchCreateAppointments(clinicId: string, appointments: Array<Omit<Appointment, 'id' | 'createdAt' | 'updatedAt' | 'clinicId'>>): Promise<void> {
-    const batch = writeBatch(getOptimizedFirestore());
+    // Ensure Firebase is ready before creating batch
+    if (!(await firebaseManager.isReady())) {
+      throw new Error('Firebase not ready - please wait for initialization');
+    }
+    
+    const db = await getOptimizedFirestore();
+    const batch = writeBatch(db);
+    
+    const appointmentsCollection = await getAppointmentsCollectionAsync();
     
     appointments.forEach(appointmentData => {
       const id = generateId();
-      const appointmentRef = doc(getAppointmentsCollection(), id);
+      const appointmentRef = doc(appointmentsCollection, id);
       const appointment: Appointment = {
         ...appointmentData,
         id,
@@ -667,8 +745,9 @@ export const AppointmentService = {
   }> {
     const today = new Date().toISOString().split('T')[0];
     
+    const appointmentsCollection = await getAppointmentsCollectionAsync();
     const q = query(
-      getAppointmentsCollection(),
+      appointmentsCollection,
       where('clinicId', '==', clinicId),
       where('isActive', '==', true)
     );
@@ -686,23 +765,6 @@ export const AppointmentService = {
     };
   },
 
-  // Get recent appointments (last 10)
-  async getRecentAppointments(clinicId: string, limitCount: number = 10): Promise<Appointment[]> {
-    const q = query(
-      getAppointmentsCollection(),
-      where('clinicId', '==', clinicId),
-      where('isActive', '==', true),
-      orderBy('createdAt', 'desc'),
-      limit(limitCount)
-    );
-
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    })) as Appointment[];
-  },
-
   // ✅ NEW: Sync existing appointments to create missing patient records
   async syncExistingAppointmentsToPatients(clinicId: string): Promise<{
     totalAppointments: number;
@@ -714,8 +776,9 @@ export const AppointmentService = {
     
     try {
       // Get all active appointments for the clinic
+      const appointmentsCollection = await getAppointmentsCollectionAsync();
       const q = query(
-        getAppointmentsCollection(),
+        appointmentsCollection,
         where('clinicId', '==', clinicId),
         where('isActive', '==', true)
       );
@@ -731,7 +794,13 @@ export const AppointmentService = {
       let patientsCreated = 0;
       let patientsLinked = 0;
       const errors: string[] = [];
-      const batch = writeBatch(getOptimizedFirestore());
+      // Ensure Firebase is ready before creating batch
+      if (!(await firebaseManager.isReady())) {
+        throw new Error('Firebase not ready - please wait for initialization');
+      }
+      
+      const db = await getOptimizedFirestore();
+      const batch = writeBatch(db);
 
       // Process each appointment
       for (const appointment of appointments) {
@@ -755,7 +824,7 @@ export const AppointmentService = {
 
           if (patientId) {
             // Update appointment with patientId
-            const appointmentRef = doc(getAppointmentsCollection(), appointment.id);
+            const appointmentRef = doc(appointmentsCollection, appointment.id);
             batch.update(appointmentRef, { 
               patientId: patientId,
               updatedAt: serverTimestamp()
@@ -837,8 +906,9 @@ export const AppointmentService = {
 
   // ✅ NEW: Helper to get all appointments (used by sync function)
   async getAllAppointments(clinicId: string): Promise<Appointment[]> {
+    const appointmentsCollection = await getAppointmentsCollectionAsync();
     const q = query(
-      getAppointmentsCollection(),
+      appointmentsCollection,
       where('clinicId', '==', clinicId),
       where('isActive', '==', true)
     );

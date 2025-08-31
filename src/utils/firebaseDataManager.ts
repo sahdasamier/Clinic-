@@ -14,7 +14,7 @@ import {
   type Unsubscribe,
   writeBatch
 } from 'firebase/firestore';
-import { getOptimizedFirestore, firebaseManager } from '../api/firebaseOptimized';
+import { getOptimizedFirestore, firebaseManager } from '@lib/firebase/legacy-compat';
 
 // ✅ COMPREHENSIVE FIREBASE DATA MANAGER
 // Handles real-time synchronization across all pages

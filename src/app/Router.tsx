@@ -1,28 +1,21 @@
 import React from "react";
 import { Routes, Route, BrowserRouter } from "react-router-dom";
-import ProtectedRoute from "../components/ProtectedRoute";
-import AdminProtectedRoute from "../components/AdminProtectedRoute";
-import ClinicAccessGuard from "../components/ClinicAccessGuard";
-import PermissionGuard from "../components/PermissionGuard";
-import BlurredPermissionGuard from "../components/BlurredPermissionGuard";
-import EnhancedRouteGuard from "../components/EnhancedRouteGuard";
-import Layout from "../components/Layout";
-import DashboardPage from "../features/dashboard/DashboardPage";
-import LoginPage from "../features/auth/LoginPage";
-import ResetPasswordPage from "../features/auth/ResetPasswordPage";
-import AdminLoginPage from "../features/auth/AdminLoginPage";
-import AdminPanelPage from "../features/admin/AdminPanelPage";
-import ReceptionistDashboard from "../features/dashboard/ReceptionistDashboard";
-import DoctorDashboard from "../features/dashboard/DoctorDashboard";
-import PatientListPage from "../features/patients/PatientListPage";
-import PatientDetailPage from "../features/patients/PatientDetailPage";
-import AppointmentListPage from "../features/appointments/AppointmentListPage";
-import AppointmentCalendarPage from "../features/appointments/AppointmentCalendarPage";
-import PaymentListPage from "../features/payments/PaymentListPage";
-import LaboratoryRadiologyCenterPage from "../features/LaboratoryRadiologyCenterPage/LaboratoryRadiologyCenterPage";
-import NotificationsPage from "../features/notifications/NotificationsPage";
-import DoctorSchedulingPage from "../features/DoctorScheduling";
-import SettingsPage from "../features/settings/SettingsPage";
+import { ProtectedRoute, AdminProtectedRoute, ClinicAccessGuard, PermissionGuard, BlurredPermissionGuard, EnhancedRouteGuard } from "@components/guards";
+import { AppLayout } from "@layouts";
+import DashboardPage from "@features/dashboard/pages/DashboardPage";
+import LoginPage from "@features/auth/pages/LoginPage";
+import ResetPasswordPage from "@features/auth/pages/ResetPasswordPage";
+import AdminLoginPage from "@features/auth/pages/AdminLoginPage";
+import AdminPanelPage from "@features/admin/pages/AdminPanelPage";
+import ReceptionistDashboard from "@features/dashboard/pages/ReceptionistDashboard";
+import DoctorDashboard from "@features/dashboard/pages/DoctorDashboard";
+import { PatientListPage, PatientDetailPage } from "@features/patients";
+import { AppointmentListPage, AppointmentCalendarPage } from "@features/appointments";
+import PaymentListPage from "@features/payments/pages/PaymentListPage";
+import LaboratoryRadiologyCenterPage from "@features/LaboratoryRadiologyCenterPage/LaboratoryRadiologyCenterPage";
+import NotificationsPage from "@features/notifications/pages/NotificationsPage";
+import DoctorSchedulingPage from "@features/doctor-scheduling/pages/DoctorSchedulingPage";
+import SettingsPage from "@features/settings/pages/SettingsPage";
 
 
 
@@ -43,11 +36,11 @@ const Router: React.FC = () => {
         <Route path="/" element={
           <ProtectedRoute>
             <ClinicAccessGuard>
-              <Layout>
+              <AppLayout>
                 <EnhancedRouteGuard feature="dashboard" level="read">
                   <DashboardPage />
                 </EnhancedRouteGuard>
-              </Layout>
+              </AppLayout>
             </ClinicAccessGuard>
           </ProtectedRoute>
         } />
@@ -55,11 +48,11 @@ const Router: React.FC = () => {
         <Route path="/dashboard" element={
           <ProtectedRoute>
             <ClinicAccessGuard>
-              <Layout>
+              <AppLayout>
                 <EnhancedRouteGuard feature="dashboard" level="read">
                   <DashboardPage />
                 </EnhancedRouteGuard>
-              </Layout>
+              </AppLayout>
             </ClinicAccessGuard>
           </ProtectedRoute>
         } />
@@ -67,11 +60,11 @@ const Router: React.FC = () => {
         <Route path="/dashboard/receptionist" element={
           <ProtectedRoute>
             <ClinicAccessGuard>
-              <Layout>
+              <AppLayout>
                 <EnhancedRouteGuard feature="dashboard" level="read">
                   <ReceptionistDashboard />
                 </EnhancedRouteGuard>
-              </Layout>
+              </AppLayout>
             </ClinicAccessGuard>
           </ProtectedRoute>
         } />
@@ -79,11 +72,11 @@ const Router: React.FC = () => {
         <Route path="/dashboard/doctor" element={
           <ProtectedRoute>
             <ClinicAccessGuard>
-              <Layout>
+              <AppLayout>
                 <EnhancedRouteGuard feature="dashboard" level="read">
                   <DoctorDashboard />
                 </EnhancedRouteGuard>
-              </Layout>
+              </AppLayout>
             </ClinicAccessGuard>
           </ProtectedRoute>
         } />
@@ -92,11 +85,11 @@ const Router: React.FC = () => {
         <Route path="/patients" element={
           <ProtectedRoute>
             <ClinicAccessGuard>
-              <Layout>
+              <AppLayout>
                 <EnhancedRouteGuard feature="patients" level="read">
                   <PatientListPage />
                 </EnhancedRouteGuard>
-              </Layout>
+              </AppLayout>
             </ClinicAccessGuard>
           </ProtectedRoute>
         } />
@@ -104,11 +97,11 @@ const Router: React.FC = () => {
         <Route path="/patients/:id" element={
           <ProtectedRoute>
             <ClinicAccessGuard>
-              <Layout>
+              <AppLayout>
                 <EnhancedRouteGuard feature="patient_details" level="read">
                   <PatientDetailPage />
                 </EnhancedRouteGuard>
-              </Layout>
+              </AppLayout>
             </ClinicAccessGuard>
           </ProtectedRoute>
         } />
@@ -117,11 +110,11 @@ const Router: React.FC = () => {
         <Route path="/appointments" element={
           <ProtectedRoute>
             <ClinicAccessGuard>
-              <Layout>
+              <AppLayout>
                 <EnhancedRouteGuard feature="appointments" level="read">
                   <AppointmentListPage />
                 </EnhancedRouteGuard>
-              </Layout>
+              </AppLayout>
             </ClinicAccessGuard>
           </ProtectedRoute>
         } />
@@ -129,11 +122,11 @@ const Router: React.FC = () => {
         <Route path="/appointments/calendar" element={
           <ProtectedRoute>
             <ClinicAccessGuard>
-              <Layout>
+              <AppLayout>
                 <EnhancedRouteGuard feature="appointment_calendar" level="read">
                   <AppointmentCalendarPage />
                 </EnhancedRouteGuard>
-              </Layout>
+              </AppLayout>
             </ClinicAccessGuard>
           </ProtectedRoute>
         } />
@@ -142,11 +135,11 @@ const Router: React.FC = () => {
         <Route path="/payments" element={
           <ProtectedRoute>
             <ClinicAccessGuard>
-              <Layout>
+              <AppLayout>
                 <EnhancedRouteGuard feature="payments" level="read">
                   <PaymentListPage />
                 </EnhancedRouteGuard>
-              </Layout>
+              </AppLayout>
             </ClinicAccessGuard>
           </ProtectedRoute>
         } />
@@ -154,11 +147,11 @@ const Router: React.FC = () => {
         <Route path="/laboratoryRadiology" element={
           <ProtectedRoute>
             <ClinicAccessGuard>
-              <Layout>
+              <AppLayout>
                 <EnhancedRouteGuard feature="laboratoryRadiology" level="read">
                   <LaboratoryRadiologyCenterPage />
                 </EnhancedRouteGuard>
-              </Layout>
+              </AppLayout>
             </ClinicAccessGuard>
           </ProtectedRoute>
         } />
@@ -167,11 +160,11 @@ const Router: React.FC = () => {
         <Route path="/notifications" element={
           <ProtectedRoute>
             <ClinicAccessGuard>
-              <Layout>
+              <AppLayout>
                 <EnhancedRouteGuard feature="notifications" level="read">
                   <NotificationsPage />
                 </EnhancedRouteGuard>
-              </Layout>
+              </AppLayout>
             </ClinicAccessGuard>
           </ProtectedRoute>
         } />
@@ -179,11 +172,11 @@ const Router: React.FC = () => {
         <Route path="/doctor-scheduling" element={
           <ProtectedRoute>
             <ClinicAccessGuard>
-              <Layout>
+              <AppLayout>
                 <EnhancedRouteGuard feature="doctor_scheduling" level="read">
                   <DoctorSchedulingPage />
                 </EnhancedRouteGuard>
-              </Layout>
+              </AppLayout>
             </ClinicAccessGuard>
           </ProtectedRoute>
         } />
@@ -194,11 +187,11 @@ const Router: React.FC = () => {
         <Route path="/settings" element={
           <ProtectedRoute>
             <ClinicAccessGuard>
-              <Layout>
+              <AppLayout>
                 <EnhancedRouteGuard feature="settings" level="read">
                   <SettingsPage />
                 </EnhancedRouteGuard>
-              </Layout>
+              </AppLayout>
             </ClinicAccessGuard>
           </ProtectedRoute>
         } />
@@ -209,7 +202,7 @@ const Router: React.FC = () => {
         <Route path="*" element={
           <ProtectedRoute>
             <ClinicAccessGuard>
-              <Layout>
+              <AppLayout>
                 <EnhancedRouteGuard 
                   feature="dashboard" 
                   level="read" 
@@ -218,7 +211,7 @@ const Router: React.FC = () => {
                 >
                   <div>Page not found</div>
                 </EnhancedRouteGuard>
-              </Layout>
+              </AppLayout>
             </ClinicAccessGuard>
           </ProtectedRoute>
         } />

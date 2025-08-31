@@ -1,7 +1,7 @@
 import { query, where, collection, doc, getDoc } from 'firebase/firestore';
-import { getOptimizedFirestore, firebaseManager } from '../api/firebaseOptimized';
+import { getOptimizedFirestore, firebaseManager } from '@lib/firebase/legacy-compat';
 import { isSuperAdmin } from './adminConfig';
-import { ensureDemoClinicActive } from '../scripts/initFirestore';
+import { ensureDemoClinicActive } from '@/scripts/initFirestore';
 
 // Helper to get safe database reference
 const getDb = () => {

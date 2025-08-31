@@ -39,7 +39,7 @@ import {
 } from '@mui/icons-material';
 import { useFirebaseForm } from '../../../hooks/useFirebaseForm';
 import { FIREBASE_COLLECTIONS } from '../../../types/firebase';
-import { commonValidationRules } from '../../../utils/validation';
+import { commonValidationRules } from '@utils/validation';
 import { getTextFieldValidationProps } from '../../../theme/validationTheme';
 
 interface ClinicSettingsFirebaseProps {

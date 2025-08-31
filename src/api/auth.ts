@@ -25,7 +25,7 @@ import {
   deleteDoc,
   updateDoc 
 } from 'firebase/firestore';
-import { getOptimizedAuth, getOptimizedFirestore, firebaseManager, validateFirebaseConfig } from './firebaseOptimized';
+import { getOptimizedAuth, getOptimizedFirestore, firebaseManager, validateFirebaseConfig } from './../lib/firebase/legacy-compat';
 
 // Helper to get safe database reference
 const getDb = () => {

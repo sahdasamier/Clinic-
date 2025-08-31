@@ -11,8 +11,8 @@ import {
   getOptimizedAnalytics,
   getOptimizedMessaging,
   getOptimizedFunctions
-} from '../api/firebaseOptimized';
-import { optimizedSync, initializeOptimizedSync, useOptimizedData } from '../utils/optimizedDataSync';
+} from '@lib/firebase/legacy-compat';
+import { optimizedSync, initializeOptimizedSync, useOptimizedData } from '@utils/optimizedDataSync';
 import type { Firestore } from 'firebase/firestore';
 import type { Auth } from 'firebase/auth';
 import type { FirebaseStorage } from 'firebase/storage';

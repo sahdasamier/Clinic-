@@ -1,15 +1,15 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import App from './app/App'
-import './index.css'
-import './styles/globalStyles.css'
-import './i18n';
+import App from '@/app/App'
+import '@/index.css'
+import '@styles/globalStyles.css'
+import '@/i18n';
 
 // Firebase service initializer
-import FirebaseServiceInitializer from './components/FirebaseServiceInitializer';
+import FirebaseServiceInitializer from '@components/FirebaseServiceInitializer';
 
-// Initialize optimized Firebase first
-import { initializeOptimizedServices } from './api/firebase';
+// Initialize modern Firebase
+import { initializeFirebase } from '@lib/firebase';
 
 // ✅ IMPROVED: More robust service initialization with better error handling
 const initializeServices = async () => {
@@ -30,91 +30,54 @@ const initializeServices = async () => {
     }
     
 
-    // ✅ CRITICAL: Initialize optimized Firebase services FIRST
+    // ✅ CRITICAL: Initialize modern Firebase services FIRST
     try {
-      console.log('⏳ Initializing optimized Firebase services...');
-      await initializeOptimizedServices();
-      console.log('✅ Optimized Firebase services initialized successfully');
+      console.log('⏳ Initializing modern Firebase services...');
+      await initializeFirebase();
+      console.log('✅ Modern Firebase services initialized successfully');
       
-      // ✅ IMPROVED: Verify Firebase is actually ready with better timeout
-      const { firebaseManager } = await import('./api/firebaseOptimized');
+      // ✅ IMPROVED: Verify Firebase is ready
+      const { isFirebaseReadyAsync } = await import('@lib/firebase');
       let verificationRetries = 0;
-      const maxVerificationRetries = 10; // Increased from 5 to 10
+      const maxVerificationRetries = 10;
       
-      while (!firebaseManager.isReady() && verificationRetries < maxVerificationRetries) {
+      while (!(await isFirebaseReadyAsync()) && verificationRetries < maxVerificationRetries) {
         console.log(`⏳ Verifying Firebase initialization... (${verificationRetries + 1}/${maxVerificationRetries})`);
-        await new Promise(resolve => setTimeout(resolve, 500)); // Increased from 200ms to 500ms
+        await new Promise(resolve => setTimeout(resolve, 500));
         verificationRetries++;
       }
       
-      if (!firebaseManager.isReady()) {
+      if (!(await isFirebaseReadyAsync())) {
         throw new Error('Firebase failed verification after initialization');
       }
       
       console.log('✅ Firebase readiness verified');
       
-      // ✅ IMPROVED: Load Firebase-dependent modules with better error handling
-      const moduleLoadPromises = [
-        import('./api/analytics').catch(e => console.warn('Analytics module load failed:', e)),
-        import('./api/messaging').catch(e => console.warn('Messaging module load failed:', e)),
-        import('./api/storage').catch(e => console.warn('Storage module load failed:', e)),
-        import('./utils/manualSync').catch(e => console.warn('Manual sync module load failed:', e)),
-        import('./utils/emergencyFix').catch(e => console.warn('Emergency fix module load failed:', e)),
-        import('./utils/firebaseFriendlySync').catch(e => console.warn('Firebase friendly sync module load failed:', e)),
-        import('./utils/firebaseDataManagerInit').catch(e => console.warn('Data manager init module load failed:', e)),
-        import('./utils/quickDoctorFix').catch(e => console.warn('Quick doctor fix module load failed:', e)),
-        import('./utils/instantDoctorFix').catch(e => console.warn('Instant doctor fix module load failed:', e)),
-        import('./utils/enableRealtimeListeners').catch(e => console.warn('Realtime listeners module load failed:', e))
-      ];
+      // ✅ IMPROVED: Load essential modules with better error handling
+      console.log('✅ Modern Firebase services ready');
       
-      await Promise.allSettled(moduleLoadPromises);
-      console.log('✅ All Firebase-dependent modules loaded (some may have failed but app will continue)');
-      console.log('✅ Legacy Firebase Blaze plan services preloaded');
+      // Load only existing utility modules
+      try {
+        await Promise.allSettled([
+          import('@utils/i18nUtils').catch(e => console.warn('i18n utils load failed:', e)),
+          import('@utils/validation').catch(e => console.warn('Validation utils load failed:', e)),
+          import('@utils/dateUtils').catch(e => console.warn('Date utils load failed:', e))
+        ]);
+        console.log('✅ All utility modules loaded');
+      } catch (error) {
+        console.warn('⚠️ Some utilities failed to load:', error);
+      }
     } catch (error) {
       console.error('❌ CRITICAL: Failed to initialize Firebase services:', error);
-      
-      // ✅ NEW: Attempt Firebase recovery
-      try {
-        console.log('🔄 Attempting Firebase recovery...');
-        const { firebaseManager } = await import('./api/firebaseOptimized');
-        
-        // Check if Firebase is in a recoverable state
-        const status = firebaseManager.getStatus();
-        console.log('📊 Firebase status:', status);
-        
-        if (status === 'failed') {
-          console.log('🔄 Firebase failed, attempting reinitialization...');
-          await firebaseManager.initialize();
-          console.log('✅ Firebase recovery successful');
-        } else if (status === 'initializing') {
-          console.log('⏳ Firebase still initializing, waiting...');
-          // Wait a bit more for initialization to complete
-          await new Promise(resolve => setTimeout(resolve, 3000));
-        }
-      } catch (recoveryError) {
-        console.error('❌ Firebase recovery failed:', recoveryError);
-        console.warn('⚠️ App will start with limited functionality');
-      }
       
       // Continue with app rendering but with limited functionality
       throw error;
     }
     
-    // Show doctor debugging availability message after a delay
+    // Show service initialization completion message
     setTimeout(() => {
-      console.log('✅ All utility modules loaded successfully');
-      
-      // Show doctor debugging availability message
-      console.log('👩‍⚕️ Doctor debugging tools are now available!');
-      console.log('   ⚡ Run fixDoctors() - EMERGENCY FIX (NEW - NO IMPORTS)');
-      console.log('   🚀 Run runInstantDoctorFix() - INSTANT FIX');
-      console.log('   📋 Run completeDoctorAssignmentSolution() - Complete solution');
-      console.log('   🔧 Run quickFixDoctorAssignment() - Quick fix');
-      console.log('   🔍 Run debugPatientDoctorAssignment() - Detailed analysis');
-      console.log('');
-      console.log('🔥 Firebase management tools:');
-      console.log('   📋 Run checkFirebaseIndexes() - Check if indexes are ready');
-      console.log('   🔄 Run enableAllRealtimeListeners() - Re-enable after indexes are ready');
+      console.log('✅ Application initialization completed successfully');
+      console.log('🏯 Clinic Management System ready for use');
     }, 1000);
     
   } catch (error) {

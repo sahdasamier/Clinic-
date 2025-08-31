@@ -6,7 +6,7 @@
  */
 
 import { collection, getDocs, query, where, updateDoc, doc, writeBatch } from 'firebase/firestore';
-import { getOptimizedFirestore, firebaseManager } from '../api/firebaseOptimized';
+import { getOptimizedFirestore, firebaseManager } from '@lib/firebase/legacy-compat';
 
 export interface FixResult {
   success: boolean;

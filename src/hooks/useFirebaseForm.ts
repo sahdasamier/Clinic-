@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { doc, getDoc, setDoc, onSnapshot, serverTimestamp, Timestamp } from 'firebase/firestore';
-import { getOptimizedFirestore, firebaseManager } from '../api/firebaseOptimized';
-import { useAuth } from '../contexts/AuthContext';
+import { getOptimizedFirestore, firebaseManager } from '@lib/firebase/legacy-compat';
+import { useAuth } from '@store/auth';
 import { 
   FirebaseFormOptions, 
   FirebaseFormReturn, 

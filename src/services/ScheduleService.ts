@@ -11,7 +11,7 @@ import {
   serverTimestamp,
   writeBatch
 } from 'firebase/firestore';
-import { getOptimizedFirestore, firebaseManager } from '../api/firebaseOptimized';
+import { getOptimizedFirestore, firebaseManager } from '@lib/firebase/legacy-compat';
 
 const COLLECTION_NAME = 'schedules';
 

@@ -1,16 +1,16 @@
 import React, { useEffect } from "react";
 import { useTranslation } from 'react-i18next';
 import { ThemeProvider } from "./ThemeProvider";
-import { AuthProvider } from "../contexts/AuthContext";
-import { UserProvider } from "../contexts/UserContext";
-import { GlobalDataProvider } from "../contexts/GlobalDataContext";
-import { SidebarProvider } from "../contexts/SidebarContext";
-import { NotificationProvider } from "../contexts/NotificationProvider";
-import { NotificationProvider as NotificationDataProvider } from "../contexts/NotificationContext";
-import { ensureDemoClinicExists } from "../scripts/initFirestore";
-import { useDocumentTitle } from "../hooks/useDocumentTitle";
-import { updateDocumentDirection } from "../utils/i18nUtils";
-import ErrorBoundary from "../components/ErrorBoundary";
+import { AuthProvider } from "@store/auth";
+import { UserProvider } from "@store/auth";
+import { GlobalDataProvider } from "@store/global";
+import { SidebarProvider } from "@store/global";
+import { NotificationProvider } from "@store/notifications/NotificationContext";
+import { NotificationProvider as SnackbarProvider } from "@store/notifications/NotificationProvider";
+import { ensureDemoClinicExists } from "@/scripts/initFirestore";
+import { useDocumentTitle } from "@hooks/useDocumentTitle";
+import { updateDocumentDirection } from "@utils/i18nUtils";
+import ErrorBoundary from "@components/common/ErrorBoundary";
 import Router from "./Router";
 
 const AppContent: React.FC = () => {
@@ -41,12 +41,12 @@ const AppContent: React.FC = () => {
   // Initialize payment status checking system
   useEffect(() => {
     // Initialize payment status check for overdue detection
-    import('../utils/paymentUtils').then(({ initializePaymentStatusCheck }) => {
+    import('@utils/paymentUtils').then(({ initializePaymentStatusCheck }) => {
       initializePaymentStatusCheck();
     });
     
     // ✅ NEW: Initialize appointment backup sync system
-    import('../utils/paymentUtils').then(({ initializeAppointmentBackupSync }) => {
+    import('@utils/paymentUtils').then(({ initializeAppointmentBackupSync }) => {
       initializeAppointmentBackupSync();
     });
   }, []);
@@ -61,11 +61,11 @@ const App: React.FC = () => (
         <GlobalDataProvider>
           <SidebarProvider>
             <NotificationProvider>
-              <NotificationDataProvider>
+              <SnackbarProvider>
                 <ErrorBoundary>
                   <AppContent />
                 </ErrorBoundary>
-              </NotificationDataProvider>
+              </SnackbarProvider>
             </NotificationProvider>
           </SidebarProvider>
         </GlobalDataProvider>

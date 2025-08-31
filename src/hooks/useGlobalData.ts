@@ -1,9 +1,9 @@
 import { useMemo } from 'react';
-import { useGlobalData } from '../contexts/GlobalDataContext';
+import { useGlobalData } from '@store/global';
 import { Appointment, Patient, Payment, InventoryItem, Notification } from '../types/models';
 
 // Base hook to access global data context
-export { useGlobalData } from '../contexts/GlobalDataContext';
+export { useGlobalData } from '@store/global';
 
 // Specialized hook for appointments with filtering and search
 export function useAppointments(options?: {

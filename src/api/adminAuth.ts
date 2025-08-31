@@ -14,8 +14,9 @@ import {
   setDoc, 
   serverTimestamp 
 } from 'firebase/firestore';
-import { getOptimizedAuth, getOptimizedFirestore, firebaseManager } from './firebaseOptimized';
-import { SUPER_ADMIN_EMAILS } from '../utils/adminConfig';
+import { getOptimizedAuth, getOptimizedFirestore, firebaseManager } from './../lib/firebase/legacy-compat';
+import { SUPER_ADMIN_EMAILS } from '@utils/adminConfig';
+import type { AdminClaims, CreateUserData, CreateUserResult } from '@types/api';
 
 /**
  * Interface for admin claims from Firebase token
@@ -105,7 +106,7 @@ const createSecondaryApp = async (): Promise<{ app: FirebaseApp; auth: FirebaseA
   
   // Create fresh secondary app
   // Get Firebase config from optimized Firebase
-  const config = await import('./firebaseOptimized').then(m => m.validateFirebaseConfig());
+  const config = await import('./../lib/firebase/legacy-compat').then(m => m.validateFirebaseConfig());
   const secApp = initializeApp(config as any, secondaryAppName);
   const secAuth = getAuth(secApp);
   

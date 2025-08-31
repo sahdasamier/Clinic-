@@ -12,7 +12,7 @@ import {
   limit, 
   serverTimestamp 
 } from 'firebase/firestore';
-import { safeFirestore } from '../api/firebaseDirect';
+import { getOptimizedFirestore, firebaseManager } from '@lib/firebase/legacy-compat';
 import PatientService from './PatientService';
 
 const COLLECTION_NAME = 'medicalRequirementOrders';
@@ -89,7 +89,31 @@ const sanitizeOrderData = (data: any): any => {
 };
 
 const getMedicalRequirementsCollection = async (clinicId: string) => {
-  const db = await safeFirestore.getDb();
+  // Try synchronous cached version first
+  if (firebaseManager.isReadySync()) {
+    try {
+      const db = firebaseManager.getFirestoreSync();
+      return collection(db, COLLECTION_NAME);
+    } catch (error) {
+      console.warn('⚠️ Sync access failed, falling back to async:', error);
+    }
+  }
+  
+  // Fallback to async version with proper retry logic
+  let retries = 0;
+  while (!firebaseManager.isReadySync() && retries < 20) {
+    await new Promise(resolve => setTimeout(resolve, 250));
+    retries++;
+  }
+  
+  if (!firebaseManager.isReadySync()) {
+    throw new Error('Firebase not ready - please wait for initialization');
+  }
+  
+  // Ensure instances are cached
+  await firebaseManager.cacheInstances();
+  
+  const db = await getOptimizedFirestore();
   if (!db) throw new Error('Firestore not initialized');
   
   return collection(db, COLLECTION_NAME);
@@ -219,8 +243,9 @@ export const MedicalRequirementsService = {
       }
       
       // ✅ ADDED: Save to localStorage as backup
+      let existingOrders: MedicalRequirementOrder[] = [];
       try {
-        const existingOrders = loadFromLocalStorage(clinicId);
+        existingOrders = loadFromLocalStorage(clinicId);
         const orderWithId = { ...newOrder, id: docRef.id };
         saveToLocalStorage(clinicId, [...existingOrders, orderWithId]);
       } catch (localStorageError) {
@@ -409,7 +434,27 @@ export const MedicalRequirementsService = {
     updates: Partial<MedicalRequirementOrder>
   ): Promise<void> {
     try {
-      const db = await safeFirestore.getDb();
+      // Use proper Firebase access pattern
+      let db;
+      if (firebaseManager.isReadySync()) {
+        try {
+          db = firebaseManager.getFirestoreSync();
+        } catch (error) {
+          console.warn('⚠️ Sync access failed, falling back to async:', error);
+          if (!(await firebaseManager.isReady())) {
+            throw new Error('Firebase not ready - please wait for initialization');
+          }
+          await firebaseManager.cacheInstances();
+          db = await getOptimizedFirestore();
+        }
+      } else {
+        if (!(await firebaseManager.isReady())) {
+          throw new Error('Firebase not ready - please wait for initialization');
+        }
+        await firebaseManager.cacheInstances();
+        db = await getOptimizedFirestore();
+      }
+      
       if (!db) throw new Error('Firestore not initialized');
       
       const orderRef = doc(db, COLLECTION_NAME, orderId);
@@ -455,9 +500,11 @@ export const MedicalRequirementsService = {
       }
       
       // ✅ ADDED: Update localStorage backup
+      let existingOrders: MedicalRequirementOrder[] = [];
+      let updatedOrders: MedicalRequirementOrder[] = [];
       try {
-        const existingOrders = loadFromLocalStorage(clinicId);
-        const updatedOrders = existingOrders.map(order => 
+        existingOrders = loadFromLocalStorage(clinicId);
+        updatedOrders = existingOrders.map(order => 
           order.id === orderId 
             ? { ...order, ...sanitizedUpdates, updatedAt: new Date().toISOString() }
             : order
@@ -529,7 +576,27 @@ export const MedicalRequirementsService = {
   // Delete a medical requirement order and update patient counts
   async deleteOrder(clinicId: string, orderId: string): Promise<void> {
     try {
-      const db = await safeFirestore.getDb();
+      // Use proper Firebase access pattern
+      let db;
+      if (firebaseManager.isReadySync()) {
+        try {
+          db = firebaseManager.getFirestoreSync();
+        } catch (error) {
+          console.warn('⚠️ Sync access failed, falling back to async:', error);
+          if (!(await firebaseManager.isReady())) {
+            throw new Error('Firebase not ready - please wait for initialization');
+          }
+          await firebaseManager.cacheInstances();
+          db = await getOptimizedFirestore();
+        }
+      } else {
+        if (!(await firebaseManager.isReady())) {
+          throw new Error('Firebase not ready - please wait for initialization');
+        }
+        await firebaseManager.cacheInstances();
+        db = await getOptimizedFirestore();
+      }
+      
       if (!db) throw new Error('Firestore not initialized');
       
       const orderRef = doc(db, COLLECTION_NAME, orderId);
@@ -657,7 +724,27 @@ export const MedicalRequirementsService = {
   // Get single order by ID
   async getOrderById(clinicId: string, orderId: string): Promise<MedicalRequirementOrder | null> {
     try {
-      const db = await safeFirestore.getDb();
+      // Use proper Firebase access pattern
+      let db;
+      if (firebaseManager.isReadySync()) {
+        try {
+          db = firebaseManager.getFirestoreSync();
+        } catch (error) {
+          console.warn('⚠️ Sync access failed, falling back to async:', error);
+          if (!(await firebaseManager.isReady())) {
+            throw new Error('Firebase not ready - please wait for initialization');
+          }
+          await firebaseManager.cacheInstances();
+          db = await getOptimizedFirestore();
+        }
+      } else {
+        if (!(await firebaseManager.isReady())) {
+          throw new Error('Firebase not ready - please wait for initialization');
+        }
+        await firebaseManager.cacheInstances();
+        db = await getOptimizedFirestore();
+      }
+      
       if (!db) throw new Error('Firestore not initialized');
       
       const orderRef = doc(db, COLLECTION_NAME, orderId);

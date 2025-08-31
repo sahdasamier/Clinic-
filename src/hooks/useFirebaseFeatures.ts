@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { useUser } from '../contexts/UserContext';
-import { AnalyticsService, globalPageTimer } from '../api/analytics';
-import { MessagingService } from '../api/messaging';
-import { StorageService } from '../api/storage';
+import { useAuth } from '@store/auth';
+import { useUser } from '@store/auth';
+import { AnalyticsService, globalPageTimer } from '@lib/api/analytics';
+import { MessagingService } from '@lib/api/messaging';
+import { StorageService } from '@lib/api/storage';
 import { httpsCallable } from 'firebase/functions';
-import { getOptimizedFunctions, firebaseManager } from '../api/firebaseOptimized';
+import { getOptimizedFunctions, firebaseManager } from '@lib/firebase/legacy-compat';
 
 // Helper to get safe functions reference
 const getFunctionsInstance = () => {

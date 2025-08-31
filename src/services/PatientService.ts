@@ -13,17 +13,24 @@ import {
   updateDoc,
   increment
 } from 'firebase/firestore';
-import { getOptimizedFirestore, firebaseManager } from '../api/firebaseOptimized';
+import { getOptimizedFirestore, firebaseManager } from '@lib/firebase/legacy-compat';
 
 const COLLECTION_NAME = 'patients';
 
 // Safe collection reference that waits for Firebase to be ready
 const getPatientsCollection = () => {
-  if (!firebaseManager.isReady()) {
-    throw new Error('Firebase not ready - please wait for initialization');
+  // Try synchronous cached version first
+  if (firebaseManager.isReadySync()) {
+    try {
+      const db = firebaseManager.getFirestoreSync();
+      return collection(db, COLLECTION_NAME);
+    } catch (error) {
+      console.warn('⚠️ Sync access failed, falling back to error:', error);
+      throw new Error('Firebase not ready - please wait for initialization');
+    }
   }
-  const db = getOptimizedFirestore();
-  return collection(db, COLLECTION_NAME);
+  
+  throw new Error('Firebase not ready - please wait for initialization');
 };
 
 export interface Patient {
@@ -277,7 +284,13 @@ export const PatientService = {
 
   // Batch operations for data migration
   async batchCreatePatients(clinicId: string, patients: Array<Omit<Patient, 'id' | 'createdAt' | 'updatedAt' | 'clinicId'>>): Promise<void> {
-    const batch = writeBatch(getOptimizedFirestore());
+    // Ensure Firebase is ready before creating batch
+    if (!(await firebaseManager.isReady())) {
+      throw new Error('Firebase not ready - please wait for initialization');
+    }
+    
+    const db = await getOptimizedFirestore();
+    const batch = writeBatch(db);
     
     patients.forEach(patientData => {
       const id = crypto.randomUUID();
@@ -323,11 +336,11 @@ export const PatientService = {
   },
 
   // Update medical requirement counts for a patient
-  async updateRequirementCounts(patientId: string, increment: boolean = true): Promise<void> {
+  async updateRequirementCounts(patientId: string, shouldIncrement: boolean = true): Promise<void> {
     try {
       const patientRef = doc(getPatientsCollection(), patientId);
       
-      if (increment) {
+      if (shouldIncrement) {
         // Increment the count and set the flag
         await updateDoc(patientRef, {
           pendingRequirementsCount: increment(1),

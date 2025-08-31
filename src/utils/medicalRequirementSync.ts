@@ -1,5 +1,5 @@
-import { PatientService } from '../services/PatientService';
-import MedicalRequirementsService, { MedicalRequirementOrder } from '../services/MedicalRequirementsService';
+import { PatientService } from '@/services/PatientService';
+import MedicalRequirementsService, { MedicalRequirementOrder } from '@/services/MedicalRequirementsService';
 
 /**
  * Synchronizes completed medical requirements from the laboratoryRadiology system back to patient records

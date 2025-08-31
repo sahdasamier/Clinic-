@@ -10,7 +10,7 @@ import {
   serverTimestamp,
   orderBy
 } from 'firebase/firestore';
-import { getOptimizedFirestore, firebaseManager } from './firebaseOptimized';
+import { getOptimizedFirestore, firebaseManager } from './../lib/firebase/legacy-compat';
 
 // Helper to get safe database reference
 const getDb = () => {
@@ -164,7 +164,7 @@ export const createAppointment = async (appointmentData: AppointmentFormData): P
       console.log('💰 Creating payment record for appointment...');
       
       // Import payment utilities
-      const { getAppointmentPaymentAmount, createPayment } = await import('../utils/paymentUtils');
+      const { getAppointmentPaymentAmount, createPayment } = await import('@utils/paymentUtils');
       const appointmentAmount = getAppointmentPaymentAmount(appointmentData.type);
       
       const paymentData = {
@@ -198,7 +198,7 @@ export const createAppointment = async (appointmentData: AppointmentFormData): P
       
       // Also save to Firebase Data Manager for consistency
       try {
-        const { firebaseDataManager } = await import('../utils/firebaseDataManager');
+        const { firebaseDataManager } = await import('@utils/firebaseDataManager');
         const dataManager = firebaseDataManager.initialize({ clinicId: appointmentData.clinicId });
         await dataManager.createPayment(paymentData);
         console.log('✅ Payment also saved to Firebase via DataManager');

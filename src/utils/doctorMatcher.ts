@@ -1,4 +1,4 @@
-import { getDoctorsByClinic } from '../api/doctorPatients';
+import { getDoctorsByClinic } from '@lib/api/doctorPatients';
 
 /**
  * Match doctor name from scheduling system to Firebase user ID

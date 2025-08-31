@@ -1,16 +1,61 @@
-import { 
-  Employee, 
-  BusinessExpense, 
-  ExpenseCategory, 
-  VATAdjustment,
-  defaultExpenseCategories 
-} from '../data/mockData';
+import { STORAGE_KEYS, DEFAULT_EXPENSE_CATEGORIES } from '@config/constants';
+
+// Define types locally since they were removed from mockData
+export interface Employee {
+  id: string;
+  name: string;
+  position: string;
+  salary: number;
+  currency: string;
+  paymentFrequency: 'monthly' | 'weekly' | 'daily';
+  startDate: string;
+  isActive: boolean;
+  benefits?: {
+    healthInsurance?: number;
+    transportation?: number;
+    bonus?: number;
+  };
+}
+
+export interface BusinessExpense {
+  id: string;
+  category: string;
+  description: string;
+  amount: number;
+  currency: string;
+  date: string;
+  isRecurring: boolean;
+  frequency?: 'monthly' | 'quarterly' | 'yearly';
+  vatIncluded: boolean;
+  vatAmount?: number;
+  supplier?: string;
+  notes?: string;
+}
+
+export interface ExpenseCategory {
+  id: string;
+  name: string;
+  description: string;
+  color: string;
+  icon: string;
+  vatApplicable: boolean;
+}
+
+export interface VATAdjustment {
+  id: string;
+  amount: number;
+  reason: string;
+  type: 'deduction' | 'addition';
+  date: string;
+  description: string;
+  category: 'manual_correction' | 'external_payment' | 'refund' | 'other';
+}
 
 // Storage keys
-const EMPLOYEES_STORAGE_KEY = 'clinic_employees_data';
-const BUSINESS_EXPENSES_STORAGE_KEY = 'clinic_business_expenses_data';
-const VAT_ADJUSTMENTS_STORAGE_KEY = 'clinic_vat_adjustments';
-const EXPENSE_CATEGORIES_STORAGE_KEY = 'clinic_expense_categories';
+const EMPLOYEES_STORAGE_KEY = STORAGE_KEYS.EMPLOYEES;
+const BUSINESS_EXPENSES_STORAGE_KEY = STORAGE_KEYS.BUSINESS_EXPENSES;
+const VAT_ADJUSTMENTS_STORAGE_KEY = STORAGE_KEYS.VAT_ADJUSTMENTS;
+const EXPENSE_CATEGORIES_STORAGE_KEY = STORAGE_KEYS.EXPENSE_CATEGORIES;
 
 // Employee Management - FIXED: Re-enabled localStorage persistence
 export const loadEmployeesFromStorage = (): Employee[] => {

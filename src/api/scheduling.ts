@@ -10,7 +10,7 @@ import {
   serverTimestamp,
   orderBy 
 } from 'firebase/firestore';
-import { getOptimizedFirestore, firebaseManager } from './firebaseOptimized';
+import { getOptimizedFirestore, firebaseManager } from './../lib/firebase/legacy-compat';
 import { getAppointmentsByDate, getAppointmentsByDoctor } from './appointments';
 import { getDefaultDoctorSchedulesData, type DoctorScheduleData } from '../data/mockData';
 

@@ -1,4 +1,16 @@
-import { VATSettings, defaultVATSettings } from '../data/mockData';
+// VAT Settings interface
+interface VATSettings {
+  enabled: boolean;
+  rate: number;
+  currency: string;
+}
+
+// Default VAT settings
+const defaultVATSettings: VATSettings = {
+  enabled: false,
+  rate: 0.21,
+  currency: 'USD'
+};
 
 // Get VAT settings - FIXED: Re-enabled localStorage persistence
 export const getVATSettings = (): VATSettings => {

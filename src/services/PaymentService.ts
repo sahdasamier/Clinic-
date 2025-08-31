@@ -11,16 +11,26 @@ import {
   serverTimestamp,
   writeBatch
 } from 'firebase/firestore';
-import { getOptimizedFirestore, firebaseManager } from '../api/firebaseOptimized';
+import { getOptimizedFirestore, firebaseManager } from '@lib/firebase/legacy-compat';
 
 const COLLECTION_NAME = 'payments';
 
 // Safe collection reference that waits for Firebase to be ready
-const getPaymentsCollection = () => {
+const getPaymentsCollection = async () => {
+  // Wait for Firebase to be ready with timeout
+  let retries = 0;
+  const maxRetries = 20; // 5 seconds total
+  
+  while (!firebaseManager.isReady() && retries < maxRetries) {
+    await new Promise(resolve => setTimeout(resolve, 250));
+    retries++;
+  }
+  
   if (!firebaseManager.isReady()) {
     throw new Error('Firebase not ready - please wait for initialization');
   }
-  const db = getOptimizedFirestore();
+  
+  const db = await getOptimizedFirestore();
   return collection(db, COLLECTION_NAME);
 };
 
@@ -77,14 +87,16 @@ export class PaymentService {
       updatedAt: serverTimestamp(),
     };
 
-    await setDoc(doc(getPaymentsCollection(), id), payment);
+    const paymentsCollection = await getPaymentsCollection();
+    await setDoc(doc(paymentsCollection, id), payment);
     console.log('✅ Payment created:', id);
     return id;
   }
 
   // Update an existing payment
   static async updatePayment(paymentId: string, updates: Partial<Payment>): Promise<Payment> {
-    const paymentRef = doc(getPaymentsCollection(), paymentId);
+    const paymentsCollection = await getPaymentsCollection();
+    const paymentRef = doc(paymentsCollection, paymentId);
     
     const updateData = {
       ...updates,
@@ -119,37 +131,59 @@ export class PaymentService {
 
   // Hard delete a payment
   static async hardDeletePayment(paymentId: string): Promise<void> {
-    await deleteDoc(doc(getPaymentsCollection(), paymentId));
+    const paymentsCollection = await getPaymentsCollection();
+    await deleteDoc(doc(paymentsCollection, paymentId));
     console.log('✅ Payment permanently deleted:', paymentId);
   }
 
   // Listen to payments for a specific clinic
   static listenPayments(clinicId: string, callback: (payments: Payment[]) => void): () => void {
-    const q = query(
-      getPaymentsCollection(),
-      where('clinicId', '==', clinicId),
-      where('isActive', '==', true),
-      orderBy('createdAt', 'desc')
-    );
+    let unsubscribe: (() => void) | null = null;
+    
+    // Setup listener asynchronously
+    const setupListener = async () => {
+      try {
+        const paymentsCollection = await getPaymentsCollection();
+        const q = query(
+          paymentsCollection,
+          where('clinicId', '==', clinicId),
+          where('isActive', '==', true),
+          orderBy('createdAt', 'desc')
+        );
 
-    return onSnapshot(q, (snapshot) => {
-      const payments = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Payment[];
-      
-      console.log(`💰 Payments updated: ${payments.length} active payments`);
-      callback(payments);
-    }, (error) => {
-      console.error('❌ Error listening to payments:', error);
-      callback([]);
-    });
+        unsubscribe = onSnapshot(q, (snapshot) => {
+          const payments = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          })) as Payment[];
+          
+          console.log(`💰 Payments updated: ${payments.length} active payments`);
+          callback(payments);
+        }, (error) => {
+          console.error('❌ Error listening to payments:', error);
+          callback([]);
+        });
+      } catch (error) {
+        console.error('❌ Error setting up payment listener:', error);
+        callback([]);
+      }
+    };
+    
+    setupListener();
+    
+    // Return cleanup function
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
   }
 
   // Get all payments for a clinic
   static async getPayments(clinicId: string): Promise<Payment[]> {
+    const paymentsCollection = await getPaymentsCollection();
     const q = query(
-      getPaymentsCollection(),
+      paymentsCollection,
       where('clinicId', '==', clinicId),
       where('isActive', '==', true),
       orderBy('createdAt', 'desc')
@@ -167,42 +201,82 @@ export class PaymentService {
 
   // Listen to payments by status
   static listenPaymentsByStatus(clinicId: string, status: Payment['status'], callback: (payments: Payment[]) => void): () => void {
-    const q = query(
-      getPaymentsCollection(),
-      where('clinicId', '==', clinicId),
-      where('status', '==', status),
-      where('isActive', '==', true),
-      orderBy('createdAt', 'desc')
-    );
+    let unsubscribe: (() => void) | null = null;
+    
+    // Setup listener asynchronously
+    const setupListener = async () => {
+      try {
+        const paymentsCollection = await getPaymentsCollection();
+        const q = query(
+          paymentsCollection,
+          where('clinicId', '==', clinicId),
+          where('status', '==', status),
+          where('isActive', '==', true),
+          orderBy('createdAt', 'desc')
+        );
 
-    return onSnapshot(q, (snapshot) => {
-      const payments = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Payment[];
-      
-      callback(payments);
-    });
+        unsubscribe = onSnapshot(q, (snapshot) => {
+          const payments = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          })) as Payment[];
+          
+          callback(payments);
+        });
+      } catch (error) {
+        console.error('❌ Error setting up payment status listener:', error);
+        callback([]);
+      }
+    };
+    
+    setupListener();
+    
+    // Return cleanup function
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
   }
 
   // Listen to payments for a specific patient
   static listenPaymentsByPatient(clinicId: string, patientId: string, callback: (payments: Payment[]) => void): () => void {
-    const q = query(
-      getPaymentsCollection(),
-      where('clinicId', '==', clinicId),
-      where('patientId', '==', patientId),
-      where('isActive', '==', true),
-      orderBy('createdAt', 'desc')
-    );
+    let unsubscribe: (() => void) | null = null;
+    
+    // Setup listener asynchronously
+    const setupListener = async () => {
+      try {
+        const paymentsCollection = await getPaymentsCollection();
+        const q = query(
+          paymentsCollection,
+          where('clinicId', '==', clinicId),
+          where('patientId', '==', patientId),
+          where('isActive', '==', true),
+          orderBy('createdAt', 'desc')
+        );
 
-    return onSnapshot(q, (snapshot) => {
-      const payments = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Payment[];
-      
-      callback(payments);
-    });
+        unsubscribe = onSnapshot(q, (snapshot) => {
+          const payments = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          })) as Payment[];
+          
+          callback(payments);
+        });
+      } catch (error) {
+        console.error('❌ Error setting up patient payment listener:', error);
+        callback([]);
+      }
+    };
+    
+    setupListener();
+    
+    // Return cleanup function
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
   }
 
   // Get payment statistics
@@ -242,8 +316,9 @@ export class PaymentService {
 
   // Get payments for a specific appointment
   static async getPaymentsByAppointment(clinicId: string, appointmentId: string): Promise<Payment[]> {
+    const paymentsCollection = await getPaymentsCollection();
     const q = query(
-      getPaymentsCollection(),
+      paymentsCollection,
       where('clinicId', '==', clinicId),
       where('appointmentId', '==', appointmentId),
       where('isActive', '==', true)
@@ -271,11 +346,12 @@ export class PaymentService {
 
   // Batch create payments
   static async batchCreatePayments(clinicId: string, payments: Array<Omit<Payment, 'id' | 'createdAt' | 'updatedAt' | 'clinicId'>>): Promise<void> {
-    const batch = writeBatch(getOptimizedFirestore());
+    const batch = writeBatch(await getOptimizedFirestore());
+    const paymentsCollection = await getPaymentsCollection();
     
     payments.forEach(paymentData => {
       const id = crypto.randomUUID();
-      const paymentRef = doc(getPaymentsCollection(), id);
+      const paymentRef = doc(paymentsCollection, id);
       const payment: Payment = {
         ...paymentData,
         id,

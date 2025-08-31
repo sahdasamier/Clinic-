@@ -5,7 +5,7 @@ import {
   onSnapshot,
   serverTimestamp 
 } from 'firebase/firestore';
-import { getOptimizedFirestore, firebaseManager } from './firebaseOptimized';
+import { getOptimizedFirestore, firebaseManager } from './../lib/firebase/legacy-compat';
 
 // Helper to get safe database reference
 const getDb = () => {

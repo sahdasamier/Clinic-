@@ -1,0 +1,4052 @@
+import React, { useState, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+import { getOptimizedFirestore } from '@lib/firebase/legacy-compat';
+import {
+  Box,
+  Container,
+  Grid,
+  Card,
+  CardContent,
+  Typography,
+  Avatar,
+  Button,
+  TextField,
+  InputAdornment,
+  IconButton,
+  Chip,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Menu,
+  MenuItem,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  FormControl,
+  InputLabel,
+  Select,
+  Tabs,
+  Tab,
+  Divider,
+  Paper,
+  LinearProgress,
+  Tooltip,
+  Snackbar,
+  Alert,
+  FormControlLabel,
+  Switch,
+  CircularProgress,
+} from '@mui/material';
+
+import { useAuth } from '@store/auth';
+import { useUser } from '@store/auth';
+import {
+  Search,
+  Add,
+  FilterList,
+  Payment,
+  MonetizationOn,
+  Receipt,
+  CreditCard,
+  AccountBalance,
+  TrendingUp,
+  TrendingDown,
+  Warning,
+  CheckCircle,
+  Edit,
+  Download,
+  Print,
+  Send,
+  AttachMoney,
+  AccessTime,
+  People,
+  CalendarToday,
+  DateRange,
+  DeleteOutline,
+  Share,
+  LocalHospital,
+  Percent,
+  Business,
+  Refresh,
+  Close,
+  DeleteSweep
+} from '@mui/icons-material';
+
+import {
+  paymentCategories,
+} from '@config/constants';
+
+// Payment configuration and constants
+const paymentMethods = ['Cash', 'Credit Card', 'Bank Transfer', 'Insurance'];
+const paymentStatuses = ['Pending', 'Completed', 'Failed', 'Refunded'];
+
+const defaultNewInvoiceData = {
+  patient: '',
+  doctor: '',
+  appointmentId: '',
+  amount: '',
+  category: 'consultation',
+  invoiceDate: new Date().toISOString().split('T')[0],
+  dueDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+  description: '',
+  method: 'Cash',
+  insuranceAmount: '0',
+  includeVAT: false,
+  vatRate: 0
+};
+
+const defaultVATSettings = {
+  enabled: false,
+  rate: 0.21,
+  currency: 'USD'
+};
+import { 
+  PaymentService,
+  AppointmentService,
+  ServiceUtils,
+  type Payment as FirestorePayment,
+  type Appointment as FirestoreAppointment
+} from '@/services';
+import { 
+  getVATSettings, 
+  calculateVAT, 
+  calculateProfitWithVAT,
+  formatCurrencyWithVAT,
+  type VATCalculation 
+} from '@utils/vatUtils';
+import { 
+  calculateFinancialSummary,
+  loadVATAdjustmentsFromStorage,
+  saveVATAdjustmentsToStorage,
+  type FinancialSummary 
+} from '@utils/expenseUtils';
+import InvoiceGenerator from './InvoiceGenerator';
+// doctorSchedules import removed - using real Firebase data
+import { loadAppointmentsFromStorage } from '../appointments/AppointmentListPage';
+import { 
+  paymentSync, 
+  appointmentSync, 
+  doctorSync,
+  initializeBidirectionalSync,
+  debugStorageState 
+} from '@utils/dataSyncManager';
+import { 
+  testPaymentNotificationSystem,
+  processAllAppointmentsForPayments,
+  loadPaymentsFromStorage,
+  savePaymentsToStorage as savePaymentsToPaymentUtils,
+  updatePaymentStatus,
+  updatePaymentAmount,
+  createPayment,
+  clearAllPaymentCache,
+  forceRefreshFromFirebase,
+  hasStalePaymentData,
+  resetPaymentSystemCache
+} from '@utils/paymentUtils';
+import VATAdjustmentModal from '@features/payments/components/VATAdjustmentModal';
+import ExpenseManagementModal from '@features/payments/components/ExpenseManagementModal';
+import FirebaseFriendlySync, { FirebaseDataBridge } from '@utils/firebaseFriendlySync';
+import { firebaseDataManager, type Payment as FirebasePayment } from '@utils/firebaseDataManager';
+
+// ✅ NEW: Use the new real-time data hooks instead of legacy systems
+import {
+  useGlobalData,
+  usePayments,
+  useAppointments,
+  usePatients,
+  useRealtimeUpdates,
+  useDashboardStats
+} from '../../hooks/useGlobalData';
+
+// Doctor interface for Firestore data
+interface Doctor {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: string;
+  clinicId: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface TabPanelProps {
+  children?: React.ReactNode;
+  index: number;
+  value: number;
+}
+
+function TabPanel(props: TabPanelProps) {
+  const { children, value, index, ...other } = props;
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`payment-tabpanel-${index}`}
+      aria-labelledby={`payment-tab-${index}`}
+      {...other}
+    >
+      {value === index && <Box sx={{ py: 3 }}>{children}</Box>}
+    </div>
+  );
+}
+
+
+
+interface NewInvoiceData {
+  patient: string;
+  doctor: string; // Added doctor field for clinic management
+  appointmentId?: string; // Link to appointment
+  amount: string;
+  category: string;
+  invoiceDate: string;
+  dueDate: string;
+  description: string;
+  method: string;
+  insuranceAmount: string;
+  includeVAT: boolean;
+  vatRate: number;
+}
+
+interface SnackbarState {
+  open: boolean;
+  message: string;
+  severity: 'success' | 'error' | 'warning' | 'info';
+}
+
+// Generate recent dates for sample data
+const generateRecentDates = () => {
+  const today = new Date();
+  const dates = [];
+  
+  for (let i = 0; i < 30; i++) {
+    const date = new Date(today.getTime() - i * 24 * 60 * 60 * 1000);
+    dates.push({
+      date: date.toISOString().split('T')[0],
+      dueDate: new Date(date.getTime() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    });
+  }
+  
+  return dates;
+};
+
+
+
+// Data persistence utilities - removed duplicate functions to avoid conflicts
+
+// StatCard component
+interface StatCardProps {
+  title: string;
+  value: string | number;
+  icon: React.ReactNode;
+  color: string;
+  subtitle?: string;
+  trend?: string;
+  trendDirection?: 'up' | 'down';
+}
+
+const StatCard: React.FC<StatCardProps> = ({ 
+  title, 
+  value, 
+  icon, 
+  color, 
+  subtitle, 
+  trend, 
+  trendDirection 
+}) => {
+  const { t } = useTranslation();
+  
+  return (
+    <Card sx={{ 
+      height: '100%',
+      background: 'linear-gradient(120deg, rgba(2, 0, 36, 0.08) 0%, rgba(9, 9, 121, 0.12) 35%, rgba(0, 212, 255, 0.08) 100%)',
+      backdropFilter: 'blur(15px)',
+      border: '1px solid rgba(9, 9, 121, 0.2)',
+      borderRadius: 3,
+      position: 'relative',
+      overflow: 'hidden',
+      '&:hover': {
+        transform: 'translateY(-4px)',
+        background: 'linear-gradient(120deg, rgba(2, 0, 36, 0.12) 0%, rgba(9, 9, 121, 0.18) 35%, rgba(0, 212, 255, 0.12) 100%)',
+        boxShadow: '0 8px 25px rgba(9, 9, 121, 0.25)',
+      },
+      transition: 'all 0.3s ease',
+      '&::before': {
+        content: '""',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: '4px',
+        background: 'linear-gradient(90deg, rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
+      }
+    }}>
+      <CardContent sx={{ p: 3, position: 'relative' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+          <Box
+            sx={{
+              width: 56,
+              height: 56,
+              borderRadius: '16px',
+              background: 'linear-gradient(135deg, rgba(9, 9, 121, 0.2) 0%, rgba(0, 212, 255, 0.15) 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: color,
+              backdropFilter: 'blur(15px)',
+              border: '1px solid rgba(9, 9, 121, 0.3)',
+              '& svg': {
+                fontSize: 28,
+                filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))'
+              }
+            }}
+          >
+            {icon}
+          </Box>
+          {trend && (
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center',
+              backgroundColor: trendDirection === 'up' ? '#10B98110' : '#EF444410',
+              borderRadius: 2,
+              px: 1.5,
+              py: 0.5,
+              border: `1px solid ${trendDirection === 'up' ? '#10B98130' : '#EF444430'}`
+            }}>
+              {trendDirection === 'up' ? (
+                <TrendingUp sx={{ fontSize: 16, color: '#10B981', mr: 0.5 }} />
+              ) : (
+                <TrendingDown sx={{ fontSize: 16, color: '#EF4444', mr: 0.5 }} />
+              )}
+              <Typography
+                variant="caption"
+                sx={{
+                  color: trendDirection === 'up' ? '#10B981' : '#EF4444',
+                  fontWeight: 700,
+                  fontSize: '0.75rem'
+                }}
+              >
+                {trend}
+              </Typography>
+            </Box>
+          )}
+        </Box>
+        <Typography 
+          variant="h3" 
+          sx={{ 
+            fontWeight: 800, 
+            mb: 0.5, 
+            color: 'text.primary',
+            background: `linear-gradient(135deg, ${color} 0%, ${color}80 100%)`,
+            backgroundClip: 'text',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            textShadow: 'none'
+          }}
+        >
+          {value}
+        </Typography>
+        <Typography variant="body1" sx={{ fontWeight: 600, mb: 1, color: 'text.primary' }}>
+          {title}
+        </Typography>
+        {subtitle && (
+          <Typography variant="body2" color="text.secondary" sx={{ opacity: 0.8 }}>
+            {subtitle}
+          </Typography>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
+// Main PaymentListPage component
+const PaymentListPage: React.FC = () => {
+  const { t, i18n } = useTranslation();
+  const { user, loading: authLoading, initialized } = useAuth();
+  const { userProfile } = useUser();
+  const isRTL = i18n.language === 'ar';
+
+  // ✅ LOCAL PAYMENTS STATE: Manage payments state locally
+  const [payments, setPayments] = useState<PaymentData[]>([]);
+  const [paymentsLoading, setPaymentsLoading] = useState(true);
+  const [paymentsError, setPaymentsError] = useState<string | null>(null);
+  
+  // Payment management functions
+  const addPayment = (payment: PaymentData) => {
+    setPayments(prev => [...prev, payment]);
+  };
+  
+  const updatePayment = (updatedPayment: PaymentData) => {
+    setPayments(prev => prev.map(p => p.id === updatedPayment.id ? updatedPayment : p));
+  };
+  
+  const deletePayment = (paymentId: number) => {
+    setPayments(prev => prev.filter(p => p.id !== paymentId));
+  };
+  
+  const paymentStats = {
+    total: payments.length,
+    paid: payments.filter(p => p.status === 'Paid').length,
+    pending: payments.filter(p => p.status === 'Pending').length,
+    overdue: payments.filter(p => p.status === 'Overdue').length
+  };
+
+  // ✅ LOCAL APPOINTMENTS STATE: Manage appointments state locally  
+  const [appointments, setAppointments] = useState<any[]>([]);
+  const [appointmentsLoading, setAppointmentsLoading] = useState(true);
+  const [appointmentsError, setAppointmentsError] = useState<string | null>(null);
+
+  // ✅ LOCAL PATIENTS STATE: Manage patients state locally
+  const [patients, setPatients] = useState<any[]>([]);
+  const [patientsLoading, setPatientsLoading] = useState(true);
+  const [patientsError, setPatientsError] = useState<string | null>(null);
+
+  // ✅ DASHBOARD STATS: Calculate locally from payments data
+  const dashboardStats = {
+    totalRevenue: payments.reduce((sum, p) => sum + (p.amount || 0), 0),
+    totalPayments: payments.length,
+    pendingPayments: payments.filter(p => p.status === 'Pending').length,
+    overduePayments: payments.filter(p => p.status === 'Overdue').length
+  };
+
+  // ✅ INITIALIZE DATA: Load initial data on component mount
+  React.useEffect(() => {
+    // Initialize with default data if needed
+    if (payments.length === 0 && !paymentsLoading) {
+      const defaultPayments = [];
+      setPayments(defaultPayments);
+      console.log('✅ PaymentListPage: Initialized with default payments data');
+    }
+    
+    // Set loading states
+    setPaymentsLoading(false);
+    setAppointmentsLoading(false);  
+    setPatientsLoading(false);
+  }, []);
+
+  // ✅ NEW: Real-time update notifications
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+  const [updateCount, setUpdateCount] = useState(0);
+  
+  // State management
+  const [tabValue, setTabValue] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterAnchor, setFilterAnchor] = useState<null | HTMLElement>(null);
+  const [addPaymentOpen, setAddPaymentOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
+  const [selectedPayment, setSelectedPayment] = useState<PaymentData | null>(null);
+  const [activeFilter, setActiveFilter] = useState<'all' | 'thisMonth' | 'lastMonth' | 'paid' | 'pending' | 'overdue' | 'withInsurance'>('all');
+  const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
+  const [selectedInvoiceForView, setSelectedInvoiceForView] = useState<PaymentData | null>(null);
+  const [snackbar, setSnackbar] = useState<SnackbarState>({ 
+    open: false, 
+    message: '', 
+    severity: 'success' 
+  });
+  const [statusMenuAnchor, setStatusMenuAnchor] = useState<null | HTMLElement>(null);
+  const [selectedPaymentForStatusChange, setSelectedPaymentForStatusChange] = useState<PaymentData | null>(null);
+  const [exportOptionsOpen, setExportOptionsOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [showAppointmentSelection, setShowAppointmentSelection] = useState(false);
+  const [vatAdjustmentModalOpen, setVatAdjustmentModalOpen] = useState(false);
+  const [expenseManagementModalOpen, setExpenseManagementModalOpen] = useState(false);
+  
+  // ✅ NEW: Force re-render mechanism
+  const [forceRenderKey, setForceRenderKey] = useState(0);
+  const forceRerender = () => {
+    setForceRenderKey(prev => prev + 1);
+    console.log(`🔄 UI: Forced re-render triggered, key: ${forceRenderKey + 1}`);
+  };
+  
+  // Payment amount editing state
+  const [editPaymentModalOpen, setEditPaymentModalOpen] = useState(false);
+  const [selectedPaymentForEdit, setSelectedPaymentForEdit] = useState<PaymentData | null>(null);
+  const [editPaymentForm, setEditPaymentForm] = useState({
+    amount: '',
+    paidAmount: ''
+  });
+  
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  
+  // Load VAT adjustments from localStorage using utility function
+  const [vatAdjustments, setVatAdjustments] = useState(() => {
+    try {
+      const loaded = loadVATAdjustmentsFromStorage();
+      console.log('✅ PaymentListPage: Loaded VAT adjustments from localStorage:', loaded.length);
+      return loaded;
+    } catch (error) {
+      console.error('❌ PaymentListPage: Error loading VAT adjustments:', error);
+      return [];
+    }
+  });
+  
+    // ✅ Firebase real-time data states (now handled by hooks)
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const [dataLoading, setDataLoading] = useState(true);
+  const [firebasePayments, setFirebasePayments] = useState<FirebasePayment[]>([]);
+  const [firebaseConnected, setFirebaseConnected] = useState(false);
+  
+  // ✅ Initialize invoice form with defaults (no localStorage)
+  const [newInvoiceData, setNewInvoiceData] = useState<NewInvoiceData>(() => {
+    return {
+      ...defaultNewInvoiceData,
+      includeVAT: getVATSettings().defaultIncludeVAT,
+      vatRate: getVATSettings().rate,
+    };
+  });
+  const [vatSettings, setVATSettings] = useState<VATSettings>(getVATSettings());
+  const [currentVATCalculation, setCurrentVATCalculation] = useState<VATCalculation | null>(null);
+  
+  const [availableDoctors, setAvailableDoctors] = useState<Doctor[]>([]);
+
+  // Add state for cache operations
+  const [isClearingCache, setIsClearingCache] = useState(false);
+  const [showStaleDataWarning, setShowStaleDataWarning] = useState(false);
+
+  // Check for stale data on mount
+  useEffect(() => {
+    if (hasStalePaymentData()) {
+      setShowStaleDataWarning(true);
+    }
+  }, []);
+
+  // Handle cache clearing with better feedback
+  const handleClearCache = async () => {
+    if (!userProfile?.clinicId) {
+      alert('❌ No clinic ID available. Please log in again.');
+      return;
+    }
+    
+    // Confirm with user
+    const confirmed = window.confirm(
+      '🧹 Clear Payment Cache?\n\n' +
+      'This will:\n' +
+      '• Clear all cached payment data\n' +
+      '• Refresh from Firebase database\n' +
+      '• Remove any deleted/stale payments\n\n' +
+      'Continue?'
+    );
+    
+    if (!confirmed) return;
+    
+    setIsClearingCache(true);
+    try {
+      console.log('🔄 Starting payment cache clear...');
+      
+      // Step 1: Clear cache
+      await resetPaymentSystemCache(userProfile.clinicId);
+      
+      // Step 2: Force refresh from Firebase
+      console.log('🔄 Force refreshing from Firebase...');
+      const freshPayments = await forceRefreshFromFirebase(userProfile.clinicId);
+      
+      // Step 3: Update UI
+      setPayments(freshPayments);
+      setShowStaleDataWarning(false);
+      
+      // Step 4: Show success message
+      const message = freshPayments.length > 0 
+        ? `✅ Cache cleared! Found ${freshPayments.length} payments in Firebase.`
+        : '✅ Cache cleared! No payments found in Firebase (showing empty state).';
+      
+      console.log('✅ Payment cache clear complete');
+      alert(message + '\n\nAll stale/deleted payments have been removed.');
+      
+    } catch (error) {
+      console.error('❌ Error clearing cache:', error);
+      
+      // Provide detailed error feedback
+      let errorMessage = '❌ Error clearing cache:\n\n';
+      if (error instanceof Error) {
+        errorMessage += error.message;
+      } else {
+        errorMessage += 'Unknown error occurred';
+      }
+      errorMessage += '\n\nCheck browser console for details.';
+      
+      alert(errorMessage);
+    } finally {
+      setIsClearingCache(false);
+    }
+  };
+
+  // Add debug info for developers
+  const handleClearCacheDebug = () => {
+    console.log('🔍 PAYMENT CACHE DEBUG INFO:');
+    console.log('Has stale data:', hasStalePaymentData());
+    console.log('Clinic ID:', userProfile?.clinicId);
+    console.log('Current payments count:', payments.length);
+    console.log('localStorage keys:', Object.keys(localStorage).filter(key => 
+      key.includes('payment') || key.includes('clinic') || key.includes('vat')
+    ));
+    
+    // Show cache contents
+    try {
+      const cached = localStorage.getItem('clinic_payments_data');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        console.log('Cached payments:', parsed.length, parsed);
+      } else {
+        console.log('No cached payments found');
+      }
+    } catch (e) {
+      console.log('Error reading cached payments:', e);
+    }
+  };
+
+  // Add keyboard shortcut for developers (Ctrl+Shift+D on payment page)
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.ctrlKey && event.shiftKey && event.key === 'D') {
+        event.preventDefault();
+        handleClearCacheDebug();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [payments.length, userProfile?.clinicId]);
+
+  // ✅ NEW: Direct Firebase connection test with fallback
+  React.useEffect(() => {
+    if (!initialized || authLoading || !user || !userProfile) return;
+
+    console.log('🔄 DIRECT TEST: Fetching Firebase payment data directly...');
+    
+    const testFirebaseConnection = async () => {
+      try {
+        const clinicId = userProfile.clinicId || 'demo-clinic';
+        
+        // ✅ FIXED: Wait for Firebase to be ready before accessing services
+        console.log('🔄 Waiting for Firebase to be ready...');
+        const { firebaseManager } = await import('@lib/firebase/legacy-compat');
+        
+        // Wait for Firebase initialization with timeout
+        let retries = 0;
+        const maxRetries = 20; // 5 seconds total
+        
+        while (!firebaseManager.isReady() && retries < maxRetries) {
+          await new Promise(resolve => setTimeout(resolve, 250));
+          retries++;
+        }
+        
+        if (!firebaseManager.isReady()) {
+          throw new Error('Firebase initialization timeout - service not ready after 5 seconds');
+        }
+        
+        console.log('✅ Firebase is ready, proceeding with data fetch...');
+        
+        // Direct fetch from Firebase services
+        console.log('💰 Fetching payments directly from Firebase...');
+        const directPayments = await PaymentService.getPayments(clinicId);
+        console.log(`💰 Direct fetch: Found ${directPayments.length} payments`);
+        
+        console.log('📋 Fetching appointments directly...');
+        const directAppointments = await AppointmentService.getAllAppointments(clinicId);
+        console.log(`📋 Direct fetch: Found ${directAppointments.length} appointments`);
+        
+        // ✅ PRIORITIZE FIREBASE: Only use Firebase data, show warning if localStorage has stale data
+        if (directPayments.length > 0) {
+          const convertedPayments = directPayments.map((payment: any) => ({
+            id: parseInt(payment.id) || Math.random() * 1000,
+            invoiceId: payment.invoiceId || `INV-${payment.id}`,
+            patient: payment.patient || 'Unknown Patient',
+            patientAvatar: payment.patient?.split(' ').map((n: string) => n[0]).join('').toUpperCase() || 'UP',
+            doctor: payment.doctor || 'Unknown Doctor',
+            appointmentId: payment.appointmentId || '',
+            amount: payment.amount || 0,
+            currency: payment.currency || 'USD',
+            date: payment.date || ServiceUtils.getToday(),
+            dueDate: payment.dueDate || ServiceUtils.getToday(),
+            status: payment.status || 'pending',
+            method: payment.method || 'cash',
+            description: payment.description || 'Payment',
+            category: payment.category || 'consultation',
+            insurance: 'No',
+            insuranceAmount: 0,
+            paidAmount: payment.paidAmount || (payment.status === 'completed' ? payment.amount : 0),
+            includeVAT: false,
+            vatRate: 0,
+            vatAmount: 0,
+            totalAmountWithVAT: payment.amount || 0,
+            baseAmount: payment.amount || 0
+          })) as PaymentData[];
+          
+          setPayments(convertedPayments);
+          console.log('✅ Payments state updated from Firebase');
+          
+          // Clear any stale localStorage data
+          if (hasStalePaymentData()) {
+            localStorage.removeItem('clinic_payments_data');
+            console.log('🧹 Cleared stale localStorage data');
+          }
+        } else {
+          // ✅ NO FIREBASE DATA: Show empty state instead of falling back to localStorage
+          console.log('💰 No Firebase payments found - showing empty state');
+          setPayments([]);
+          
+          // Check if we have stale data in localStorage
+          if (hasStalePaymentData()) {
+            setShowStaleDataWarning(true);
+            console.log('⚠️ Stale data detected in localStorage - showing warning');
+          }
+        }
+        
+        if (directAppointments.length > 0) {
+          setAppointments(directAppointments);
+          console.log('✅ Appointments state updated');
+        }
+        
+        setIsDataLoaded(true);
+        setDataLoading(false);
+        
+      } catch (error) {
+        console.error('❌ PAYMENT DIRECT TEST: Firebase connection failed:', error);
+        
+        // ✅ FALLBACK: Only fall back to localStorage if Firebase is completely unavailable
+        console.log('🔄 Firebase unavailable, checking localStorage as last resort...');
+        const localPayments = loadPaymentsFromStorage();
+        
+        if (localPayments.length > 0) {
+          setPayments(localPayments);
+          setShowStaleDataWarning(true); // Always show warning when using localStorage
+        } else {
+          setPayments([]);
+        }
+        
+        setIsDataLoaded(true);
+        setDataLoading(false);
+      }
+    };
+    
+    // Run direct test
+    testFirebaseConnection();
+  }, [initialized, authLoading, user, userProfile]);
+
+  // ✅ Firebase Data Bridge (keep as backup)
+  React.useEffect(() => {
+    if (!initialized || authLoading || !user || !userProfile) return;
+
+    console.log('💚 Setting up Payment Firebase Data Bridge as backup...');
+
+    // Subscribe to real-time data changes
+    const unsubscribe = FirebaseDataBridge.subscribe((data) => {
+      console.log('💚 Payment Data Bridge Update:', {
+        appointments: data.appointments?.length || 0,
+        patients: data.patients?.length || 0
+      });
+
+      if (data.appointments && data.appointments.length > 0) {
+        setAppointments(data.appointments);
+        console.log('💚 Payment Data Bridge: Appointments updated');
+      }
+      
+      // Note: Payment sync will be handled by direct Firebase calls for now
+      setIsDataLoaded(true);
+      setDataLoading(false);
+    });
+
+    // Force refresh data for this page
+    setTimeout(() => {
+      FirebaseDataBridge.refreshAll(userProfile.clinicId || 'demo-clinic');
+    }, 3000);
+
+    // ✅ REMOVED: Firebase real-time listener handles this automatically
+
+    // ✅ REMOVED: All redundant event handlers - Firebase real-time listener handles updates
+
+    // ✅ SIMPLIFIED: Only handle critical payment updates to prevent infinite loop
+    const handlePaymentsUpdated = (event: CustomEvent) => {
+      const { payments: updatedPayments, source } = event.detail;
+      
+      // ✅ PREVENT INFINITE LOOP: Ignore events from PaymentListPage itself
+      if (source === 'PaymentListPage') {
+        console.log('🔄 Ignoring payment update from self to prevent infinite loop');
+        return;
+      }
+      
+      console.log('💚 Payment page: External payment update received from:', source);
+      
+      if (updatedPayments && Array.isArray(updatedPayments)) {
+        console.log(`🔄 Payment page: Updating UI with ${updatedPayments.length} payments`);
+        setPayments([...updatedPayments]);
+        forceRerender();
+      }
+    };
+
+    // ✅ SIMPLIFIED: Only essential event listeners
+    window.addEventListener('paymentsUpdated', handlePaymentsUpdated as EventListener);
+
+    // Cleanup on unmount
+    return () => {
+      console.log('💚 Cleaning up Payment Firebase Data Bridge...');
+      unsubscribe();
+      window.removeEventListener('paymentsUpdated', handlePaymentsUpdated as EventListener);
+    };
+  }, [initialized, authLoading, user, userProfile]);
+
+  // Load data from localStorage on component mount - wait for auth
+  useEffect(() => {
+    // Wait for auth to be initialized and user to be available
+    if (!initialized || authLoading || !user) {
+      console.log('🔄 PaymentListPage: Waiting for auth initialization...', {
+        initialized,
+        authLoading,
+        hasUser: !!user
+      });
+      return;
+    }
+
+    console.log('✅ PaymentListPage: Auth initialized, loading payment data...');
+    setDataLoading(true);
+
+    try {
+      const loadedPayments = [];
+      setPayments(loadedPayments);
+      setIsDataLoaded(true);
+      console.log('✅ PaymentListPage: Payment data loaded successfully');
+    } catch (error) {
+      console.error('❌ PaymentListPage: Error loading payment data:', error);
+    } finally {
+      setDataLoading(false);
+    }
+
+    // Listen for mobile FAB action
+    const handleOpenAddPayment = () => {
+      setAddPaymentOpen(true);
+    };
+
+    // Listen for user data clearing
+    const handleUserDataCleared = () => {
+      // Reset to default state
+      setPayments([]);
+      setTabValue(0);
+      setSearchQuery('');
+      setActiveFilter('all');
+      setNewInvoiceData({
+        ...defaultNewInvoiceData,
+        includeVAT: getVATSettings().defaultIncludeVAT,
+        vatRate: getVATSettings().rate,
+      });
+      setSelectedPayment(null);
+      setSelectedInvoiceForView(null);
+      setSelectedPaymentForStatusChange(null);
+      
+      // Close all dialogs
+      setAddPaymentOpen(false);
+      setInvoiceDialogOpen(false);
+      setExportOptionsOpen(false);
+      setFilterAnchor(null);
+      setStatusMenuAnchor(null);
+      
+      // Set view mode to default
+      setViewMode('table');
+      
+      console.log('✅ Payments reset to default state');
+    };
+
+    window.addEventListener('userDataCleared', handleUserDataCleared);
+    window.addEventListener('openAddPayment', handleOpenAddPayment);
+    
+    return () => {
+      window.removeEventListener('userDataCleared', handleUserDataCleared);
+      window.removeEventListener('openAddPayment', handleOpenAddPayment);
+    };
+  }, [initialized, authLoading, user]);
+
+  // ✅ Real-time Firestore listener for doctors
+  useEffect(() => {
+    const clinicId = userProfile?.clinicId;
+    
+    if (!clinicId) {
+      console.log('🔄 PaymentListPage: Waiting for clinicId...');
+      return;
+    }
+
+    console.log('🔄 PaymentListPage: Setting up real-time doctor listener for clinic:', clinicId);
+
+            // ✅ FIXED: Use Firebase v9+ modular pattern
+        const setupFirebaseListener = async () => {
+          try {
+            console.log('✅ PaymentListPage: Setting up Firebase v9+ modular listener');
+            const { collection, query, where, onSnapshot } = await import('firebase/firestore');
+            const { getOptimizedFirestore } = await import('@lib/firebase/legacy-compat');
+            const db = await getOptimizedFirestore();
+            
+            const usersCollection = collection(db, 'users');
+            const q = query(
+              usersCollection,
+              where('clinicId', '==', clinicId),
+              where('role', '==', 'doctor'),
+              where('isActive', '==', true)
+            );
+
+        const unsub = onSnapshot(q, (snap) => {
+          const list = snap.docs.map(d => ({ id: d.id, ...d.data() })) as Doctor[];
+          setAvailableDoctors(list);
+          console.log('✅ PaymentListPage: Real-time doctors updated:', list.length);
+        }, (error) => {
+          console.error('❌ PaymentListPage: Error in doctor listener:', error);
+          // Fallback to empty array on error
+          setAvailableDoctors([]);
+        });
+
+        return unsub;
+      } catch (error) {
+        console.error('❌ PaymentListPage: Failed to create Firebase listener:', error);
+        return null;
+      }
+    };
+    
+    // Start the async setup
+    let cleanup: (() => void) | null = null;
+    setupFirebaseListener().then((unsubscribe) => {
+      cleanup = unsubscribe;
+    }).catch((error) => {
+      console.error('❌ PaymentListPage: Firebase listener setup failed:', error);
+    });
+
+    return () => {
+      console.log('🔄 PaymentListPage: Cleaning up doctor listener');
+      if (cleanup) cleanup();
+    };
+  }, [userProfile?.clinicId]);
+
+  // ✅ FIREBASE REAL-TIME STATE - Firebase Data Manager Integration
+  useEffect(() => {
+    if (!userProfile?.clinicId) {
+      console.log('🔄 PaymentListPage: Waiting for userProfile.clinicId...');
+      return;
+    }
+
+    console.log('🔥 Initializing Firebase Data Manager for payments...');
+    
+    // Initialize Firebase Data Manager
+    const dataManager = firebaseDataManager.initialize({
+      clinicId: userProfile.clinicId,
+      userId: userProfile.id
+    });
+    
+    // Listen to real-time payment updates
+    dataManager.addEventListener('payments', (firebasePayments: FirebasePayment[]) => {
+      console.log(`🔥 REALTIME: Received ${firebasePayments.length} payments from Firebase`);
+      setFirebasePayments(firebasePayments);
+      
+      // Convert Firebase payments to PaymentData format for UI compatibility
+      const convertedPayments = firebasePayments.map(convertFirebasePaymentToPaymentData);
+      setPayments(convertedPayments);
+      setDataLoading(false);
+      setFirebaseConnected(true);
+      setIsDataLoaded(true);
+    });
+    
+    // Listen to cross-page events
+    const handlePaymentCreated = (event: CustomEvent) => {
+      console.log('🔄 Cross-page event: Payment created', event.detail);
+      // Data will be updated via real-time listener automatically
+    };
+    
+    const handlePaymentUpdated = (event: CustomEvent) => {
+      console.log('🔄 Cross-page event: Payment updated', event.detail);
+      // Data will be updated via real-time listener automatically
+    };
+    
+    const handleAppointmentPaymentSynced = (event: CustomEvent) => {
+      console.log('🔄 PAYMENT PAGE: Appointment payment synced from appointment page');
+      console.log('📋 Sync Event Details:', event.detail);
+      
+      const { appointmentId, newStatus, source } = event.detail;
+      
+      // Update payment status locally if change came from appointment page
+      if (source !== 'PaymentListPage') {
+        setPayments(prev => prev.map(payment => 
+          payment.appointmentId === appointmentId 
+            ? { ...payment, status: newStatus }
+            : payment
+        ));
+        
+        console.log('✅ Payment status updated from appointment sync:', {
+          appointmentId,
+          newStatus,
+          source
+        });
+      }
+      
+      // Show notification
+      setSnackbar({
+        open: true,
+        message: `Payment status synced for appointment ${appointmentId}: ${newStatus}`,
+        severity: 'info'
+      });
+    };
+
+    // ✅ NEW: Handle payment status changes from appointment page
+    const handlePaymentStatusChangeFromAppointment = (event: CustomEvent) => {
+      console.log('💚 PAYMENT PAGE: Payment status changed from appointment page');
+      console.log('📋 Appointment Change Details:', event.detail);
+      
+      const { appointmentId, newStatus, source, paymentId, patient } = event.detail;
+      
+      if (source === 'AppointmentListPage') {
+        console.log('🔄 Appointment-initiated payment status change detected');
+        
+        // Update payment status locally - search by appointmentId or patient name
+        setPayments(prev => {
+          const updatedPayments = prev.map(payment => {
+            const shouldUpdate = 
+              payment.appointmentId === appointmentId || 
+              payment.id.toString() === paymentId ||
+              (payment.patient === patient && !payment.appointmentId); // Fallback for payments without appointmentId
+            
+            if (shouldUpdate) {
+              console.log('🎯 Updating payment:', {
+                paymentId: payment.id,
+                invoiceId: payment.invoiceId,
+                oldStatus: payment.status,
+                newStatus: newStatus,
+                matchedBy: payment.appointmentId === appointmentId ? 'appointmentId' : 
+                          payment.id.toString() === paymentId ? 'paymentId' : 'patient'
+              });
+              
+              return { 
+                ...payment, 
+                status: newStatus,
+                // Update paidAmount if status is paid
+                paidAmount: newStatus === 'paid' ? payment.amount : 
+                           newStatus === 'pending' ? 0 : payment.paidAmount
+              };
+            }
+            return payment;
+          });
+          
+          // Save updated payments to localStorage immediately
+          try {
+            localStorage.setItem('clinic_payments_data', JSON.stringify(updatedPayments));
+            console.log('💾 Updated payments saved to localStorage');
+          } catch (error) {
+            console.error('❌ Error saving updated payments:', error);
+          }
+          
+          return updatedPayments;
+        });
+        
+        console.log('✅ Payment updated from appointment page change:', {
+          appointmentId,
+          paymentId,
+          newStatus,
+          source,
+          patient
+        });
+        
+        // Force re-render
+        setForceRenderKey(prev => prev + 1);
+        
+        // Show success notification
+        setSnackbar({
+          open: true,
+          message: `Payment status updated to ${newStatus} from appointment change`,
+          severity: 'success'
+        });
+      } else {
+        console.log('📝 Payment status change not from appointment page, ignoring');
+      }
+    };
+    
+    // Listen for VAT adjustments updates
+    const handleVATAdjustmentsUpdated = (event: CustomEvent) => {
+      const { adjustments } = event.detail;
+      console.log('📢 PaymentListPage: VAT adjustments updated event received:', adjustments.length);
+      
+      // Update VAT adjustments state
+      setVatAdjustments(adjustments);
+      
+      // Trigger financial summary recalculation
+      setRefreshTrigger(prev => {
+        const newTrigger = prev + 1;
+        console.log('🔄 VAT adjustments triggered financial summary recalculation:', newTrigger);
+        return newTrigger;
+      });
+    };
+
+    // Listen for employee updates from expense management
+    const handleEmployeesUpdated = (event: CustomEvent) => {
+      const { employees } = event.detail;
+      console.log('📢 PaymentListPage: Employees updated event received:', employees.length);
+      
+      // Add a small delay to ensure localStorage has been written
+      setTimeout(() => {
+        // Trigger financial summary recalculation to include new salary expenses
+        setRefreshTrigger(prev => {
+          const newTrigger = prev + 1;
+          console.log('🔄 Employee updates triggered financial summary recalculation:', newTrigger);
+          return newTrigger;
+        });
+      }, 100);
+    };
+
+    // Listen for business expense updates from expense management
+    const handleBusinessExpensesUpdated = (event: CustomEvent) => {
+      const { expenses } = event.detail;
+      console.log('📢 PaymentListPage: Business expenses updated event received:', expenses.length);
+      
+      // Add a small delay to ensure localStorage has been written
+      setTimeout(() => {
+        // Trigger financial summary recalculation to include new business expenses
+        setRefreshTrigger(prev => {
+          const newTrigger = prev + 1;
+          console.log('🔄 Business expense updates triggered financial summary recalculation:', newTrigger);
+          return newTrigger;
+        });
+      }, 100);
+    };
+
+    // Add browser event listeners
+    window.addEventListener('paymentCreated', handlePaymentCreated as EventListener);
+    window.addEventListener('paymentUpdated', handlePaymentUpdated as EventListener);
+    window.addEventListener('appointmentPaymentSynced', handleAppointmentPaymentSynced as EventListener);
+    window.addEventListener('paymentStatusChanged', handlePaymentStatusChangeFromAppointment as EventListener);
+    window.addEventListener('vatAdjustmentsUpdated', handleVATAdjustmentsUpdated as EventListener);
+    window.addEventListener('employeesUpdated', handleEmployeesUpdated as EventListener);
+    window.addEventListener('businessExpensesUpdated', handleBusinessExpensesUpdated as EventListener);
+    
+    console.log('👂 Payment page event listeners registered for cross-page sync');
+    
+    // Handle user data clearing
+    const handleUserDataCleared = () => {
+      // Reset to default state
+      setPayments([]);
+      setAppointments([]);
+      setVatAdjustments([]); // Reset VAT adjustments
+      setTabValue(0);
+      setSearchQuery('');
+      setActiveFilter('all');
+      setRefreshTrigger(0); // Reset refresh trigger
+      setNewInvoiceData({
+        ...defaultNewInvoiceData,
+        includeVAT: getVATSettings().defaultIncludeVAT,
+        vatRate: getVATSettings().rate,
+        insuranceAmount: '0'
+      });
+      setSelectedPayment(null);
+      setSelectedInvoiceForView(null);
+      setSelectedPaymentForStatusChange(null);
+      
+      // Close all dialogs
+      setAddPaymentOpen(false);
+      setInvoiceDialogOpen(false);
+      setExportOptionsOpen(false);
+      setFilterAnchor(null);
+      setStatusMenuAnchor(null);
+      
+      console.log('✅ Payments reset to default state');
+    };
+
+    // Listen for mobile FAB action
+    const handleOpenAddPayment = () => {
+      setAddPaymentOpen(true);
+    };
+
+    window.addEventListener('userDataCleared', handleUserDataCleared);
+    window.addEventListener('openAddPayment', handleOpenAddPayment);
+    
+    // Cleanup function
+    return () => {
+      window.removeEventListener('paymentCreated', handlePaymentCreated as EventListener);
+      window.removeEventListener('paymentUpdated', handlePaymentUpdated as EventListener);
+      window.removeEventListener('appointmentPaymentSynced', handleAppointmentPaymentSynced as EventListener);
+      window.removeEventListener('paymentStatusChanged', handlePaymentStatusChangeFromAppointment as EventListener);
+      window.removeEventListener('vatAdjustmentsUpdated', handleVATAdjustmentsUpdated as EventListener);
+      window.removeEventListener('employeesUpdated', handleEmployeesUpdated as EventListener);
+      window.removeEventListener('businessExpensesUpdated', handleBusinessExpensesUpdated as EventListener);
+      window.removeEventListener('userDataCleared', handleUserDataCleared);
+      window.removeEventListener('openAddPayment', handleOpenAddPayment);
+      console.log('🧹 Cleaned up payment page event listeners');
+    };
+  }, [userProfile?.clinicId]);
+
+  // ✅ REMOVED: This was causing infinite loop
+  // No longer auto-saving to localStorage when payments change
+  // Firebase handles persistence automatically
+
+  // Removed: Invoice form localStorage saving - keeping UI state only
+
+  // Calculate VAT whenever amount or VAT settings change
+  useEffect(() => {
+    const amount = parseFloat(newInvoiceData.amount);
+    if (!isNaN(amount) && amount > 0) {
+      const calculation = calculateVAT(amount, newInvoiceData.vatRate, newInvoiceData.includeVAT);
+      setCurrentVATCalculation(calculation);
+    } else {
+      setCurrentVATCalculation(null);
+    }
+    }, [newInvoiceData.amount, newInvoiceData.vatRate, newInvoiceData.includeVAT]);
+
+  // Appointment helper functions
+  const getAppointmentsByDate = (date: string) => {
+    return appointments.filter(apt => apt.date === date);
+  };
+
+  const getCompletedAppointmentsByDate = (date: string) => {
+    return appointments.filter(apt => 
+      apt.date === date && (apt.status === 'completed' || apt.completed === true)
+    );
+  };
+
+  const getPendingAppointmentsByDate = (date: string) => {
+    return appointments.filter(apt => 
+      apt.date === date && apt.status !== 'completed' && apt.completed !== true
+    );
+  };
+
+  const handleAppointmentSelection = (appointment: any) => {
+    setNewInvoiceData(prev => ({
+      ...prev,
+      patient: appointment.patient,
+      doctor: appointment.doctor,
+      appointmentId: appointment.id?.toString(),
+      invoiceDate: appointment.date,
+      description: `${appointment.type || 'Unknown'} appointment with Dr. ${appointment.doctor}`,
+      category: appointment.type && appointment.type.toLowerCase().includes('consultation') ? 'consultation' : 
+                appointment.type && appointment.type.toLowerCase().includes('checkup') ? 'checkup' :
+                appointment.type && appointment.type.toLowerCase().includes('emergency') ? 'emergency' : 'consultation'
+    }));
+    setShowAppointmentSelection(false);
+  };
+
+  // Calculate appointment-related statistics
+  const todayAppointments = getAppointmentsByDate(new Date().toISOString().split('T')[0]);
+  const completedTodayAppointments = getCompletedAppointmentsByDate(new Date().toISOString().split('T')[0]);
+  const pendingTodayAppointments = getPendingAppointmentsByDate(new Date().toISOString().split('T')[0]);
+  const appointmentLinkedPayments = payments.filter(payment => payment.appointmentId);
+
+  // Calculate today's appointment revenue
+  const todayAppointmentRevenue = appointmentLinkedPayments
+    .filter(payment => payment.date === new Date().toISOString().split('T')[0])
+    .reduce((sum, payment) => sum + (payment.status === 'paid' ? payment.amount : 0), 0);
+
+  // Helper functions
+  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    setTabValue(newValue);
+  };
+
+  const getStatusColor = (status: string) => {
+    const statusColors = {
+      paid: 'success',
+      pending: 'warning',
+      overdue: 'error',
+      partial: 'info'
+    };
+    return statusColors[status as keyof typeof statusColors] || 'default';
+  };
+
+  const getStatusIcon = (status: string) => {
+    const statusIcons = {
+      paid: <CheckCircle fontSize="small" />,
+      pending: <AccessTime fontSize="small" />,
+      overdue: <Warning fontSize="small" />,
+      partial: <AttachMoney fontSize="small" />
+    };
+    return statusIcons[status as keyof typeof statusIcons] || <Receipt fontSize="small" />;
+  };
+
+  const getMethodIcon = (method: string) => {
+    const methodIcons = {
+      'credit card': <CreditCard fontSize="small" />,
+      'cash': <MonetizationOn fontSize="small" />,
+      'bank transfer': <AccountBalance fontSize="small" />,
+      'insurance': <Receipt fontSize="small" />
+    };
+    return methodIcons[(method && method.toLowerCase()) as keyof typeof methodIcons] || <Payment fontSize="small" />;
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat(
+      isRTL ? 'ar-EG' : 'en-US',
+      { style: 'decimal', minimumFractionDigits: 2 }
+    ).format(amount);
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString(
+      isRTL ? 'ar-EG' : 'en-US'
+    );
+  };
+
+  // Filtering logic
+  const getFilteredPayments = () => {
+    let filtered = payments;
+
+    // Apply main filter
+    switch (activeFilter) {
+      case 'thisMonth':
+        const thisMonth = new Date();
+        thisMonth.setDate(1);
+        filtered = filtered.filter(payment => new Date(payment.date) >= thisMonth);
+        break;
+      case 'lastMonth':
+        const lastMonth = new Date();
+        lastMonth.setMonth(lastMonth.getMonth() - 1);
+        const endLastMonth = new Date(lastMonth.getFullYear(), lastMonth.getMonth() + 1, 0);
+        lastMonth.setDate(1);
+        filtered = filtered.filter(payment => {
+          const paymentDate = new Date(payment.date);
+          return paymentDate >= lastMonth && paymentDate <= endLastMonth;
+        });
+        break;
+      case 'paid':
+        filtered = filtered.filter(payment => payment.status === 'paid');
+        break;
+      case 'pending':
+        filtered = filtered.filter(payment => payment.status === 'pending');
+        break;
+      case 'overdue':
+        filtered = filtered.filter(payment => payment.status === 'overdue');
+        break;
+      case 'withInsurance':
+        filtered = filtered.filter(payment => payment.insurance === 'Yes');
+        break;
+      default: // 'all'
+        break;
+    }
+
+    // Apply search query
+    if (searchQuery) {
+      filtered = filtered.filter(payment =>
+        (payment.patient && payment.patient.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (payment.invoiceId && payment.invoiceId.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (payment.description && payment.description.toLowerCase().includes(searchQuery.toLowerCase()))
+      );
+    }
+
+    return filtered;
+  };
+
+  const filteredPayments = getFilteredPayments();
+
+  // Calculate comprehensive financial summary with all expenses
+  const paidPayments = payments.filter(p => p.status === 'paid');
+  const baseRevenue = paidPayments.reduce((sum, p) => sum + p.amount, 0);
+  const totalInsurance = paidPayments.filter(p => p.insurance === 'Yes').reduce((sum, p) => sum + (p.insuranceAmount || 0), 0);
+
+  // Enhanced VAT calculations - only calculate VAT if there are actually VAT-enabled payments
+  const paymentsWithVAT = paidPayments.filter(p => p.includeVAT && (p.vatAmount || 0) > 0);
+  const automaticVATFromPayments = paymentsWithVAT.reduce((sum, p) => sum + (p.vatAmount || 0), 0);
+  const hasVATPayments = paymentsWithVAT.length > 0;
+
+  // ❌ DISABLED: Automatic payment processing to prevent duplicates
+  // Process appointments to create payments
+  // useEffect(() => {
+  //   if (appointments.length > 0) {
+  //     processAllAppointmentsForPayments(appointments);
+  //     
+  //     // Reload payments after processing appointments
+  //     setTimeout(() => {
+  //       const updatedPayments = loadPaymentsFromStorage();
+  //       setPayments(updatedPayments);
+  //       console.log(`🔄 Reloaded ${updatedPayments.length} payments after processing appointments`);
+  //     }, 100);
+  //   }
+  // }, [appointments]);
+  
+  console.log('ℹ️ Automatic payment processing disabled to prevent duplicate payments');
+
+  // Calculate comprehensive financial summary including salaries, business expenses, and VAT adjustments
+  // Use refreshTrigger to force recalculation when VAT adjustments change
+  const financialSummary: FinancialSummary = useMemo(() => {
+    console.log('📊 Calculating financial summary with:', { 
+      baseRevenue, 
+      automaticVATFromPayments, 
+      vatAdjustments: vatAdjustments.length,
+      refreshTrigger 
+    });
+    
+    // Debug VAT adjustments
+    console.log('🔍 Current VAT adjustments in state:', vatAdjustments);
+    
+    const summary = calculateFinancialSummary(baseRevenue, automaticVATFromPayments);
+    console.log('💰 Financial summary calculated:', {
+      finalVATCollected: summary.finalVATCollected,
+      netVATAdjustments: summary.netVATAdjustments,
+      totalExpenses: summary.totalExpenses,
+      netProfit: summary.netProfit,
+      vatAdjustmentDetails: summary.vatAdjustmentDetails
+    });
+    
+    // Additional debug for VAT card display
+    console.log('🎯 VAT Card will show:', Math.abs(summary.finalVATCollected));
+    
+    return summary;
+  }, [baseRevenue, automaticVATFromPayments, vatAdjustments, refreshTrigger]);
+
+  // Extract key financial metrics
+  const totalRevenue = financialSummary.adjustedRevenue; // Revenue including VAT adjustments
+  const totalProfit = financialSummary.netProfit; // Profit after all expenses (salaries + business expenses)
+  const grossProfit = financialSummary.grossProfit; // Profit before expenses (after VAT only)
+  const totalExpenses = financialSummary.totalExpenses; // All expenses (salaries + business)
+  const finalVATCollected = financialSummary.finalVATCollected; // Final VAT after all adjustments
+  const pendingAmount = payments.filter(p => p.status === 'pending').reduce((sum, p) => sum + p.amount, 0);
+
+  // Debug function for testing expense management integration (browser console)
+  React.useEffect(() => {
+    // Add global debug functions for expense management
+    (window as any).debugExpenseManagement = {
+      getCurrentFinancialSummary: () => {
+        console.log('📊 Current Financial Summary:', {
+          totalRevenue: financialSummary.totalRevenue,
+          totalSalaryExpenses: financialSummary.totalSalaryExpenses,
+          totalBusinessExpenses: financialSummary.totalBusinessExpenses,
+          totalExpenses: financialSummary.totalExpenses,
+          netProfit: financialSummary.netProfit,
+          finalVATCollected: financialSummary.finalVATCollected
+        });
+        return financialSummary;
+      },
+      testExpenseIntegration: () => {
+        console.log('🧪 Testing expense management integration...');
+        
+        // Check localStorage data
+        const employees = JSON.parse(localStorage.getItem('clinic_employees_data') || '[]');
+        const businessExpenses = JSON.parse(localStorage.getItem('clinic_business_expenses_data') || '[]');
+        const vatAdjustments = JSON.parse(localStorage.getItem('clinic_vat_adjustments') || '[]');
+        
+        console.log('💾 Current localStorage data:', {
+          employees: employees.length,
+          businessExpenses: businessExpenses.length,
+          vatAdjustments: vatAdjustments.length,
+          employeeDetails: employees.map((e: any) => ({ name: e.name, salary: e.salary, frequency: e.paymentFrequency })),
+          businessExpenseDetails: businessExpenses.map((e: any) => ({ category: e.category, amount: e.amount, isRecurring: e.isRecurring })),
+          vatAdjustmentDetails: vatAdjustments.map((v: any) => ({ type: v.type, amount: v.amount, reason: v.reason }))
+        });
+        
+                 // Test financial summary calculation
+         const testSummary = calculateFinancialSummary(baseRevenue, automaticVATFromPayments);
+         console.log('🧮 Test financial summary calculation:', testSummary);
+        
+        return { employees, businessExpenses, vatAdjustments };
+      },
+      forceExpenseRefresh: () => {
+        console.log('🔄 Forcing expense management refresh...');
+        setRefreshTrigger(prev => {
+          const newTrigger = prev + 1;
+          console.log(`✅ Expense refresh triggered: ${newTrigger}`);
+          return newTrigger;
+        });
+      },
+      openExpenseModal: () => {
+        console.log('📂 Opening expense management modal...');
+        setExpenseManagementModalOpen(true);
+      }
+    };
+
+    console.log('🔧 Expense management debug functions available:');
+    console.log('- debugExpenseManagement.getCurrentFinancialSummary()');
+    console.log('- debugExpenseManagement.testExpenseIntegration()');
+    console.log('- debugExpenseManagement.forceExpenseRefresh()');
+    console.log('- debugExpenseManagement.openExpenseModal()');
+  }, [financialSummary, baseRevenue, automaticVATFromPayments, setRefreshTrigger]);
+
+  // Event handlers
+  const handleCreatePayment = async () => {
+    try {
+      // Validation
+      if (!newInvoiceData.patient || !newInvoiceData.amount || !newInvoiceData.category || 
+          !newInvoiceData.invoiceDate || !newInvoiceData.dueDate || !newInvoiceData.description || !newInvoiceData.method) {
+        setSnackbar({
+          open: true,
+          message: t('payment.validation.fillAllFields'),
+          severity: 'error'
+        });
+        return;
+      }
+
+      const amount = parseFloat(newInvoiceData.amount);
+      if (isNaN(amount) || amount <= 0) {
+        setSnackbar({
+          open: true,
+          message: t('payment.validation.validAmount'),
+          severity: 'error'
+        });
+        return;
+      }
+
+      // Validate dates
+      const invoiceDate = new Date(newInvoiceData.invoiceDate);
+      const today = new Date();
+      today.setHours(23, 59, 59, 999);
+      
+      if (invoiceDate > today) {
+        setSnackbar({
+          open: true,
+          message: t('payment.validation.futureDateNotAllowed'),
+          severity: 'error'
+        });
+        return;
+      }
+
+      const dueDate = new Date(newInvoiceData.dueDate);
+      if (dueDate <= invoiceDate) {
+        setSnackbar({
+          open: true,
+          message: t('payment.validation.dueDateAfterInvoice'),
+          severity: 'error'
+        });
+        return;
+      }
+
+      const insuranceAmount = parseFloat(newInvoiceData.insuranceAmount) || 0;
+      
+      // Calculate VAT
+      const vatCalculation = calculateVAT(amount, newInvoiceData.vatRate, newInvoiceData.includeVAT);
+
+      // ✅ Use Firebase createPayment function
+      const paymentData: Omit<PaymentData, 'id' | 'invoiceId'> = {
+        patientAvatar: newInvoiceData.patient.split(' ').map((n: string) => n[0]).join('').toUpperCase(),
+        date: newInvoiceData.invoiceDate,
+        status: 'pending',
+        currency: 'EGP',
+        patient: newInvoiceData.patient,
+        doctor: newInvoiceData.doctor,
+        amount: vatCalculation.totalAmountWithVAT,
+        category: newInvoiceData.category,
+        dueDate: newInvoiceData.dueDate,
+        description: newInvoiceData.description,
+        method: newInvoiceData.method,
+        insurance: insuranceAmount > 0 ? 'Yes' : 'No',
+        insuranceAmount: insuranceAmount,
+        includeVAT: vatCalculation.includeVAT,
+        vatRate: vatCalculation.vatRate,
+        vatAmount: vatCalculation.vatAmount,
+        totalAmountWithVAT: vatCalculation.totalAmountWithVAT,
+        baseAmount: vatCalculation.baseAmount,
+        paidAmount: 0,
+        ...(newInvoiceData.appointmentId && { appointmentId: newInvoiceData.appointmentId }),
+      };
+
+      const newPayment = createPayment(paymentData);
+      
+      if (newPayment) {
+        // ✅ Reload payments from localStorage to get updated data
+        const updatedPayments = loadPaymentsFromStorage();
+        setPayments(updatedPayments);
+        
+        setAddPaymentOpen(false);
+        
+        // Reset form
+        setNewInvoiceData({
+          ...defaultNewInvoiceData,
+          includeVAT: vatSettings.defaultIncludeVAT,
+          vatRate: vatSettings.rate,
+          insuranceAmount: '0'
+        });
+
+        setSnackbar({
+          open: true,
+          message: t('payment.success.invoiceCreated', { invoiceId: newPayment.invoiceId, patient: newPayment.patient }),
+          severity: 'success'
+        });
+
+        // Auto-open invoice for viewing
+        setTimeout(() => {
+          setSelectedInvoiceForView(newPayment);
+          setInvoiceDialogOpen(true);
+        }, 1000);
+      } else {
+        throw new Error('Failed to create payment in Firebase');
+      }
+    } catch (error) {
+      console.error('❌ Error creating payment:', error);
+      setSnackbar({
+        open: true,
+        message: 'Failed to create payment. Please try again.',
+        severity: 'error'
+      });
+    }
+  };
+
+  const handleUpdatePaymentStatus = async (paymentId: number, newStatus: string, paidAmount?: number) => {
+    try {
+      console.log(`🔄 Firebase: Updating payment ${paymentId} status to: ${newStatus}`);
+      
+      // ✅ Use the localStorage payment utility function
+      const success = updatePaymentStatus(
+        paymentId.toString(),
+        newStatus,
+        paidAmount
+      );
+      
+      if (success) {
+        // ✅ Reload payments from localStorage to get updated data
+        const updatedPayments = loadPaymentsFromStorage();
+        setPayments(updatedPayments);
+        
+        const updatedPayment = updatedPayments.find(p => p.id === paymentId);
+        const statusText = t(`payment.status.${newStatus}`);
+        
+        setSnackbar({
+          open: true,
+          message: `Payment ${updatedPayment?.invoiceId} status updated to ${statusText} via Firebase!`,
+          severity: 'success'
+        });
+        
+        console.log(`✅ Firebase: Payment ${paymentId} status updated successfully`);
+      } else {
+        throw new Error('Failed to update payment status in Firebase');
+      }
+      
+    } catch (error) {
+      console.error('❌ Error updating payment status:', error);
+      setSnackbar({
+        open: true,
+        message: 'Failed to update payment status. Please try again.',
+        severity: 'error'
+      });
+    }
+  };
+
+  const handleViewInvoice = (payment: PaymentData) => {
+    setSelectedInvoiceForView(payment);
+    setInvoiceDialogOpen(true);
+  };
+
+  const handleDownloadInvoice = (payment: PaymentData) => {
+    setSnackbar({
+      open: true,
+      message: t('payment.actions.generatingPDF', { invoiceId: payment.invoiceId }),
+      severity: 'info'
+    });
+
+    setTimeout(() => {
+      // Generate and download PDF logic here
+      const invoiceContent = generateInvoiceText(payment);
+      downloadTextFile(invoiceContent, `Invoice_${payment.invoiceId}.txt`);
+      
+      setSnackbar({
+        open: true,
+        message: t('payment.success.invoiceDownloaded', { invoiceId: payment.invoiceId }),
+        severity: 'success'
+      });
+    }, 1000);
+  };
+
+  const handlePrintInvoice = (payment: PaymentData) => {
+    setSnackbar({
+      open: true,
+      message: t('payment.actions.preparingPrint', { invoiceId: payment.invoiceId }),
+      severity: 'info'
+    });
+
+    setTimeout(() => {
+      const printContent = generatePrintableInvoice(payment);
+      openPrintWindow(printContent);
+      
+      setSnackbar({
+        open: true,
+        message: t('payment.success.invoiceSentToPrinter', { invoiceId: payment.invoiceId }),
+        severity: 'success'
+      });
+    }, 800);
+  };
+
+  const handleSendReminder = (payment: PaymentData) => {
+    if (payment.status === 'paid') {
+      setSnackbar({
+        open: true,
+        message: t('payment.info.alreadyPaid', { invoiceId: payment.invoiceId }),
+        severity: 'info'
+      });
+      return;
+    }
+
+    // Generate WhatsApp message and open
+    const message = generateReminderMessage(payment);
+    const phoneNumber = '+20123456789'; // This should come from patient data
+    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+    
+    setSnackbar({
+      open: true,
+      message: t('payment.actions.openingWhatsApp', { patient: payment.patient }),
+      severity: 'info'
+    });
+
+    setTimeout(() => {
+      window.open(whatsappUrl, '_blank');
+      setSnackbar({
+        open: true,
+        message: t('payment.success.reminderSent', { patient: payment.patient }),
+        severity: 'success'
+      });
+    }, 1000);
+  };
+
+  const handleEditPayment = (payment: PaymentData) => {
+    setSelectedPaymentForEdit(payment);
+    setEditPaymentForm({
+      amount: payment.baseAmount?.toString() || payment.amount.toString(),
+      paidAmount: payment.paidAmount?.toString() || '0'
+    });
+    setEditPaymentModalOpen(true);
+  };
+
+  const handleSavePaymentEdit = async () => {
+    if (!selectedPaymentForEdit) return;
+    
+    const newAmount = parseFloat(editPaymentForm.amount);
+    const newPaidAmount = parseFloat(editPaymentForm.paidAmount);
+    
+    if (isNaN(newAmount) || newAmount <= 0) {
+      setSnackbar({
+        open: true,
+        message: 'Please enter a valid amount',
+        severity: 'error'
+      });
+      return;
+    }
+    
+    if (isNaN(newPaidAmount) || newPaidAmount < 0) {
+      setSnackbar({
+        open: true,
+        message: 'Please enter a valid paid amount',
+        severity: 'error'
+      });
+      return;
+    }
+    
+    try {
+      const success = updatePaymentAmount(selectedPaymentForEdit.id, newAmount, newPaidAmount);
+      
+      if (success) {
+        // Reload payments from localStorage
+        const updatedPayments = loadPaymentsFromStorage();
+        setPayments(updatedPayments);
+        
+        setEditPaymentModalOpen(false);
+        setSelectedPaymentForEdit(null);
+        
+        setSnackbar({
+          open: true,
+          message: `Payment ${selectedPaymentForEdit.invoiceId} amount updated successfully!`,
+          severity: 'success'
+        });
+      } else {
+        throw new Error('Failed to update payment amount');
+      }
+    } catch (error) {
+      console.error('Error updating payment amount:', error);
+      setSnackbar({
+        open: true,
+        message: 'Failed to update payment amount. Please try again.',
+        severity: 'error'
+      });
+    }
+  };
+
+  const handleDeletePayment = (paymentId: number) => {
+    const payment = payments.find(p => p.id === paymentId);
+    if (window.confirm(t('payment.confirmation.deleteInvoice', { invoiceId: payment?.invoiceId }))) {
+      setPayments(prev => prev.filter(payment => payment.id !== paymentId));
+      setSnackbar({
+        open: true,
+        message: t('payment.success.invoiceDeleted', { invoiceId: payment?.invoiceId }),
+        severity: 'success'
+      });
+    }
+  };
+
+  const handleOpenStatusMenu = (event: React.MouseEvent<HTMLElement>, payment: PaymentData) => {
+    event.stopPropagation();
+    setStatusMenuAnchor(event.currentTarget);
+    setSelectedPaymentForStatusChange(payment);
+  };
+
+  const handleCloseStatusMenu = () => {
+    setStatusMenuAnchor(null);
+    setSelectedPaymentForStatusChange(null);
+  };
+
+  const handleChangeStatus = async (newStatus: string) => {
+    if (selectedPaymentForStatusChange) {
+      console.log('🎯 PAYMENT STATUS CHANGE STARTED:');
+      console.log('💳 Payment Details:', {
+        id: selectedPaymentForStatusChange.id,
+        invoiceId: selectedPaymentForStatusChange.invoiceId,
+        patient: selectedPaymentForStatusChange.patient,
+        appointmentId: selectedPaymentForStatusChange.appointmentId,
+        currentStatus: selectedPaymentForStatusChange.status,
+        newStatus: newStatus,
+        currentPaidAmount: selectedPaymentForStatusChange.paidAmount,
+        totalAmount: selectedPaymentForStatusChange.amount,
+        timestamp: new Date().toISOString()
+      });
+      
+      try {
+        console.log('🔄 Calling handleUpdatePaymentStatus...');
+        await handleUpdatePaymentStatus(selectedPaymentForStatusChange.id, newStatus);
+        
+        console.log('✅ handleUpdatePaymentStatus completed, verifying changes...');
+        
+        // ✅ ENHANCED: Wait a bit longer for the update to complete
+        setTimeout(() => {
+          const refreshedPayments = loadPaymentsFromStorage();
+          const updatedPayment = refreshedPayments.find(p => p.id === selectedPaymentForStatusChange.id);
+          
+          console.log('🔍 PAYMENT STATUS VERIFICATION:', {
+            originalStatus: selectedPaymentForStatusChange.status,
+            requestedStatus: newStatus,
+            actualStatus: updatedPayment?.status,
+            actualPaidAmount: updatedPayment?.paidAmount,
+            statusUpdateSuccessful: updatedPayment?.status === newStatus,
+            paymentFound: !!updatedPayment,
+            timestamp: new Date().toISOString()
+          });
+          
+          if (updatedPayment?.status !== newStatus) {
+            console.warn('⚠️ PAYMENT STATUS MISMATCH DETECTED:');
+            console.warn('📊 Mismatch Details:', {
+              expected: newStatus,
+              actual: updatedPayment?.status,
+              paymentId: selectedPaymentForStatusChange.id,
+              invoiceId: selectedPaymentForStatusChange.invoiceId
+            });
+            setSnackbar({
+              open: true,
+              message: `⚠️ Status update issue: Expected ${newStatus} but got ${updatedPayment?.status}. Check console for details.`,
+              severity: 'warning'
+            });
+          } else {
+            console.log('✅ PAYMENT STATUS UPDATE SUCCESSFUL:');
+            console.log('🎉 Success Details:', {
+              invoiceId: selectedPaymentForStatusChange.invoiceId,
+              statusChange: `${selectedPaymentForStatusChange.status} → ${newStatus}`,
+              timestamp: new Date().toISOString()
+            });
+
+            // ✅ NEW: Dispatch cross-page event for appointment synchronization
+            if (selectedPaymentForStatusChange.appointmentId) {
+              console.log('📢 DISPATCHING CROSS-PAGE EVENT: appointmentPaymentStatusSync');
+              window.dispatchEvent(new CustomEvent('appointmentPaymentStatusSync', {
+                detail: {
+                  appointmentId: selectedPaymentForStatusChange.appointmentId,
+                  patient: selectedPaymentForStatusChange.patient,
+                  paymentId: selectedPaymentForStatusChange.id,
+                  invoiceId: selectedPaymentForStatusChange.invoiceId,
+                  oldStatus: selectedPaymentForStatusChange.status,
+                  newStatus: newStatus,
+                  source: 'PaymentListPage',
+                  timestamp: Date.now()
+                }
+              }));
+              
+              console.log('🔗 Appointment Sync Event Details:', {
+                eventType: 'appointmentPaymentStatusSync',
+                appointmentId: selectedPaymentForStatusChange.appointmentId,
+                statusChange: `${selectedPaymentForStatusChange.status} → ${newStatus}`,
+                source: 'PaymentListPage'
+              });
+            }
+          }
+          
+          setPayments(refreshedPayments);
+          forceRerender();
+          
+        }, 100); // Increased timeout to ensure localStorage update completes
+        
+        // ✅ IMMEDIATE: Force re-render right away
+        forceRerender();
+        
+      } catch (error) {
+        console.error('❌ PAYMENT STATUS CHANGE FAILED:', error);
+        console.error('💥 Payment Error Details:', {
+          paymentId: selectedPaymentForStatusChange.id,
+          invoiceId: selectedPaymentForStatusChange.invoiceId,
+          targetStatus: newStatus,
+          error: error.message || error,
+          timestamp: new Date().toISOString(),
+          stack: error.stack
+        });
+        setSnackbar({
+          open: true,
+          message: `Failed to update payment status: ${error.message}`,
+          severity: 'error'
+        });
+      }
+    }
+    handleCloseStatusMenu();
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbar(prev => ({ ...prev, open: false }));
+  };
+
+  // Handle VAT adjustments
+  const handleVATAdjustmentSave = (adjustments: any[]) => {
+    console.log('💰 VAT Adjustments saved:', adjustments);
+    
+    // Save to both state and localStorage
+    setVatAdjustments(adjustments);
+    
+    // Use the imported function to save to localStorage
+    saveVATAdjustmentsToStorage(adjustments);
+    console.log('💾 VAT adjustments saved to localStorage');
+    
+    // Trigger recalculation of financial summary by updating refresh trigger
+    setRefreshTrigger(prev => {
+      const newTrigger = prev + 1;
+      console.log('🔄 Triggering financial summary recalculation:', newTrigger);
+      return newTrigger;
+    });
+    
+    // Force immediate recalculation by checking localStorage
+    setTimeout(() => {
+      const reloadedAdjustments = loadVATAdjustmentsFromStorage();
+      console.log('🔍 Verification - Reloaded VAT adjustments from localStorage:', reloadedAdjustments);
+      
+      if (reloadedAdjustments.length !== adjustments.length) {
+        console.warn('⚠️ VAT adjustments count mismatch!');
+      }
+    }, 100);
+    
+    setSnackbar({
+      open: true,
+      message: `VAT adjustments saved successfully! ${adjustments.length} adjustments applied.`,
+      severity: 'success'
+    });
+  };
+
+  // Enhanced utility functions
+  const generateInvoiceText = (payment: PaymentData): string => {
+    // Enhanced VAT calculation - only apply if VAT is included
+    const hasVAT = payment.includeVAT && (payment.vatRate || 0) > 0;
+    const vatRate = hasVAT ? (payment.vatRate || 0) / 100 : 0;
+    const vatAmount = hasVAT ? payment.amount * vatRate : 0;
+    const totalAmount = payment.amount + vatAmount;
+    
+    const patientBalance = payment.insurance === 'Yes' 
+      ? totalAmount - (payment.insuranceAmount || 0)
+      : totalAmount;
+
+    return `
+${t('invoice.title')} ${payment.invoiceId}
+========================================
+
+${t('invoice.sections.billTo')}: ${payment.patient}
+${t('invoice.labels.issueDate')}: ${formatDate(payment.date)}
+${t('invoice.labels.dueDate')}: ${formatDate(payment.dueDate)}
+
+${t('invoice.table.description')}: ${payment.description}
+${t('invoice.table.category')}: ${t(`payment.categories.${payment.category}`)}
+${t('invoice.table.paymentMethod')}: ${t(`payment.methods.${payment.method.toLowerCase().replace(' ', '_')}`)}
+
+----------------------------------------
+${t('invoice.calculations.subtotal')}: ${payment.currency} ${formatCurrency(payment.amount)}
+${hasVAT 
+  ? `${t('invoice.calculations.vat')} (${(vatRate * 100).toFixed(1)}%): ${payment.currency} ${formatCurrency(vatAmount)}`
+  : `${t('invoice.calculations.vat')}: Not Applicable - ${payment.currency} 0.00`
+}
+${t('invoice.calculations.totalAmount')}: ${payment.currency} ${formatCurrency(totalAmount)}
+
+${payment.insurance === 'Yes' ? `
+${t('invoice.calculations.insuranceCoverage')}: ${payment.currency} ${formatCurrency(payment.insuranceAmount)}
+${t('invoice.calculations.patientBalance')}: ${payment.currency} ${formatCurrency(patientBalance)}
+` : ''}
+
+${t('invoice.labels.status')}: ${t(`payment.status.${payment.status}`).toUpperCase()}
+
+----------------------------------------
+${t('invoice.footer.generatedBy')} ${t('invoice.defaultClinic.name')} ${t('invoice.footer.managementSystem')}
+${formatDate(new Date().toISOString())}
+  `;
+  };
+
+  const downloadTextFile = (content: string, filename: string) => {
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  };
+
+  const generatePrintableInvoice = (payment: PaymentData): string => {
+    // Enhanced VAT calculation for printable invoice
+    const hasVAT = payment.includeVAT && (payment.vatRate || 0) > 0;
+    const vatRate = hasVAT ? (payment.vatRate || 0) / 100 : 0;
+    const vatAmount = hasVAT ? payment.amount * vatRate : 0;
+    const totalAmount = payment.amount + vatAmount;
+    
+    const patientBalance = payment.insurance === 'Yes' 
+      ? totalAmount - (payment.insuranceAmount || 0)
+      : totalAmount;
+
+    return `
+      <!DOCTYPE html>
+      <html dir="${isRTL ? 'rtl' : 'ltr'}" lang="${i18n.language}">
+      <head>
+        <meta charset="UTF-8">
+        <title>${t('invoice.title')} ${payment.invoiceId}</title>
+        <style>
+          body { 
+            font-family: ${isRTL ? 'Noto Sans Arabic, Arial' : 'Arial'}, sans-serif; 
+            margin: 20px; 
+            line-height: 1.6;
+            color: #333;
+            direction: ${isRTL ? 'rtl' : 'ltr'};
+          }
+          .header { 
+            text-align: center; 
+            border-bottom: 2px solid #1976d2; 
+            padding-bottom: 20px; 
+            margin-bottom: 30px;
+          }
+          .clinic-name { 
+            font-size: 28px; 
+            font-weight: bold; 
+            color: #1976d2; 
+            margin-bottom: 10px;
+          }
+          .invoice-title { 
+            font-size: 24px; 
+            margin: 20px 0; 
+            color: #1976d2;
+          }
+          /* Add more styles as needed */
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="clinic-name">${t('invoice.defaultClinic.name')}</div>
+          <div>${t('invoice.defaultClinic.address')}</div>
+          <div>${t('invoice.labels.phone')}: ${t('invoice.defaultClinic.phone')} | ${t('invoice.labels.email')}: ${t('invoice.defaultClinic.email')}</div>
+        </div>
+
+        <div class="invoice-title">${t('invoice.title')}</div>
+
+        <!-- Add complete invoice HTML structure here -->
+        
+      </body>
+      </html>
+    `;
+  };
+
+  const openPrintWindow = (content: string) => {
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(content);
+      printWindow.document.close();
+      printWindow.focus();
+      
+      setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+      }, 500);
+    }
+  };
+
+  const generateReminderMessage = (payment: PaymentData): string => {
+    // Enhanced VAT calculation for reminder message
+    const hasVAT = payment.includeVAT && (payment.vatRate || 0) > 0;
+    const vatRate = hasVAT ? (payment.vatRate || 0) / 100 : 0;
+    const vatAmount = hasVAT ? payment.amount * vatRate : 0;
+    const totalAmount = payment.amount + vatAmount;
+    
+    const amountDue = payment.insurance === 'Yes' 
+      ? totalAmount - (payment.insuranceAmount || 0)
+      : totalAmount;
+
+    return `🏥 *${t('payment.reminder.title')}*\n\n${t('payment.reminder.dear')} ${payment.patient},\n\n${t('payment.reminder.friendlyReminder')}:\n\n📋 *${t('invoice.labels.invoiceId')}:* ${payment.invoiceId}\n🗓️ *${t('invoice.labels.serviceDate')}:* ${formatDate(payment.date)}\n📝 *${t('invoice.table.description')}:* ${payment.description}\n💰 *${t('payment.reminder.amountDue')}:* ${payment.currency} ${formatCurrency(amountDue)}\n📅 *${t('invoice.labels.dueDate')}:* ${formatDate(payment.dueDate)}\n\n${t('payment.reminder.pleaseArrange')}\n\n${t('payment.reminder.questions')}\n\n${t('payment.reminder.thankYou')} 🙏`;
+  };
+
+  // ✅ HELPER FUNCTION: Convert Firebase Payment to PaymentData
+  const convertFirebasePaymentToPaymentData = (firebasePayment: FirebasePayment): PaymentData => {
+    return {
+      id: firebasePayment.id ? 
+        Math.abs(firebasePayment.id.split('').reduce((a, b) => ((a << 5) - a + b.charCodeAt(0)) & 0xffffffff, 0)) :
+        Date.now() + Math.floor(Math.random() * 10000),
+      invoiceId: firebasePayment.invoiceId || `INV-${firebasePayment.id}`,
+      patient: firebasePayment.patient,
+      patientAvatar: firebasePayment.patient.split(' ').map(n => n[0]).join('').toUpperCase() || 'P',
+      doctor: firebasePayment.doctor || 'Unknown Doctor',
+      appointmentId: firebasePayment.appointmentId || '',
+      amount: firebasePayment.amount,
+      currency: firebasePayment.currency,
+      date: firebasePayment.date,
+      dueDate: firebasePayment.dueDate || firebasePayment.date,
+      status: firebasePayment.status as PaymentData['status'],
+      method: firebasePayment.method,
+      description: firebasePayment.description || 'Payment',
+      category: firebasePayment.category || 'consultation',
+      insurance: firebasePayment.insurance === 'Yes' ? 'Yes' : 'No',
+      insuranceAmount: firebasePayment.insuranceAmount || 0,
+      paidAmount: firebasePayment.paidAmount || (firebasePayment.status === 'paid' ? firebasePayment.amount : 0),
+      includeVAT: firebasePayment.includeVAT || false,
+      vatRate: firebasePayment.vatRate || 0,
+      vatAmount: firebasePayment.vatAmount || 0,
+      totalAmountWithVAT: firebasePayment.totalAmountWithVAT || firebasePayment.amount,
+      baseAmount: firebasePayment.baseAmount || firebasePayment.amount
+    };
+  };
+
+  // ✅ AUTOMATIC APPOINTMENT PROCESSING: This happens automatically via useEffect
+
+  // Add Firebase connection indicator
+  const renderFirebaseStatus = () => (
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+      <Box
+        sx={{
+          width: 8,
+          height: 8,
+          borderRadius: '50%',
+          backgroundColor: firebaseConnected ? 'success.main' : 'error.main'
+        }}
+      />
+      <Typography variant="body2" color="textSecondary">
+        Firebase: {firebaseConnected ? 'Connected' : 'Disconnected'} • 
+        Real-time sync: {firebaseConnected ? 'Active' : 'Inactive'}
+      </Typography>
+    </Box>
+  );
+
+  // ✅ DEBUG: Add console command for payment synchronization debugging
+  useEffect(() => {
+    (window as any).debugPaymentSync = (appointmentId?: string, patient?: string) => {
+      console.log('🔍 PAYMENT SYNC DEBUG:');
+      console.log('📊 Current payments:', payments.length);
+      
+      if (appointmentId || patient) {
+        const matchingPayments = payments.filter(payment => 
+          (appointmentId && payment.appointmentId === appointmentId) ||
+          (patient && payment.patient === patient)
+        );
+        
+        console.log('🎯 Matching payments:', matchingPayments.map(p => ({
+          id: p.id,
+          invoiceId: p.invoiceId,
+          patient: p.patient,
+          appointmentId: p.appointmentId,
+          status: p.status,
+          amount: p.amount,
+          paidAmount: p.paidAmount
+        })));
+        
+        if (matchingPayments.length === 0) {
+          console.log('❌ No payments found for:', { appointmentId, patient });
+          console.log('📋 All payments:', payments.map(p => ({
+            id: p.id,
+            patient: p.patient,
+            appointmentId: p.appointmentId,
+            status: p.status
+          })));
+        }
+      } else {
+        console.log('📋 All payments:', payments.map(p => ({
+          id: p.id,
+          invoiceId: p.invoiceId,
+          patient: p.patient,
+          appointmentId: p.appointmentId,
+          status: p.status,
+          amount: p.amount,
+          paidAmount: p.paidAmount
+        })));
+      }
+      
+      return payments;
+    };
+    
+    (window as any).testPaymentSync = (appointmentId: string, newStatus: string, patient?: string) => {
+      console.log('🧪 TESTING PAYMENT SYNC:');
+      console.log('📝 Test parameters:', { appointmentId, newStatus, patient });
+      
+      // Simulate the event from appointment page
+      window.dispatchEvent(new CustomEvent('paymentStatusChanged', {
+        detail: {
+          appointmentId,
+          patient: patient || 'Test Patient',
+          paymentId: 'test-payment-id',
+          oldStatus: 'pending',
+          newStatus,
+          source: 'AppointmentListPage',
+          timestamp: Date.now()
+        }
+      }));
+      
+      console.log('✅ Test event dispatched');
+    };
+    
+    console.log('🔧 Payment sync debug commands available:');
+    console.log('   • debugPaymentSync() - Show all payments');
+    console.log('   • debugPaymentSync(appointmentId, patient) - Find specific payments');
+    console.log('   • testPaymentSync(appointmentId, newStatus, patient) - Test sync');
+  }, [payments]);
+
+  // Show loading state while connecting to Firebase
+  if (dataLoading && !firebaseConnected) {
+    return (
+      <Container maxWidth="xl" sx={{ mt: 4, mb: 4, flex: 1, overflow: 'auto' }}>
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            height: '60vh',
+            gap: 2
+          }}
+        >
+          <CircularProgress size={60} />
+          <Typography variant="h6" color="textSecondary">
+            🔥 Connecting to Firebase...
+          </Typography>
+          <Typography variant="body2" color="textSecondary">
+            Setting up real-time payment synchronization
+          </Typography>
+        </Box>
+      </Container>
+    );
+  }
+
+  return (
+    <Container key={`payment-list-${forceRenderKey}`} maxWidth="xl" sx={{ mt: 4, mb: 4, flex: 1, overflow: 'auto', direction: isRTL ? 'rtl' : 'ltr' }}>
+
+          
+          {/* Header Section */}
+          <Box sx={{ 
+            mb: 4, 
+            p: 4,
+            background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
+            borderRadius: 3,
+            color: 'white',
+            position: 'relative',
+            overflow: 'hidden',
+          }}>
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: { xs: 'flex-start', md: 'center' }, 
+              justifyContent: 'space-between', 
+              position: 'relative', 
+              zIndex: 1,
+              flexDirection: { xs: 'column', md: 'row' },
+              gap: { xs: 3, md: 0 }
+            }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', width: { xs: '100%', md: 'auto' } }}>
+                <Box sx={{
+                  width: { xs: 48, md: 60 },
+                  height: { xs: 48, md: 60 },
+                  borderRadius: '50%',
+                  backgroundColor: 'rgba(255,255,255,0.2)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  mr: isRTL ? 0 : { xs: 2, md: 3 },
+                  ml: isRTL ? { xs: 2, md: 3 } : 0,
+                  backdropFilter: 'blur(10px)',
+                  flexShrink: 0,
+                }}>
+                  <MonetizationOn sx={{ fontSize: { xs: 24, md: 32 }, color: 'white' }} />
+                </Box>
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography variant="h3" sx={{ 
+                    fontWeight: 800, 
+                    color: 'white',
+                    mb: 1,
+                    textShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                    fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' },
+                    lineHeight: 1.2
+                  }}>
+                    {t('payment.title')}
+                  </Typography>
+                  <Typography variant="h6" sx={{ 
+                    color: 'rgba(255,255,255,0.9)',
+                    fontWeight: 400,
+                    fontSize: { xs: '0.9rem', md: '1.25rem' },
+                    lineHeight: 1.3
+                  }}>
+                    {t('payment.subtitle')}
+                  </Typography>
+                </Box>
+              </Box>
+              
+              {/* Responsive Button Container */}
+              <Box sx={{ 
+                display: 'flex', 
+                gap: { xs: 2, md: 2 },
+                width: { xs: '100%', md: 'auto' },
+                flexDirection: { xs: 'column', sm: 'row' },
+                alignItems: 'stretch'
+              }}>
+                <Button
+                  variant="contained"
+                  size="large"
+                  startIcon={<Add />}
+                  onClick={() => setAddPaymentOpen(true)}
+                  sx={{ 
+                    borderRadius: 3,
+                    px: { xs: 3, md: 4 },
+                    py: { xs: 1.5, md: 1.5 },
+                    minHeight: 48,
+                    backgroundColor: 'rgba(255,255,255,0.2)',
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255,255,255,0.3)',
+                    color: 'white',
+                    fontWeight: 700,
+                    textTransform: 'none',
+                    fontSize: { xs: '0.9rem', md: '1.1rem' },
+                    flex: { xs: 1, sm: 'none' },
+                    minWidth: { xs: 'auto', sm: 160 },
+                    whiteSpace: 'nowrap',
+                    textOverflow: 'ellipsis',
+                    overflow: 'hidden',
+                    '&:hover': {
+                      backgroundColor: 'rgba(255,255,255,0.3)',
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 8px 25px rgba(0,0,0,0.2)',
+                    },
+                    transition: 'all 0.3s ease'
+                  }}
+                >
+                  <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                    {t('payment.actions.createNewInvoice')}
+                  </Box>
+                  <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
+                    New Invoice
+                  </Box>
+                </Button>
+                
+                                  <Button
+                    variant="outlined"
+                    size="large"
+                    startIcon={<Download />}
+                    onClick={() => setExportOptionsOpen(true)}
+                    sx={{ 
+                      borderRadius: 3,
+                      px: { xs: 3, md: 4 },
+                      py: { xs: 1.5, md: 1.5 },
+                      minHeight: 48,
+                      backgroundColor: 'rgba(255,255,255,0.1)',
+                      backdropFilter: 'blur(10px)',
+                      border: '1px solid rgba(255,255,255,0.3)',
+                      color: 'white',
+                      fontWeight: 600,
+                      textTransform: 'none',
+                      fontSize: { xs: '0.9rem', md: '1rem' },
+                      flex: { xs: 1, sm: 'none' },
+                      minWidth: { xs: 'auto', sm: 120 },
+                      whiteSpace: 'nowrap',
+                      textOverflow: 'ellipsis',
+                      overflow: 'hidden',
+                      '&:hover': {
+                        backgroundColor: 'rgba(255,255,255,0.2)',
+                        transform: 'translateY(-2px)',
+                        boxShadow: '0 8px 25px rgba(0,0,0,0.2)',
+                      },
+                      transition: 'all 0.3s ease'
+                    }}
+                  >
+                    <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                      {t('payment.actions.exportAll')}
+                    </Box>
+                    <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
+                      Export All
+                    </Box>
+                  </Button>
+                  
+
+              </Box>
+            </Box>
+          </Box>
+
+          {/* Stats Cards */}
+          <Grid container spacing={3} sx={{ mb: 4 }}>
+            <Grid item xs={12} sm={6} md={2}>
+              <StatCard
+                title={t('payment.stats.totalRevenue')}
+                value={`EGP ${formatCurrency(totalRevenue)}`}
+                icon={<TrendingUp />}
+                color="#10B981"
+                subtitle={t('payment.stats.thisMonth')}
+                trend="+12.5%"
+                trendDirection="up"
+              />
+            </Grid>
+            <Grid item xs={12} sm={6} md={2}>
+              <StatCard
+                title="Net Profit (After All Expenses)"
+                value={`EGP ${formatCurrency(totalProfit)}`}
+                icon={<MonetizationOn />}
+                color="#8B5CF6"
+                subtitle={`Revenue: EGP ${formatCurrency(totalRevenue)} | Total Expenses: EGP ${formatCurrency(totalExpenses)} | Net: EGP ${formatCurrency(totalProfit)}`}
+                trend="+15.3%"
+                trendDirection="up"
+              />
+            </Grid>
+            <Grid item xs={12} sm={6} md={2}>
+              <StatCard
+                title={t('payment.stats.pendingPayments')}
+                value={`EGP ${formatCurrency(pendingAmount)}`}
+                icon={<AccessTime />}
+                color="#F59E0B"
+                subtitle={t('payment.stats.pendingInvoices', { count: payments.filter(p => p.status === 'pending').length })}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6} md={2}>
+              <Box 
+                onClick={() => setExpenseManagementModalOpen(true)}
+                sx={{ 
+                  cursor: 'pointer',
+                  '&:hover': {
+                    transform: 'scale(1.02)',
+                    transition: 'transform 0.2s ease'
+                  }
+                }}
+              >
+                <StatCard
+                  title="💼 Total Expenses (Click to Edit)"
+                  value={`EGP ${formatCurrency(totalExpenses)}`}
+                  icon={<Business />}
+                  color="#EF4444"
+                  subtitle={`Salaries: EGP ${formatCurrency(financialSummary.totalSalaryExpenses)} | Business: EGP ${formatCurrency(financialSummary.totalBusinessExpenses)}`}
+                  trend={totalExpenses > 0 ? "Active" : "None"}
+                  trendDirection={totalExpenses > 0 ? "up" : undefined}
+                />
+              </Box>
+            </Grid>
+            <Grid item xs={12} sm={6} md={2}>
+              <StatCard
+                title="Today's Appointments Revenue"
+                value={`EGP ${formatCurrency(todayAppointmentRevenue)}`}
+                icon={<CalendarToday />}
+                color="#2196F3"
+                subtitle={`${todayAppointments.length} appointments: ${completedTodayAppointments.length} completed • ${pendingTodayAppointments.length} pending`}
+                trend={todayAppointmentRevenue > 0 ? `+EGP ${formatCurrency(todayAppointmentRevenue)}` : "No Revenue"}
+                trendDirection={todayAppointmentRevenue > 0 ? "up" : undefined}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6} md={2}>
+              <Box 
+                onClick={() => vatSettings.enabled && setVatAdjustmentModalOpen(true)}
+                sx={{ 
+                  cursor: vatSettings.enabled ? 'pointer' : 'default',
+                  '&:hover': vatSettings.enabled ? {
+                    transform: 'scale(1.02)',
+                    transition: 'transform 0.2s ease'
+                  } : {}
+                }}
+              >
+                <StatCard
+                  title={vatSettings.enabled ? 'VAT Adjustments (Click to Edit)' : 'Appointment Payments'}
+                  value={
+                    vatSettings.enabled 
+                      ? `EGP ${formatCurrency(Math.abs(finalVATCollected))}`
+                      : appointmentLinkedPayments.length
+                  }
+                  icon={vatSettings.enabled ? <Percent /> : <Receipt />}
+                  color={vatSettings.enabled ? (finalVATCollected !== 0 ? "#F59E0B" : "#9CA3AF") : "#673AB7"}
+                  subtitle={
+                    vatSettings.enabled 
+                      ? finalVATCollected !== 0
+                        ? `Manual VAT Adjustments: ${financialSummary.netVATAdjustments >= 0 ? '+' : ''}EGP ${formatCurrency(Math.abs(financialSummary.netVATAdjustments))} | ${financialSummary.vatAdjustmentDetails.length} adjustment(s)`
+                        : `Rate: ${vatSettings.rate}% | Click to add manual VAT adjustments`
+                      : `${appointmentLinkedPayments.length} linked to appointments`
+                  }
+                  trend={finalVATCollected !== 0 ? (finalVATCollected > 0 ? "+Manual" : "-Manual") : "0%"}
+                  trendDirection={finalVATCollected > 0 ? "up" : finalVATCollected < 0 ? "down" : undefined}
+                />
+              </Box>
+            </Grid>
+          </Grid>
+
+          <Grid container spacing={3}>
+            {/* Main Payments View */}
+            <Grid item xs={12}>
+              <Card sx={{
+                background: 'linear-gradient(120deg, rgba(2, 0, 36, 0.05) 0%, rgba(9, 9, 121, 0.08) 35%, rgba(0, 212, 255, 0.05) 100%)',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(9, 9, 121, 0.1)',
+                borderRadius: 3,
+                boxShadow: '0 4px 20px rgba(9, 9, 121, 0.1)',
+              }}>
+                <CardContent sx={{ p: 0 }}>
+                  {/* Search and Filters */}
+                  <Box sx={{ p: 3, borderBottom: 1, borderColor: 'divider' }}>
+                    <Grid container spacing={2} alignItems="center">
+                      <Grid item xs={12} md={6}>
+                        <TextField
+                          fullWidth
+                          placeholder={t('payment.search.placeholder')}
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          InputProps={{
+                            startAdornment: (
+                              <InputAdornment position="start">
+                                <Search color="action" />
+                              </InputAdornment>
+                            ),
+                          }}
+                          sx={{ '& .MuiOutlinedInput-root': { borderRadius: 3 } }}
+                        />
+                      </Grid>
+                      <Grid item xs={12} md={6}>
+                        <Box sx={{ 
+                          display: 'flex', 
+                          gap: { xs: 1.5, md: 2 }, 
+                          justifyContent: { xs: 'flex-start', md: 'flex-end' },
+                          flexWrap: 'wrap',
+                          alignItems: 'center'
+                        }}>
+                          <Button
+                            variant="outlined"
+                            startIcon={<FilterList />}
+                            onClick={(e) => setFilterAnchor(e.currentTarget)}
+                            sx={{
+                              minHeight: 48,
+                              px: { xs: 3, md: 3 },
+                              py: { xs: 1.5, md: 1.5 },
+                              fontSize: { xs: '0.875rem', md: '0.875rem' },
+                              borderRadius: 2,
+                              fontWeight: 600,
+                              minWidth: { xs: 'auto', sm: 100 },
+                              whiteSpace: 'nowrap',
+                              textOverflow: 'ellipsis',
+                              overflow: 'hidden'
+                            }}
+                          >
+                            <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                              {t('payment.actions.filter')}
+                            </Box>
+                            <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
+                              Filter
+                            </Box>
+                          </Button>
+                          <Button
+                            variant="outlined"
+                            startIcon={<Download />}
+                            onClick={() => setExportOptionsOpen(true)}
+                            sx={{
+                              minHeight: 48,
+                              px: { xs: 3, md: 3 },
+                              py: { xs: 1.5, md: 1.5 },
+                              fontSize: { xs: '0.875rem', md: '0.875rem' },
+                              borderRadius: 2,
+                              fontWeight: 600,
+                              minWidth: { xs: 'auto', sm: 100 },
+                              whiteSpace: 'nowrap',
+                              textOverflow: 'ellipsis',
+                              overflow: 'hidden'
+                            }}
+                          >
+                            <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                              {t('payment.actions.export')}
+                            </Box>
+                            <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
+                              Export
+                            </Box>
+                          </Button>
+                          <Button
+                            variant={viewMode === 'table' ? 'contained' : 'outlined'}
+                            onClick={() => setViewMode('table')}
+                            sx={{
+                              minHeight: 48,
+                              px: { xs: 3, md: 3 },
+                              py: { xs: 1.5, md: 1.5 },
+                              fontSize: { xs: '0.875rem', md: '0.875rem' },
+                              borderRadius: 2,
+                              fontWeight: 600,
+                              minWidth: { xs: 'auto', sm: 90 },
+                              whiteSpace: 'nowrap',
+                              textOverflow: 'ellipsis',
+                              overflow: 'hidden'
+                            }}
+                          >
+                            <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                              {t('payment.view.table')}
+                            </Box>
+                            <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
+                              Table
+                            </Box>
+                          </Button>
+                          <Button
+                            variant={viewMode === 'cards' ? 'contained' : 'outlined'}
+                            onClick={() => setViewMode('cards')}
+                            sx={{
+                              minHeight: 48,
+                              px: { xs: 3, md: 3 },
+                              py: { xs: 1.5, md: 1.5 },
+                              fontSize: { xs: '0.875rem', md: '0.875rem' },
+                              borderRadius: 2,
+                              fontWeight: 600,
+                              minWidth: { xs: 'auto', sm: 90 },
+                              whiteSpace: 'nowrap',
+                              textOverflow: 'ellipsis',
+                              overflow: 'hidden'
+                            }}
+                          >
+                            <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                              {t('payment.view.cards')}
+                            </Box>
+                            <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
+                              Cards
+                            </Box>
+                          </Button>
+                        </Box>
+                      </Grid>
+                    </Grid>
+                  </Box>
+
+                  {/* Tabs */}
+                  <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 3 }}>
+                    <Tabs value={tabValue} onChange={handleTabChange}>
+                      <Tab label={t('payment.tabs.all', { count: payments.length })} />
+                      <Tab label={t('payment.tabs.paid', { count: payments.filter(p => p.status === 'paid').length })} />
+                      <Tab label={t('payment.tabs.pending', { count: payments.filter(p => p.status === 'pending').length })} />
+                      <Tab label={t('payment.tabs.overdue', { count: payments.filter(p => p.status === 'overdue').length })} />
+                    </Tabs>
+                  </Box>
+
+                  {/* Payments Table */}
+                  {viewMode === 'table' && (
+                    <TabPanel value={tabValue} index={0}>
+                      <TableContainer>
+                        <Table>
+                          <TableHead>
+                            <TableRow sx={{
+                              background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
+                            }}>
+                              <TableCell sx={{ 
+                                fontWeight: 700,
+                                color: 'white',
+                                fontSize: '0.95rem'
+                              }}>
+                                {t('payment.table.invoice')}
+                              </TableCell>
+                              <TableCell sx={{ 
+                                fontWeight: 700,
+                                color: 'white',
+                                fontSize: '0.95rem'
+                              }}>
+                                {t('payment.table.patient')}
+                              </TableCell>
+                              <TableCell sx={{ 
+                                fontWeight: 700,
+                                color: 'white',
+                                fontSize: '0.95rem'
+                              }}>
+                                {t('payment.table.amount')}
+                              </TableCell>
+                              <TableCell sx={{ 
+                                fontWeight: 700,
+                                color: 'white',
+                                fontSize: '0.95rem'
+                              }}>
+                                {t('payment.table.method')}
+                              </TableCell>
+                              <TableCell sx={{ 
+                                fontWeight: 700,
+                                color: 'white',
+                                fontSize: '0.95rem'
+                              }}>
+                                {t('payment.table.date')}
+                              </TableCell>
+                              <TableCell sx={{ 
+                                fontWeight: 700,
+                                color: 'white',
+                                fontSize: '0.95rem'
+                              }}>
+                                {t('payment.table.status')}
+                              </TableCell>
+                              <TableCell sx={{ 
+                                fontWeight: 700,
+                                color: 'white',
+                                fontSize: '0.95rem'
+                              }}>
+                                {t('payment.table.actions')}
+                              </TableCell>
+                            </TableRow>
+                          </TableHead>
+                          <TableBody>
+                            {filteredPayments.map((payment, index) => (
+                              <TableRow 
+                                key={`${payment.id}-${payment.invoiceId}-${index}`} 
+                                hover
+                                sx={{
+                                  background: 'linear-gradient(135deg, rgba(9, 9, 121, 0.02) 0%, rgba(0, 212, 255, 0.02) 100%)',
+                                  '&:hover': {
+                                    background: 'linear-gradient(135deg, rgba(9, 9, 121, 0.05) 0%, rgba(0, 212, 255, 0.05) 100%)',
+                                  },
+                                  '&:nth-of-type(even)': {
+                                    background: 'linear-gradient(135deg, rgba(9, 9, 121, 0.01) 0%, rgba(0, 212, 255, 0.01) 100%)',
+                                    '&:hover': {
+                                      background: 'linear-gradient(135deg, rgba(9, 9, 121, 0.04) 0%, rgba(0, 212, 255, 0.04) 100%)',
+                                    }
+                                  }
+                                }}
+                              >
+                                <TableCell>
+                                  <Box>
+                                    <Typography variant="body2" fontWeight={600}>
+                                      {payment.invoiceId}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                      {payment.description}
+                                    </Typography>
+                                  </Box>
+                                </TableCell>
+                                <TableCell>
+                                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                  <Avatar
+                                       sx={{
+                                         width: 32,
+                                         height: 32,
+                                         mr: isRTL ? 0 : 1.5,
+                                         ml: isRTL ? 1.5 : 0,
+                                         background: 'linear-gradient(135deg, rgba(9, 9, 121, 1) 0%, rgba(0, 212, 255, 1) 100%)',
+                                         fontSize: '0.75rem',
+                                         fontWeight: 600,
+                                         boxShadow: '0 4px 12px rgba(9, 9, 121, 0.3)'
+                                       }}
+                                     >
+                                       {payment.patientAvatar}
+                                     </Avatar>
+                                     <Typography variant="body2">{payment.patient}</Typography>
+                                   </Box>
+                                 </TableCell>
+                                 <TableCell>
+                                   <Box>
+                                     <Typography variant="body2" fontWeight={600}>
+                                       {payment.currency} {formatCurrency(payment.amount)}
+                                     </Typography>
+                                     {payment.insurance === 'Yes' && (
+                                       <Typography variant="caption" color="info.main">
+                                         {t('payment.table.insurance')}: {payment.currency} {formatCurrency(payment.insuranceAmount)}
+                                       </Typography>
+                                     )}
+                                   </Box>
+                                 </TableCell>
+                                 <TableCell>
+                                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                     {getMethodIcon(payment.method)}
+                                     <Typography variant="body2" sx={{ ml: isRTL ? 0 : 1, mr: isRTL ? 1 : 0 }}>
+                                       {t(`payment.methods.${payment.method.toLowerCase().replace(' ', '_')}`)}
+                                     </Typography>
+                                   </Box>
+                                 </TableCell>
+                                 <TableCell>
+                                   <Box>
+                                     <Typography variant="body2">{formatDate(payment.date)}</Typography>
+                                     <Typography variant="caption" color="text.secondary">
+                                       {t('payment.table.due')}: {formatDate(payment.dueDate)}
+                                     </Typography>
+                                   </Box>
+                                 </TableCell>
+                                 <TableCell>
+                                   <Tooltip title={t('payment.actions.clickToChangeStatus')}>
+                                     <Chip
+                                       icon={getStatusIcon(payment.status)}
+                                       label={t(`payment.status.${payment.status}`)}
+                                       color={getStatusColor(payment.status) as any}
+                                       size="small"
+                                       variant="filled"
+                                       clickable
+                                       onClick={(e) => handleOpenStatusMenu(e, payment)}
+                                       sx={{ 
+                                         cursor: 'pointer',
+                                         fontWeight: 600,
+                                         textTransform: 'capitalize',
+                                         '&:hover': {
+                                           transform: 'scale(1.05)',
+                                           boxShadow: 2,
+                                         },
+                                         transition: 'all 0.2s ease'
+                                       }}
+                                     />
+                                   </Tooltip>
+                                 </TableCell>
+                                 <TableCell>
+                                   <Box sx={{ display: 'flex', gap: 0.5 }}>
+                                     <Tooltip title={t('payment.actions.viewInvoice')}>
+                                       <IconButton 
+                                         size="small" 
+                                         color="primary"
+                                         onClick={() => handleViewInvoice(payment)}
+                                       >
+                                         <Receipt fontSize="small" />
+                                       </IconButton>
+                                     </Tooltip>
+                                     <Tooltip title={t('payment.actions.downloadPDF')}>
+                                       <IconButton 
+                                         size="small" 
+                                         color="primary"
+                                         onClick={() => handleDownloadInvoice(payment)}
+                                       >
+                                         <Download fontSize="small" />
+                                       </IconButton>
+                                     </Tooltip>
+                                     <Tooltip title={t('payment.actions.sendReminder')}>
+                                       <IconButton 
+                                         size="small" 
+                                         color="primary"
+                                         onClick={() => handleSendReminder(payment)}
+                                       >
+                                         <Send fontSize="small" />
+                                       </IconButton>
+                                     </Tooltip>
+                                     <Tooltip title={t('payment.actions.edit')}>
+                                       <IconButton 
+                                         size="small" 
+                                         color="primary"
+                                         onClick={() => handleEditPayment(payment)}
+                                       >
+                                         <Edit fontSize="small" />
+                                       </IconButton>
+                                     </Tooltip>
+                                     <Tooltip title={t('payment.actions.delete')}>
+                                       <IconButton 
+                                         size="small" 
+                                         color="error"
+                                         onClick={() => handleDeletePayment(payment.id)}
+                                       >
+                                         <DeleteOutline fontSize="small" />
+                                       </IconButton>
+                                     </Tooltip>
+                                   </Box>
+                                 </TableCell>
+                               </TableRow>
+                             ))}
+                           </TableBody>
+                         </Table>
+                       </TableContainer>
+                     </TabPanel>
+                   )}
+
+                   {/* Payment Cards View */}
+                   {viewMode === 'cards' && (
+                     <TabPanel value={tabValue} index={0}>
+                       <Grid container spacing={3} sx={{ p: 3 }}>
+                         {filteredPayments.map((payment, index) => (
+                           <Grid item xs={12} sm={6} md={6} key={`${payment.id}-${payment.invoiceId}-${index}`}>
+                             <Card sx={{ 
+                               height: '100%', 
+                               background: 'linear-gradient(135deg, rgba(2, 0, 36, 0.05) 0%, rgba(9, 9, 121, 0.08) 35%, rgba(0, 212, 255, 0.05) 100%)',
+                               backdropFilter: 'blur(10px)',
+                               border: payment.status === 'overdue' ? '2px solid #EF4444' : 
+                                       payment.status === 'pending' ? '2px solid #F59E0B' : '1px solid rgba(9, 9, 121, 0.15)',
+                               '&:hover': { 
+                                 boxShadow: '0 8px 25px rgba(9, 9, 121, 0.2)',
+                                 background: 'linear-gradient(135deg, rgba(2, 0, 36, 0.08) 0%, rgba(9, 9, 121, 0.12) 35%, rgba(0, 212, 255, 0.08) 100%)',
+                               },
+                             }}>
+                               <CardContent sx={{ p: 3 }}>
+                                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                                   <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                                     {payment.invoiceId}
+                                   </Typography>
+                                   <Tooltip title={t('payment.actions.clickToChangeStatus')}>
+                                     <Chip
+                                       icon={getStatusIcon(payment.status)}
+                                       label={t(`payment.status.${payment.status}`)}
+                                       color={getStatusColor(payment.status) as any}
+                                       size="small"
+                                       variant="filled"
+                                       clickable
+                                       onClick={(e) => handleOpenStatusMenu(e, payment)}
+                                       sx={{ 
+                                         cursor: 'pointer',
+                                         fontWeight: 600,
+                                         textTransform: 'capitalize',
+                                         '&:hover': {
+                                           transform: 'scale(1.05)',
+                                           boxShadow: 2,
+                                         },
+                                         transition: 'all 0.2s ease'
+                                       }}
+                                     />
+                                   </Tooltip>
+                                 </Box>
+                                 
+                                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                                   <Avatar
+                                     sx={{
+                                       width: 40,
+                                       height: 40,
+                                       mr: isRTL ? 0 : 2,
+                                       ml: isRTL ? 2 : 0,
+                                       backgroundColor: 'primary.main',
+                                     }}
+                                   >
+                                     {payment.patientAvatar}
+                                   </Avatar>
+                                   <Box>
+                                     <Typography variant="body1" fontWeight={600}>
+                                       {payment.patient}
+                                     </Typography>
+                                     <Typography variant="body2" color="text.secondary">
+                                       {payment.description}
+                                     </Typography>
+                                   </Box>
+                                 </Box>
+
+                                 <Divider sx={{ my: 2 }} />
+
+                                 <Grid container spacing={2}>
+                                   <Grid item xs={6}>
+                                     <Typography variant="body2" color="text.secondary">
+                                       {t('payment.fields.amount')}
+                                     </Typography>
+                                     <Typography variant="h6" fontWeight={600} color="primary.main">
+                                       {payment.currency} {formatCurrency(payment.amount)}
+                                     </Typography>
+                                   </Grid>
+                                   <Grid item xs={6}>
+                                     <Typography variant="body2" color="text.secondary">
+                                       {t('payment.fields.dueDate')}
+                                     </Typography>
+                                     <Typography variant="body2" fontWeight={600}>
+                                       {formatDate(payment.dueDate)}
+                                     </Typography>
+                                   </Grid>
+                                   <Grid item xs={6}>
+                                     <Typography variant="body2" color="text.secondary">
+                                       {t('payment.fields.method')}
+                                     </Typography>
+                                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                       {getMethodIcon(payment.method)}
+                                       <Typography variant="body2" sx={{ ml: isRTL ? 0 : 0.5, mr: isRTL ? 0.5 : 0 }}>
+                                         {t(`payment.methods.${payment.method.toLowerCase().replace(' ', '_')}`)}
+                                       </Typography>
+                                     </Box>
+                                   </Grid>
+                                   <Grid item xs={6}>
+                                     <Typography variant="body2" color="text.secondary">
+                                       {t('payment.fields.insurance')}
+                                     </Typography>
+                                     <Typography variant="body2" fontWeight={600}>
+                                       {payment.insurance === 'Yes' 
+                                         ? `${payment.currency} ${formatCurrency(payment.insuranceAmount)}` 
+                                         : t('payment.insurance.none')
+                                       }
+                                     </Typography>
+                                   </Grid>
+                                 </Grid>
+
+                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
+                                   <Button 
+                                     size="small" 
+                                     startIcon={<Receipt />}
+                                     onClick={() => handleViewInvoice(payment)}
+                                   >
+                                     {t('payment.actions.view')}
+                                   </Button>
+                                   <Button 
+                                     size="small" 
+                                     startIcon={<Download />}
+                                     onClick={() => handleDownloadInvoice(payment)}
+                                   >
+                                     {t('payment.actions.download')}
+                                   </Button>
+                                   <Button 
+                                     size="small" 
+                                     startIcon={<Send />}
+                                     onClick={() => handleSendReminder(payment)}
+                                   >
+                                     {t('payment.actions.send')}
+                                   </Button>
+                                 </Box>
+                               </CardContent>
+                             </Card>
+                           </Grid>
+                         ))}
+                       </Grid>
+                     </TabPanel>
+                   )}
+                 </CardContent>
+               </Card>
+             </Grid>
+           </Grid>
+
+           {/* Payment Analytics Dashboard */}
+           <Box sx={{ mt: 4 }}>
+             <Grid container spacing={3}>
+               {/* Payment Method Distribution */}
+               <Grid item xs={12}>
+                 <Card sx={{ 
+                   height: '100%',
+                   background: 'linear-gradient(135deg, rgba(2, 0, 36, 0.03) 0%, rgba(9, 9, 121, 0.06) 35%, rgba(0, 212, 255, 0.03) 100%)',
+                   backdropFilter: 'blur(10px)',
+                   border: '1px solid rgba(9, 9, 121, 0.1)',
+                   borderRadius: 3,
+                   boxShadow: '0 4px 20px rgba(9, 9, 121, 0.1)',
+                   '&:hover': {
+                     background: 'linear-gradient(135deg, rgba(2, 0, 36, 0.05) 0%, rgba(9, 9, 121, 0.08) 35%, rgba(0, 212, 255, 0.05) 100%)',
+                     boxShadow: '0 6px 25px rgba(9, 9, 121, 0.15)',
+                   },
+                   transition: 'all 0.3s ease',
+                 }}>
+                   <CardContent sx={{ p: 4 }}>
+                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                       <CreditCard sx={{ fontSize: 28, color: 'primary.main', mr: isRTL ? 0 : 2, ml: isRTL ? 2 : 0 }} />
+                       <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                         {t('payment.analytics.paymentMethods')}
+                       </Typography>
+                     </Box>
+
+                     {['Credit Card', 'Cash', 'Bank Transfer', 'Insurance'].map((method) => {
+                       const count = payments.filter(p => p.method === method).length;
+                       const percentage = payments.length > 0 ? (count / payments.length) * 100 : 0;
+                       const amount = payments.filter(p => p.method === method).reduce((sum, p) => sum + p.amount, 0);
+
+                       return (
+                         <Box key={method} sx={{ mb: 3 }}>
+                           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                               {getMethodIcon(method)}
+                               <Typography variant="body1" fontWeight={600}>
+                                 {t(`payment.methods.${method.toLowerCase().replace(' ', '_')}`)}
+                               </Typography>
+                             </Box>
+                             <Typography variant="body2" fontWeight={600}>
+                               EGP {formatCurrency(amount)}
+                             </Typography>
+                           </Box>
+                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                             <LinearProgress 
+                               variant="determinate" 
+                               value={percentage} 
+                               sx={{ 
+                                 flex: 1, 
+                                 height: 8, 
+                                 borderRadius: 2,
+                                 backgroundColor: 'grey.200',
+                                 '& .MuiLinearProgress-bar': {
+                                   borderRadius: 2,
+                                   backgroundColor: method === 'Credit Card' ? '#1976d2' :
+                                                 method === 'Cash' ? '#2e7d32' :
+                                                 method === 'Bank Transfer' ? '#ed6c02' : '#9c27b0'
+                                 }
+                               }} 
+                             />
+                             <Typography variant="caption" fontWeight={600} sx={{ minWidth: 40 }}>
+                               {percentage.toFixed(0)}%
+                             </Typography>
+                           </Box>
+                           <Typography variant="caption" color="text.secondary">
+                             {t('payment.analytics.transactions', { count })}
+                           </Typography>
+                         </Box>
+                       );
+                     })}
+                   </CardContent>
+                 </Card>
+               </Grid>
+             </Grid>
+           </Box>
+
+           {/* Dialogs and Menus */}
+           
+           {/* Add Payment Dialog */}
+           <Dialog
+             open={addPaymentOpen}
+             onClose={() => setAddPaymentOpen(false)}
+             maxWidth="md"
+             fullWidth
+             PaperProps={{
+               sx: { direction: isRTL ? 'rtl' : 'ltr' }
+             }}
+           >
+             <DialogTitle>{t('payment.dialogs.createNewInvoice')}</DialogTitle>
+             <DialogContent>
+               {/* Appointment Selection Section */}
+               <Box sx={{ mb: 3, p: 2, bgcolor: 'primary.light', borderRadius: 2, border: '1px solid', borderColor: 'primary.main' }}>
+                 <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 2, color: 'primary.main', display: 'flex', alignItems: 'center', gap: 1 }}>
+                   <CalendarToday fontSize="small" />
+                   Select Date to View Appointments
+                 </Typography>
+                 <Grid container spacing={2} alignItems="center">
+                   <Grid item xs={12} md={6}>
+                     <TextField
+                       fullWidth
+                       label="Appointment Date"
+                       type="date"
+                       value={selectedDate}
+                       onChange={(e) => setSelectedDate(e.target.value)}
+                       InputLabelProps={{ shrink: true }}
+                       size="small"
+                     />
+                   </Grid>
+                   <Grid item xs={12} md={6}>
+                     <Button
+                       variant="outlined"
+                       startIcon={<People />}
+                       onClick={() => setShowAppointmentSelection(!showAppointmentSelection)}
+                       disabled={getCompletedAppointmentsByDate(selectedDate).length === 0}
+                       size="small"
+                       sx={{ 
+                         height: 40,
+                         fontSize: '0.875rem',
+                         whiteSpace: 'nowrap'
+                       }}
+                     >
+                       View Appointments ({getCompletedAppointmentsByDate(selectedDate).length})
+                     </Button>
+                   </Grid>
+                 </Grid>
+                 
+                 {/* Appointment List */}
+                 {showAppointmentSelection && (
+                   <Box sx={{ mt: 2 }}>
+                     <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                       🏥 Completed appointments for {formatDate(selectedDate)}:
+                     </Typography>
+                     {getCompletedAppointmentsByDate(selectedDate).length > 0 ? (
+                       <Box sx={{ maxHeight: 200, overflowY: 'auto' }}>
+                         {getCompletedAppointmentsByDate(selectedDate).map((apt, index) => (
+                           <Paper
+                             key={apt.id || index}
+                             sx={{
+                               p: 2,
+                               mb: 1,
+                               cursor: 'pointer',
+                               border: '1px solid',
+                               borderColor: 'divider',
+                               '&:hover': {
+                                 borderColor: 'primary.main',
+                                 backgroundColor: 'primary.light'
+                               }
+                             }}
+                             onClick={() => handleAppointmentSelection(apt)}
+                           >
+                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                               <Box>
+                                 <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                   👤 {apt.patient} • 🩺 Dr. {apt.doctor}
+                                 </Typography>
+                                 <Typography variant="caption" color="text.secondary">
+                                   ⏰ {apt.time} • 📋 {apt.type} • 📍 {apt.location}
+                                 </Typography>
+                               </Box>
+                               <Chip
+                                 label="Select"
+                                 size="small"
+                                 color="primary"
+                                 variant="outlined"
+                               />
+                             </Box>
+                           </Paper>
+                         ))}
+                       </Box>
+                     ) : (
+                       <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic', textAlign: 'center', py: 2 }}>
+                         No completed appointments found for this date
+                       </Typography>
+                     )}
+                   </Box>
+                 )}
+               </Box>
+
+               <Grid container spacing={2} sx={{ mt: 1 }}>
+                 <Grid item xs={12} md={6}>
+                   <TextField
+                     fullWidth
+                     name="patient"
+                     label={t('payment.fields.patientName')}
+                     required
+                     value={newInvoiceData.patient}
+                     onChange={(e) => setNewInvoiceData(prev => ({ ...prev, patient: e.target.value }))}
+                     placeholder={t('payment.placeholders.patientName')}
+                   />
+                 </Grid>
+                 <Grid item xs={12} md={6}>
+                   <FormControl fullWidth required>
+                     <InputLabel>Doctor</InputLabel>
+                     <Select 
+                       name="doctor" 
+                       label="Doctor"
+                       value={newInvoiceData.doctor}
+                       onChange={(e) => setNewInvoiceData(prev => ({ ...prev, doctor: e.target.value }))}
+                     >
+                       {availableDoctors.map((doctor) => (
+                         <MenuItem key={doctor.id} value={`${doctor.firstName} ${doctor.lastName}`}>
+                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                             <LocalHospital sx={{ fontSize: 18, color: 'primary.main' }} />
+                             <Box>
+                               <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                 Dr. {doctor.firstName} {doctor.lastName}
+                               </Typography>
+                               <Typography variant="caption" color="text.secondary">
+                                 General Practice
+                               </Typography>
+                             </Box>
+                           </Box>
+                         </MenuItem>
+                       ))}
+                     </Select>
+                   </FormControl>
+                 </Grid>
+                 <Grid item xs={12} md={6}>
+                   <TextField
+                     fullWidth
+                     name="amount"
+                     label={t('payment.fields.amount')}
+                     type="number"
+                     required
+                     value={newInvoiceData.amount}
+                     onChange={(e) => setNewInvoiceData(prev => ({ ...prev, amount: e.target.value }))}
+                     InputProps={{
+                       startAdornment: <InputAdornment position="start">EGP</InputAdornment>,
+                     }}
+                     inputProps={{ min: 0, step: 0.01 }}
+                   />
+                 </Grid>
+                 <Grid item xs={12} md={6}>
+                   <TextField
+                     fullWidth
+                     name="invoiceDate"
+                     label={t('payment.fields.invoiceDate')}
+                     type="date"
+                     required
+                     value={newInvoiceData.invoiceDate}
+                     onChange={(e) => setNewInvoiceData(prev => ({ ...prev, invoiceDate: e.target.value }))}
+                     InputLabelProps={{ shrink: true }}
+                     inputProps={{ 
+                       max: new Date().toISOString().split('T')[0]
+                     }}
+                     helperText={t('payment.helpers.serviceDate')}
+                   />
+                 </Grid>
+                 <Grid item xs={12} md={6}>
+                   <FormControl fullWidth required>
+                     <InputLabel>{t('payment.fields.serviceCategory')}</InputLabel>
+                     <Select 
+                       name="category" 
+                       label={t('payment.fields.serviceCategory')}
+                       value={newInvoiceData.category}
+                       onChange={(e) => setNewInvoiceData(prev => ({ ...prev, category: e.target.value }))}
+                     >
+                       <MenuItem value="consultation">{t('payment.categories.consultation')}</MenuItem>
+                       <MenuItem value="checkup">{t('payment.categories.checkup')}</MenuItem>
+                       <MenuItem value="surgery">{t('payment.categories.surgery')}</MenuItem>
+                       <MenuItem value="emergency">{t('payment.categories.emergency')}</MenuItem>
+                       <MenuItem value="followup">{t('payment.categories.followup')}</MenuItem>
+                       <MenuItem value="procedure">{t('payment.categories.procedure')}</MenuItem>
+                     </Select>
+                   </FormControl>
+                 </Grid>
+                 <Grid item xs={12} md={6}>
+                   <TextField
+                     fullWidth
+                     name="dueDate"
+                     label={t('payment.fields.dueDate')}
+                     type="date"
+                     required
+                     value={newInvoiceData.dueDate}
+                     onChange={(e) => setNewInvoiceData(prev => ({ ...prev, dueDate: e.target.value }))}
+                     InputLabelProps={{ shrink: true }}
+                     inputProps={{ min: new Date().toISOString().split('T')[0] }}
+                   />
+                 </Grid>
+                 <Grid item xs={12}>
+                   <TextField
+                     fullWidth
+                     name="description"
+                     label={t('payment.fields.description')}
+                     multiline
+                     rows={3}
+                     required
+                     value={newInvoiceData.description}
+                     onChange={(e) => setNewInvoiceData(prev => ({ ...prev, description: e.target.value }))}
+                     placeholder={t('payment.placeholders.description')}
+                   />
+                 </Grid>
+                 <Grid item xs={12} md={6}>
+                   <FormControl fullWidth required>
+                     <InputLabel>{t('payment.fields.paymentMethod')}</InputLabel>
+                     <Select 
+                       name="method" 
+                       label={t('payment.fields.paymentMethod')}
+                       value={newInvoiceData.method}
+                       onChange={(e) => setNewInvoiceData(prev => ({ ...prev, method: e.target.value }))}
+                       sx={{
+                         '& .MuiSelect-select': {
+                           background: 'linear-gradient(135deg, rgba(9, 9, 121, 0.05) 0%, rgba(0, 212, 255, 0.05) 100%)',
+                         }
+                       }}
+                     >
+                       <MenuItem 
+                         value="Cash"
+                         sx={{
+                           '&:hover': {
+                             background: 'linear-gradient(90deg, rgba(9, 9, 121, 0.05) 0%, rgba(0, 212, 255, 0.05) 100%)'
+                           },
+                           '&.Mui-selected': {
+                             background: 'linear-gradient(90deg, rgba(9, 9, 121, 0.1) 0%, rgba(0, 212, 255, 0.1) 100%)',
+                             fontWeight: 700
+                           }
+                         }}
+                       >
+                         💵 {t('payment.methods.cash')}
+                       </MenuItem>
+                       <MenuItem 
+                         value="Credit Card"
+                         sx={{
+                           '&:hover': {
+                             background: 'linear-gradient(90deg, rgba(9, 9, 121, 0.05) 0%, rgba(0, 212, 255, 0.05) 100%)'
+                           },
+                           '&.Mui-selected': {
+                             background: 'linear-gradient(90deg, rgba(9, 9, 121, 0.1) 0%, rgba(0, 212, 255, 0.1) 100%)',
+                             fontWeight: 700
+                           }
+                         }}
+                       >
+                         💳 {t('payment.methods.credit_card')}
+                       </MenuItem>
+                       <MenuItem 
+                         value="Bank Transfer"
+                         sx={{
+                           '&:hover': {
+                             background: 'linear-gradient(90deg, rgba(9, 9, 121, 0.05) 0%, rgba(0, 212, 255, 0.05) 100%)'
+                           },
+                           '&.Mui-selected': {
+                             background: 'linear-gradient(90deg, rgba(9, 9, 121, 0.1) 0%, rgba(0, 212, 255, 0.1) 100%)',
+                             fontWeight: 700
+                           }
+                         }}
+                       >
+                         🏦 {t('payment.methods.bank_transfer')}
+                       </MenuItem>
+                       <MenuItem 
+                         value="Insurance"
+                         sx={{
+                           '&:hover': {
+                             background: 'linear-gradient(90deg, rgba(9, 9, 121, 0.05) 0%, rgba(0, 212, 255, 0.05) 100%)'
+                           },
+                           '&.Mui-selected': {
+                             background: 'linear-gradient(90deg, rgba(9, 9, 121, 0.1) 0%, rgba(0, 212, 255, 0.1) 100%)',
+                             fontWeight: 700
+                           }
+                         }}
+                       >
+                         🏥 {t('payment.methods.insurance')}
+                       </MenuItem>
+                     </Select>
+                   </FormControl>
+                 </Grid>
+                 <Grid item xs={12} md={6}>
+                   <TextField
+                     fullWidth
+                     name="insuranceAmount"
+                     label={t('payment.fields.insuranceCoverage')}
+                     type="number"
+                     value={newInvoiceData.insuranceAmount}
+                     onChange={(e) => setNewInvoiceData(prev => ({ ...prev, insuranceAmount: e.target.value }))}
+                     InputProps={{
+                       startAdornment: <InputAdornment position="start">EGP</InputAdornment>,
+                     }}
+                     inputProps={{ min: 0, step: 0.01 }}
+                     placeholder="0"
+                     helperText={t('payment.helpers.insuranceCoverage')}
+                   />
+                 </Grid>
+
+                 {/* VAT Section */}
+                 {vatSettings.enabled && (
+                   <>
+                     <Grid item xs={12}>
+                       <Divider sx={{ my: 2 }}>
+                         <Chip label="VAT Settings" icon={<Percent />} />
+                       </Divider>
+                     </Grid>
+                     
+                     <Grid item xs={12} md={6}>
+                       <FormControlLabel
+                         control={
+                           <Switch
+                             checked={newInvoiceData.includeVAT}
+                             onChange={(e) => setNewInvoiceData(prev => ({ ...prev, includeVAT: e.target.checked }))}
+                             color="primary"
+                           />
+                         }
+                         label={
+                           <Box>
+                             <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                               Include VAT
+                             </Typography>
+                             <Typography variant="caption" color="text.secondary">
+                               Add VAT to the invoice amount
+                             </Typography>
+                           </Box>
+                         }
+                       />
+                     </Grid>
+
+                     <Grid item xs={12} md={6}>
+                       <TextField
+                         fullWidth
+                         name="vatRate"
+                         label="VAT Rate"
+                         type="number"
+                         value={newInvoiceData.vatRate}
+                         onChange={(e) => setNewInvoiceData(prev => ({ ...prev, vatRate: parseFloat(e.target.value) || 0 }))}
+                         InputProps={{
+                           endAdornment: <InputAdornment position="end">%</InputAdornment>,
+                         }}
+                         inputProps={{ min: 0, max: 100, step: 0.1 }}
+                         disabled={!newInvoiceData.includeVAT}
+                         helperText={newInvoiceData.includeVAT ? "Current VAT rate" : "Enable VAT to set rate"}
+                       />
+                     </Grid>
+
+                     {/* VAT Calculation Preview */}
+                     {currentVATCalculation && newInvoiceData.includeVAT && (
+                       <Grid item xs={12}>
+                         <Box sx={{ 
+                           p: 2, 
+                           bgcolor: 'primary.light', 
+                           borderRadius: 2,
+                           border: '1px solid',
+                           borderColor: 'primary.main'
+                         }}>
+                           <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: 'primary.main' }}>
+                             📊 VAT Calculation Preview
+                           </Typography>
+                           <Grid container spacing={1}>
+                             <Grid item xs={12} sm={4}>
+                               <Typography variant="body2">
+                                 💰 Base Amount: <strong>EGP {currentVATCalculation.baseAmount.toFixed(2)}</strong>
+                               </Typography>
+                             </Grid>
+                             <Grid item xs={12} sm={4}>
+                               <Typography variant="body2">
+                                 📈 VAT ({currentVATCalculation.vatRate}%): <strong>EGP {currentVATCalculation.vatAmount.toFixed(2)}</strong>
+                               </Typography>
+                             </Grid>
+                             <Grid item xs={12} sm={4}>
+                               <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                 💳 Total with VAT: <strong>EGP {currentVATCalculation.totalAmountWithVAT.toFixed(2)}</strong>
+                               </Typography>
+                             </Grid>
+                           </Grid>
+                         </Box>
+                       </Grid>
+                     )}
+                   </>
+                 )}
+               </Grid>
+             </DialogContent>
+             <DialogActions>
+               <Button onClick={() => setAddPaymentOpen(false)}>
+                 {t('common.cancel')}
+               </Button>
+               <Button 
+                 variant="contained" 
+                 onClick={handleCreatePayment}
+               >
+                 {t('payment.actions.createInvoice')}
+               </Button>
+             </DialogActions>
+           </Dialog>
+
+           {/* Invoice View Dialog */}
+           <Dialog
+             open={invoiceDialogOpen}
+             onClose={() => setInvoiceDialogOpen(false)}
+             maxWidth="lg"
+             fullWidth
+             PaperProps={{
+               sx: { 
+                 minHeight: '90vh',
+                 backgroundColor: '#f5f5f5',
+                 direction: isRTL ? 'rtl' : 'ltr'
+               }
+             }}
+           >
+             <DialogTitle sx={{ 
+               display: 'flex', 
+               justifyContent: 'space-between', 
+               alignItems: 'center',
+               pb: 2,
+               borderBottom: 1,
+               borderColor: 'divider'
+             }}>
+               <Typography variant="h5" sx={{ fontWeight: 700 }}>
+                 {t('payment.dialogs.invoicePreview')}
+               </Typography>
+               <Box sx={{ display: 'flex', gap: 1 }}>
+                 <Button
+                   variant="outlined"
+                   startIcon={<Share />}
+                   onClick={() => selectedInvoiceForView && window.navigator.share && window.navigator.share({
+                     title: `${t('invoice.title')} ${selectedInvoiceForView.invoiceId}`,
+                     text: `${t('invoice.title')} ${t('common.for')} ${selectedInvoiceForView.patient}`,
+                     url: window.location.href
+                   })}
+                 >
+                   {t('payment.actions.share')}
+                 </Button>
+                 <Button
+                   variant="contained"
+                   startIcon={<Download />}
+                   onClick={() => selectedInvoiceForView && handleDownloadInvoice(selectedInvoiceForView)}
+                 >
+                   {t('payment.actions.download')}
+                 </Button>
+               </Box>
+             </DialogTitle>
+             <DialogContent sx={{ p: 3 }}>
+               {selectedInvoiceForView && (
+                 <InvoiceGenerator
+                   invoiceData={selectedInvoiceForView}
+                   onDownload={() => handleDownloadInvoice(selectedInvoiceForView)}
+                   onPrint={() => handlePrintInvoice(selectedInvoiceForView)}
+                   onShare={() => window.navigator.share && window.navigator.share({
+                     title: `${t('invoice.title')} ${selectedInvoiceForView.invoiceId}`,
+                     text: `${t('invoice.title')} ${t('common.for')} ${selectedInvoiceForView.patient}`,
+                     url: window.location.href
+                   })}
+                 />
+               )}
+             </DialogContent>
+             <DialogActions>
+               <Button onClick={() => setInvoiceDialogOpen(false)}>
+                 {t('common.close')}
+               </Button>
+             </DialogActions>
+           </Dialog>
+
+           {/* Filter Menu */}
+           <Menu
+             anchorEl={filterAnchor}
+             open={Boolean(filterAnchor)}
+             onClose={() => setFilterAnchor(null)}
+             PaperProps={{
+               sx: {
+                 minWidth: 200,
+                 borderRadius: 2,
+                 boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+                 direction: isRTL ? 'rtl' : 'ltr'
+               }
+             }}
+           >
+             <Box sx={{ px: 2, py: 1, borderBottom: 1, borderColor: 'divider' }}>
+               <Typography variant="subtitle2" fontWeight={600}>
+                 {t('payment.filters.title')}
+               </Typography>
+               <Typography variant="caption" color="text.secondary">
+                 {t('payment.filters.subtitle')}
+               </Typography>
+             </Box>
+             
+             <MenuItem 
+               onClick={() => {
+                 setActiveFilter('all');
+                 setFilterAnchor(null);
+               }}
+               selected={activeFilter === 'all'}
+               sx={{ py: 1.5 }}
+             >
+               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                 <Receipt sx={{ color: 'text.secondary', fontSize: 20 }} />
+                 <Typography variant="body2" fontWeight={600}>
+                   {t('payment.filters.allPayments')}
+                 </Typography>
+               </Box>
+             </MenuItem>
+             
+             <MenuItem 
+               onClick={() => {
+                 setActiveFilter('thisMonth');
+                 setFilterAnchor(null);
+               }}
+               selected={activeFilter === 'thisMonth'}
+               sx={{ py: 1.5 }}
+             >
+               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                 <CalendarToday sx={{ color: 'primary.main', fontSize: 20 }} />
+                 <Typography variant="body2" fontWeight={600}>
+                   {t('payment.filters.thisMonth')}
+                 </Typography>
+               </Box>
+             </MenuItem>
+             
+             <MenuItem 
+               onClick={() => {
+                 setActiveFilter('lastMonth');
+                 setFilterAnchor(null);
+               }}
+               selected={activeFilter === 'lastMonth'}
+               sx={{ py: 1.5 }}
+             >
+               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                 <DateRange sx={{ color: 'text.secondary', fontSize: 20 }} />
+                 <Typography variant="body2" fontWeight={600}>
+                   {t('payment.filters.lastMonth')}
+                 </Typography>
+               </Box>
+             </MenuItem>
+             
+             <Divider />
+             
+             <MenuItem 
+               onClick={() => {
+                 setActiveFilter('paid');
+                 setFilterAnchor(null);
+               }}
+               selected={activeFilter === 'paid'}
+               sx={{ py: 1.5, '&:hover': { backgroundColor: 'success.light' } }}
+             >
+               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                 <CheckCircle sx={{ color: 'success.main', fontSize: 20 }} />
+                 <Typography variant="body2" fontWeight={600}>
+                   {t('payment.filters.paidOnly')}
+                 </Typography>
+               </Box>
+             </MenuItem>
+             
+             <MenuItem 
+               onClick={() => {
+                 setActiveFilter('pending');
+                 setFilterAnchor(null);
+               }}
+               selected={activeFilter === 'pending'}
+               sx={{ py: 1.5, '&:hover': { backgroundColor: 'warning.light' } }}
+             >
+               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                 <AccessTime sx={{ color: 'warning.main', fontSize: 20 }} />
+                 <Typography variant="body2" fontWeight={600}>
+                   {t('payment.filters.pendingOnly')}
+                 </Typography>
+               </Box>
+             </MenuItem>
+             
+             <MenuItem 
+               onClick={() => {
+                 setActiveFilter('overdue');
+                 setFilterAnchor(null);
+               }}
+               selected={activeFilter === 'overdue'}
+               sx={{ py: 1.5, '&:hover': { backgroundColor: 'error.light' } }}
+             >
+               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                 <Warning sx={{ color: 'error.main', fontSize: 20 }} />
+                 <Typography variant="body2" fontWeight={600}>
+                   {t('payment.filters.overdueOnly')}
+                 </Typography>
+               </Box>
+             </MenuItem>
+             
+             <MenuItem 
+               onClick={() => {
+                 setActiveFilter('withInsurance');
+                 setFilterAnchor(null);
+               }}
+               selected={activeFilter === 'withInsurance'}
+               sx={{ py: 1.5 }}
+             >
+               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                 <LocalHospital sx={{ color: 'info.main', fontSize: 20 }} />
+                 <Typography variant="body2" fontWeight={600}>
+                   {t('payment.filters.withInsurance')}
+                 </Typography>
+               </Box>
+             </MenuItem>
+           </Menu>
+
+           {/* Status Change Menu */}
+           <Menu
+             anchorEl={statusMenuAnchor}
+             open={Boolean(statusMenuAnchor)}
+             onClose={handleCloseStatusMenu}
+             PaperProps={{
+               sx: {
+                 minWidth: 200,
+                 borderRadius: 2,
+                 boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+                 direction: isRTL ? 'rtl' : 'ltr'
+               }
+             }}
+           >
+             <Box sx={{ px: 2, py: 1, borderBottom: 1, borderColor: 'divider' }}>
+               <Typography variant="subtitle2" fontWeight={600}>
+                 {t('payment.statusMenu.title')}
+               </Typography>
+               <Typography variant="caption" color="text.secondary">
+                 {selectedPaymentForStatusChange?.invoiceId} • {selectedPaymentForStatusChange?.patient}
+               </Typography>
+             </Box>
+             
+             <MenuItem 
+               onClick={() => handleChangeStatus('pending')}
+               disabled={selectedPaymentForStatusChange?.status === 'pending'}
+               sx={{ 
+                 py: 1.5,
+                 '&:hover': { backgroundColor: 'warning.light' }
+               }}
+             >
+               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                 <AccessTime sx={{ color: 'warning.main', fontSize: 20 }} />
+                 <Box>
+                   <Typography variant="body2" fontWeight={600}>
+                     {t('payment.status.pending')}
+                   </Typography>
+                   <Typography variant="caption" color="text.secondary">
+                     {t('payment.statusMenu.pendingDesc')}
+                   </Typography>
+                 </Box>
+               </Box>
+             </MenuItem>
+             
+             <MenuItem 
+               onClick={() => handleChangeStatus('paid')}
+               disabled={selectedPaymentForStatusChange?.status === 'paid'}
+               sx={{ 
+                 py: 1.5,
+                 '&:hover': { backgroundColor: 'success.light' }
+               }}
+             >
+               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                 <CheckCircle sx={{ color: 'success.main', fontSize: 20 }} />
+                 <Box>
+                   <Typography variant="body2" fontWeight={600}>
+                     {t('payment.status.paid')}
+                   </Typography>
+                   <Typography variant="caption" color="text.secondary">
+                     {t('payment.statusMenu.paidDesc')}
+                   </Typography>
+                 </Box>
+               </Box>
+             </MenuItem>
+             
+             <MenuItem 
+               onClick={() => handleChangeStatus('overdue')}
+               disabled={selectedPaymentForStatusChange?.status === 'overdue'}
+               sx={{ 
+                 py: 1.5,
+                 '&:hover': { backgroundColor: 'error.light' }
+               }}
+             >
+               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                 <Warning sx={{ color: 'error.main', fontSize: 20 }} />
+                 <Box>
+                   <Typography variant="body2" fontWeight={600}>
+                     {t('payment.status.overdue')}
+                   </Typography>
+                   <Typography variant="caption" color="text.secondary">
+                     {t('payment.statusMenu.overdueDesc')}
+                   </Typography>
+                 </Box>
+               </Box>
+             </MenuItem>
+             
+             <MenuItem 
+               onClick={() => handleChangeStatus('partial')}
+               disabled={selectedPaymentForStatusChange?.status === 'partial'}
+               sx={{ 
+                 py: 1.5,
+                 '&:hover': { backgroundColor: 'info.light' }
+               }}
+             >
+               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                 <AttachMoney sx={{ color: 'info.main', fontSize: 20 }} />
+                 <Box>
+                   <Typography variant="body2" fontWeight={600}>
+                     {t('payment.status.partial')}
+                   </Typography>
+                   <Typography variant="caption" color="text.secondary">
+                     {t('payment.statusMenu.partialDesc')}
+                   </Typography>
+                 </Box>
+               </Box>
+             </MenuItem>
+           </Menu>
+
+           {/* Snackbar for notifications */}
+           <Snackbar
+             open={snackbar.open}
+             autoHideDuration={4000}
+             onClose={handleCloseSnackbar}
+             anchorOrigin={{ vertical: 'bottom', horizontal: isRTL ? 'left' : 'right' }}
+           >
+             <Alert 
+               onClose={handleCloseSnackbar} 
+               severity={snackbar.severity}
+               variant="filled"
+               sx={{ width: '100%' }}
+             >
+               {snackbar.message}
+             </Alert>
+           </Snackbar>
+
+           {/* VAT Adjustment Modal */}
+           <VATAdjustmentModal
+             open={vatAdjustmentModalOpen}
+             onClose={() => setVatAdjustmentModalOpen(false)}
+             currentRevenue={baseRevenue}
+             currentVATCollected={0}
+             onSave={handleVATAdjustmentSave}
+           />
+
+           {/* Expense Management Modal */}
+           <ExpenseManagementModal
+             open={expenseManagementModalOpen}
+             onClose={() => setExpenseManagementModalOpen(false)}
+             totalRevenue={baseRevenue}
+             automaticVATFromPayments={automaticVATFromPayments}
+           />
+
+           {/* Edit Payment Amount Modal */}
+           <Dialog
+             open={editPaymentModalOpen}
+             onClose={() => setEditPaymentModalOpen(false)}
+             maxWidth="sm"
+             fullWidth
+           >
+             <DialogTitle>
+               <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                 💰 Edit Payment Amount
+               </Typography>
+               {selectedPaymentForEdit && (
+                 <Typography variant="body2" color="text.secondary">
+                   {selectedPaymentForEdit.invoiceId} • {selectedPaymentForEdit.patient}
+                 </Typography>
+               )}
+             </DialogTitle>
+             <DialogContent>
+               <Box sx={{ pt: 2 }}>
+                 <Grid container spacing={3}>
+                   <Grid item xs={12}>
+                     <TextField
+                       fullWidth
+                       label="Payment Amount"
+                       type="number"
+                       value={editPaymentForm.amount}
+                       onChange={(e) => setEditPaymentForm(prev => ({ ...prev, amount: e.target.value }))}
+                       InputProps={{
+                         startAdornment: <InputAdornment position="start">EGP</InputAdornment>,
+                       }}
+                       inputProps={{ min: 0, step: 0.01 }}
+                       helperText="Base amount (before VAT)"
+                     />
+                   </Grid>
+                   <Grid item xs={12}>
+                     <TextField
+                       fullWidth
+                       label="Paid Amount"
+                       type="number"
+                       value={editPaymentForm.paidAmount}
+                       onChange={(e) => setEditPaymentForm(prev => ({ ...prev, paidAmount: e.target.value }))}
+                       InputProps={{
+                         startAdornment: <InputAdornment position="start">EGP</InputAdornment>,
+                       }}
+                       inputProps={{ min: 0, step: 0.01 }}
+                       helperText="Amount already paid by patient"
+                     />
+                   </Grid>
+                   {selectedPaymentForEdit && (
+                     <Grid item xs={12}>
+                       <Box sx={{ 
+                         p: 2, 
+                         bgcolor: 'grey.50', 
+                         borderRadius: 2,
+                         border: '1px solid',
+                         borderColor: 'grey.200'
+                       }}>
+                         <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                           💳 Current Payment Info
+                         </Typography>
+                         <Typography variant="body2" color="text.secondary">
+                           Current Total: EGP {formatCurrency(selectedPaymentForEdit.amount)}<br/>
+                           Current Paid: EGP {formatCurrency(selectedPaymentForEdit.paidAmount || 0)}<br/>
+                           Current Status: {selectedPaymentForEdit.status}
+                         </Typography>
+                       </Box>
+                     </Grid>
+                   )}
+                 </Grid>
+               </Box>
+             </DialogContent>
+             <DialogActions>
+               <Button onClick={() => setEditPaymentModalOpen(false)}>
+                 Cancel
+               </Button>
+               <Button 
+                 variant="contained" 
+                 onClick={handleSavePaymentEdit}
+                 sx={{ fontWeight: 600 }}
+               >
+                 💾 Save Changes
+               </Button>
+             </DialogActions>
+           </Dialog>
+
+           
+
+           {/* Test Notification Button */}
+           <Tooltip title="Test Payment Notification System" placement="left">
+             <Button
+               variant="contained"
+               onClick={() => testPaymentNotificationSystem()}
+               sx={{
+                 position: 'fixed',
+                 bottom: 24,
+                 right: 24,
+                 borderRadius: '50%',
+                 width: 64,
+                 height: 64,
+                 minWidth: 64,
+                 background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
+                 color: 'white',
+                 boxShadow: '0 8px 32px rgba(102, 126, 234, 0.4)',
+                 zIndex: 1000,
+                 '&:hover': {
+                   background: 'linear-gradient(135deg, #764ba2 0%, #f093fb 100%)',
+                   transform: 'scale(1.1)',
+                   boxShadow: '0 12px 48px rgba(102, 126, 234, 0.6)',
+                 },
+                 transition: 'all 0.3s ease',
+                 display: 'flex',
+                 alignItems: 'center',
+                 justifyContent: 'center'
+               }}
+             >
+               💰
+             </Button>
+           </Tooltip>
+
+           {/* Firebase Status */}
+           {renderFirebaseStatus()}
+
+           {/* ✅ Stale Data Warning */}
+           {showStaleDataWarning && (
+             <Alert 
+               severity="warning" 
+               sx={{ mb: 2 }}
+               action={
+                 <Box sx={{ display: 'flex', gap: 1 }}>
+                   <Button
+                     color="inherit"
+                     size="small"
+                     onClick={handleClearCache}
+                     disabled={isClearingCache}
+                     startIcon={isClearingCache ? <CircularProgress size={16} /> : <Refresh />}
+                   >
+                     {isClearingCache ? 'Clearing...' : 'Clear Cache'}
+                   </Button>
+                   <IconButton
+                     color="inherit"
+                     size="small"
+                     onClick={() => setShowStaleDataWarning(false)}
+                   >
+                     <Close />
+                   </IconButton>
+                 </Box>
+               }
+             >
+               <Typography variant="body2">
+                 ⚠️ <strong>Stale Data Detected:</strong> You may be seeing old cached payment data that no longer exists in Firebase. 
+                 Click "Clear Cache" to refresh from the database and remove any deleted payments.
+               </Typography>
+             </Alert>
+           )}
+
+           {/* ✅ Manual Cache Clear Button for Admin */}
+           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+             <Typography variant="h4" component="h1" sx={{ fontWeight: 600, color: 'primary.main' }}>
+               {t('payment_management')}
+             </Typography>
+             
+             <Box sx={{ display: 'flex', gap: 1 }}>
+               {/* Clear Cache Button */}
+               <Tooltip title="Clear all cached payment data and refresh from Firebase" arrow>
+                 <Button
+                   variant="outlined"
+                   size="small"
+                   onClick={handleClearCache}
+                   disabled={isClearingCache}
+                   startIcon={isClearingCache ? <CircularProgress size={16} /> : <DeleteSweep />}
+                   sx={{
+                     borderColor: 'warning.main',
+                     color: 'warning.main',
+                     '&:hover': {
+                       borderColor: 'warning.dark',
+                       backgroundColor: 'warning.light',
+                       color: 'warning.dark'
+                     }
+                   }}
+                 >
+                   {isClearingCache ? 'Clearing...' : 'Clear Cache'}
+                 </Button>
+               </Tooltip>
+               
+               {/* Existing buttons */}
+               <Button
+                 variant="contained"
+                 startIcon={<Add />}
+                 onClick={() => setAddPaymentOpen(true)}
+               >
+                 {t('add_payment')}
+               </Button>
+             </Box>
+           </Box>
+         </Container>
+ );
+};
+
+export default PaymentListPage;
+
+// ✅ NEW: Add debug functionality to window object for Payment page
+if (typeof window !== 'undefined') {
+  // Debug and force refresh function 
+  (window as any).debugPaymentAndForceRefresh = async () => {
+    console.log('🔍 PAYMENT DEBUG: Starting comprehensive payment data test...');
+    
+    try {
+      // Test Firebase services directly
+      console.log('🔄 Testing PaymentService...');
+      const testPayments = await PaymentService.getPayments('demo-clinic');
+      console.log(`💰 PaymentService test: ${testPayments.length} payments found`);
+      
+      console.log('🔄 Testing AppointmentService...');
+      const testAppointments = await AppointmentService.getAllAppointments('demo-clinic');
+      console.log(`📅 AppointmentService test: ${testAppointments.length} appointments found`);
+      
+      // Test Firebase Data Bridge
+      console.log('🔄 Testing Firebase Data Bridge for Payments...');
+      FirebaseDataBridge.refreshAll('demo-clinic');
+      
+      // Show results
+      const totalData = testPayments.length + testAppointments.length;
+      console.log(`🎯 PAYMENT DEBUG COMPLETE: ${totalData} total records found`);
+      
+      alert(`✅ Payment Debug Results:\n\n💰 Payments: ${testPayments.length}\n📅 Appointments: ${testAppointments.length}\n\n🎯 Total: ${totalData} records\n\nCheck console for detailed logs.`);
+      
+    } catch (error) {
+      console.error('❌ PAYMENT DEBUG ERROR:', error);
+      alert(`❌ Payment Debug Failed:\n\n${error}\n\nCheck console for details.`);
+    }
+  };
+
+  // Add all other global debug commands for payments
+  (window as any).paymentTest = (window as any).debugPaymentAndForceRefresh;
+  (window as any).paymentSync = () => FirebaseDataBridge.refreshAll('demo-clinic');
+  (window as any).paymentRefresh = () => {
+    console.log('🔄 Refreshing payment data via Firebase Data Bridge...');
+    FirebaseDataBridge.refreshAll('demo-clinic');
+  };
+  
+  // Add console command info
+  console.log(`
+  🎯 PAYMENT PAGE DEBUG COMMANDS AVAILABLE:
+  
+  • paymentTest() - Complete payment data test
+  • debugPaymentAndForceRefresh() - Same as above
+  • paymentSync() - Sync payment data via Firebase Data Bridge  
+  • paymentRefresh() - Force refresh all payment data
+  
+  💡 Type any of these commands in the console to test payment data flow!
+  `);
+}
+
+// ✅ REMOVED: This code was outside the component and causing compilation errors

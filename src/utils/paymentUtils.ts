@@ -1,11 +1,10 @@
 import { 
-  PaymentData, 
-  defaultClinicPaymentSettings, 
-  ClinicPaymentSettings,
-  AppointmentTypeSettings,
-  defaultVATSettings,
-  VATSettings 
-} from '../data/mockData';
+  PAYMENT_METHODS,
+  PAYMENT_STATUSES,
+  DEFAULT_FORMS,
+  STORAGE_KEYS,
+  VAT_RATE_OPTIONS
+} from '@config/constants';
 import { PaymentNotificationService } from '../services/paymentNotificationService';
 import { PaymentService, type Payment as FirebasePayment } from '../services/PaymentService';
 import { 
@@ -19,9 +18,9 @@ import {
 } from '../api/clinics';
 
 // Storage keys
-const PAYMENTS_STORAGE_KEY = 'clinic_payments_data';
-const CLINIC_SETTINGS_KEY = 'clinic_payment_settings';
-const VAT_SETTINGS_KEY = 'clinic_vat_settings';
+const PAYMENTS_STORAGE_KEY = STORAGE_KEYS.PAYMENTS;
+const CLINIC_SETTINGS_KEY = STORAGE_KEYS.CLINIC_SETTINGS;
+const VAT_SETTINGS_KEY = STORAGE_KEYS.VAT_SETTINGS;
 
 // ✅ NEW: Use Firebase for clinic settings instead of localStorage
 let cachedSettings: { [clinicId: string]: any } = {};
@@ -500,7 +499,7 @@ export const createPayment = (paymentData: any): any => {
       // Save to Firebase asynchronously (don't block the return)
       (async () => {
         try {
-          const { firebaseDataManager } = await import('../utils/firebaseDataManager');
+          const { firebaseDataManager } = await import('@utils/firebaseDataManager');
           const dataManager = firebaseDataManager.initialize({ 
             clinicId: paymentData.clinicId 
           });
@@ -1594,7 +1593,7 @@ export const initializeAppointmentBackupSync = (): void => {
     console.log('🧪 Testing appointment save functionality...');
     
     // Test Firebase readiness
-    const { firebaseManager } = await import('../api/firebaseOptimized');
+    const { firebaseManager } = await import('@lib/firebase/legacy-compat');
     const isReady = firebaseManager.isReady();
     console.log(`🔥 Firebase ready: ${isReady}`);
     
@@ -1660,7 +1659,7 @@ export const forceSyncAppointmentsAndPayments = async (clinicId: string): Promis
       
       for (const payment of emergencyPayments) {
         try {
-          const { firebaseDataManager } = await import('../utils/firebaseDataManager');
+          const { firebaseDataManager } = await import('@utils/firebaseDataManager');
           const dataManager = firebaseDataManager.initialize({ clinicId });
           await dataManager.createPayment(payment);
           paymentsSynced++;
@@ -1720,7 +1719,7 @@ export const forceSyncAppointmentsAndPayments = async (clinicId: string): Promis
     console.log('🔍 Checking Firebase connection...');
     
     // Test Firebase readiness
-    const { firebaseManager } = await import('../api/firebaseOptimized');
+    const { firebaseManager } = await import('@lib/firebase/legacy-compat');
     const isReady = firebaseManager.isReady();
     console.log(`🔥 Firebase ready: ${isReady}`);
     
@@ -1731,7 +1730,7 @@ export const forceSyncAppointmentsAndPayments = async (clinicId: string): Promis
     
     // Test Firestore connection
     try {
-      const { firebaseDataManager } = await import('../utils/firebaseDataManager');
+      const { firebaseDataManager } = await import('@utils/firebaseDataManager');
       const dataManager = firebaseDataManager.initialize({ clinicId: 'demo-clinic' });
       
       // Try to read some data (this tests the connection)
@@ -1802,7 +1801,7 @@ console.log('   • checkAppointmentBackups() - Check local backup status');
     console.log('3️⃣ Verifying appointment in Firebase...');
     await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds for Firebase sync
     
-    const { firebaseDataManager } = await import('../utils/firebaseDataManager');
+    const { firebaseDataManager } = await import('@utils/firebaseDataManager');
     const dataManager = firebaseDataManager.initialize({ clinicId });
     const firebaseAppointments = await dataManager.getAppointments();
     

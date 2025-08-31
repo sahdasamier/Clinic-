@@ -7,7 +7,7 @@ import {
   getMetadata,
   updateMetadata 
 } from 'firebase/storage';
-import { getOptimizedStorage, firebaseManager } from './firebaseOptimized';
+import { getOptimizedStorage, firebaseManager } from './../lib/firebase/legacy-compat';
 
 // Helper to get safe storage reference
 const getStorageInstance = () => {

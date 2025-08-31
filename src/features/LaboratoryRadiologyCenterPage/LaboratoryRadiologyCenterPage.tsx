@@ -62,12 +62,12 @@ import {
   Biotech,
   MedicalServices,
 } from '@mui/icons-material';
-import { useAuth } from '../../contexts/AuthContext';
-import { useUser } from '../../contexts/UserContext';
+import { useAuth } from '@store/auth';
+import { useUser } from '@store/auth';
 import { useGlobalData } from '../../hooks/useGlobalData';
-import FileUploadComponent from '../../components/FileUploadComponent';
-import MedicalRequirementsService, { MedicalRequirementOrder } from '../../services/MedicalRequirementsService';
-import { completeRequirementWorkflow } from '../../utils/medicalRequirementSync';
+import FileUploadComponent from '@components/common/forms/FileUploadComponent';
+import MedicalRequirementsService, { MedicalRequirementOrder } from '@/services/MedicalRequirementsService';
+import { completeRequirementWorkflow } from '@utils/medicalRequirementSync';
 
 interface TabPanelProps {
   children?: React.ReactNode;

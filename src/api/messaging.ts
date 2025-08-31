@@ -1,5 +1,5 @@
 import { getMessaging, getToken, onMessage, MessagePayload } from 'firebase/messaging';
-import { firebaseManager } from './firebaseOptimized';
+import { firebaseManager } from './../lib/firebase/legacy-compat';
 
 // Lazy initialization of messaging
 let messaging: any = null;

@@ -4,7 +4,7 @@
  */
 
 import { collection, getDocs, query, where, writeBatch, doc } from 'firebase/firestore';
-import { getOptimizedFirestore, firebaseManager } from '../api/firebaseOptimized';
+import { getOptimizedFirestore, firebaseManager } from '@lib/firebase/legacy-compat';
 
 export const quickFixDoctorIssues = async () => {
   console.log('🚀 Quick Doctor Fix Starting...');

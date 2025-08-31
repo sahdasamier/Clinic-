@@ -12,15 +12,14 @@ import {
   type Transaction,
 } from 'firebase/firestore';
 import { type Auth } from 'firebase/auth';
-import { type Functions } from 'firebase/functions';
+import { getFunctions, type Functions } from 'firebase/functions';
 
 // ✅ FIXED: Import from the optimized Firebase instead of the proxy
 import { 
   getOptimizedFirestore, 
   getOptimizedAuth, 
-  getOptimizedFunctions,
   firebaseManager 
-} from '../api/firebaseOptimized';
+} from '@lib/firebase/legacy-compat';
 
 // Configuration interface
 interface FirebaseRealtimeConfig {
@@ -71,50 +70,63 @@ export class FirebaseRealtimeManager {
   // ✅ FIXED: Getters now use the actual optimized Firebase services
   private get db(): Firestore {
     if (!this._db) {
-      if (!firebaseManager.isReady()) {
-        throw new Error('Firebase Firestore not ready yet. Please wait for initialization.');
+      // Use cached instance if available, otherwise get fresh instance
+      if (firebaseManager.isReadySync()) {
+        try {
+          this._db = firebaseManager.getFirestoreSync();
+          console.log('✅ FirebaseRealtimeManager: Got Firestore instance');
+        } catch (error) {
+          console.error('❌ Failed to get Firestore instance:', error);
+          throw new Error('Firebase Firestore failed to initialize');
+        }
+      } else {
+        throw new Error('Firebase services not ready - call waitForFirebaseReady() first');
       }
-      
-      try {
-        this._db = getOptimizedFirestore();
-        console.log('✅ FirebaseRealtimeManager: Got Firestore instance');
-      } catch (error) {
-        console.error('❌ Failed to get Firestore instance:', error);
-        throw new Error('Firebase Firestore failed to initialize');
-      }
+    }
+    if (!this._db) {
+      throw new Error('Firebase Firestore instance is null after initialization');
     }
     return this._db;
   }
 
   private get auth(): Auth {
     if (!this._auth) {
-      if (!firebaseManager.isReady()) {
-        throw new Error('Firebase Auth not ready yet. Please wait for initialization.');
+      // Use cached instance if available, otherwise get fresh instance
+      if (firebaseManager.isReadySync()) {
+        try {
+          this._auth = firebaseManager.getAuthSync();
+          console.log('✅ FirebaseRealtimeManager: Got Auth instance');
+        } catch (error) {
+          console.error('❌ Failed to get Auth instance:', error);
+          throw new Error('Firebase Auth failed to initialize');
+        }
+      } else {
+        throw new Error('Firebase services not ready - call waitForFirebaseReady() first');
       }
-      
-      try {
-        this._auth = getOptimizedAuth();
-        console.log('✅ FirebaseRealtimeManager: Got Auth instance');
-      } catch (error) {
-        console.error('❌ Failed to get Auth instance:', error);
-        throw new Error('Firebase Auth failed to initialize');
-      }
+    }
+    if (!this._auth) {
+      throw new Error('Firebase Auth instance is null after initialization');
     }
     return this._auth;
   }
 
   private get functions(): Functions {
     if (!this._functions) {
-      if (!firebaseManager.isReady()) {
-        throw new Error('Firebase Functions not ready yet. Please wait for initialization.');
-      }
-      
-      try {
-        this._functions = getOptimizedFunctions();
-        console.log('✅ FirebaseRealtimeManager: Got Functions instance');
-      } catch (error) {
-        console.error('❌ Failed to get Functions instance:', error);
-        throw new Error('Firebase Functions failed to initialize');
+      // Use cached instance if available, otherwise get fresh instance
+      if (firebaseManager.isReadySync()) {
+        try {
+          const app = firebaseManager.getAppSync();
+          if (!app) {
+            throw new Error('Firebase App not available');
+          }
+          this._functions = getFunctions(app);
+          console.log('✅ FirebaseRealtimeManager: Got Functions instance');
+        } catch (error) {
+          console.error('❌ Failed to get Functions instance:', error);
+          throw new Error('Firebase Functions failed to initialize');
+        }
+      } else {
+        throw new Error('Firebase services not ready - call waitForFirebaseReady() first');
       }
     }
     return this._functions;
@@ -169,10 +181,14 @@ export class FirebaseRealtimeManager {
 
     while (retries < maxRetries) {
       try {
-        // ✅ FIXED: Check if firebaseManager is ready first
-        if (!firebaseManager.isReady()) {
+        // ✅ FIXED: Properly await the async firebaseManager.isReady()
+        const isReady = await firebaseManager.isReady();
+        if (!isReady) {
           throw new Error('Firebase manager not ready yet');
         }
+        
+        // Cache Firebase instances for synchronous getter access
+        await firebaseManager.cacheInstances();
         
         // Try to access the Firebase services - this will throw if not ready
         const testDb = this.db;
@@ -718,7 +734,7 @@ export class FirebaseRealtimeManager {
       await new Promise(resolve => setTimeout(resolve, 2000));
       
       // Reinitialize with current config
-      await this.initialize(this.config);
+      await this.initialize();
       
       console.log('✅ Emergency reconnect completed successfully');
     } catch (error) {

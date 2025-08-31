@@ -1,7 +1,7 @@
-import { AppointmentService } from '../services/AppointmentService';
-import { PatientService } from '../services/PatientService';
+import { AppointmentService } from '@/services/AppointmentService';
+import { PatientService } from '@/services/PatientService';
 import { getDocs, query, where, collection } from 'firebase/firestore';
-import { getOptimizedFirestore, firebaseManager } from '../api/firebaseOptimized';
+import { getOptimizedFirestore, firebaseManager } from '@lib/firebase/legacy-compat';
 
 // Helper to get safe database reference
 const getDb = () => {

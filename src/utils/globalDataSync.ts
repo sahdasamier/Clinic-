@@ -1,7 +1,7 @@
 import React from 'react';
-import { AppointmentService } from '../services/AppointmentService';
-import { PatientService } from '../services/PatientService';
-import { PaymentService } from '../services/PaymentService';
+import { AppointmentService } from '@/services/AppointmentService';
+import { PatientService } from '@/services/PatientService';
+import { PaymentService } from '@/services/PaymentService';
 
 // ✅ EMERGENCY: Circuit breaker for infinite loops
 let globalLoopDetection = {

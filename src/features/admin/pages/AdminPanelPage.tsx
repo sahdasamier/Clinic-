@@ -1,0 +1,2245 @@
+import React, { useState, useEffect, useContext } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { signOut, createUserWithEmailAndPassword, updateProfile, getAuth, signInWithEmailAndPassword, deleteUser, sendPasswordResetEmail } from 'firebase/auth';
+import { initializeApp, deleteApp } from 'firebase/app';
+import { auth } from '@lib/firebase/legacy-compat';
+import { createUserWithSecondaryApp, verifyAdminAuthentication, CreateUserData } from '@lib/api/adminAuth';
+import FirebaseHealthCheck from '@features/system/components/FirebaseHealthCheck';
+import { 
+  collection, 
+  addDoc, 
+  getDocs, 
+  updateDoc, 
+  deleteDoc,
+  doc, 
+  query, 
+  orderBy,
+  where,
+  serverTimestamp,
+  setDoc 
+} from 'firebase/firestore';
+import { firebaseConfig, isOptimizedFirebaseReady, getOptimizedServices } from '@lib/firebase/legacy-compat';
+import { getOptimizedFirestore, getOptimizedAuth } from '@lib/firebase/legacy-compat';
+import { createUserAccount, createUserInvitation, isValidEmail, checkEmailExists, doubleCheckEmailBeforeCreation, createUserAccountWithCleanup, suggestAlternativeEmails } from '@lib/api/auth';
+import { fixClinicAccess } from '@utils/clinicUtils';
+import { initializeDemoClinicAfterAuth } from '@/scripts/initFirestore';
+import { useAuth } from '@store/auth';
+import { Clinic, User } from '../../types/models';
+import { validateUserLimit, getPlanInfo, canAddUser } from '@utils/subscriptionUtils';
+import { formatDateForTable, formatDateTime, formatDateForInput, timestampToDate, getRelativeTime } from '@utils/dateUtils';
+import { UserPermissions } from '../../types/permissions';
+import PermissionsManager from '@features/admin/components/PermissionsManager';
+import { comprehensiveDoctorFix, diagnoseDoctorIssues } from '@utils/comprehensiveDoctorFix';
+import {
+  Box,
+  Container,
+  Typography,
+  Card,
+  CardContent,
+  Button,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Switch,
+  Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Grid,
+  AppBar,
+  Toolbar,
+  IconButton,
+  Tabs,
+  Tab,
+  Alert,
+  CircularProgress,
+  InputAdornment,
+  Snackbar,
+} from '@mui/material';
+import {
+  AdminPanelSettings,
+  Add,
+  Business,
+  People,
+  ExitToApp,
+  Refresh,
+  Delete,
+  Warning,
+  Edit,
+  Security,
+  Visibility,
+  VisibilityOff,
+  ContentCopy,
+  AutorenewRounded,
+  LockReset,
+} from '@mui/icons-material';
+import { Tooltip } from '@mui/material';
+
+const AdminPanelPage: React.FC = () => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  
+  // Helper function to get Firestore instance safely
+  const getFirestore = () => {
+    if (!isOptimizedFirebaseReady()) {
+      throw new Error('Firebase not ready yet. Please wait a moment and try again.');
+    }
+    return getOptimizedFirestore();
+  };
+  
+  const [activeTab, setActiveTab] = useState(0);
+  const [clinics, setClinics] = useState<Clinic[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [firebaseReady, setFirebaseReady] = useState(false);
+  
+  // Dialog states
+  const [clinicDialogOpen, setClinicDialogOpen] = useState(false);
+  const [userDialogOpen, setUserDialogOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{type: 'clinic' | 'user', id: string, name: string} | null>(null);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editingClinic, setEditingClinic] = useState<Clinic | null>(null);
+  const [permissionsDialogOpen, setPermissionsDialogOpen] = useState(false);
+  const [userForPermissions, setUserForPermissions] = useState<User | null>(null);
+  
+  // Add this near your other dialog state declarations
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [confirmMessage, setConfirmMessage] = useState('');
+  const [confirmAction, setConfirmAction] = useState<() => void>(() => {});
+  
+  // Password success dialog
+  const [passwordSuccessOpen, setPasswordSuccessOpen] = useState(false);
+  const [createdUserCredentials, setCreatedUserCredentials] = useState<{email: string, password: string, name: string} | null>(null);
+  
+  // Email validation
+  const [emailValidation, setEmailValidation] = useState<{
+    isChecking: boolean;
+    isValid: boolean;
+    error: string;
+    exists: boolean;
+  }>({
+    isChecking: false,
+    isValid: true,
+    error: '',
+    exists: false
+  });
+  
+  // Password visibility and notifications
+  const [showTempPassword, setShowTempPassword] = useState(true); // Show password by default
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [generatedPasswords, setGeneratedPasswords] = useState<{[userId: string]: string}>({});
+  // Password visibility state removed - passwords are now securely managed by Firebase Auth
+  
+  // Doctor fix state
+  const [doctorFixLoading, setDoctorFixLoading] = useState(false);
+  const [doctorFixDialogOpen, setDoctorFixDialogOpen] = useState(false);
+  const [doctorFixResult, setDoctorFixResult] = useState<any>(null);
+  
+  // Form states
+  const [newClinic, setNewClinic] = useState({
+    name: '',
+    subscriptionPlan: 'basic' as 'basic' | 'premium' | 'enterprise',
+    maxUsers: 10,
+    createdAt: '',
+  });
+  
+  const [newUser, setNewUser] = useState({
+    email: '',
+    firstName: '',
+    lastName: '',
+    role: 'receptionist' as 'management' | 'doctor' | 'receptionist',
+    clinicId: '',
+    password: '',
+    createdAt: '',
+  });
+
+  // Admin verification state
+  const [adminVerification, setAdminVerification] = useState<{
+    isAdmin: boolean;
+    loading: boolean;
+    error: string | null;
+    method: string | null;
+  }>({
+    isAdmin: false,
+    loading: true,
+    error: null,
+    method: null
+  });
+
+  // Verify admin status on component mount and auth changes
+  useEffect(() => {
+    let unsubscribe: (() => void) | null = null;
+
+    const checkAdminStatus = async () => {
+      try {
+        setAdminVerification(prev => ({ ...prev, loading: true }));
+        const result = await verifyAdminAuthentication();
+        
+        // Determine verification method
+        let method = null;
+        if (result.isAdmin) {
+          try {
+            // Only access auth if Firebase is ready
+            if (isOptimizedFirebaseReady()) {
+              const auth = getOptimizedAuth();
+              const user = auth.currentUser;
+              if (user) {
+                try {
+                  const idTokenResult = await user.getIdTokenResult();
+                  const claims = idTokenResult.claims as any;
+                  if (claims.admin === true) {
+                    method = 'Custom Claims';
+                  } else {
+                    method = 'Super Admin Email';
+                  }
+                } catch {
+                  method = 'Super Admin Email';
+                }
+              }
+            } else {
+              method = 'Super Admin Email';
+            }
+          } catch (error) {
+            console.warn('⚠️ Could not determine admin method:', error);
+            method = 'Super Admin Email';
+          }
+        }
+        
+        setAdminVerification({
+          isAdmin: result.isAdmin,
+          loading: false,
+          error: result.error || null,
+          method
+        });
+      } catch (error: any) {
+        setAdminVerification({
+          isAdmin: false,
+          loading: false,
+          error: error.message || 'Failed to verify admin status',
+          method: null
+        });
+      }
+    };
+
+    const setupAuthListener = async () => {
+      // Wait for Firebase to be ready before setting up auth listener
+      if (!isOptimizedFirebaseReady()) {
+        console.log('🔄 AdminPanel: Firebase not ready, waiting for initialization...');
+        // Retry after a short delay
+        setTimeout(setupAuthListener, 500);
+        return;
+      }
+
+      try {
+        // Use optimized auth service
+        const auth = getOptimizedAuth();
+        
+        // Check admin status immediately
+        checkAdminStatus();
+        
+        // Set up auth state listener
+        unsubscribe = auth.onAuthStateChanged(() => {
+          checkAdminStatus();
+        });
+        
+        console.log('✅ AdminPanel: Auth listener setup complete');
+      } catch (error) {
+        console.error('❌ AdminPanel: Error setting up auth listener:', error);
+        // Fallback: just check admin status without listener
+        checkAdminStatus();
+      }
+    };
+
+    setupAuthListener();
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, []);
+
+  // Monitor Firebase readiness
+  useEffect(() => {
+    const checkFirebaseReady = () => {
+      const ready = isOptimizedFirebaseReady();
+      setFirebaseReady(ready);
+    };
+    
+    // Check immediately
+    checkFirebaseReady();
+    
+    // Set up a polling mechanism to check Firebase readiness
+    const interval = setInterval(checkFirebaseReady, 1000); // Check every second
+    
+    // Clear interval once Firebase is ready
+    if (firebaseReady) {
+      clearInterval(interval);
+    }
+    
+    return () => clearInterval(interval);
+  }, [firebaseReady]);
+
+  useEffect(() => {
+    if (firebaseReady) {
+      fetchData();
+      
+      // Initialize demo clinic after admin authentication
+      if (user?.email) {
+        initializeDemoClinicAfterAuth().catch(error => {
+          console.warn('⚠️ Post-auth demo clinic initialization failed:', error);
+        });
+      }
+    }
+  }, [user, firebaseReady]);
+
+  // Helper functions for password management
+  const generateRandomPassword = () => {
+    const length = 12;
+    const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+    let result = "";
+    for (let i = 0; i < length; i++) {
+      result += charset.charAt(Math.floor(Math.random() * charset.length));
+    }
+    return result;
+  };
+
+  const handleGeneratePassword = () => {
+    const newPassword = generateRandomPassword();
+    setNewUser({...newUser, password: newPassword});
+    setShowTempPassword(true); // Always show password when generated
+    showSnackbar('Password generated and visible!');
+  };
+
+  const handleCopyPassword = async () => {
+    try {
+      await navigator.clipboard.writeText(newUser.password);
+      showSnackbar('Password copied to clipboard');
+    } catch (error) {
+      console.error('Failed to copy password:', error);
+      showSnackbar('Failed to copy password');
+    }
+  };
+
+  const showSnackbar = (message: string) => {
+    setSnackbarMessage(message);
+    setSnackbarOpen(true);
+  };
+
+  // Password visibility and clipboard functions removed - passwords are securely managed by Firebase Auth
+  
+  // Secure password reset function for admins
+  const sendPasswordReset = async (userEmail: string, userName: string) => {
+    try {
+      if (!isOptimizedFirebaseReady()) {
+        throw new Error('Firebase not ready');
+      }
+      const auth = getOptimizedAuth();
+      await sendPasswordResetEmail(auth, userEmail);
+      showSnackbar(`Password reset email sent to ${userName} (${userEmail})`);
+    } catch (error: any) {
+      console.error('Error sending password reset email:', error);
+      let errorMessage = 'Failed to send password reset email';
+      
+      if (error.code === 'auth/user-not-found') {
+        errorMessage = 'User not found in Firebase Authentication';
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = 'Invalid email address';
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = 'Too many requests. Please try again later';
+      }
+      
+      showSnackbar(errorMessage);
+    }
+  };
+
+  // Simple email validation - orphaned accounts handled during creation
+  const handleEmailChange = (email: string) => {
+    setNewUser({...newUser, email});
+    
+    // Clear previous errors
+    setError('');
+    
+    // Simple format validation only
+    if (email.trim() && !isValidEmail(email)) {
+      setEmailValidation({
+        isChecking: false,
+        isValid: false,
+        error: 'Please enter a valid email format',
+        exists: false
+      });
+    } else {
+      setEmailValidation({
+        isChecking: false,
+        isValid: true,
+        error: '',
+        exists: false
+      });
+    }
+  };
+
+  const fetchData = async () => {
+    setLoading(true);
+    setError('');
+    
+    try {
+      // Wait for Firebase to be ready before making any calls
+      if (!isOptimizedFirebaseReady()) {
+        console.log('⏳ Waiting for Firebase to initialize...');
+        // Poll for Firebase readiness
+        let attempts = 0;
+        const maxAttempts = 30; // 15 seconds max wait
+        
+        while (!isOptimizedFirebaseReady() && attempts < maxAttempts) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          attempts++;
+        }
+        
+        if (!isOptimizedFirebaseReady()) {
+          throw new Error('Firebase initialization timeout. Please refresh the page.');
+        }
+        
+        console.log('✅ Firebase is ready, proceeding with data fetch...');
+      }
+      
+      await Promise.all([fetchClinics(), fetchUsers()]);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      setError(error instanceof Error ? error.message : 'Failed to load data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchClinics = async () => {
+    if (!isOptimizedFirebaseReady()) {
+      throw new Error('Firebase not ready for clinics fetch');
+    }
+    
+    try {
+      const db = getOptimizedFirestore();
+      const clinicsQuery = query(collection(db, 'clinics'), orderBy('createdAt', 'desc'));
+      const snapshot = await getDocs(clinicsQuery);
+      const clinicsData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Clinic[];
+      setClinics(clinicsData);
+    } catch (error) {
+      console.error('Error in fetchClinics:', error);
+      throw new Error(`Failed to fetch clinics: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  const fetchUsers = async () => {
+    if (!isOptimizedFirebaseReady()) {
+      throw new Error('Firebase not ready for users fetch');
+    }
+    
+    try {
+      const db = getOptimizedFirestore();
+      const usersQuery = query(collection(db, 'users'), orderBy('createdAt', 'desc'));
+      const snapshot = await getDocs(usersQuery);
+      const usersData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as User[];
+      setUsers(usersData);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      throw new Error(`Failed to fetch users: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  const handleCreateClinic = async () => {
+    // Validation
+    if (!newClinic.name) {
+      setError('Please enter a clinic name');
+      return;
+    }
+    
+    try {
+      const db = getOptimizedFirestore();
+      await addDoc(collection(db, 'clinics'), {
+        name: newClinic.name,
+        isActive: true,
+        settings: {
+          allowedFeatures: ['patients', 'appointments', 'payments'],
+          maxUsers: newClinic.maxUsers,
+          subscriptionPlan: newClinic.subscriptionPlan,
+        },
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        createdBy: user?.email || '',
+      });
+      
+      resetClinicForm();
+      setClinicDialogOpen(false);
+      fetchClinics();
+    } catch (error) {
+      console.error('Error creating clinic:', error);
+      setError('Failed to create clinic');
+    }
+  };
+
+  const handleUpdateClinic = async () => {
+    if (!editingClinic) return;
+    
+    // Validation
+    if (!newClinic.name) {
+      setError('Please enter a clinic name');
+      return;
+    }
+    
+    // Check if new max users is valid for the plan
+    const currentUserCount = users.filter(u => u.clinicId === editingClinic.id && u.isActive).length;
+    const validation = validateUserLimit(
+      newClinic.subscriptionPlan,
+      newClinic.maxUsers,
+      0 // Don't check current count when editing clinic
+    );
+    
+    if (!validation.isValid) {
+      setError(validation.message || 'Invalid user limit for selected plan');
+      return;
+    }
+
+    // Check if reducing max users below current active users
+    if (newClinic.maxUsers < currentUserCount) {
+      setError(`Cannot set max users to ${newClinic.maxUsers}. Currently has ${currentUserCount} active users.`);
+      return;
+    }
+    
+    try {
+      const updateData: any = {
+        name: newClinic.name,
+        settings: {
+          ...editingClinic.settings,
+          maxUsers: newClinic.maxUsers,
+          subscriptionPlan: newClinic.subscriptionPlan,
+        },
+        updatedAt: serverTimestamp(),
+      };
+
+      // Update creation date if provided and different
+      if (newClinic.createdAt && newClinic.createdAt !== formatDateForInput(editingClinic.createdAt)) {
+        updateData.createdAt = new Date(newClinic.createdAt);
+      }
+
+      const db = getFirestore();
+      await updateDoc(doc(db, 'clinics', editingClinic.id), updateData);
+      
+      resetClinicForm();
+      setClinicDialogOpen(false);
+      setEditingClinic(null);
+      fetchClinics();
+    } catch (error) {
+      console.error('Error updating clinic:', error);
+      setError('Failed to update clinic');
+    }
+  };
+
+  const resetClinicForm = () => {
+    setNewClinic({
+      name: '',
+      subscriptionPlan: 'basic',
+      maxUsers: 10,
+      createdAt: '',
+    });
+  };
+
+  const handleEditClinic = (clinic: Clinic) => {
+    setEditingClinic(clinic);
+    setNewClinic({
+      name: clinic.name,
+      subscriptionPlan: clinic.settings.subscriptionPlan,
+      maxUsers: clinic.settings.maxUsers,
+      createdAt: formatDateForInput(clinic.createdAt),
+    });
+    setClinicDialogOpen(true);
+  };
+
+  const handleClinicDialogClose = () => {
+    setClinicDialogOpen(false);
+    setEditingClinic(null);
+    resetClinicForm();
+  };
+
+  const handleCreateUser = async () => {
+    // First verify admin authentication and claims
+    const adminCheck = await verifyAdminAuthentication();
+    if (!adminCheck.isAdmin) {
+      setError(adminCheck.error || 'Admin authentication required. Please ensure you have admin privileges.');
+      return;
+    }
+
+    // Clear previous errors
+    setError('');
+    
+    // Basic validation
+    if (!newUser.email?.trim() || !newUser.firstName?.trim() || !newUser.lastName?.trim() || !newUser.clinicId || !newUser.password?.trim()) {
+      setError('Please fill in all required fields');
+      return;
+    }
+
+    if (!isValidEmail(newUser.email.trim())) {
+      setError('Please enter a valid email address');
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      showSnackbar('🔐 Creating user account with secure secondary app...');
+      
+      console.log('🔐 Creating user with secure secondary Firebase app approach...');
+      
+      // Prepare user data for the secure creation function
+      const userData: CreateUserData = {
+        email: newUser.email.trim(),
+        password: newUser.password,
+        firstName: newUser.firstName.trim(),
+        lastName: newUser.lastName.trim(),
+        role: newUser.role,
+        clinicId: newUser.clinicId,
+      };
+      
+      // Use the secure secondary app method
+      const result = await createUserWithSecondaryApp(userData);
+      
+      if (result.success) {
+        console.log('✅ User account created securely without affecting admin session');
+        
+        // Store password for display
+        setGeneratedPasswords(prev => ({
+          ...prev,
+          [userData.email]: newUser.password
+        }));
+        
+        setCreatedUserCredentials({
+          email: userData.email,
+          password: newUser.password,
+          name: `${userData.firstName} ${userData.lastName}`
+        });
+        
+        resetUserForm();
+        setUserDialogOpen(false);
+        setPasswordSuccessOpen(true);
+        fetchUsers();
+        showSnackbar('✅ User account created successfully with secure method!');
+        
+      } else {
+        console.error('❌ Secure user creation failed:', result.error);
+        setError(result.error || 'Failed to create user account');
+        showSnackbar('❌ Failed to create user account');
+      }
+      
+    } catch (error: any) {
+      console.error('❌ Unexpected error in secure user creation:', error);
+      setError(`Unexpected error: ${error.message}`);
+      showSnackbar('❌ Failed to create user');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateUser = async () => {
+    if (!editingUser) return;
+    
+    // Validation
+    if (!newUser.email || !newUser.firstName || !newUser.lastName || !newUser.clinicId) {
+      setError('Please fill in all required fields');
+      return;
+    }
+    
+    try {
+      const updateData: any = {
+        email: newUser.email,
+        firstName: newUser.firstName,
+        lastName: newUser.lastName,
+        role: newUser.role,
+        clinicId: newUser.clinicId,
+        updatedAt: serverTimestamp(),
+      };
+
+      // Update creation date if provided and different
+      if (newUser.createdAt && newUser.createdAt !== formatDateForInput(editingUser.createdAt)) {
+        updateData.createdAt = new Date(newUser.createdAt);
+      }
+
+      const db = getFirestore();
+      await updateDoc(doc(db, 'users', editingUser.id), updateData);
+      
+      resetUserForm();
+      setUserDialogOpen(false);
+      setEditingUser(null);
+      fetchUsers();
+    } catch (error) {
+      console.error('Error updating user:', error);
+      setError('Failed to update user');
+    }
+  };
+
+  const resetUserForm = () => {
+    setNewUser({
+      email: '',
+      firstName: '',
+      lastName: '',
+      role: 'receptionist',
+      clinicId: '',
+      password: '',
+      createdAt: '',
+    });
+    setShowTempPassword(true); // Show password by default for new users
+    
+    // Reset email validation
+    setEmailValidation({
+      isChecking: false,
+      isValid: true,
+      error: '',
+      exists: false
+    });
+    
+    // Clear any pending validation timeouts
+    clearTimeout((window as any).emailValidationTimeout);
+  };
+
+  const handleEditUser = (user: User) => {
+    setEditingUser(user);
+    setNewUser({
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role: user.role,
+      clinicId: user.clinicId,
+      password: '', // Don't show existing password
+      createdAt: formatDateForInput(user.createdAt),
+    });
+    setUserDialogOpen(true);
+  };
+
+  const handleUserDialogClose = () => {
+    setUserDialogOpen(false);
+    setEditingUser(null);
+    resetUserForm();
+  };
+
+  const handleManagePermissions = (user: User) => {
+    setUserForPermissions(user);
+    setPermissionsDialogOpen(true);
+  };
+
+  const handleSavePermissions = async (permissions: UserPermissions) => {
+    if (!userForPermissions) return;
+
+    try {
+      const db = getFirestore();
+      await updateDoc(doc(db, 'users', userForPermissions.id), {
+        permissions,
+        updatedAt: serverTimestamp(),
+      });
+      
+      fetchUsers(); // Refresh user list
+      setPermissionsDialogOpen(false);
+      setUserForPermissions(null);
+    } catch (error) {
+      console.error('Error updating user permissions:', error);
+      setError('Failed to update user permissions');
+    }
+  };
+
+  const toggleClinicStatus = async (clinicId: string, currentStatus: boolean) => {
+    try {
+      const db = getFirestore();
+      await updateDoc(doc(db, 'clinics', clinicId), {
+        isActive: !currentStatus,
+        updatedAt: serverTimestamp(),
+      });
+      fetchClinics();
+    } catch (error) {
+      console.error('Error updating clinic status:', error);
+      setError('Failed to update clinic status');
+    }
+  };
+
+  const toggleUserStatus = async (userId: string, currentStatus: boolean) => {
+    try {
+      const db = getFirestore();
+      await updateDoc(doc(db, 'users', userId), {
+        isActive: !currentStatus,
+        updatedAt: serverTimestamp(),
+      });
+      fetchUsers();
+    } catch (error) {
+      console.error('Error updating user status:', error);
+      setError('Failed to update user status');
+    }
+  };
+
+  const handleDeleteClinic = async () => {
+    if (!itemToDelete || itemToDelete.type !== 'clinic') return;
+    
+    try {
+      const db = getFirestore();
+      await deleteDoc(doc(db, 'clinics', itemToDelete.id));
+      setDeleteConfirmOpen(false);
+      setItemToDelete(null);
+      fetchClinics();
+    } catch (error) {
+      console.error('Error deleting clinic:', error);
+      setError('Failed to delete clinic');
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!itemToDelete || itemToDelete.type !== 'user') return;
+    
+    try {
+      // Find the user to get their email
+      const userToDelete = users.find(u => u.id === itemToDelete.id);
+      const userEmail = userToDelete?.email;
+      
+      if (!userEmail) {
+        setError('User email not found');
+        return;
+      }
+
+      // Delete the Firestore document first
+      const db = getFirestore();
+      await deleteDoc(doc(db, 'users', itemToDelete.id));
+      
+      // Try to delete Firebase Auth account if we have the password
+      let authDeleted = false;
+      const userPassword = generatedPasswords[userEmail];
+      
+      if (userPassword) {
+        try {
+          // Create secondary Firebase app to avoid affecting admin session
+          const secondaryApp = initializeApp(firebaseConfig, `delete-${Date.now()}`);
+          const secondaryAuth = getAuth(secondaryApp);
+          
+          // Sign in as the user to be deleted
+          const userCredential = await signInWithEmailAndPassword(secondaryAuth, userEmail, userPassword);
+          
+          // Delete the user account
+          await deleteUser(userCredential.user);
+          
+          // Clean up secondary app
+          await deleteApp(secondaryApp);
+          
+          authDeleted = true;
+          console.log(`✅ Firebase Auth account deleted: ${userEmail}`);
+          
+        } catch (authError: any) {
+          console.warn(`⚠️ Could not delete Firebase Auth account for ${userEmail}:`, authError);
+          // Continue anyway - database deletion was successful
+        }
+      }
+      
+      // Remove from generated passwords if it exists
+      if (generatedPasswords[userEmail]) {
+        setGeneratedPasswords(prev => {
+          const newPasswords = { ...prev };
+          delete newPasswords[userEmail];
+          return newPasswords;
+        });
+      }
+      
+      setDeleteConfirmOpen(false);
+      setItemToDelete(null);
+      fetchUsers();
+      
+      // Show appropriate success message
+      if (authDeleted) {
+        showSnackbar(`✅ User ${userEmail} completely deleted (database + auth)`);
+      } else if (userPassword) {
+        showSnackbar(`⚠️ User ${userEmail} database deleted, auth deletion failed`);
+      } else {
+        showSnackbar(`✅ User ${userEmail} database deleted (auth account remains - no password available)`);
+      }
+      
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      setError('Failed to delete user');
+      showSnackbar('❌ Failed to delete user');
+    }
+  };
+
+  const confirmDelete = (type: 'clinic' | 'user', id: string, name: string) => {
+    setItemToDelete({ type, id, name });
+    setDeleteConfirmOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (itemToDelete?.type === 'clinic') {
+      handleDeleteClinic();
+    } else if (itemToDelete?.type === 'user') {
+      handleDeleteUser();
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      if (isOptimizedFirebaseReady()) {
+        const auth = getOptimizedAuth();
+        await signOut(auth);
+      } else {
+        console.warn('Firebase not ready for sign out');
+      }
+      navigate('/admin/login');
+    } catch (error) {
+      console.error('Error signing out:', error);
+      // Still navigate even if sign out fails
+      navigate('/admin/login');
+    }
+  };
+
+  const handleFixClinicAccess = async () => {
+    try {
+      setLoading(true);
+      showSnackbar('🔧 Fixing clinic access...');
+      
+      console.log('🔧 Step 1: Initializing demo clinic...');
+      await initializeDemoClinicAfterAuth();
+      
+      console.log('🔧 Step 2: Running clinic access fix...');
+      const success = await fixClinicAccess('demo-clinic');
+      
+      console.log('🔧 Step 3: Refreshing admin data...');
+      await fetchData(); // Refresh the clinic and user lists
+      
+      if (success) {
+        showSnackbar('✅ Demo clinic access fixed! Users should now be able to login.');
+      } else {
+        showSnackbar('❌ Failed to fix clinic access. Check console for details.');
+      }
+    } catch (error) {
+      console.error('Error fixing clinic access:', error);
+      showSnackbar('❌ Error fixing clinic access');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDoctorFix = async () => {
+    try {
+      setDoctorFixLoading(true);
+      showSnackbar('🩺 Running comprehensive doctor fix...');
+      
+      console.log('🩺 Starting comprehensive doctor assignment fix...');
+      const result = await comprehensiveDoctorFix('demo-clinic');
+      
+      setDoctorFixResult(result);
+      setDoctorFixDialogOpen(true);
+      
+      if (result.success) {
+        showSnackbar(`✅ Doctor fix completed! Fixed ${result.appointmentsFixed} appointments and ${result.patientsFixed} patients.`);
+      } else {
+        showSnackbar(`❌ Doctor fix failed: ${result.message}`);
+      }
+    } catch (error) {
+      console.error('Error running doctor fix:', error);
+      showSnackbar('❌ Error running doctor fix');
+      setDoctorFixResult({
+        success: false,
+        message: `Error: ${error instanceof Error ? error.message : String(error)}`,
+        appointmentsFixed: 0,
+        patientsFixed: 0,
+        details: {
+          appointmentIssues: [],
+          patientIssues: [],
+          fixedAppointments: [],
+          fixedPatients: []
+        }
+      });
+      setDoctorFixDialogOpen(true);
+    } finally {
+      setDoctorFixLoading(false);
+    }
+  };
+
+  const handleDiagnoseDoctorIssues = async () => {
+    try {
+      showSnackbar('🔍 Diagnosing doctor issues...');
+      const diagnosis = await diagnoseDoctorIssues('demo-clinic');
+      console.log('🩺 DOCTOR DIAGNOSIS RESULTS:', diagnosis);
+      
+      if (diagnosis) {
+        const totalIssues = 
+          diagnosis.appointmentIssues.drCurrentDoctor.length +
+          diagnosis.appointmentIssues.invalidDoctorId.length +
+          diagnosis.appointmentIssues.missingDoctor.length +
+          diagnosis.appointmentIssues.missingDoctorId.length +
+          diagnosis.patientIssues.missingDoctor.length +
+          diagnosis.patientIssues.invalidDoctorId.length +
+          diagnosis.patientIssues.missingDoctorId.length;
+        
+        showSnackbar(`🔍 Diagnosis complete! Found ${totalIssues} doctor issues. Check console for details.`);
+      } else {
+        showSnackbar('❌ Failed to diagnose doctor issues');
+      }
+    } catch (error) {
+      console.error('Error diagnosing doctor issues:', error);
+      showSnackbar('❌ Error diagnosing doctor issues');
+    }
+  };
+
+  // Debug function to check for common orphaned accounts
+  const handleCheckOrphanedAccounts = async () => {
+    try {
+      setLoading(true);
+      showSnackbar('🔍 Checking for orphaned accounts...');
+      
+      const commonEmails = [
+        'test@example.com',
+        'admin@test.com',
+        'user@clinic.com',
+        'doctor@clinic.com',
+        'receptionist@clinic.com'
+      ];
+      
+      let orphanedCount = 0;
+      
+      for (const email of commonEmails) {
+        try {
+          const exists = await checkEmailExists(email);
+          if (exists) {
+            console.warn(`🚨 Orphaned account found: ${email}`);
+            orphanedCount++;
+          }
+        } catch (error) {
+          console.error(`Error checking ${email}:`, error);
+        }
+      }
+      
+      if (orphanedCount > 0) {
+        showSnackbar(`⚠️ Found ${orphanedCount} potential orphaned accounts. Check console for details.`);
+      } else {
+        showSnackbar('✅ No orphaned accounts found in common email list.');
+      }
+      
+    } catch (error) {
+      console.error('Error checking orphaned accounts:', error);
+      showSnackbar('❌ Error checking orphaned accounts');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getClinicName = (clinicId: string) => {
+    const clinic = clinics.find(c => c.id === clinicId);
+    return clinic?.name || 'Unknown Clinic';
+  };
+
+  const getClinicUserCount = (clinicId: string) => {
+    return users.filter(u => u.clinicId === clinicId && u.isActive).length;
+  };
+
+  if (loading || !firebaseReady) {
+    return (
+      <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh', gap: 2 }}>
+        <CircularProgress size={60} />
+        <Typography variant="h6" color="text.secondary">
+          {!firebaseReady ? '🔄 Initializing Firebase services...' : '📊 Loading admin data...'}
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          {!firebaseReady ? 'Please wait while we set up the database connection' : 'Fetching clinics and users'}
+        </Typography>
+      </Box>
+    );
+  }
+
+  return (
+    <Box sx={{ flexGrow: 1 }}>
+      {/* App Bar */}
+      <AppBar position="static" sx={{ backgroundColor: '#7C3AED' }}>
+        <Toolbar>
+          <AdminPanelSettings sx={{ mr: 2 }} />
+          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+            Super Admin Panel
+          </Typography>
+          <Button 
+            color="inherit" 
+            onClick={fetchData}
+            startIcon={<Refresh />}
+            sx={{ mr: 1 }}
+          >
+            Refresh
+          </Button>
+          <Button 
+            color="inherit" 
+            onClick={handleFixClinicAccess}
+            startIcon={<Warning />}
+            sx={{ mr: 1, backgroundColor: 'rgba(255,255,255,0.1)' }}
+            title="Fix clinic access issues (if users can't login)"
+          >
+            Fix Access
+          </Button>
+          <Button 
+            color="inherit" 
+            onClick={handleDiagnoseDoctorIssues}
+            startIcon={<AdminPanelSettings />}
+            sx={{ mr: 1, backgroundColor: 'rgba(255,255,255,0.1)' }}
+            title="Diagnose doctor assignment issues"
+          >
+            Diagnose Doctors
+          </Button>
+          <Button 
+            color="inherit" 
+            onClick={handleDoctorFix}
+            startIcon={<AutorenewRounded />}
+            sx={{ mr: 1, backgroundColor: 'rgba(255,165,0,0.8)' }}
+            title="Fix all doctor assignment issues"
+            disabled={doctorFixLoading}
+          >
+            {doctorFixLoading ? 'Fixing...' : 'Fix Doctors'}
+          </Button>
+          <Button 
+            color="inherit" 
+            onClick={handleCheckOrphanedAccounts}
+            startIcon={<Security />}
+            sx={{ mr: 2, backgroundColor: 'rgba(255,255,255,0.1)' }}
+            title="Check for orphaned Firebase Auth accounts"
+          >
+            Check Orphans
+          </Button>
+          <IconButton color="inherit" onClick={handleSignOut}>
+            <ExitToApp />
+          </IconButton>
+        </Toolbar>
+      </AppBar>
+
+      <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
+        {error && (
+          <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError('')}>
+            <Box component="pre" sx={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit', margin: 0 }}>
+              {error}
+            </Box>
+          </Alert>
+        )}
+
+        {/* Security Compliance Panel */}
+        <Alert severity="success" sx={{ mb: 2 }}>
+          <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+            🔒 Security Compliance - Password Protection:
+          </Typography>
+          <Typography variant="body2">
+            <strong>SECURE:</strong> User passwords are securely managed by Firebase Authentication using industry-standard encryption. 
+            Passwords are never stored in plain text and are not accessible through this interface for enhanced security.
+          </Typography>
+        </Alert>
+
+        {/* Firebase Status Panel */}
+        <Alert severity={firebaseReady ? "success" : "warning"} sx={{ mb: 2 }}>
+          <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+            🔥 Firebase Services Status:
+          </Typography>
+          <Typography variant="body2">
+            {firebaseReady ? (
+              <span style={{ color: 'green', fontWeight: 600 }}>✅ All Firebase services are ready and operational</span>
+            ) : (
+              <span style={{ color: 'orange', fontWeight: 600 }}>⏳ Firebase services are still initializing...</span>
+            )}
+          </Typography>
+        </Alert>
+
+        {/* Admin Info Panel */}
+        <Alert severity={adminVerification.isAdmin ? "success" : "warning"} sx={{ mb: 3 }}>
+          <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+            🔐 Admin Authentication Status:
+          </Typography>
+          {adminVerification.loading ? (
+            <Typography variant="body2">Verifying admin privileges...</Typography>
+          ) : adminVerification.isAdmin ? (
+            <Box>
+              <Typography variant="body2" sx={{ color: 'success.main', fontWeight: 600 }}>
+                ✅ Admin Verified ({adminVerification.method}) - {(() => {
+                  try {
+                    if (isOptimizedFirebaseReady()) {
+                      const auth = getOptimizedAuth();
+                      return auth.currentUser?.email || 'Unknown';
+                    }
+                    return 'Loading...';
+                  } catch {
+                    return 'Unknown';
+                  }
+                })()}
+              </Typography>
+              <Typography variant="body2" sx={{ mt: 1 }}>
+                🔐 <strong>Secure User Creation:</strong> Uses secondary Firebase app to prevent admin logout
+              </Typography>
+              <Typography variant="body2">
+                • Admin session remains active during user creation
+                • Generated passwords are visible and stored securely
+                • New users are created without affecting your authentication
+                • Share credentials with users via secure channels only
+              </Typography>
+            </Box>
+          ) : (
+            <Box>
+              <Typography variant="body2" sx={{ color: 'error.main', fontWeight: 600 }}>
+                ❌ Admin Verification Failed: {adminVerification.error}
+              </Typography>
+              <Typography variant="body2" sx={{ mt: 1 }}>
+                Please ensure you have admin custom claims or are using a super admin email.
+              </Typography>
+            </Box>
+          )}
+        </Alert>
+
+        {/* Firebase Health Check */}
+        <FirebaseHealthCheck />
+
+        {/* Stats Cards */}
+        <Grid container spacing={3} sx={{ mb: 4 }}>
+          <Grid item xs={12} sm={6} md={3}>
+            <Card>
+              <CardContent>
+                <Typography color="textSecondary" gutterBottom>
+                  Total Clinics
+                </Typography>
+                <Typography variant="h4">
+                  {clinics.length}
+                </Typography>
+                <Typography color="textSecondary">
+                  {clinics.filter(c => c.isActive).length} active
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Card>
+              <CardContent>
+                <Typography color="textSecondary" gutterBottom>
+                  Total Users
+                </Typography>
+                <Typography variant="h4">
+                  {users.length}
+                </Typography>
+                <Typography color="textSecondary">
+                  {users.filter(u => u.isActive).length} active
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+
+        {/* Tabs */}
+        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+          <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)}>
+            <Tab label="Clinics Management" icon={<Business />} />
+            <Tab label="Users Management" icon={<People />} />
+          </Tabs>
+        </Box>
+
+        {/* Clinics Tab */}
+        {activeTab === 0 && (
+          <Box>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
+              <Typography variant="h5">Clinics</Typography>
+              <Button
+                variant="contained"
+                startIcon={<Add />}
+                onClick={() => setClinicDialogOpen(true)}
+                sx={{ backgroundColor: '#7C3AED' }}
+              >
+                Add Clinic
+              </Button>
+            </Box>
+
+            <TableContainer component={Paper}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Name</TableCell>
+                    <TableCell>Plan</TableCell>
+                    <TableCell>Users</TableCell>
+                    <TableCell>Status</TableCell>
+                    <TableCell>Created</TableCell>
+                    <TableCell>Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {clinics.map((clinic) => {
+                    const currentUsers = getClinicUserCount(clinic.id);
+                    const maxUsers = clinic.settings.maxUsers;
+                    const planInfo = getPlanInfo(clinic.settings.subscriptionPlan);
+                    const isNearLimit = currentUsers / maxUsers > 0.8;
+                    const isAtLimit = currentUsers >= maxUsers;
+
+                    return (
+                      <TableRow key={clinic.id}>
+                        <TableCell>{clinic.name}</TableCell>
+                        <TableCell>
+                          <Chip 
+                            label={planInfo.name} 
+                            size="small"
+                            color={planInfo.color as any}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Typography 
+                              color={isAtLimit ? 'error' : isNearLimit ? 'warning.main' : 'text.primary'}
+                              fontWeight={isAtLimit ? 'bold' : 'normal'}
+                            >
+                              {currentUsers}/{maxUsers}
+                            </Typography>
+                            {isAtLimit && (
+                              <Chip label="FULL" size="small" color="error" />
+                            )}
+                            {isNearLimit && !isAtLimit && (
+                              <Chip label="NEAR LIMIT" size="small" color="warning" />
+                            )}
+                          </Box>
+                        </TableCell>
+                        <TableCell>
+                          <Chip 
+                            label={clinic.isActive ? 'Active' : 'Inactive'} 
+                            color={clinic.isActive ? 'success' : 'error'}
+                            size="small"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Tooltip title={formatDateTime(clinic.createdAt)} arrow>
+                            <Box sx={{ cursor: 'pointer' }}>
+                              <Typography variant="body2">
+                                {formatDateForTable(clinic.createdAt)}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                {getRelativeTime(clinic.createdAt)}
+                              </Typography>
+                            </Box>
+                          </Tooltip>
+                        </TableCell>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Switch
+                              checked={clinic.isActive}
+                              onChange={() => toggleClinicStatus(clinic.id, clinic.isActive)}
+                            />
+                            <IconButton
+                              color="primary"
+                              size="small"
+                              onClick={() => handleEditClinic(clinic)}
+                              title="Edit Clinic"
+                            >
+                              <Edit />
+                            </IconButton>
+                            <IconButton
+                              color="error"
+                              size="small"
+                              onClick={() => confirmDelete('clinic', clinic.id, clinic.name)}
+                              title="Delete Clinic"
+                            >
+                              <Delete />
+                            </IconButton>
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Box>
+        )}
+
+        {/* Users Tab */}
+        {activeTab === 1 && (
+          <Box>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
+              <Typography variant="h5">Users</Typography>
+              <Button
+                variant="contained"
+                startIcon={<Add />}
+                onClick={() => setUserDialogOpen(true)}
+                disabled={!adminVerification.isAdmin || adminVerification.loading}
+                sx={{ 
+                  backgroundColor: adminVerification.isAdmin ? '#7C3AED' : 'grey.400',
+                  '&:hover': {
+                    backgroundColor: adminVerification.isAdmin ? '#6B21E5' : 'grey.500'
+                  }
+                }}
+                title={
+                  !adminVerification.isAdmin 
+                    ? 'Admin verification required to create users' 
+                    : 'Create a new user account'
+                }
+              >
+                Add User
+              </Button>
+            </Box>
+
+            <TableContainer component={Paper}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Name</TableCell>
+                    <TableCell>Email</TableCell>
+                    <TableCell>Role</TableCell>
+                    <TableCell>Clinic</TableCell>
+                    <TableCell>Status</TableCell>
+                    <TableCell>Created</TableCell>
+                    <TableCell>Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {users.map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell>{`${user.firstName} ${user.lastName}`}</TableCell>
+                      <TableCell>{user.email}</TableCell>
+                      <TableCell>
+                        <Chip label={user.role} size="small" />
+                      </TableCell>
+                      <TableCell>{getClinicName(user.clinicId)}</TableCell>
+                      <TableCell>
+                        <Chip 
+                          label={user.isActive ? 'Active' : 'Inactive'} 
+                          color={user.isActive ? 'success' : 'error'}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Tooltip title={formatDateTime(user.createdAt)} arrow>
+                          <Box sx={{ cursor: 'pointer' }}>
+                            <Typography variant="body2">
+                              {formatDateForTable(user.createdAt)}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {getRelativeTime(user.createdAt)}
+                            </Typography>
+                          </Box>
+                        </Tooltip>
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Switch
+                            checked={user.isActive}
+                            onChange={() => toggleUserStatus(user.id, user.isActive)}
+                          />
+                          <IconButton
+                            color="secondary"
+                            size="small"
+                            onClick={() => handleManagePermissions(user)}
+                            title="Manage Permissions"
+                          >
+                            <Security />
+                          </IconButton>
+                          <IconButton
+                            color="primary"
+                            size="small"
+                            onClick={() => handleEditUser(user)}
+                            title="Edit User"
+                          >
+                            <Edit />
+                          </IconButton>
+                          <IconButton
+                            color="info"
+                            size="small"
+                            onClick={() => sendPasswordReset(user.email, `${user.firstName} ${user.lastName}`)}
+                            title="Send Password Reset Email"
+                          >
+                            <LockReset />
+                          </IconButton>
+                          <IconButton
+                            color="error"
+                            size="small"
+                            onClick={() => confirmDelete('user', user.id, `${user.firstName} ${user.lastName}`)}
+                            title="Delete User"
+                          >
+                            <Delete />
+                          </IconButton>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Box>
+        )}
+      </Container>
+
+      {/* Create/Edit Clinic Dialog */}
+      <Dialog open={clinicDialogOpen} onClose={handleClinicDialogClose} maxWidth="sm" fullWidth>
+        <DialogTitle>{editingClinic ? 'Edit Clinic' : 'Create New Clinic'}</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Clinic Name"
+            fullWidth
+            variant="outlined"
+            value={newClinic.name}
+            onChange={(e) => setNewClinic({...newClinic, name: e.target.value})}
+            sx={{ mb: 2 }}
+          />
+          <FormControl fullWidth sx={{ mb: 2 }}>
+            <InputLabel>Subscription Plan</InputLabel>
+            <Select
+              value={newClinic.subscriptionPlan}
+              label="Subscription Plan"
+              onChange={(e) => setNewClinic({...newClinic, subscriptionPlan: e.target.value as any})}
+            >
+              <MenuItem value="basic">Basic</MenuItem>
+              <MenuItem value="premium">Premium</MenuItem>
+              <MenuItem value="enterprise">Enterprise</MenuItem>
+            </Select>
+          </FormControl>
+          <TextField
+            margin="dense"
+            label="Max Users"
+            type="number"
+            fullWidth
+            variant="outlined"
+            value={newClinic.maxUsers}
+            onChange={(e) => setNewClinic({...newClinic, maxUsers: parseInt(e.target.value)})}
+            sx={{ mb: 2 }}
+          />
+          {editingClinic && (
+            <TextField
+              margin="dense"
+              label="Created Date"
+              type="date"
+              fullWidth
+              variant="outlined"
+              value={newClinic.createdAt}
+              onChange={(e) => setNewClinic({...newClinic, createdAt: e.target.value})}
+              InputLabelProps={{ shrink: true }}
+              helperText="Change the creation date if needed"
+            />
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClinicDialogClose}>Cancel</Button>
+          <Button 
+            onClick={editingClinic ? handleUpdateClinic : handleCreateClinic} 
+            variant="contained"
+          >
+            {editingClinic ? 'Update' : 'Create'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Create/Edit User Dialog */}
+      <Dialog open={userDialogOpen} onClose={handleUserDialogClose} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          {editingUser ? 'Edit User' : 'Create New User'}
+          {!editingUser && (
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1, fontWeight: 'normal' }}>
+              🔐 Admin-only user creation - Only administrators can create user accounts
+            </Typography>
+          )}
+        </DialogTitle>
+        <DialogContent>
+          <Grid container spacing={2}>
+            <Grid item xs={6}>
+              <TextField
+                margin="dense"
+                label="First Name"
+                fullWidth
+                variant="outlined"
+                value={newUser.firstName}
+                onChange={(e) => setNewUser({...newUser, firstName: e.target.value})}
+              />
+            </Grid>
+            <Grid item xs={6}>
+              <TextField
+                margin="dense"
+                label="Last Name"
+                fullWidth
+                variant="outlined"
+                value={newUser.lastName}
+                onChange={(e) => setNewUser({...newUser, lastName: e.target.value})}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                margin="dense"
+                label="Email Address"
+                type="email"
+                fullWidth
+                variant="outlined"
+                value={newUser.email}
+                onChange={(e) => handleEmailChange(e.target.value)}
+                error={!emailValidation.isValid}
+                helperText={
+                  emailValidation.isChecking 
+                    ? "Checking email availability..." 
+                    : emailValidation.error || 
+                      (emailValidation.isValid && newUser.email && !emailValidation.exists 
+                        ? "✅ Email is available" 
+                        : "")
+                }
+                InputProps={{
+                  endAdornment: emailValidation.isChecking ? (
+                    <InputAdornment position="end">
+                      <CircularProgress size={20} />
+                    </InputAdornment>
+                  ) : emailValidation.isValid && newUser.email && !emailValidation.exists ? (
+                    <InputAdornment position="end">
+                      <Typography sx={{ color: 'success.main', fontSize: '1.2rem' }}>✅</Typography>
+                    </InputAdornment>
+                  ) : emailValidation.error ? (
+                    <InputAdornment position="end">
+                      <Typography sx={{ color: 'error.main', fontSize: '1.2rem' }}>❌</Typography>
+                    </InputAdornment>
+                  ) : null
+                }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderColor: emailValidation.isValid ? 'inherit' : 'error.main',
+                  }
+                }}
+              />
+            </Grid>
+            <Grid item xs={6}>
+              <FormControl fullWidth margin="dense">
+                <InputLabel>Role</InputLabel>
+                <Select
+                  value={newUser.role}
+                  label="Role"
+                  onChange={(e) => setNewUser({...newUser, role: e.target.value as any})}
+                >
+                  <MenuItem value="management">Management</MenuItem>
+                  <MenuItem value="doctor">Doctor</MenuItem>
+                  <MenuItem value="receptionist">Receptionist</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={6}>
+              <FormControl fullWidth margin="dense">
+                <InputLabel>Clinic</InputLabel>
+                <Select
+                  value={newUser.clinicId}
+                  label="Clinic"
+                  onChange={(e) => setNewUser({...newUser, clinicId: e.target.value})}
+                >
+                  {clinics.filter(c => c.isActive).map((clinic) => {
+                    const currentUsers = getClinicUserCount(clinic.id);
+                    const remaining = clinic.settings.maxUsers - currentUsers;
+                    const isAtLimit = remaining <= 0;
+                    
+                    return (
+                      <MenuItem 
+                        key={clinic.id} 
+                        value={clinic.id}
+                        disabled={isAtLimit && !editingUser}
+                      >
+                        {clinic.name} ({currentUsers}/{clinic.settings.maxUsers} users)
+                        {isAtLimit && !editingUser && " - FULL"}
+                      </MenuItem>
+                    );
+                  })}
+                </Select>
+                {newUser.clinicId && !editingUser && (
+                  <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
+                    {(() => {
+                      const selectedClinic = clinics.find(c => c.id === newUser.clinicId);
+                      if (selectedClinic) {
+                        const currentUsers = getClinicUserCount(selectedClinic.id);
+                        const remaining = selectedClinic.settings.maxUsers - currentUsers;
+                        return remaining > 0 
+                          ? `${remaining} user slots remaining`
+                          : 'No slots available';
+                      }
+                      return '';
+                    })()}
+                  </Typography>
+                )}
+              </FormControl>
+            </Grid>
+            {!editingUser && (
+              <Grid item xs={12}>
+                <Typography variant="h6" sx={{ mb: 2, color: 'primary.main', fontWeight: 600 }}>
+                  🔐 User Password
+                </Typography>
+                <Box sx={{ 
+                  border: '2px solid', 
+                  borderColor: newUser.password ? 'success.main' : 'grey.300',
+                  borderRadius: 2, 
+                  p: 2, 
+                  backgroundColor: newUser.password ? 'success.50' : 'grey.50' 
+                }}>
+                  <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', mb: 2 }}>
+                    <TextField
+                      margin="dense"
+                      label="Temporary Password"
+                      type={showTempPassword ? 'text' : 'password'}
+                      fullWidth
+                      variant="outlined"
+                      value={newUser.password}
+                      onChange={(e) => setNewUser({...newUser, password: e.target.value})}
+                      helperText={newUser.password ? "✅ Password is ready! Copy this for the user." : "Generate or enter a password"}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          backgroundColor: 'white',
+                          fontFamily: showTempPassword ? 'monospace' : 'inherit',
+                          fontSize: showTempPassword ? '1.1rem' : 'inherit',
+                          fontWeight: showTempPassword ? 'bold' : 'normal',
+                        }
+                      }}
+                      InputProps={{
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            <IconButton
+                              onClick={() => setShowTempPassword(!showTempPassword)}
+                              edge="end"
+                              size="small"
+                              title={showTempPassword ? 'Hide password' : 'Show password'}
+                              color={showTempPassword ? 'primary' : 'default'}
+                            >
+                              {showTempPassword ? <VisibilityOff /> : <Visibility />}
+                            </IconButton>
+                            <IconButton
+                              onClick={handleCopyPassword}
+                              edge="end"
+                              size="small"
+                              disabled={!newUser.password}
+                              title="Copy password"
+                              sx={{ ml: 0.5 }}
+                              color={newUser.password ? 'primary' : 'default'}
+                            >
+                              <ContentCopy />
+                            </IconButton>
+                          </InputAdornment>
+                        ),
+                      }}
+                    />
+                    <Button
+                      variant="contained"
+                      onClick={handleGeneratePassword}
+                      startIcon={<AutorenewRounded />}
+                      sx={{ 
+                        mt: 1, 
+                        minWidth: 'auto',
+                        px: 3,
+                        height: '56px',
+                        backgroundColor: 'secondary.main',
+                        '&:hover': {
+                          backgroundColor: 'secondary.dark',
+                        }
+                      }}
+                      title="Generate random password"
+                    >
+                      Generate
+                    </Button>
+                  </Box>
+                  
+                  {newUser.password && (
+                    <Box sx={{ 
+                      backgroundColor: 'success.100', 
+                      border: '1px solid', 
+                      borderColor: 'success.main',
+                      borderRadius: 1, 
+                      p: 2,
+                      mt: 1
+                    }}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'success.dark', mb: 1 }}>
+                        📋 Password for {newUser.firstName} {newUser.lastName}:
+                      </Typography>
+                      <Typography 
+                        variant="h6" 
+                        sx={{ 
+                          fontFamily: 'monospace', 
+                          backgroundColor: 'white',
+                          p: 1,
+                          borderRadius: 1,
+                          border: '1px solid',
+                          borderColor: 'success.main',
+                          color: 'success.dark',
+                          fontWeight: 'bold',
+                          letterSpacing: '0.1em'
+                        }}
+                      >
+                        {newUser.password}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                        💡 Make sure to save this password before creating the user!
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
+              </Grid>
+            )}
+            {editingUser && (
+              <Grid item xs={12}>
+                <TextField
+                  margin="dense"
+                  label="Created Date"
+                  type="date"
+                  fullWidth
+                  variant="outlined"
+                  value={newUser.createdAt}
+                  onChange={(e) => setNewUser({...newUser, createdAt: e.target.value})}
+                  InputLabelProps={{ shrink: true }}
+                  helperText="Change the creation date if needed"
+                />
+              </Grid>
+            )}
+            {editingUser && (
+              <Grid item xs={12}>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1, fontStyle: 'italic' }}>
+                  Note: Password changes must be handled through the authentication system separately.
+                </Typography>
+              </Grid>
+            )}
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleUserDialogClose}>Cancel</Button>
+          <Button 
+            onClick={editingUser ? handleUpdateUser : handleCreateUser} 
+            variant="contained"
+            disabled={
+              loading || 
+              (!editingUser && (
+                emailValidation.isChecking || 
+                !emailValidation.isValid || 
+                emailValidation.exists ||
+                !newUser.email?.trim() ||
+                !newUser.firstName?.trim() ||
+                !newUser.lastName?.trim() ||
+                !newUser.password?.trim() ||
+                !newUser.clinicId
+              ))
+            }
+          >
+            {loading ? (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <CircularProgress size={16} color="inherit" />
+                {editingUser ? 'Updating...' : 'Creating...'}
+              </Box>
+            ) : (
+              editingUser ? 'Update' : 'Create User'
+            )}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog 
+        open={deleteConfirmOpen} 
+        onClose={() => setDeleteConfirmOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Warning color="error" />
+          Confirm Deletion
+        </DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to permanently delete {' '}
+            <strong>{itemToDelete?.name}</strong>?
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+            This action cannot be undone. {itemToDelete?.type === 'clinic' 
+              ? 'All users and data associated with this clinic will become inaccessible.' 
+              : 'This user will be removed from the database.'}
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteConfirmOpen(false)}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleConfirmDelete} 
+            variant="contained" 
+            color="error"
+            startIcon={<Delete />}
+          >
+            Delete Permanently
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Permissions Manager Dialog */}
+      <PermissionsManager
+        open={permissionsDialogOpen}
+        onClose={() => {
+          setPermissionsDialogOpen(false);
+          setUserForPermissions(null);
+        }}
+        user={userForPermissions}
+        onSave={handleSavePermissions}
+      />
+
+      {/* Password Success Dialog */}
+      <Dialog 
+        open={passwordSuccessOpen} 
+        onClose={() => setPasswordSuccessOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle sx={{ 
+          backgroundColor: 'success.main', 
+          color: 'white',
+          textAlign: 'center',
+          py: 3
+        }}>
+          <Typography variant="h5" sx={{ fontWeight: 600 }}>
+            🎉 User Account Created Successfully!
+          </Typography>
+        </DialogTitle>
+        <DialogContent sx={{ p: 4 }}>
+          {createdUserCredentials && (
+            <Box>
+              <Alert severity="success" sx={{ mb: 3 }}>
+                <Typography variant="h6" sx={{ mb: 2 }}>
+                  ✅ {createdUserCredentials.name} can now login with these credentials:
+                </Typography>
+              </Alert>
+              
+              <Box sx={{ 
+                border: '2px solid', 
+                borderColor: 'success.main',
+                borderRadius: 2, 
+                p: 3, 
+                backgroundColor: 'success.50',
+                mb: 3
+              }}>
+                <Grid container spacing={3}>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: 'success.dark' }}>
+                      📧 Email Address:
+                    </Typography>
+                    <Box sx={{ 
+                      backgroundColor: 'white',
+                      p: 2,
+                      borderRadius: 1,
+                      border: '1px solid',
+                      borderColor: 'success.main',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1
+                    }}>
+                      <Typography variant="h6" sx={{ fontFamily: 'monospace', flexGrow: 1 }}>
+                        {createdUserCredentials.email}
+                      </Typography>
+                      <IconButton
+                        size="small"
+                        onClick={() => {
+                          navigator.clipboard.writeText(createdUserCredentials.email);
+                          showSnackbar('Email copied to clipboard');
+                        }}
+                        title="Copy email"
+                      >
+                        <ContentCopy />
+                      </IconButton>
+                    </Box>
+                  </Grid>
+                  
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: 'success.dark' }}>
+                      🔐 Secure Access:
+                    </Typography>
+                    <Box sx={{ 
+                      backgroundColor: 'white',
+                      p: 2,
+                      borderRadius: 1,
+                      border: '1px solid',
+                      borderColor: 'success.main',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 1
+                    }}>
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          color: 'success.dark',
+                          fontWeight: 500
+                        }}
+                      >
+                        Password securely set in Firebase Authentication
+                      </Typography>
+                      <Typography 
+                        variant="body2" 
+                        color="text.secondary"
+                      >
+                        Use password reset feature to provide secure access to the user
+                      </Typography>
+                    </Box>
+                  </Grid>
+                </Grid>
+              </Box>
+              
+              <Alert severity="info" sx={{ mb: 2 }}>
+                <Typography variant="body2">
+                  <strong>📋 Next Steps:</strong>
+                  <br />• Use the password reset feature to send secure login instructions
+                  <br />• User will receive an email with a secure login link
+                  <br />• Account is active and ready for secure access
+                  <br />• User can set their own password via the reset link
+                </Typography>
+              </Alert>
+              
+              <Box sx={{ 
+                backgroundColor: 'primary.50',
+                border: '1px solid',
+                borderColor: 'primary.main',
+                borderRadius: 1,
+                p: 2
+              }}>
+                <Typography variant="body2" sx={{ fontWeight: 600, color: 'primary.dark' }}>
+                  🚀 Quick Actions:
+                </Typography>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={() => {
+                    const userInfo = `New User Created:\nEmail: ${createdUserCredentials.email}\n\nNext Step: Send password reset email for secure access`;
+                    navigator.clipboard.writeText(userInfo);
+                    showSnackbar('User information copied to clipboard');
+                  }}
+                  startIcon={<ContentCopy />}
+                  sx={{ mt: 1, mr: 1 }}
+                >
+                  Copy User Info
+                </Button>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={() => sendPasswordReset(createdUserCredentials.email, 'the new user')}
+                  sx={{ mt: 1, mr: 1 }}
+                >
+                  Send Password Reset
+                </Button>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={() => setPasswordSuccessOpen(false)}
+                  sx={{ mt: 1 }}
+                >
+                  Create Another User
+                </Button>
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: 3 }}>
+          <Button 
+            onClick={() => setPasswordSuccessOpen(false)} 
+            variant="contained"
+            size="large"
+            sx={{ minWidth: 120 }}
+          >
+            Got It!
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Manual Cleanup Instructions Dialog */}
+      <Dialog 
+        open={confirmDialogOpen} 
+        onClose={() => setConfirmDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Warning color="warning" />
+          Manual Cleanup Required
+        </DialogTitle>
+        <DialogContent>
+          <Box component="pre" sx={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit', margin: 0 }}>
+            {confirmMessage}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmDialogOpen(false)}>
+            I'll Do This Later
+          </Button>
+          <Button 
+            variant="contained" 
+            onClick={confirmAction}
+            startIcon={<ExitToApp />}
+          >
+            Open Firebase Console
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Doctor Fix Results Dialog */}
+      <Dialog 
+        open={doctorFixDialogOpen} 
+        onClose={() => setDoctorFixDialogOpen(false)}
+        maxWidth="lg"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <AutorenewRounded color={doctorFixResult?.success ? "success" : "error"} />
+          Doctor Fix Results
+        </DialogTitle>
+        <DialogContent>
+          {doctorFixResult && (
+            <Box>
+              <Alert severity={doctorFixResult.success ? "success" : "error"} sx={{ mb: 2 }}>
+                <Typography variant="h6">
+                  {doctorFixResult.success ? '✅ Fix Completed' : '❌ Fix Failed'}
+                </Typography>
+                <Typography variant="body2">
+                  {doctorFixResult.message}
+                </Typography>
+              </Alert>
+
+              {doctorFixResult.success && (
+                <Grid container spacing={2} sx={{ mb: 3 }}>
+                  <Grid item xs={6}>
+                    <Card>
+                      <CardContent>
+                        <Typography color="textSecondary" gutterBottom>
+                          Appointments Fixed
+                        </Typography>
+                        <Typography variant="h4" color="primary">
+                          {doctorFixResult.appointmentsFixed}
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Card>
+                      <CardContent>
+                        <Typography color="textSecondary" gutterBottom>
+                          Patients Fixed
+                        </Typography>
+                        <Typography variant="h4" color="primary">
+                          {doctorFixResult.patientsFixed}
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                </Grid>
+              )}
+
+              {doctorFixResult.details && (
+                <Box>
+                  {doctorFixResult.details.appointmentIssues.length > 0 && (
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="h6" sx={{ mb: 1 }}>
+                        📅 Appointment Issues Fixed:
+                      </Typography>
+                      <Box sx={{ maxHeight: 200, overflow: 'auto', backgroundColor: '#f5f5f5', p: 1, borderRadius: 1 }}>
+                        {doctorFixResult.details.appointmentIssues.map((issue: string, index: number) => (
+                          <Typography key={index} variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
+                            • {issue}
+                          </Typography>
+                        ))}
+                      </Box>
+                    </Box>
+                  )}
+
+                  {doctorFixResult.details.patientIssues.length > 0 && (
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="h6" sx={{ mb: 1 }}>
+                        👥 Patient Issues Fixed:
+                      </Typography>
+                      <Box sx={{ maxHeight: 200, overflow: 'auto', backgroundColor: '#f5f5f5', p: 1, borderRadius: 1 }}>
+                        {doctorFixResult.details.patientIssues.map((issue: string, index: number) => (
+                          <Typography key={index} variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
+                            • {issue}
+                          </Typography>
+                        ))}
+                      </Box>
+                    </Box>
+                  )}
+
+                  {doctorFixResult.details.fixedAppointments.length > 0 && (
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="h6" sx={{ mb: 1 }}>
+                        📋 Fixed Appointments Details:
+                      </Typography>
+                      <TableContainer component={Paper} sx={{ maxHeight: 300 }}>
+                        <Table size="small">
+                          <TableHead>
+                            <TableRow>
+                              <TableCell>Patient</TableCell>
+                              <TableCell>Original Doctor</TableCell>
+                              <TableCell>New Doctor</TableCell>
+                              <TableCell>Issues</TableCell>
+                            </TableRow>
+                          </TableHead>
+                          <TableBody>
+                            {doctorFixResult.details.fixedAppointments.map((apt: any, index: number) => (
+                              <TableRow key={index}>
+                                <TableCell>{apt.patient}</TableCell>
+                                <TableCell>{apt.originalDoctor || 'None'}</TableCell>
+                                <TableCell>{apt.newDoctor}</TableCell>
+                                <TableCell>{apt.issues.join(', ')}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </TableContainer>
+                    </Box>
+                  )}
+
+                  {doctorFixResult.details.fixedPatients.length > 0 && (
+                    <Box>
+                      <Typography variant="h6" sx={{ mb: 1 }}>
+                        👤 Fixed Patients Details:
+                      </Typography>
+                      <TableContainer component={Paper} sx={{ maxHeight: 300 }}>
+                        <Table size="small">
+                          <TableHead>
+                            <TableRow>
+                              <TableCell>Patient Name</TableCell>
+                              <TableCell>Original Doctor</TableCell>
+                              <TableCell>New Doctor</TableCell>
+                              <TableCell>Issues</TableCell>
+                            </TableRow>
+                          </TableHead>
+                          <TableBody>
+                            {doctorFixResult.details.fixedPatients.map((patient: any, index: number) => (
+                              <TableRow key={index}>
+                                <TableCell>{patient.name}</TableCell>
+                                <TableCell>{patient.originalDoctor || 'None'}</TableCell>
+                                <TableCell>{patient.newDoctor}</TableCell>
+                                <TableCell>{patient.issues.join(', ')}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </TableContainer>
+                    </Box>
+                  )}
+                </Box>
+              )}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={() => setDoctorFixDialogOpen(false)}
+            variant="contained"
+          >
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={3000}
+        onClose={() => setSnackbarOpen(false)}
+        message={snackbarMessage}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      />
+    </Box>
+  );
+};
+
+export default AdminPanelPage; 

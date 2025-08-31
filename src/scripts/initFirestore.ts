@@ -1,20 +1,48 @@
 import { doc, setDoc, collection, addDoc } from 'firebase/firestore';
-import { getOptimizedFirestore, getOptimizedAuth, firebaseManager } from '../api/firebaseOptimized';
-import { createUserAccount } from '../api/auth';
+import { getOptimizedFirestore, getOptimizedAuth, firebaseManager } from '@lib/firebase/legacy-compat';
+import { createUserAccount } from '@lib/api/auth';
 
 // Helper to get safe database reference
-const getDb = () => {
-  if (!firebaseManager.isReady()) {
+const getDb = async () => {
+  // Try synchronous cached version first
+  if (firebaseManager.isReadySync()) {
+    try {
+      return firebaseManager.getFirestoreSync();
+    } catch (error) {
+      console.warn('⚠️ Sync access failed, falling back to async:', error);
+    }
+  }
+  
+  // Fallback to async version
+  if (!(await firebaseManager.isReady())) {
     throw new Error('Firebase not ready - please wait for initialization');
   }
-  return getOptimizedFirestore();
+  
+  // Ensure instances are cached
+  await firebaseManager.cacheInstances();
+  
+  return await getOptimizedFirestore();
 };
 
 // Helper to get safe auth reference
-const getAuth = () => {
-  if (!firebaseManager.isReady()) {
+const getAuth = async () => {
+  // Try synchronous cached version first
+  if (firebaseManager.isReadySync()) {
+    try {
+      return firebaseManager.getAuthSync();
+    } catch (error) {
+      console.warn('⚠️ Sync auth access failed, falling back to async:', error);
+    }
+  }
+  
+  // Fallback to async version
+  if (!(await firebaseManager.isReady())) {
     throw new Error('Firebase not ready - please wait for initialization');
   }
+  
+  // Ensure instances are cached
+  await firebaseManager.cacheInstances();
+  
   return getOptimizedAuth();
 };
 
@@ -29,7 +57,7 @@ export const initializeFirestore = async () => {
     }
 
     // Check if user is authenticated before trying to write
-    const auth = getAuth();
+    const auth = await getAuth();
     if (!auth.currentUser) {
       console.log('⚠️ No authenticated user - skipping Firestore initialization');
       return false;
@@ -51,7 +79,8 @@ export const initializeFirestore = async () => {
     };
 
     // Use setDoc with specific ID
-    await setDoc(doc(getDb(), 'clinics', 'demo-clinic'), demoClinicData);
+    const db = await getDb();
+    await setDoc(doc(db, 'clinics', 'demo-clinic'), demoClinicData);
 
     console.log('✅ Demo clinic created successfully');
 
@@ -61,7 +90,8 @@ export const initializeFirestore = async () => {
     for (const collectionName of collections) {
       try {
         // Create a dummy document to initialize the collection
-        await addDoc(collection(getDb(), collectionName), {
+        const db = await getDb();
+        await addDoc(collection(db, collectionName), {
           _initialized: true,
           createdAt: new Date(),
           clinicId: 'demo-clinic',
@@ -83,7 +113,8 @@ export const initializeFirestore = async () => {
 // Function to check if demo clinic exists and is active
 export const checkDemoClinicExists = async (): Promise<{ exists: boolean; isActive?: boolean }> => {
   try {
-    const demoClinicRef = doc(getDb(), 'clinics', 'demo-clinic');
+    const db = await getDb();
+    const demoClinicRef = doc(db, 'clinics', 'demo-clinic');
     const docSnap = await import('firebase/firestore').then(({ getDoc }) => getDoc(demoClinicRef));
     
     if (docSnap.exists()) {
@@ -145,7 +176,7 @@ export const ensureDemoClinicActive = async (): Promise<boolean> => {
     }
 
     // Check if user is authenticated before trying to write
-    const auth = getAuth();
+    const auth = await getAuth();
     if (!auth.currentUser) {
       console.log('⚠️ No authenticated user - skipping demo clinic activation');
       return false;
@@ -166,7 +197,8 @@ export const ensureDemoClinicActive = async (): Promise<boolean> => {
       createdBy: auth.currentUser.email || 'system',
     };
 
-    await setDoc(doc(getDb(), 'clinics', 'demo-clinic'), demoClinicData);
+    const db = await getDb();
+    await setDoc(doc(db, 'clinics', 'demo-clinic'), demoClinicData);
     console.log('✅ Demo clinic created/updated and set to active');
     return true;
   } catch (error) {

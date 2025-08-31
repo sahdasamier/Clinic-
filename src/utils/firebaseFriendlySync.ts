@@ -1,11 +1,11 @@
-import { AppointmentService } from '../services/AppointmentService';
-import { PatientService } from '../services/PatientService';
-import { getOptimizedAuth, firebaseManager } from '../api/firebaseOptimized';
+import { AppointmentService } from '@/services/AppointmentService';
+import { PatientService } from '@/services/PatientService';
+import { getOptimizedAuth, firebaseManager } from '@lib/firebase/legacy-compat';
 
 // Helper function to check if Firebase is ready
 const isFirebaseReady = (): boolean => {
   try {
-    return firebaseManager.isReady() && getOptimizedAuth && typeof getOptimizedAuth().currentUser !== 'undefined';
+    return firebaseManager.isReadySync() && getOptimizedAuth && typeof getOptimizedAuth().currentUser !== 'undefined';
   } catch (error) {
     console.log('Firebase not yet ready:', error);
     return false;
@@ -104,8 +104,15 @@ export class FirebaseFriendlySync {
     const startTime = Date.now();
     
     while (Date.now() - startTime < maxWaitMs) {
-      if (firebaseManager.isReady()) {
-        return true;
+      if (await firebaseManager.isReady()) {
+        // Also ensure instances are cached for synchronous access
+        try {
+          await firebaseManager.cacheInstances();
+          return true;
+        } catch (error) {
+          console.warn('⚠️ Error caching Firebase instances:', error);
+          // Continue waiting if caching fails
+        }
       }
       
       // Wait 500ms before checking again
@@ -138,10 +145,13 @@ export class FirebaseFriendlySync {
       console.log('💚 Refreshing data for all pages...');
       
       // Wait a bit more to ensure services are ready
-      if (!firebaseManager.isReady()) {
+      if (!(await firebaseManager.isReady())) {
         console.log('💚 Waiting for Firebase services to be fully ready...');
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
+      
+      // ✅ Ensure Firebase instances are cached for synchronous access
+      await firebaseManager.cacheInstances();
       
       // Get fresh data from Firebase
       const appointments = await AppointmentService.getAllAppointments(clinicId);
@@ -329,10 +339,13 @@ export class FirebaseFriendlySync {
       console.log('💚 FirebaseFriendlySync: Checking data (minimal reads)...');
       
       // Wait a bit more to ensure services are ready
-      if (!firebaseManager.isReady()) {
+      if (!(await firebaseManager.isReady())) {
         console.log('💚 Waiting for Firebase services to be fully ready...');
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
+      
+      // ✅ Ensure Firebase instances are cached for synchronous access
+      await firebaseManager.cacheInstances();
       
       const appointments = await AppointmentService.getAllAppointments(clinicId);
       const patients = await PatientService.searchPatients(clinicId, '');
