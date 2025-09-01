@@ -88,6 +88,33 @@ const sanitizeOrderData = (data: any): any => {
   return sanitized;
 };
 
+// ✅ ADDED: Data sanitization function for Firestore documents
+const sanitizeFirestoreData = (data: any): any => {
+  const sanitized: any = {};
+  
+  Object.keys(data).forEach(key => {
+    const value = data[key];
+    
+    // Skip undefined values (Firebase doesn't allow them)
+    if (value === undefined) {
+      console.log(`⚠️ Skipping undefined field in Firestore data: ${key}`);
+      return;
+    }
+    
+    // Handle arrays - filter out undefined/null items
+    if (Array.isArray(value)) {
+      const filteredArray = value.filter(item => item !== undefined && item !== null);
+      sanitized[key] = filteredArray;
+      return;
+    }
+    
+    // Include the value
+    sanitized[key] = value;
+  });
+  
+  return sanitized;
+};
+
 const getMedicalRequirementsCollection = async (clinicId: string) => {
   // Try synchronous cached version first
   if (firebaseManager.isReadySync()) {
@@ -338,7 +365,7 @@ export const MedicalRequirementsService = {
       const querySnapshot = await getDocs(q);
       const results = querySnapshot.docs.map(doc => ({
         id: doc.id,
-        ...doc.data()
+        ...sanitizeFirestoreData(doc.data())
       } as MedicalRequirementOrder));
       
       console.log(`✅ Found ${results.length} medical requirements for patient ${patientId}`);
@@ -380,7 +407,7 @@ export const MedicalRequirementsService = {
       const querySnapshot = await getDocs(q);
       const results = querySnapshot.docs.map(doc => ({
         id: doc.id,
-        ...doc.data()
+        ...sanitizeFirestoreData(doc.data())
       } as MedicalRequirementOrder));
       
       console.log(`✅ Found ${results.length} pending medical requirements for patient ${patientId}`);
@@ -417,10 +444,12 @@ export const MedicalRequirementsService = {
       );
       
       const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map(doc => ({
+      const results = querySnapshot.docs.map(doc => ({
         id: doc.id,
-        ...doc.data()
+        ...sanitizeFirestoreData(doc.data())
       } as MedicalRequirementOrder));
+      
+      return results;
     } catch (error) {
       console.error('❌ Error fetching orders by status:', error);
       throw error;

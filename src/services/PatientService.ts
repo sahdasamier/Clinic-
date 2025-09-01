@@ -7,6 +7,7 @@ import {
   where, 
   onSnapshot, 
   getDocs,
+  getDoc,
   orderBy,
   serverTimestamp,
   writeBatch,
@@ -128,6 +129,60 @@ export interface Patient {
 }
 
 export const PatientService = {
+  // ✅ ADDED: Data sanitization function to remove undefined values
+  sanitizeFirestoreData(data: any): any {
+    const sanitized: any = {};
+    
+    Object.keys(data).forEach(key => {
+      const value = data[key];
+      
+      // Skip undefined values (Firebase doesn't allow them)
+      if (value === undefined) {
+        console.debug(`🔄 Skipping undefined field in Firestore data: ${key}`);
+        return;
+      }
+      
+      // Handle arrays - filter out undefined/null items
+      if (Array.isArray(value)) {
+        const filteredArray = value.filter(item => item !== undefined && item !== null);
+        sanitized[key] = filteredArray;
+        return;
+      }
+      
+      // Include the value
+      sanitized[key] = value;
+    });
+    
+    return sanitized;
+  },
+  
+  // ✅ ADDED: Data sanitization function to remove undefined values
+  sanitizeRequirementData(data: any): any {
+    const sanitized: any = {};
+    
+    Object.keys(data).forEach(key => {
+      const value = data[key];
+      
+      // Skip undefined values (Firebase doesn't allow them)
+      if (value === undefined) {
+        console.debug(`🔄 Skipping undefined field in medical requirement: ${key}`);
+        return;
+      }
+      
+      // Handle arrays - filter out undefined/null items
+      if (Array.isArray(value)) {
+        const filteredArray = value.filter(item => item !== undefined && item !== null);
+        sanitized[key] = filteredArray;
+        return;
+      }
+      
+      // Include the value
+      sanitized[key] = value;
+    });
+    
+    return sanitized;
+  },
+
   // Create a new patient
   async createPatient(clinicId: string, patientData: Omit<Patient, 'id' | 'createdAt' | 'updatedAt' | 'clinicId'>): Promise<string> {
     const id = crypto.randomUUID();
@@ -145,11 +200,58 @@ export const PatientService = {
     return id;
   },
 
+  // Get a patient by ID with enhanced error handling
+  async getPatientById(clinicId: string, patientId: string): Promise<Patient | null> {
+    try {
+      const patientRef = doc(getPatientsCollection(), patientId);
+      const patientSnap = await getDoc(patientRef);
+      
+      if (patientSnap.exists()) {
+        // If clinicId is provided, validate it matches
+        if (clinicId && patientSnap.data().clinicId !== clinicId) {
+          return null;
+        }
+        
+        return {
+          id: patientSnap.id,
+          ...this.sanitizeFirestoreData(patientSnap.data())
+        } as Patient;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('❌ Error fetching patient by ID:', error);
+      return null;
+    }
+  },
+
   // Update an existing patient
   async updatePatient(patientId: string, updates: Partial<Patient>): Promise<void> {
+    // ✅ ADDED: Sanitize updates to remove undefined values
+    const sanitizedUpdates: any = {};
+    Object.keys(updates).forEach(key => {
+      const value = (updates as any)[key];
+      
+      // Skip undefined values (Firebase doesn't allow them)
+      if (value === undefined) {
+        console.log(`⚠️ Skipping undefined field in patient update: ${key}`);
+        return;
+      }
+      
+      // Handle arrays - filter out undefined/null items
+      if (Array.isArray(value)) {
+        const filteredArray = value.filter(item => item !== undefined && item !== null);
+        sanitizedUpdates[key] = filteredArray;
+        return;
+      }
+      
+      // Include the value
+      sanitizedUpdates[key] = value;
+    });
+    
     const patientRef = doc(getPatientsCollection(), patientId);
     await setDoc(patientRef, {
-      ...updates,
+      ...sanitizedUpdates,
       updatedAt: serverTimestamp(),
     }, { merge: true });
     console.log('✅ Patient updated:', patientId);
@@ -179,7 +281,7 @@ export const PatientService = {
     return onSnapshot(q, (snapshot) => {
       const patients = snapshot.docs.map(doc => ({
         id: doc.id,
-        ...doc.data()
+        ...this.sanitizeFirestoreData(doc.data())
       })) as Patient[];
       
       console.log(`📊 Patients updated: ${patients.length} active patients`);
@@ -203,7 +305,7 @@ export const PatientService = {
     return onSnapshot(q, (snapshot) => {
       const patients = snapshot.docs.map(doc => ({
         id: doc.id,
-        ...doc.data()
+        ...this.sanitizeFirestoreData(doc.data())
       })) as Patient[];
       
       callback(patients);
@@ -223,7 +325,7 @@ export const PatientService = {
     const snapshot = await getDocs(q);
     const allPatients = snapshot.docs.map(doc => ({
       id: doc.id,
-      ...doc.data()
+      ...this.sanitizeFirestoreData(doc.data())
     })) as Patient[];
 
     // Client-side filtering (not ideal for large datasets)
@@ -244,15 +346,12 @@ export const PatientService = {
     doctor: string;
     notes?: string;
   }): Promise<void> {
-    const patientRef = doc(getPatientsCollection(), patientId);
-    
-    // Get current patient data
-    const patientSnapshot = await getDocs(query(getPatientsCollection(), where('__name__', '==', patientId)));
-    if (patientSnapshot.empty) {
+    // Get current patient data using the sanitized version
+    const currentPatient = await this.getPatientById('', patientId);
+    if (!currentPatient) {
       throw new Error('Patient not found');
     }
     
-    const currentPatient = patientSnapshot.docs[0].data() as Patient;
     const updatedHistory = [...(currentPatient.medicalHistory || []), historyEntry];
     
     await this.updatePatient(patientId, { 
@@ -269,14 +368,12 @@ export const PatientService = {
     dateStarted: string;
     status: 'Active' | 'Discontinued';
   }): Promise<void> {
-    const patientRef = doc(getPatientsCollection(), patientId);
-    
-    const patientSnapshot = await getDocs(query(getPatientsCollection(), where('__name__', '==', patientId)));
-    if (patientSnapshot.empty) {
+    // Get current patient data using the sanitized version
+    const currentPatient = await this.getPatientById('', patientId);
+    if (!currentPatient) {
       throw new Error('Patient not found');
     }
     
-    const currentPatient = patientSnapshot.docs[0].data() as Patient;
     const updatedMedications = [...(currentPatient.medications || []), medication];
     
     await this.updatePatient(patientId, { medications: updatedMedications });
@@ -413,6 +510,52 @@ export const PatientService = {
       console.log(`✅ Recalculated requirement counts for patient ${patientId}: ${pendingCount} pending`);
     } catch (error) {
       console.error('❌ Error recalculating requirement counts for patient:', patientId, error);
+      throw error;
+    }
+  },
+
+  // Sync medical requirements from separate collection to patient record
+  async syncMedicalRequirements(clinicId: string, patientId: string): Promise<void> {
+    try {
+      // Import MedicalRequirementsService dynamically to avoid circular dependencies
+      const { default: MedicalRequirementsService } = await import('./MedicalRequirementsService');
+      
+      // Get all medical requirements for this patient from the separate collection
+      const requirements = await MedicalRequirementsService.getOrdersByPatient(clinicId, patientId);
+      
+      // Transform the requirements to match the patient's medicalRequirements format
+      const transformedRequirements = requirements.map(req => {
+        const transformed = {
+          id: req.id,
+          title: req.title,
+          type: req.requirementType,
+          status: req.status,
+          dateOrdered: req.dateOrdered,
+          dueDate: req.dueDate,
+          priority: req.priority,
+          description: req.description,
+          orderedBy: req.orderedBy,
+          completedDate: req.completedDate,
+          uploadedFiles: req.documents || [],
+          // Add any other fields that might be needed
+          category: req.category,
+          notes: req.notes,
+          processingNotes: req.processingNotes,
+          completionNotes: req.completionNotes
+        };
+        
+        // ✅ ADDED: Sanitize the transformed data to remove undefined values
+        return this.sanitizeRequirementData(transformed);
+      });
+      
+      // Update the patient's medicalRequirements array
+      await this.updatePatient(patientId, {
+        medicalRequirements: transformedRequirements
+      });
+      
+      console.log(`✅ Synced ${requirements.length} medical requirements for patient ${patientId}`);
+    } catch (error) {
+      console.error('❌ Error syncing medical requirements for patient:', patientId, error);
       throw error;
     }
   }

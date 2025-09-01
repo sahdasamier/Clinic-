@@ -18,8 +18,11 @@ export const syncCompletedRequirementToPatient = async (
     }
 
     // Find the corresponding requirement in the patient's medicalRequirements array
+    // First try to match by originalPatientRequirementId, then by order ID if that fails
     const updatedMedicalRequirements = (patient.medicalRequirements || []).map((req: any) => {
-      if (req.id?.toString() === completedOrder.originalPatientRequirementId) {
+      // Try matching by originalPatientRequirementId first (for lab/radiology completed orders)
+      if (completedOrder.originalPatientRequirementId && 
+          req.id?.toString() === completedOrder.originalPatientRequirementId) {
         return {
           ...req,
           status: 'completed',
@@ -29,6 +32,19 @@ export const syncCompletedRequirementToPatient = async (
           documents: completedOrder.documents || [],
         };
       }
+      
+      // Fallback to matching by order ID (for requirements completed directly in patient interface)
+      if (req.id?.toString() === completedOrder.id) {
+        return {
+          ...req,
+          status: 'completed',
+          completedDate: completedOrder.completedDate,
+          processedBy: completedOrder.processedBy,
+          completionNotes: completedOrder.completionNotes,
+          documents: completedOrder.documents || [],
+        };
+      }
+      
       return req;
     });
 
@@ -49,7 +65,7 @@ export const syncCompletedRequirementToPatient = async (
     ];
 
     // Update the patient with completed requirement and new documents
-    await PatientService.updatePatient(clinicId, completedOrder.patientId, {
+    await PatientService.updatePatient(completedOrder.patientId, {
       medicalRequirements: updatedMedicalRequirements,
       documents: updatedDocuments,
     });

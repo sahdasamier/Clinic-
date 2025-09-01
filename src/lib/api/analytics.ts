@@ -1,13 +1,28 @@
-import { getAnalytics, logEvent, setUserProperties, setUserId } from 'firebase/analytics';
+import { getAnalytics, logEvent, setUserProperties, setUserId, isSupported } from 'firebase/analytics';
 import { firebaseManager } from './../firebase/legacy-compat';
 
 // Lazy initialization of analytics
 let analytics: any = null;
+let isAnalyticsSupported = false;
 
-const getAnalyticsInstance = () => {
-  if (!analytics && firebaseManager.isReady()) {
+const getAnalyticsInstance = async () => {
+  // Check if analytics is supported
+  if (!isAnalyticsSupported) {
     try {
-      analytics = firebaseManager.getAnalytics();
+      isAnalyticsSupported = await isSupported();
+      if (!isAnalyticsSupported) {
+        console.warn('Firebase Analytics not supported in this environment');
+        return null;
+      }
+    } catch (error) {
+      console.warn('Error checking analytics support:', error);
+      return null;
+    }
+  }
+  
+  if (!analytics) {
+    try {
+      analytics = await firebaseManager.getAnalytics();
     } catch (error) {
       console.warn('Analytics not available:', error);
       return null;
@@ -23,8 +38,8 @@ export interface AnalyticsEvent {
 
 export const AnalyticsService = {
   // Initialize analytics for a user
-  initializeUser: (userId: string, userProperties: Record<string, any>) => {
-    const analyticsInstance = getAnalyticsInstance();
+  initializeUser: async (userId: string, userProperties: Record<string, any>) => {
+    const analyticsInstance = await getAnalyticsInstance();
     if (analyticsInstance) {
       setUserId(analyticsInstance, userId);
       setUserProperties(analyticsInstance, userProperties);
@@ -32,8 +47,8 @@ export const AnalyticsService = {
   },
 
   // Track page views
-  trackPageView: (pageName: string, additionalParams?: Record<string, any>) => {
-    const analyticsInstance = getAnalyticsInstance();
+  trackPageView: async (pageName: string, additionalParams?: Record<string, any>) => {
+    const analyticsInstance = await getAnalyticsInstance();
     if (analyticsInstance) {
       logEvent(analyticsInstance, 'page_view', {
         page_title: pageName,
@@ -44,8 +59,8 @@ export const AnalyticsService = {
   },
 
   // Track appointment-related events
-  trackAppointmentBooked: (appointmentType: string, doctorId: string, clinicId: string) => {
-    const analyticsInstance = getAnalyticsInstance();
+  trackAppointmentBooked: async (appointmentType: string, doctorId: string, clinicId: string) => {
+    const analyticsInstance = await getAnalyticsInstance();
     if (analyticsInstance) {
       logEvent(analyticsInstance, 'appointment_booked', {
         appointment_type: appointmentType,
@@ -56,8 +71,8 @@ export const AnalyticsService = {
     }
   },
 
-  trackAppointmentCompleted: (appointmentId: string, duration: number, appointmentType: string) => {
-    const analyticsInstance = getAnalyticsInstance();
+  trackAppointmentCompleted: async (appointmentId: string, duration: number, appointmentType: string) => {
+    const analyticsInstance = await getAnalyticsInstance();
     if (analyticsInstance) {
       logEvent(analyticsInstance, 'appointment_completed', {
         appointment_id: appointmentId,
@@ -67,8 +82,8 @@ export const AnalyticsService = {
     }
   },
 
-  trackAppointmentCancelled: (appointmentId: string, reason: string, cancelledBy: string) => {
-    const analyticsInstance = getAnalyticsInstance();
+  trackAppointmentCancelled: async (appointmentId: string, reason: string, cancelledBy: string) => {
+    const analyticsInstance = await getAnalyticsInstance();
     if (analyticsInstance) {
       logEvent(analyticsInstance, 'appointment_cancelled', {
         appointment_id: appointmentId,
@@ -79,8 +94,8 @@ export const AnalyticsService = {
   },
 
   // Track patient-related events
-  trackPatientRegistered: (patientId: string, registrationMethod: string, clinicId: string) => {
-    const analyticsInstance = getAnalyticsInstance();
+  trackPatientRegistered: async (patientId: string, registrationMethod: string, clinicId: string) => {
+    const analyticsInstance = await getAnalyticsInstance();
     if (analyticsInstance) {
       logEvent(analyticsInstance, 'patient_registered', {
         patient_id: patientId,
@@ -90,8 +105,8 @@ export const AnalyticsService = {
     }
   },
 
-  trackPatientUpdated: (patientId: string, fieldsUpdated: string[], clinicId: string) => {
-    const analyticsInstance = getAnalyticsInstance();
+  trackPatientUpdated: async (patientId: string, fieldsUpdated: string[], clinicId: string) => {
+    const analyticsInstance = await getAnalyticsInstance();
     if (analyticsInstance) {
       logEvent(analyticsInstance, 'patient_updated', {
         patient_id: patientId,
@@ -102,8 +117,8 @@ export const AnalyticsService = {
   },
 
   // Track payment events
-  trackPaymentProcessed: (paymentId: string, amount: number, method: string, appointmentId?: string) => {
-    const analyticsInstance = getAnalyticsInstance();
+  trackPaymentProcessed: async (paymentId: string, amount: number, method: string, appointmentId?: string) => {
+    const analyticsInstance = await getAnalyticsInstance();
     if (analyticsInstance) {
       logEvent(analyticsInstance, 'payment_processed', {
         payment_id: paymentId,
@@ -115,8 +130,8 @@ export const AnalyticsService = {
     }
   },
 
-  trackPaymentFailed: (amount: number, method: string, errorReason: string) => {
-    const analyticsInstance = getAnalyticsInstance();
+  trackPaymentFailed: async (amount: number, method: string, errorReason: string) => {
+    const analyticsInstance = await getAnalyticsInstance();
     if (analyticsInstance) {
       logEvent(analyticsInstance, 'payment_failed', {
         amount: amount,
@@ -128,8 +143,8 @@ export const AnalyticsService = {
   },
 
   // Track laboratoryRadiology events
-  trackInventoryLowStock: (itemId: string, itemName: string, currentQuantity: number, minQuantity: number) => {
-    const analyticsInstance = getAnalyticsInstance();
+  trackInventoryLowStock: async (itemId: string, itemName: string, currentQuantity: number, minQuantity: number) => {
+    const analyticsInstance = await getAnalyticsInstance();
     if (analyticsInstance) {
       logEvent(analyticsInstance, 'laboratoryRadiology_low_stock', {
         item_id: itemId,
@@ -140,8 +155,8 @@ export const AnalyticsService = {
     }
   },
 
-  trackInventoryRestocked: (itemId: string, itemName: string, quantityAdded: number, newTotal: number) => {
-    const analyticsInstance = getAnalyticsInstance();
+  trackInventoryRestocked: async (itemId: string, itemName: string, quantityAdded: number, newTotal: number) => {
+    const analyticsInstance = await getAnalyticsInstance();
     if (analyticsInstance) {
       logEvent(analyticsInstance, 'laboratoryRadiology_restocked', {
         item_id: itemId,
@@ -153,8 +168,8 @@ export const AnalyticsService = {
   },
 
   // Track user actions
-  trackUserLogin: (userId: string, role: string, clinicId: string) => {
-    const analyticsInstance = getAnalyticsInstance();
+  trackUserLogin: async (userId: string, role: string, clinicId: string) => {
+    const analyticsInstance = await getAnalyticsInstance();
     if (analyticsInstance) {
       logEvent(analyticsInstance, 'login', {
         user_id: userId,
@@ -165,8 +180,8 @@ export const AnalyticsService = {
     }
   },
 
-  trackUserLogout: (userId: string, sessionDuration: number) => {
-    const analyticsInstance = getAnalyticsInstance();
+  trackUserLogout: async (userId: string, sessionDuration: number) => {
+    const analyticsInstance = await getAnalyticsInstance();
     if (analyticsInstance) {
       logEvent(analyticsInstance, 'logout', {
         user_id: userId,
@@ -175,8 +190,8 @@ export const AnalyticsService = {
     }
   },
 
-  trackFeatureUsed: (featureName: string, context?: string) => {
-    const analyticsInstance = getAnalyticsInstance();
+  trackFeatureUsed: async (featureName: string, context?: string) => {
+    const analyticsInstance = await getAnalyticsInstance();
     if (analyticsInstance) {
       logEvent(analyticsInstance, 'feature_used', {
         feature_name: featureName,
@@ -186,8 +201,8 @@ export const AnalyticsService = {
   },
 
   // Track search and filter usage
-  trackSearch: (searchTerm: string, searchType: 'patients' | 'appointments' | 'laboratoryRadiology', resultsCount: number) => {
-    const analyticsInstance = getAnalyticsInstance();
+  trackSearch: async (searchTerm: string, searchType: 'patients' | 'appointments' | 'laboratoryRadiology', resultsCount: number) => {
+    const analyticsInstance = await getAnalyticsInstance();
     if (analyticsInstance) {
       logEvent(analyticsInstance, 'search', {
         search_term: searchTerm,
@@ -197,8 +212,8 @@ export const AnalyticsService = {
     }
   },
 
-  trackFilterUsed: (filterType: string, filterValue: string, context: string) => {
-    const analyticsInstance = getAnalyticsInstance();
+  trackFilterUsed: async (filterType: string, filterValue: string, context: string) => {
+    const analyticsInstance = await getAnalyticsInstance();
     if (analyticsInstance) {
       logEvent(analyticsInstance, 'filter_used', {
         filter_type: filterType,
@@ -209,8 +224,8 @@ export const AnalyticsService = {
   },
 
   // Track errors and issues
-  trackError: (errorType: string, errorMessage: string, context?: string) => {
-    const analyticsInstance = getAnalyticsInstance();
+  trackError: async (errorType: string, errorMessage: string, context?: string) => {
+    const analyticsInstance = await getAnalyticsInstance();
     if (analyticsInstance) {
       logEvent(analyticsInstance, 'app_error', {
         error_type: errorType,
@@ -221,8 +236,8 @@ export const AnalyticsService = {
     }
   },
 
-  trackPerformanceIssue: (issueType: string, loadTime: number, pageName: string) => {
-    const analyticsInstance = getAnalyticsInstance();
+  trackPerformanceIssue: async (issueType: string, loadTime: number, pageName: string) => {
+    const analyticsInstance = await getAnalyticsInstance();
     if (analyticsInstance) {
       logEvent(analyticsInstance, 'performance_issue', {
         issue_type: issueType,
@@ -233,8 +248,8 @@ export const AnalyticsService = {
   },
 
   // Track file uploads
-  trackFileUpload: (fileType: string, fileSize: number, uploadContext: string, success: boolean) => {
-    const analyticsInstance = getAnalyticsInstance();
+  trackFileUpload: async (fileType: string, fileSize: number, uploadContext: string, success: boolean) => {
+    const analyticsInstance = await getAnalyticsInstance();
     if (analyticsInstance) {
       logEvent(analyticsInstance, 'file_upload', {
         file_type: fileType,
@@ -246,8 +261,8 @@ export const AnalyticsService = {
   },
 
   // Track data synchronization
-  trackDataSync: (syncType: string, recordCount: number, duration: number, success: boolean) => {
-    const analyticsInstance = getAnalyticsInstance();
+  trackDataSync: async (syncType: string, recordCount: number, duration: number, success: boolean) => {
+    const analyticsInstance = await getAnalyticsInstance();
     if (analyticsInstance) {
       logEvent(analyticsInstance, 'data_sync', {
         sync_type: syncType,
@@ -259,22 +274,22 @@ export const AnalyticsService = {
   },
 
   // Set user properties for better segmentation
-  setUserProperties: (properties: {
+  setUserProperties: async (properties: {
     role?: 'doctor' | 'receptionist' | 'admin' | 'management';
     clinic_id?: string;
     clinic_size?: 'small' | 'medium' | 'large';
     subscription_plan?: string;
     signup_date?: string;
   }) => {
-    const analyticsInstance = getAnalyticsInstance();
+    const analyticsInstance = await getAnalyticsInstance();
     if (analyticsInstance) {
       setUserProperties(analyticsInstance, properties);
     }
   },
 
   // Track custom events
-  trackCustomEvent: (eventName: string, parameters?: Record<string, any>) => {
-    const analyticsInstance = getAnalyticsInstance();
+  trackCustomEvent: async (eventName: string, parameters?: Record<string, any>) => {
+    const analyticsInstance = await getAnalyticsInstance();
     if (analyticsInstance) {
       logEvent(analyticsInstance, eventName, parameters);
     }
@@ -305,4 +320,45 @@ export class PageTimer {
 }
 
 // Export a global page timer instance
-export const globalPageTimer = new PageTimer(); 
+export const globalPageTimer = new PageTimer();
+
+// Export the functions that the legacy compatibility layer expects
+export async function getFirebaseAnalytics() {
+  return await getAnalyticsInstance();
+}
+
+export { isSupported as isAnalyticsSupported } from 'firebase/analytics';
+
+export async function trackEvent(eventName: string, eventParams?: { [key: string]: any }) {
+  const analytics = await getFirebaseAnalytics();
+  if (!analytics) {
+    console.warn('Analytics not available');
+    return;
+  }
+  
+  logEvent(analytics, eventName, eventParams);
+}
+
+export async function setAnalyticsUserId(userId: string) {
+  const analytics = await getFirebaseAnalytics();
+  if (!analytics) {
+    console.warn('Analytics not available');
+    return;
+  }
+  
+  setUserId(analytics, userId);
+}
+
+export async function setAnalyticsUserProperties(properties: { [key: string]: any }) {
+  const analytics = await getFirebaseAnalytics();
+  if (!analytics) {
+    console.warn('Analytics not available');
+    return;
+  }
+  
+  setUserProperties(analytics, properties);
+}
+
+export function isAnalyticsReady(): boolean {
+  return analytics !== null;
+}

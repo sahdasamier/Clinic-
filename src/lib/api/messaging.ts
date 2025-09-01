@@ -1,13 +1,28 @@
-import { getMessaging, getToken, onMessage, MessagePayload } from 'firebase/messaging';
+import { getMessaging, getToken, onMessage, MessagePayload, isSupported } from 'firebase/messaging';
 import { firebaseManager } from './../firebase/legacy-compat';
 
 // Lazy initialization of messaging
 let messaging: any = null;
+let isMessagingSupported = false;
 
-const getMessagingInstance = () => {
-  if (!messaging && firebaseManager.isReady()) {
+const getMessagingInstance = async () => {
+  // Check if messaging is supported
+  if (!isMessagingSupported) {
     try {
-      messaging = firebaseManager.getMessaging();
+      isMessagingSupported = await isSupported();
+      if (!isMessagingSupported) {
+        console.warn('Firebase Messaging not supported in this environment');
+        return null;
+      }
+    } catch (error) {
+      console.warn('Error checking messaging support:', error);
+      return null;
+    }
+  }
+  
+  if (!messaging) {
+    try {
+      messaging = await firebaseManager.getMessaging();
     } catch (error) {
       console.warn('Messaging not available:', error);
       return null;
@@ -35,7 +50,7 @@ export const MessagingService = {
   // Initialize push notifications and get FCM token
   initializeMessaging: async (): Promise<string | null> => {
     try {
-      const messagingInstance = getMessagingInstance();
+      const messagingInstance = await getMessagingInstance();
       if (!messagingInstance) {
         console.warn('Messaging service not available');
         return null;
@@ -94,21 +109,22 @@ export const MessagingService = {
   // Listen for foreground messages
   onMessageListener: (): Promise<MessagePayload> => {
     return new Promise((resolve) => {
-      const messagingInstance = getMessagingInstance();
-      if (!messagingInstance) {
-        console.warn('Messaging service not available for message listener');
-        return;
-      }
-
-      onMessage(messagingInstance, (payload) => {
-        console.log('Foreground message received:', payload);
-        
-        // Show browser notification if the app is in focus
-        if (payload.notification) {
-          MessagingService.showBrowserNotification(payload.notification);
+      getMessagingInstance().then((messagingInstance) => {
+        if (!messagingInstance) {
+          console.warn('Messaging service not available for message listener');
+          return;
         }
-        
-        resolve(payload);
+
+        onMessage(messagingInstance, (payload) => {
+          console.log('Foreground message received:', payload);
+          
+          // Show browser notification if the app is in focus
+          if (payload.notification) {
+            MessagingService.showBrowserNotification(payload.notification);
+          }
+          
+          resolve(payload);
+        });
       });
     });
   },
@@ -259,34 +275,42 @@ export const MessagingService = {
   }
 };
 
-// Service Worker for background message handling
-// Note: This should be in your public/firebase-messaging-sw.js file
-export const SW_MESSAGING_CONFIG = `
-importScripts('https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/9.0.0/firebase-messaging-compat.js');
+// Export the functions that the legacy compatibility layer expects
+export async function getFirebaseMessaging() {
+  return await getMessagingInstance();
+}
 
-firebase.initializeApp({
-  apiKey: "your-api-key",
-  authDomain: "your-auth-domain",
-  projectId: "your-project-id",
-  storageBucket: "your-storage-bucket",
-  messagingSenderId: "your-messaging-sender-id",
-  appId: "your-app-id"
-});
+export { isSupported as isMessagingSupported } from 'firebase/messaging';
 
-const messaging = firebase.messaging();
+export async function getFcmToken(vapidKey: string) {
+  try {
+    const messaging = await getFirebaseMessaging();
+    if (!messaging) {
+      console.warn('Messaging not available');
+      return null;
+    }
+    
+    const token = await getToken(messaging, { vapidKey });
+    return token;
+  } catch (error) {
+    console.error('Failed to get FCM token:', error);
+    return null;
+  }
+}
 
-messaging.onBackgroundMessage((payload) => {
-  console.log('Background message received:', payload);
-  
-  const notificationTitle = payload.notification.title;
-  const notificationOptions = {
-    body: payload.notification.body,
-    icon: payload.notification.icon || '/favicon.png',
-    badge: '/favicon.png',
-    data: payload.data
-  };
+export function onForegroundMessage(callback: (payload: MessagePayload) => void) {
+  getMessagingInstance().then((messaging) => {
+    if (!messaging) {
+      console.warn('Messaging not available for message listener');
+      return;
+    }
+    
+    onMessage(messaging, callback);
+  }).catch((error) => {
+    console.error('Failed to set up message listener:', error);
+  });
+}
 
-  self.registration.showNotification(notificationTitle, notificationOptions);
-});
-`; 
+export function isMessagingReady(): boolean {
+  return messaging !== null;
+}

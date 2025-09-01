@@ -40,6 +40,7 @@ import {
   Science,
   MedicalServices,
   Biotech,
+  Task,
 } from '@mui/icons-material';
 
 const drawerWidth = 300;
@@ -91,13 +92,14 @@ const navLinks: NavLink[] = [
     group: 'business'
   },
   { 
-    to: '/laboratoryRadiology', 
-    text: 'laboratoryRadiology', 
+    to: '/lab-radiology', 
+    text: 'lab & Radiology', 
     icon: <Science />, 
     permission: 'laboratoryRadiology',
     minLevel: 'read',
     group: 'core'
   },
+
   { 
     to: '/notifications', 
     text: 'notifications', 

@@ -9,6 +9,8 @@ export { getFirestoreInstance as getOptimizedFirestore, getFirestore as db, getF
 export { getFirebaseAuth as getOptimizedAuth, getAuth as getOptimizedAuthSync, authService as authHelpers } from './auth';
 export { getFirebaseStorage as getOptimizedStorage } from './storage';
 export { getFirebaseFunctions as getOptimizedFunctions } from './functions';
+export { getFirebaseMessaging as getOptimizedMessaging } from '../api/messaging';
+export { getFirebaseAnalytics as getOptimizedAnalytics } from '../api/analytics';
 export { validateConfig as validateFirebaseConfig } from './config';
 
 // Additional compatibility exports
@@ -24,6 +26,8 @@ export async function getOptimizedServices() {
     auth: isReady ? (await import('./auth')).getFirebaseAuth() : null,
     storage: isReady ? (await import('./storage')).getFirebaseStorage() : null,
     functions: isReady ? (await import('./functions')).getFirebaseFunctions() : null,
+    messaging: isReady ? (await import('../api/messaging')).getFirebaseMessaging() : null,
+    analytics: isReady ? (await import('../api/analytics')).getFirebaseAnalytics() : null,
   };
 }
 
@@ -104,6 +108,28 @@ export const firebaseManager = {
       console.log('✅ Firebase instances cached for synchronous access');
     } catch (error) {
       console.warn('⚠️ Failed to cache Firebase instances:', error);
+    }
+  },
+  
+  // Firebase Messaging
+  getMessaging: async () => {
+    try {
+      const { getFirebaseMessaging } = await import('../api/messaging');
+      return getFirebaseMessaging();
+    } catch (error) {
+      console.warn('Error getting Firebase Messaging:', error);
+      return null;
+    }
+  },
+  
+  // Firebase Analytics
+  getAnalytics: async () => {
+    try {
+      const { getFirebaseAnalytics } = await import('../api/analytics');
+      return getFirebaseAnalytics();
+    } catch (error) {
+      console.warn('Error getting Firebase Analytics:', error);
+      return null;
     }
   },
   

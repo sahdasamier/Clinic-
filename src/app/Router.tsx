@@ -1,7 +1,7 @@
 import React from "react";
 import { Routes, Route, BrowserRouter } from "react-router-dom";
 import { ProtectedRoute, AdminProtectedRoute, ClinicAccessGuard, PermissionGuard, BlurredPermissionGuard, EnhancedRouteGuard } from "@components/guards";
-import { AppLayout } from "@layouts";
+import AppLayout from "@layouts/AppLayout";
 import DashboardPage from "@features/dashboard/pages/DashboardPage";
 import LoginPage from "@features/auth/pages/LoginPage";
 import ResetPasswordPage from "@features/auth/pages/ResetPasswordPage";
@@ -12,10 +12,13 @@ import DoctorDashboard from "@features/dashboard/pages/DoctorDashboard";
 import { PatientListPage, PatientDetailPage } from "@features/patients";
 import { AppointmentListPage, AppointmentCalendarPage } from "@features/appointments";
 import PaymentListPage from "@features/payments/pages/PaymentListPage";
-import LaboratoryRadiologyCenterPage from "@features/LaboratoryRadiologyCenterPage/LaboratoryRadiologyCenterPage";
+// import LaboratoryRadiologyCenterPage from "@features/LaboratoryRadiologyCenterPage/LaboratoryRadiologyCenterPage";
 import NotificationsPage from "@features/notifications/pages/NotificationsPage";
 import DoctorSchedulingPage from "@features/doctor-scheduling/pages/DoctorSchedulingPage";
 import SettingsPage from "@features/settings/pages/SettingsPage";
+import LabPage from "@features/lab/pages/LabPage";
+import LabRadiologyPage from "@features/lab/pages/LabRadiologyPageNew";
+
 
 
 
@@ -144,17 +147,44 @@ const Router: React.FC = () => {
           </ProtectedRoute>
         } />
         
-        <Route path="/laboratoryRadiology" element={
+        <Route path="/lab-radiology" element={
           <ProtectedRoute>
             <ClinicAccessGuard>
               <AppLayout>
                 <EnhancedRouteGuard feature="laboratoryRadiology" level="read">
-                  <LaboratoryRadiologyCenterPage />
+                  <LabRadiologyPage />
                 </EnhancedRouteGuard>
               </AppLayout>
             </ClinicAccessGuard>
           </ProtectedRoute>
         } />
+        
+        {/* Lab Routes */}
+        <Route path="/lab/:orderId" element={
+          <ProtectedRoute>
+            <ClinicAccessGuard>
+              <AppLayout>
+                <EnhancedRouteGuard feature="laboratoryRadiology" level="read">
+                  <LabPage />
+                </EnhancedRouteGuard>
+              </AppLayout>
+            </ClinicAccessGuard>
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/lab-radiology" element={
+          <ProtectedRoute>
+            <ClinicAccessGuard>
+              <AppLayout>
+                <EnhancedRouteGuard feature="laboratoryRadiology" level="read">
+                  <LabRadiologyPage />
+                </EnhancedRouteGuard>
+              </AppLayout>
+            </ClinicAccessGuard>
+          </ProtectedRoute>
+        } />
+        
+
         
         {/* Advanced Features Routes */}
         <Route path="/notifications" element={

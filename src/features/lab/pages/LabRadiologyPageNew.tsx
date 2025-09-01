@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Container,
@@ -26,11 +27,6 @@ import {
   DialogActions,
   Badge,
   Avatar,
-  List,
-  ListItem,
-  ListItemAvatar,
-  ListItemText,
-  ListItemSecondaryAction,
   FormControl,
   InputLabel,
   Select,
@@ -40,9 +36,12 @@ import {
   Tooltip,
   Divider,
   CircularProgress,
+  Fab,
+  List,
+  ListItem,
+  ListItemText,
 } from '@mui/material';
 import {
-  Inventory,
   Search,
   FilterList,
   Assignment,
@@ -61,10 +60,11 @@ import {
   Science,
   Biotech,
   MedicalServices,
+  Add,
 } from '@mui/icons-material';
 import { useAuth } from '@store/auth';
 import { useUser } from '@store/auth';
-import { useGlobalData } from '../../hooks/useGlobalData';
+import { useGlobalData } from '@hooks/useGlobalData';
 import FileUploadComponent from '@components/common/forms/FileUploadComponent';
 import MedicalRequirementsService, { MedicalRequirementOrder } from '@/services/MedicalRequirementsService';
 import { completeRequirementWorkflow } from '@utils/medicalRequirementSync';
@@ -90,10 +90,9 @@ function TabPanel(props: TabPanelProps) {
   );
 }
 
-// Interface is now imported from the service
-
-const LaboratoryRadiologyPage: React.FC = () => {
+const LabRadiologyPage: React.FC = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { userProfile } = useUser();
   const { patients } = useGlobalData();
@@ -102,6 +101,7 @@ const LaboratoryRadiologyPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [filterPriority, setFilterPriority] = useState('');
+  const [filterType, setFilterType] = useState('');
   const [selectedOrder, setSelectedOrder] = useState<MedicalRequirementOrder | null>(null);
   const [processOrderOpen, setProcessOrderOpen] = useState(false);
   const [uploadDocuments, setUploadDocuments] = useState<File[]>([]);
@@ -118,7 +118,7 @@ const LaboratoryRadiologyPage: React.FC = () => {
       try {
         setLoading(true);
         
-        // ✅ ADDED: Try to sync localStorage with Firebase first
+        // Sync localStorage with Firebase first
         try {
           await MedicalRequirementsService.syncLocalStorageWithFirebase(userProfile.clinicId);
           console.log('✅ localStorage synced with Firebase');
@@ -132,7 +132,6 @@ const LaboratoryRadiologyPage: React.FC = () => {
       } catch (err) {
         console.error('Error loading medical requirement orders:', err);
         setError('Failed to load laboratory & radiology orders');
-        // Set empty array instead of mock data
         setMedicalOrders([]);
       } finally {
         setLoading(false);
@@ -141,44 +140,6 @@ const LaboratoryRadiologyPage: React.FC = () => {
 
     loadOrders();
   }, [userProfile?.clinicId]);
-
-  // ✅ ADDED: Handle adding new medical requirements with localStorage backup
-  const handleAddNewRequirement = async (requirementData: any) => {
-    if (!userProfile?.clinicId) return;
-    
-    try {
-      console.log('🔄 Adding new medical requirement:', requirementData);
-      
-      const orderId = await MedicalRequirementsService.createOrder(
-        userProfile.clinicId,
-        requirementData
-      );
-      
-      console.log('✅ New medical requirement created with ID:', orderId);
-      
-      // Reload orders to show the new one
-      const updatedOrders = await MedicalRequirementsService.getOrdersByClinic(userProfile.clinicId);
-      setMedicalOrders(updatedOrders);
-      
-      // Show success message
-      setError(null);
-      
-      // ✅ NEW: Dispatch event for immediate table update in patient list
-      window.dispatchEvent(new CustomEvent('medicalRequirementAdded', {
-        detail: {
-          patientId: requirementData.patientId,
-          requirementId: orderId,
-          status: 'pending'
-        }
-      }));
-      
-      console.log('🔄 Dispatched medicalRequirementAdded event for patient:', requirementData.patientId);
-      
-    } catch (error) {
-      console.error('❌ Error adding new medical requirement:', error);
-      setError('Failed to add new medical requirement. Please try again.');
-    }
-  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -210,6 +171,15 @@ const LaboratoryRadiologyPage: React.FC = () => {
     }
   };
 
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case 'lab': return <Science />;
+      case 'imaging': return <Biotech />;
+      case 'consultation': return <MedicalServices />;
+      default: return <Assignment />;
+    }
+  };
+
   const filteredOrders = medicalOrders.filter(order => {
     if (searchQuery && !order.title.toLowerCase().includes(searchQuery.toLowerCase()) &&
         !order.patientName.toLowerCase().includes(searchQuery.toLowerCase())) {
@@ -217,13 +187,21 @@ const LaboratoryRadiologyPage: React.FC = () => {
     }
     if (filterStatus && order.status !== filterStatus) return false;
     if (filterPriority && order.priority !== filterPriority) return false;
+    if (filterType && order.requirementType !== filterType) return false;
     return true;
   });
 
-  const ordersByStatus = {
-    pending: filteredOrders.filter(order => order.status === 'pending'),
-    in_progress: filteredOrders.filter(order => order.status === 'in_progress'),
-    completed: filteredOrders.filter(order => order.status === 'completed'),
+  const ordersByTypeAndStatus = {
+    lab: {
+      pending: filteredOrders.filter(order => order.requirementType === 'lab' && order.status === 'pending'),
+      in_progress: filteredOrders.filter(order => order.requirementType === 'lab' && order.status === 'in_progress'),
+      completed: filteredOrders.filter(order => order.requirementType === 'lab' && order.status === 'completed'),
+    },
+    imaging: {
+      pending: filteredOrders.filter(order => order.requirementType === 'imaging' && order.status === 'pending'),
+      in_progress: filteredOrders.filter(order => order.requirementType === 'imaging' && order.status === 'in_progress'),
+      completed: filteredOrders.filter(order => order.requirementType === 'imaging' && order.status === 'completed'),
+    }
   };
 
   const handleProcessOrder = (order: MedicalRequirementOrder) => {
@@ -237,9 +215,9 @@ const LaboratoryRadiologyPage: React.FC = () => {
     if (!selectedOrder || !userProfile?.clinicId) return;
 
     try {
-      const documentsToUpload = uploadDocuments.map(file => ({
+      const documentsToUpload = uploadDocuments.map((file: any) => ({
         name: file.name,
-        url: `/documents/${file.name}`, // In real app, upload to Firebase Storage first
+        url: file.url || `/documents/${file.name}`,
         type: file.type,
         size: file.size,
         category: 'completed_result' as const,
@@ -266,7 +244,7 @@ const LaboratoryRadiologyPage: React.FC = () => {
         // Run the complete workflow: sync to patient and notify
         await completeRequirementWorkflow(userProfile.clinicId, completedOrder);
         
-        // ✅ NEW: Dispatch event for immediate table update in patient list
+        // Dispatch event for immediate table update in patient list
         window.dispatchEvent(new CustomEvent('medicalRequirementUpdated', {
           detail: {
             patientId: completedOrder.patientId,
@@ -291,9 +269,12 @@ const LaboratoryRadiologyPage: React.FC = () => {
 
   const stats = {
     total: medicalOrders.length,
-    pending: ordersByStatus.pending.length,
-    inProgress: ordersByStatus.in_progress.length,
-    completed: ordersByStatus.completed.length,
+    labPending: ordersByTypeAndStatus.lab.pending.length,
+    labInProgress: ordersByTypeAndStatus.lab.in_progress.length,
+    labCompleted: ordersByTypeAndStatus.lab.completed.length,
+    imagingPending: ordersByTypeAndStatus.imaging.pending.length,
+    imagingInProgress: ordersByTypeAndStatus.imaging.in_progress.length,
+    imagingCompleted: ordersByTypeAndStatus.imaging.completed.length,
     urgent: medicalOrders.filter(order => order.priority === 'urgent').length,
   };
 
@@ -343,31 +324,108 @@ const LaboratoryRadiologyPage: React.FC = () => {
   }
 
   return (
-    <Container maxWidth="xl" sx={{ mt: 4, mb: 4, flex: 1, overflow: 'auto' }}>
+    <Container maxWidth="xl" sx={{ mt: 4, mb: 4, flex: 1, overflow: 'auto', background: 'linear-gradient(135deg, #fafbfc 0%, #f0f2f5 100%)', borderRadius: 2, p: 2 }}>
       {/* Header */}
-      <Box sx={{ mb: 4 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', mr: 2 }}>
-            <Science sx={{ fontSize: 32, color: 'primary.main', mr: 1 }} />
-            <Biotech sx={{ fontSize: 28, color: 'secondary.main' }} />
+      <Box sx={{ 
+        mb: 4, 
+        p: 4,
+        background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
+        borderRadius: 4,
+        color: 'white',
+        position: 'relative',
+        overflow: 'hidden',
+        boxShadow: '0 8px 32px rgba(102, 126, 234, 0.25)',
+      }}>
+        
+
+        {/* Responsive Main Header Content */}
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: { xs: 'column', md: 'row' },
+          alignItems: { xs: 'flex-start', md: 'center' }, 
+          justifyContent: 'space-between', 
+          gap: { xs: 3, md: 0 },
+          position: 'relative', 
+          zIndex: 2 
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', width: { xs: '100%', md: 'auto' } }}>
+            <Box
+              sx={{
+                width: { xs: 48, sm: 56, md: 64 },
+                height: { xs: 48, sm: 56, md: 64 },
+                borderRadius: { xs: '16px', md: '20px' },
+                backgroundColor: 'rgba(255,255,255,0.2)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                mr: { xs: 2, sm: 2.5, md: 3 },
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(255,255,255,0.3)',
+                flexShrink: 0
+              }}
+            >
+              <Science sx={{ fontSize: { xs: 24, sm: 28, md: 32 }, color: 'white' }} />
+            </Box>
+            <Box>
+              <Typography 
+                variant="h3"
+                sx={{ 
+                  fontWeight: 800, 
+                  color: 'white',
+                  mb: { xs: 0.5, md: 1 },
+                  textShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                  fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' },
+                  lineHeight: 1.2
+                }}
+              >
+                Laboratory & Radiology Center
+              </Typography>
+              <Typography 
+                variant="h6"
+                sx={{ 
+                  color: 'rgba(255,255,255,0.9)',
+                  fontWeight: 400,
+                  fontSize: { xs: '0.9rem', sm: '1.1rem', md: '1.25rem' }
+                }}
+              >
+                🧪 Process laboratory tests and imaging studies
+              </Typography>
+            </Box>
           </Box>
-          <Typography variant="h4" sx={{ fontWeight: 700, color: 'text.primary' }}>
-            Laboratory & Radiology Center
-          </Typography>
         </Box>
-        <Typography variant="body1" color="text.secondary">
-          Process laboratory tests, imaging studies, and medical analysis requests from patient orders
-        </Typography>
+        
+        {/* Decorative background elements */}
+        <Box sx={{
+          position: 'absolute',
+          top: -40,
+          right: -40,
+          width: 120,
+          height: 120,
+          borderRadius: '50%',
+          backgroundColor: 'rgba(255,255,255,0.1)',
+          zIndex: 1,
+        }} />
+        <Box sx={{
+          position: 'absolute',
+          bottom: -30,
+          left: -30,
+          width: 80,
+          height: 80,
+          borderRadius: '50%',
+          backgroundColor: 'rgba(255,255,255,0.05)',
+          zIndex: 1,
+        }} />
         
         {error && (
           <Alert 
             severity="error" 
-            sx={{ mt: 2 }}
+            sx={{ mt: 2, color: 'white', backgroundColor: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)' }}
             action={
               <Button 
                 color="inherit" 
                 size="small" 
                 onClick={() => window.location.reload()}
+                sx={{ color: 'white' }}
               >
                 Retry
               </Button>
@@ -381,7 +439,7 @@ const LaboratoryRadiologyPage: React.FC = () => {
       {/* Stats Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} sm={6} md={2.4}>
-          <Card sx={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
+          <Card sx={{ background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)', color: 'white', borderRadius: 3, boxShadow: '0 4px 20px rgba(9, 9, 121, 0.1)' }}>
             <CardContent sx={{ textAlign: 'center' }}>
               <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 1 }}>
                 {stats.total}
@@ -391,37 +449,37 @@ const LaboratoryRadiologyPage: React.FC = () => {
           </Card>
         </Grid>
         <Grid item xs={12} sm={6} md={2.4}>
-          <Card sx={{ background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', color: 'white' }}>
+          <Card sx={{ background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)', color: 'white', borderRadius: 3, boxShadow: '0 4px 20px rgba(9, 9, 121, 0.1)' }}>
             <CardContent sx={{ textAlign: 'center' }}>
               <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 1 }}>
-                {stats.pending}
+                {stats.labPending + stats.imagingPending}
               </Typography>
               <Typography variant="body2">Pending</Typography>
             </CardContent>
           </Card>
         </Grid>
         <Grid item xs={12} sm={6} md={2.4}>
-          <Card sx={{ background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', color: 'white' }}>
+          <Card sx={{ background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)', color: 'white', borderRadius: 3, boxShadow: '0 4px 20px rgba(9, 9, 121, 0.1)' }}>
             <CardContent sx={{ textAlign: 'center' }}>
               <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 1 }}>
-                {stats.inProgress}
+                {stats.labInProgress + stats.imagingInProgress}
               </Typography>
               <Typography variant="body2">Processing</Typography>
             </CardContent>
           </Card>
         </Grid>
         <Grid item xs={12} sm={6} md={2.4}>
-          <Card sx={{ background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)', color: 'white' }}>
+          <Card sx={{ background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)', color: 'white', borderRadius: 3, boxShadow: '0 4px 20px rgba(9, 9, 121, 0.1)' }}>
             <CardContent sx={{ textAlign: 'center' }}>
               <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 1 }}>
-                {stats.completed}
+                {stats.labCompleted + stats.imagingCompleted}
               </Typography>
               <Typography variant="body2">Results Ready</Typography>
             </CardContent>
           </Card>
         </Grid>
         <Grid item xs={12} sm={6} md={2.4}>
-          <Card sx={{ background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', color: 'white' }}>
+          <Card sx={{ background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)', color: 'white', borderRadius: 3, boxShadow: '0 4px 20px rgba(9, 9, 121, 0.1)' }}>
             <CardContent sx={{ textAlign: 'center' }}>
               <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 1 }}>
                 {stats.urgent}
@@ -436,7 +494,7 @@ const LaboratoryRadiologyPage: React.FC = () => {
       <Card sx={{ mb: 3 }}>
         <CardContent>
           <Grid container spacing={2} alignItems="center">
-            <Grid item xs={12} md={4}>
+            <Grid item xs={12} md={3}>
               <TextField
                 fullWidth
                 placeholder="Search tests, patients, or procedures..."
@@ -451,7 +509,7 @@ const LaboratoryRadiologyPage: React.FC = () => {
                 }}
               />
             </Grid>
-            <Grid item xs={12} md={3}>
+            <Grid item xs={12} md={2}>
               <FormControl fullWidth>
                 <InputLabel>Status</InputLabel>
                 <Select
@@ -466,7 +524,7 @@ const LaboratoryRadiologyPage: React.FC = () => {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} md={3}>
+            <Grid item xs={12} md={2}>
               <FormControl fullWidth>
                 <InputLabel>Priority</InputLabel>
                 <Select
@@ -483,6 +541,20 @@ const LaboratoryRadiologyPage: React.FC = () => {
               </FormControl>
             </Grid>
             <Grid item xs={12} md={2}>
+              <FormControl fullWidth>
+                <InputLabel>Type</InputLabel>
+                <Select
+                  value={filterType}
+                  label="Type"
+                  onChange={(e) => setFilterType(e.target.value)}
+                >
+                  <MenuItem value="">All Types</MenuItem>
+                  <MenuItem value="lab">Laboratory</MenuItem>
+                  <MenuItem value="imaging">Radiology</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={3}>
               <Button
                 fullWidth
                 variant="outlined"
@@ -491,17 +563,18 @@ const LaboratoryRadiologyPage: React.FC = () => {
                   setSearchQuery('');
                   setFilterStatus('');
                   setFilterPriority('');
+                  setFilterType('');
                 }}
               >
-                Reset
+                Reset Filters
               </Button>
             </Grid>
           </Grid>
         </CardContent>
       </Card>
 
-      {/* Orders Table */}
-      <Card>
+      {/* Lab vs Imaging Tabs */}
+      <Card sx={{ background: 'linear-gradient(135deg, #fafbfc 0%, #f0f2f5 100%)', borderRadius: 3, boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
         <Tabs 
           value={tabValue} 
           onChange={(e, newValue) => setTabValue(newValue)}
@@ -509,57 +582,123 @@ const LaboratoryRadiologyPage: React.FC = () => {
         >
           <Tab 
             label={
-              <Badge badgeContent={ordersByStatus.pending.length} color="warning">
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Schedule />
-                  <span>Pending Tests</span>
-                </Box>
-              </Badge>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Science />
+                <span>Laboratory Tests</span>
+                <Badge badgeContent={stats.labPending} color="warning">
+                  <Box sx={{ width: 8, height: 8 }} />
+                </Badge>
+              </Box>
             } 
           />
           <Tab 
             label={
-              <Badge badgeContent={ordersByStatus.in_progress.length} color="info">
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Science />
-                  <span>Processing</span>
-                </Box>
-              </Badge>
-            } 
-          />
-          <Tab 
-            label={
-              <Badge badgeContent={ordersByStatus.completed.length} color="success">
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <CheckCircle />
-                  <span>Results Ready</span>
-                </Box>
-              </Badge>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Biotech />
+                <span>Radiology Studies</span>
+                <Badge badgeContent={stats.imagingPending} color="warning">
+                  <Box sx={{ width: 8, height: 8 }} />
+                </Badge>
+              </Box>
             } 
           />
         </Tabs>
 
+        {/* Laboratory Tab */}
         <TabPanel value={tabValue} index={0}>
+          <Box sx={{ mb: 2 }}>
+            <Tabs 
+              value={0} 
+              onChange={() => {}} 
+              sx={{ borderBottom: 1, borderColor: 'divider' }}
+            >
+              <Tab 
+                label={
+                  <Badge badgeContent={ordersByTypeAndStatus.lab.pending.length} color="warning">
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Schedule />
+                      <span>Pending Tests</span>
+                    </Box>
+                  </Badge>
+                } 
+              />
+              <Tab 
+                label={
+                  <Badge badgeContent={ordersByTypeAndStatus.lab.in_progress.length} color="info">
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Science />
+                      <span>Processing</span>
+                    </Box>
+                  </Badge>
+                } 
+              />
+              <Tab 
+                label={
+                  <Badge badgeContent={ordersByTypeAndStatus.lab.completed.length} color="success">
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <CheckCircle />
+                      <span>Results Ready</span>
+                    </Box>
+                  </Badge>
+                } 
+              />
+            </Tabs>
+          </Box>
+          
           <OrdersTable 
-            orders={ordersByStatus.pending} 
+            orders={ordersByTypeAndStatus.lab.pending} 
             onProcessOrder={handleProcessOrder}
             showActions={true}
+            type="lab"
           />
         </TabPanel>
 
+        {/* Radiology Tab */}
         <TabPanel value={tabValue} index={1}>
+          <Box sx={{ mb: 2 }}>
+            <Tabs 
+              value={0} 
+              onChange={() => {}} 
+              sx={{ borderBottom: 1, borderColor: 'divider' }}
+            >
+              <Tab 
+                label={
+                  <Badge badgeContent={ordersByTypeAndStatus.imaging.pending.length} color="warning">
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Schedule />
+                      <span>Pending Studies</span>
+                    </Box>
+                  </Badge>
+                } 
+              />
+              <Tab 
+                label={
+                  <Badge badgeContent={ordersByTypeAndStatus.imaging.in_progress.length} color="info">
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Biotech />
+                      <span>Processing</span>
+                    </Box>
+                  </Badge>
+                } 
+              />
+              <Tab 
+                label={
+                  <Badge badgeContent={ordersByTypeAndStatus.imaging.completed.length} color="success">
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <CheckCircle />
+                      <span>Results Ready</span>
+                    </Box>
+                  </Badge>
+                } 
+              />
+            </Tabs>
+          </Box>
+          
           <OrdersTable 
-            orders={ordersByStatus.in_progress} 
+            orders={ordersByTypeAndStatus.imaging.pending} 
             onProcessOrder={handleProcessOrder}
             showActions={true}
-          />
-        </TabPanel>
-
-        <TabPanel value={tabValue} index={2}>
-          <OrdersTable 
-            orders={ordersByStatus.completed} 
-            onProcessOrder={handleProcessOrder}
-            showActions={false}
+            type="imaging"
           />
         </TabPanel>
       </Card>
@@ -572,8 +711,8 @@ const LaboratoryRadiologyPage: React.FC = () => {
         fullWidth
       >
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Science />
-          Process Laboratory/Radiology Order
+          {selectedOrder?.requirementType === 'lab' ? <Science /> : <Biotech />}
+          Process {selectedOrder?.requirementType === 'lab' ? 'Laboratory Test' : 'Radiology Study'}
         </DialogTitle>
         <DialogContent>
           {selectedOrder && (
@@ -677,9 +816,10 @@ const LaboratoryRadiologyPage: React.FC = () => {
                       const files = results.map(result => ({
                         name: result.fileName,
                         size: result.size || 0,
-                        type: result.contentType || 'application/octet-stream'
-                      } as File));
-                      setUploadDocuments(files);
+                        type: result.contentType || 'application/octet-stream',
+                        url: result.url
+                      } as any));
+                      setUploadDocuments(files as any);
                     }}
                   />
                 </CardContent>
@@ -721,7 +861,8 @@ const OrdersTable: React.FC<{
   orders: MedicalRequirementOrder[];
   onProcessOrder: (order: MedicalRequirementOrder) => void;
   showActions: boolean;
-}> = ({ orders, onProcessOrder, showActions }) => {
+  type: 'lab' | 'imaging';
+}> = ({ orders, onProcessOrder, showActions, type }) => {
   const { t } = useTranslation();
 
   const getStatusColor = (status: string) => {
@@ -759,7 +900,7 @@ const OrdersTable: React.FC<{
       <Box sx={{ p: 4, textAlign: 'center' }}>
         <Assignment sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
         <Typography variant="h6" color="textSecondary">
-          No tests in this category
+          No {type === 'lab' ? 'laboratory tests' : 'radiology studies'} in this category
         </Typography>
       </Box>
     );
@@ -827,7 +968,7 @@ const OrdersTable: React.FC<{
                 </Typography>
               </TableCell>
               <TableCell>
-                <Typography variant="body2">{order.orderedBy}</Typography>
+                <Typography variant="body2">{order.doctorName || order.orderedBy}</Typography>
               </TableCell>
               {showActions && (
                 <TableCell align="center">
@@ -837,7 +978,7 @@ const OrdersTable: React.FC<{
                       onClick={() => onProcessOrder(order)}
                       color="primary"
                     >
-                      <Science />
+                      {type === 'lab' ? <Science /> : <Biotech />}
                     </IconButton>
                   </Tooltip>
                 </TableCell>
@@ -850,4 +991,4 @@ const OrdersTable: React.FC<{
   );
 };
 
-export default LaboratoryRadiologyPage; 
+export default LabRadiologyPage;
