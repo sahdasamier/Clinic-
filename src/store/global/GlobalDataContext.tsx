@@ -156,6 +156,22 @@ export const GlobalDataProvider: React.FC<GlobalDataProviderProps> = ({ children
       try {
         console.log('🚀 Initializing Firebase Realtime Manager for user:', user.email);
         
+        // ✅ ENHANCED: Wait for user to be authenticated before initializing Firebase
+        if (!user || !isAuthenticated) {
+          console.log('⏳ Waiting for user authentication before initializing Firebase...');
+          return;
+        }
+        
+        // ✅ ADDITIONAL CHECK: Verify user has a valid email
+        if (!user.email) {
+          console.warn('⚠️ User has no email, skipping Firebase initialization');
+          return;
+        }
+        
+        // ✅ ADDITIONAL CHECK: Add a small delay to ensure authentication is fully processed
+        console.log('⏳ Waiting for authentication to fully process...');
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
         // ✅ ENHANCED: Shorter timeout and better fallback for quick page loads
         const { firebaseManager } = await import('@lib/firebase/legacy-compat');
         

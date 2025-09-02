@@ -4,16 +4,17 @@ import { isSuperAdmin } from './adminConfig';
 import { ensureDemoClinicActive } from '@/scripts/initFirestore';
 
 // Helper to get safe database reference
-const getDb = () => {
+const getDb = async () => {
   if (!firebaseManager.isReady()) {
     throw new Error('Firebase not ready - please wait for initialization');
   }
-  return getOptimizedFirestore();
+  return await getOptimizedFirestore();
 };
 
 export const checkCollectionExists = async (collectionName: string) => {
   try {
-    const baseCollection = collection(getDb(), collectionName);
+    const db = await getDb();
+    const baseCollection = collection(db, collectionName);
     return !!baseCollection;
   } catch (error) {
     console.error(`Error checking collection ${collectionName}:`, error);
@@ -23,7 +24,8 @@ export const checkCollectionExists = async (collectionName: string) => {
 
 export const getFirstDocumentFromCollection = async (collectionName: string) => {
   try {
-    const docRef = doc(collection(getDb(), collectionName));
+    const db = await getDb();
+    const docRef = doc(collection(db, collectionName));
     const docSnap = await getDoc(docRef);
     return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } : null;
   } catch (error) {
@@ -33,8 +35,9 @@ export const getFirstDocumentFromCollection = async (collectionName: string) => 
 };
 
 // Helper function to get collection reference (lazy-loaded)
-function getCollectionRef(collectionName: string, userEmail: string, clinicId?: string) {
-  const baseCollection = collection(getDb(), collectionName);
+async function getCollectionRef(collectionName: string, userEmail: string, clinicId?: string) {
+  const db = await getDb();
+  const baseCollection = collection(db, collectionName);
   
   if (clinicId) {
     return query(baseCollection, where('clinicId', '==', clinicId));
@@ -43,8 +46,8 @@ function getCollectionRef(collectionName: string, userEmail: string, clinicId?: 
   return query(baseCollection, where('userEmail', '==', userEmail));
 }
 
-export function getClinicQuery(collectionName: string, userEmail: string, clinicId?: string) {
-  return getCollectionRef(collectionName, userEmail, clinicId);
+export async function getClinicQuery(collectionName: string, userEmail: string, clinicId?: string) {
+  return await getCollectionRef(collectionName, userEmail, clinicId);
 }
 
 // Add clinic ID to new documents
@@ -70,7 +73,8 @@ export function canAccessClinic(userEmail: string, userClinicId: string, targetC
 export async function isClinicActive(clinicId: string): Promise<boolean> {
   try {
     console.log(`🔍 Checking clinic status for ID: ${clinicId}`);
-    const clinicDoc = await getDoc(doc(getDb(), 'clinics', clinicId));
+    const db = await getDb();
+    const clinicDoc = await getDoc(doc(db, 'clinics', clinicId));
     
     if (clinicDoc.exists()) {
       const clinicData = clinicDoc.data();
@@ -89,7 +93,7 @@ export async function isClinicActive(clinicId: string): Promise<boolean> {
         await ensureDemoClinicActive();
         
         // Check again after creation
-        const retryDoc = await getDoc(doc(getDb(), 'clinics', clinicId));
+        const retryDoc = await getDoc(doc(db, 'clinics', clinicId));
         if (retryDoc.exists()) {
           const retryData = retryDoc.data();
           console.log('✅ Demo clinic created successfully');

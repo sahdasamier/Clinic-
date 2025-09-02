@@ -60,7 +60,7 @@ const AdminLoginPage: React.FC = () => {
     setLoading(true);
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      await signInWithEmailAndPassword(auth(), email, password);
       // Navigation will happen automatically via the useEffect above
     } catch (error: any) {
       console.error('Admin login error:', error);

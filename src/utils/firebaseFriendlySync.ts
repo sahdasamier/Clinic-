@@ -965,11 +965,11 @@ export const checkAuthAndShowInstructions = async () => {
       console.log('   3. Return to this page');
       console.log('   4. The sync will work automatically');
       console.log('');
-      console.log('📧 If you are a super admin, use: admin@sahdasclinic.com');
+              console.log('📧 If you are a super admin, use: sahdasamier013@gmail.com');
       console.log('🔑 If you need an account, contact your administrator');
       
       if (typeof window !== 'undefined') {
-        const message = `❌ Authentication Status: NOT LOGGED IN\n\n🔐 TO FIX THE FIREBASE PERMISSION ERRORS:\n\n1️⃣ Go to the login page (/login or /admin/login)\n2️⃣ Sign in with your credentials\n3️⃣ Return to this page\n4️⃣ The sync will work automatically\n\n📧 Super admin email: admin@sahdasclinic.com\n🔑 Need an account? Contact your administrator`;
+        const message = `❌ Authentication Status: NOT LOGGED IN\n\n🔐 TO FIX THE FIREBASE PERMISSION ERRORS:\n\n1️⃣ Go to the login page (/login or /admin/login)\n2️⃣ Sign in with your credentials\n3️⃣ Return to this page\n4️⃣ The sync will work automatically\n\n📧 Super admin email: sahdasamier013@gmail.com\n🔑 Need an account? Contact your administrator`;
         alert(message);
       }
       return false;

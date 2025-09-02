@@ -165,7 +165,7 @@ const BlurredPermissionGuard: React.FC<BlurredPermissionGuardProps> = ({
                 variant="contained"
                 startIcon={<ContactSupport />}
                 onClick={() => {
-                  window.open('mailto:admin@sahdasclinic.com?subject=Access Request&body=I need access to: ' + feature, '_blank');
+                  window.open('mailto:sahdasamier013@gmail.com?subject=Access Request&body=I need access to: ' + feature, '_blank');
                 }}
                 sx={{
                   background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',

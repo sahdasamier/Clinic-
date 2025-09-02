@@ -6,7 +6,7 @@
 // Re-export modern Firebase services with legacy names for compatibility
 export { getFirebaseApp as getApp } from './config';
 export { getFirestoreInstance as getOptimizedFirestore, getFirestore as db, getFirestore as getOptimizedFirestoreSync } from './firestore';
-export { getFirebaseAuth as getOptimizedAuth, getAuth as getOptimizedAuthSync, authService as authHelpers } from './auth';
+export { getFirebaseAuth as getOptimizedAuth, getAuth as getOptimizedAuthSync, authService as authHelpers, getFirebaseAuth as auth } from './auth';
 export { getFirebaseStorage as getOptimizedStorage } from './storage';
 export { getFirebaseFunctions as getOptimizedFunctions } from './functions';
 export { getFirebaseMessaging as getOptimizedMessaging } from '../api/messaging';

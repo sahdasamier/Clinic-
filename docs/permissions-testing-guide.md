@@ -9,7 +9,6 @@ This guide helps you test and verify that the granular permissions system is wor
 - **URL**: https://clinic-d9c0a-230db.web.app
 - **Admin Login**: `/admin/login`
 - **Admin Emails**: 
-  - admin@sahdasclinic.com
   - sahdasamier013@gmail.com
 
 ## Testing Scenarios
@@ -218,7 +217,7 @@ If you find issues during testing:
 2. **Context**: User role, permissions, browser
 3. **Expected vs Actual**: What should vs what happened
 4. **Console**: Any browser console errors
-5. **Contact**: admin@sahdasclinic.com with "Permission Issue" subject
+5. **Contact**: sahdasamier013@gmail.com with "Permission Issue" subject
 
 ## Performance Notes
 

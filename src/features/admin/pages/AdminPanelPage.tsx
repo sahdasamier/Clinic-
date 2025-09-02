@@ -194,8 +194,8 @@ const AdminPanelPage: React.FC = () => {
           try {
             // Only access auth if Firebase is ready
             if (isOptimizedFirebaseReady()) {
-              const auth = getOptimizedAuth();
-              const user = auth.currentUser;
+              const authInstance = getOptimizedAuth();
+              const user = authInstance.currentUser;
               if (user) {
                 try {
                   const idTokenResult = await user.getIdTokenResult();
@@ -245,13 +245,13 @@ const AdminPanelPage: React.FC = () => {
 
       try {
         // Use optimized auth service
-        const auth = getOptimizedAuth();
+        const authInstance = getOptimizedAuth();
         
         // Check admin status immediately
         checkAdminStatus();
         
         // Set up auth state listener
-        unsubscribe = auth.onAuthStateChanged(() => {
+        unsubscribe = authInstance.onAuthStateChanged(() => {
           checkAdminStatus();
         });
         
@@ -1168,8 +1168,8 @@ const AdminPanelPage: React.FC = () => {
                 ✅ Admin Verified ({adminVerification.method}) - {(() => {
                   try {
                     if (isOptimizedFirebaseReady()) {
-                      const auth = getOptimizedAuth();
-                      return auth.currentUser?.email || 'Unknown';
+                      const authInstance = getOptimizedAuth();
+                      return authInstance.currentUser?.email || 'Unknown';
                     }
                     return 'Loading...';
                   } catch {

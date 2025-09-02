@@ -148,6 +148,32 @@ export class FirebaseRealtimeManager {
 
   private async initialize(): Promise<void> {
     try {
+      // ✅ ENHANCED: Check authentication before initializing Firebase
+      if (!this.auth.currentUser) {
+        console.log('⏳ Waiting for user authentication before initializing Firebase...');
+        // Wait for authentication
+        await new Promise<void>((resolve) => {
+          const unsubscribe = this.auth.onAuthStateChanged((user) => {
+            if (user) {
+              unsubscribe();
+              resolve();
+            }
+          });
+          
+          // Timeout after 10 seconds
+          setTimeout(() => {
+            unsubscribe();
+            resolve();
+          }, 10000);
+        });
+        
+        // Check again after waiting
+        if (!this.auth.currentUser) {
+          console.warn('⚠️ No authenticated user found, skipping Firebase initialization');
+          return;
+        }
+      }
+      
       // Wait for Firebase services to be ready before proceeding
       console.log('⏳ Waiting for Firebase services to be ready...');
       await this.waitForFirebaseReady();

@@ -52,7 +52,7 @@ const ResetPasswordPage: React.FC = () => {
 
       try {
         // Verify the password reset code and get the email
-        const userEmail = await verifyPasswordResetCode(auth, oobCode);
+        const userEmail = await verifyPasswordResetCode(auth(), oobCode);
         setEmail(userEmail);
         setVerifying(false);
       } catch (error: any) {
@@ -94,7 +94,7 @@ const ResetPasswordPage: React.FC = () => {
 
     try {
       // Confirm the password reset
-      await confirmPasswordReset(auth, oobCode, newPassword);
+      await confirmPasswordReset(auth(), oobCode, newPassword);
       setSuccess(true);
       
       // Redirect to login after 3 seconds

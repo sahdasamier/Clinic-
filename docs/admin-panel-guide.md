@@ -6,7 +6,6 @@ The admin panel provides super admin functionality to manage multiple clinics an
 ## Access
 - **URL**: `/admin/login`
 - **Authorized Emails**: 
-  - `admin@sahdasclinic.com`
   - `sahdasamier013@gmail.com`
 
 ## Features

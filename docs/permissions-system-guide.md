@@ -265,6 +265,6 @@ function MyComponent() {
 
 ## Contact & Support
 For permission-related issues or access requests:
-- Email: admin@sahdasclinic.com
+- Email: sahdasamier013@gmail.com
 - Subject: Access Request - [Feature Name]
 - Include: User email, clinic, requested permission level 

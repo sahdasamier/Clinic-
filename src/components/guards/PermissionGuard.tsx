@@ -83,7 +83,7 @@ const PermissionGuard: React.FC<PermissionGuardProps> = ({
             size="small"
             onClick={() => {
               // You could implement a help/contact feature here
-              window.open('mailto:admin@sahdasclinic.com?subject=Access Request', '_blank');
+              window.open('mailto:sahdasamier013@gmail.com?subject=Access Request', '_blank');
             }}
           >
             Request Access

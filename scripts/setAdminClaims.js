@@ -20,7 +20,6 @@ admin.initializeApp({
 
 // Super admin emails
 const SUPER_ADMIN_EMAILS = [
-  'admin@sahdasclinic.com',
   'sahdasamier013@gmail.com'
 ];
 

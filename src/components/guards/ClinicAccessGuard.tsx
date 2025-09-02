@@ -64,7 +64,7 @@ const ClinicAccessGuard: React.FC<ClinicAccessGuardProps> = ({ children }) => {
         } else {
           console.warn('  ⚠️ No user profile or email found');
           // If no user profile but we have an authenticated user, allow access
-          if (auth.currentUser) {
+          if (auth().currentUser) {
             console.log('  ✅ Authenticated user found, allowing access');
             setHasAccess(true);
           } else {
@@ -94,7 +94,7 @@ const ClinicAccessGuard: React.FC<ClinicAccessGuardProps> = ({ children }) => {
 
   const handleSignOut = async () => {
     try {
-      await signOut(auth);
+      await signOut(auth());
       navigate('/login');
     } catch (error) {
       console.error('Error signing out:', error);
@@ -172,7 +172,7 @@ const ClinicAccessGuard: React.FC<ClinicAccessGuardProps> = ({ children }) => {
               </Button>
               
               <Typography variant="body2" sx={{ mt: 2, color: 'text.secondary' }}>
-                Contact support: admin@sahdasclinic.com
+                Contact support: sahdasamier013@gmail.com
               </Typography>
             </CardContent>
           </Card>

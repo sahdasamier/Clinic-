@@ -17,7 +17,7 @@ if [ $? -eq 0 ]; then
     echo "🔐 Multi-clinic security rules are now active."
     echo ""
     echo "Your security rules now include:"
-    echo "  - Super admin access for: admin@sahdasclinic.com, sahdasamier013@gmail.com"
+    echo "  - Super admin access for: sahdasamier013@gmail.com"
     echo "  - Clinic isolation for all regular users"
     echo "  - Complete data separation between clinics"
 else

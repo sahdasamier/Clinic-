@@ -37,7 +37,7 @@ Possible reasons:
 
 [Sign Out Button]
 
-Contact support: admin@sahdasclinic.com
+Contact support: sahdasamier013@gmail.com
 ```
 
 ### 3. **Test Database Access (Disabled Clinic)**

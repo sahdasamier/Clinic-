@@ -121,9 +121,12 @@ const LoginPage: React.FC = () => {
 
     try {
       console.log('🔄 Attempting to send password reset email to:', resetEmail);
-      console.log('🔧 Firebase Auth Domain:', auth.app.options.authDomain);
       
-      await sendPasswordResetEmail(auth, resetEmail, {
+      // Get the auth instance properly
+      const authInstance = auth();
+      console.log('🔧 Firebase Auth Domain:', authInstance.app.options.authDomain);
+      
+      await sendPasswordResetEmail(authInstance, resetEmail, {
         url: `${window.location.origin}/login`, // Redirect back to login after reset
         handleCodeInApp: false,
       });

@@ -208,7 +208,7 @@ const EnhancedRouteGuard: React.FC<EnhancedRouteGuardProps> = ({
                   onClick={() => {
                     const subject = `Access Request - ${feature.replace(/_/g, ' ')}`;
                     const body = `Hello,\n\nI would like to request access to the ${feature.replace(/_/g, ' ')} feature.\n\nCurrent Role: ${userProfile?.role}\nRequired Permission: ${level}\n\nThank you!`;
-                    window.open(`mailto:admin@sahdasclinic.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, '_blank');
+                    window.open(`mailto:sahdasamier013@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, '_blank');
                   }}
                   sx={{
                     borderColor: '#10b981',
