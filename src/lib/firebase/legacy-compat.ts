@@ -43,8 +43,9 @@ export const firebaseManager = {
       const { isFirebaseInitialized } = await import('./config');
       const { isFirestoreReady } = await import('./firestore');
       const { isAuthReady } = await import('./auth');
+      const { isStorageReady } = await import('./storage');
       
-      return isFirebaseInitialized() && isFirestoreReady() && isAuthReady();
+      return isFirebaseInitialized() && isFirestoreReady() && isAuthReady() && isStorageReady();
     } catch (error) {
       console.warn('Error checking Firebase readiness:', error);
       return false;
@@ -99,11 +100,14 @@ export const firebaseManager = {
       const { getFirebaseApp } = await import('./config');
       const { getFirestoreInstance, getFirestore } = await import('./firestore');
       const { getFirebaseAuth } = await import('./auth');
+      const { getFirebaseStorage } = await import('./storage');
       
       cachedApp = getFirebaseApp();
       // Cache the async instance result for sync access
       cachedFirestore = await getFirestoreInstance();
       cachedAuth = getFirebaseAuth();
+      // Note: Storage is synchronous, so we can cache it directly
+      const storage = getFirebaseStorage();
       
       console.log('✅ Firebase instances cached for synchronous access');
     } catch (error) {
