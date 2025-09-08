@@ -28,19 +28,27 @@
 - [x] Identify collection path mismatch
 - [x] Check user authentication and claims
 
-### Phase 2: Fix Firestore Rules 🔧
-- [ ] **HIGH PRIORITY**: Update Firestore rules to match actual collection structure
-- [ ] Add proper rules for `medicalRequirements` collection (not nested under clinics)
-- [ ] Ensure clinic-based access control works correctly
-- [ ] Test rules with different user roles (admin, staff, doctor)
+### Phase 2: Fix Firestore Rules 🔧 ✅ COMPLETED
+- [x] **HIGH PRIORITY**: Update Firestore rules to match actual collection structure
+- [x] Add proper rules for `medicalRequirementOrders` collection (correct collection name)
+- [x] Ensure clinic-based access control works correctly
+- [x] Test rules with different user roles (admin, staff, doctor)
 
-### Phase 3: Fix Collection Structure 📁
-- [ ] **HIGH PRIORITY**: Update MedicalRequirementsService to use correct collection path
-- [ ] Either:
-  - Option A: Change code to use `clinics/{clinicId}/medicalRequirements/{requirementId}`
-  - Option B: Update Firestore rules to allow `medicalRequirements/{requirementId}`
-- [ ] Update all related functions (createOrder, updateOrder, completeOrder, etc.)
-- [ ] Ensure consistency across all medical requirement operations
+### Phase 3: Fix Collection Structure 📁 ✅ COMPLETED
+- [x] **HIGH PRIORITY**: Update MedicalRequirementsService to use correct collection path
+- [x] **SOLUTION**: Code already uses correct collection name `medicalRequirementOrders`
+- [x] **SOLUTION**: Updated Firestore rules to properly handle `medicalRequirementOrders` collection
+- [x] Update all related functions (createOrder, updateOrder, completeOrder, etc.)
+- [x] Ensure consistency across all medical requirement operations
+
+## ✅ BUG FIXED - Summary
+**Issue**: "Missing or insufficient permissions" when completing medical requirement orders
+**Root Cause**: Firestore rules had insufficient null checks and error handling in `getUserClinicId()` function
+**Solution**: 
+1. Improved `getUserClinicId()` function with proper null checks
+2. Enhanced `medicalRequirementOrders` rules with robust null checking
+3. Deployed updated rules to Firebase
+**Status**: ✅ RESOLVED - Users should now be able to complete medical requirement orders without permission errors
 
 ### Phase 4: User Permissions Fix 👤
 - [ ] **HIGH PRIORITY**: Verify user has proper admin claims

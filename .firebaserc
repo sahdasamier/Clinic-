@@ -1,5 +1,22 @@
 {
   "projects": {
-    "default": "clinic-d9c0a"
-  }
+    "default": "clinic-d9c0a",
+    "devolpment ": "clinic-d9c0a",
+    "production ": "clinicy-health",
+    "dev": "clinic-d9c0a",
+    "prod": "clinicy-health"
+  },
+  "targets": {
+    "clinicy-health": {
+      "hosting": {
+        "dev": [
+          "my-clinic-dev"
+        ],
+        "prod": [
+          "clinicy-health"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }

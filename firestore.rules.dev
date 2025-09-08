@@ -94,8 +94,7 @@ service cloud.firestore {
     
     // Helper function to get user's clinic ID
     function getUserClinicId() {
-      let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
-      return userDoc != null && userDoc.data != null ? userDoc.data.clinicId : null;
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.clinicId;
     }
     
     // 🔒 Appointments collection - Clinic-based access
@@ -153,7 +152,7 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
     
-    // 🔒 Medical Requirements collection - Clinic-based access (nested structure)
+    // 🔒 Medical Requirements collection - Clinic-based access
     match /clinics/{clinicId}/medicalRequirements/{requirementId} {
       allow read, write: if request.auth != null && 
                         (isAdmin() || 
@@ -164,26 +163,14 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
     
-    
     // 🔒 Medical Requirement Orders collection - Direct access with clinic filtering
     match /medicalRequirementOrders/{orderId} {
-      // Allow read/write if user is admin OR if user's clinic matches the document's clinic
       allow read, write: if request.auth != null && 
                         (isAdmin() || 
-                         (resource != null && 
-                          resource.data != null && 
-                          resource.data.clinicId != null &&
-                          resource.data.clinicId == getUserClinicId()));
-      
-      // Allow create if user is admin OR if the new document's clinic matches user's clinic
+                         resource.data.clinicId == getUserClinicId());
       allow create: if request.auth != null && 
                    (isAdmin() || 
-                    (request.resource != null && 
-                     request.resource.data != null && 
-                     request.resource.data.clinicId != null &&
-                     request.resource.data.clinicId == getUserClinicId()));
-      
-      // Only admins can delete
+                    request.resource.data.clinicId == getUserClinicId());
       allow delete: if isAdmin();
     }
     
