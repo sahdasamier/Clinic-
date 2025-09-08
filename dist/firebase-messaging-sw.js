@@ -19,14 +19,36 @@ importScripts('https://www.gstatic.com/firebasejs/9.0.0/firebase-messaging-compa
 // Initialize the Firebase app in the service worker
 // Note: These values should be replaced with actual Firebase config during build
 // For development, you can temporarily hardcode your values here
-firebase.initializeApp({
-  apiKey: "your-api-key-here",
-  authDomain: "your-project-id.firebaseapp.com", 
-  projectId: "your-project-id",
-  storageBucket: "your-project-id.appspot.com",
-  messagingSenderId: "your-messaging-sender-id",
-  appId: "your-app-id"
-});
+// Use hostname to pick correct project at runtime (SW can't access Vite envs)
+const host = self.location.hostname || '';
+const prodHosts = new Set(['clinicy-health.firebaseapp.com', 'clinicy-health.web.app']);
+let isProdHost = prodHosts.has(host);
+try {
+  // Respect a persisted override flag if present
+  const override = self.localStorage?.getItem?.('firebaseProject');
+  if (override === 'dev') isProdHost = false;
+  if (override === 'prod') isProdHost = true;
+} catch {}
+
+const devConfig = {
+  apiKey: "AIzaSyDotAr3OZOao6-2EGsg6xusem8ENdgRa-E",
+  authDomain: "clinic-d9c0a.firebaseapp.com",
+  projectId: "clinic-d9c0a",
+  storageBucket: "clinic-d9c0a.firebasestorage.app",
+  messagingSenderId: "430481926571",
+  appId: "1:430481926571:web:4ac32749d6b0f674868aee"
+};
+
+const prodConfig = {
+  apiKey: "AIzaSyBU9NyJYqpve2-Ac_hvKOhUtFlRtb2yJlc",
+  authDomain: "clinicy-health.firebaseapp.com",
+  projectId: "clinicy-health",
+  storageBucket: "clinicy-health.firebasestorage.app",
+  messagingSenderId: "61851414075",
+  appId: "1:61851414075:web:5346d6a0d537557e0d361e"
+};
+
+firebase.initializeApp(isProdHost ? prodConfig : devConfig);
 
 // Retrieve an instance of Firebase Messaging
 const messaging = firebase.messaging();

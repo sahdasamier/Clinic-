@@ -42,7 +42,9 @@ async function initializeFirestoreWithPersistence(): Promise<Firestore> {
           tabManager: persistentSingleTabManager({
             forceOwnership: false
           })
-        })
+        }),
+        experimentalAutoDetectLongPolling: true,
+        useFetchStreams: false
       });
       
       console.debug('💾 Firestore initialized with enhanced offline persistence');
@@ -53,7 +55,10 @@ async function initializeFirestoreWithPersistence(): Promise<Firestore> {
 
     // Fallback to multi-tab persistence
     try {
-      const db = initializeFirestore(app, {});
+      const db = initializeFirestore(app, {
+        experimentalAutoDetectLongPolling: true,
+        useFetchStreams: false
+      });
       await enableMultiTabIndexedDbPersistence(db);
       console.debug('💾 Firestore initialized with multi-tab persistence');
       return db;
