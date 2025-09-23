@@ -416,9 +416,8 @@ refactor: optimize database queries
 
 ---
 
-## 📄 License & Credits
+## 📄  Credits
 
-**License:** MIT License - see [LICENSE](LICENSE) file for details
 
 **Credits:** Built with ❤️ by the Healthcare Innovation Team
 
@@ -431,17 +430,5 @@ refactor: optimize database queries
 - **Organizations** requiring on-premise deployment only
 - **Basic appointment booking** without patient management needs
 
----
 
-## 📚 Additional Documentation
 
-- [Admin Panel Guide](docs/admin-panel-guide.md) - Complete admin functionality
-- [Permissions System](docs/permissions-system-guide.md) - Role and permission management  
-- [Firebase Setup](docs/firebase-integration-checklist.md) - Detailed Firebase configuration
-- [Subscription Plans](docs/subscription-plans-guide.md) - Multi-tenant billing
-- [User Management](docs/user-edit-guide.md) - User administration
-- [Testing Guide](docs/end-to-end-testing-guide.md) - Quality assurance
-
----
-
-*Last Updated: January 2024 | Version 1.0.0*
