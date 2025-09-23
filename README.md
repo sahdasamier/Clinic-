@@ -14,10 +14,9 @@
 
 ## 🚀 Live Links
 
-- **Demo URL:** [Coming Soon - Contact Admin]
-- **Admin Panel:** `/admin/login` (Super Admin Access)
-- **Documentation:** `docs/` directory
-- **Issue Tracker:** [GitHub Issues](https://github.com/your-repo/issues)
+- **Demo URL "live":** (https://clinicy-health.web.app/)
+- **Demo URL "dev":**(https://clinic-d9c0a.web.app/)
+
 
 ---
 
