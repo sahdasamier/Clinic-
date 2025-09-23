@@ -414,12 +414,6 @@ docs: update API documentation
 refactor: optimize database queries
 ```
 
----
-
-## 📄  Credits
-
-
-**Credits:** Built with ❤️ by the Healthcare Innovation Team
 
 ---
 
