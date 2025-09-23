@@ -1,4 +1,4 @@
-# 🏥 Clinic Management System
+#  Clinic Management System
 
 ![Clinic Management System](src/images/patientpage.png)
 
