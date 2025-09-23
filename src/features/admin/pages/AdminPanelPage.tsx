@@ -19,7 +19,7 @@ import {
   setDoc 
 } from 'firebase/firestore';
 import { firebaseConfig, isOptimizedFirebaseReady, getOptimizedServices } from '@lib/firebase/legacy-compat';
-import { getOptimizedFirestore, getOptimizedAuth } from '@lib/firebase/legacy-compat';
+import { getOptimizedFirestoreSync as getOptimizedFirestore, getOptimizedAuth } from '@lib/firebase/legacy-compat';
 import { createUserAccount, createUserInvitation, isValidEmail, checkEmailExists, doubleCheckEmailBeforeCreation, createUserAccountWithCleanup, suggestAlternativeEmails } from '@lib/api/auth';
 import { fixClinicAccess } from '@utils/clinicUtils';
 import { initializeDemoClinicAfterAuth } from '@/scripts/initFirestore';
@@ -160,7 +160,7 @@ const AdminPanelPage: React.FC = () => {
     email: '',
     firstName: '',
     lastName: '',
-    role: 'receptionist' as 'management' | 'doctor' | 'receptionist',
+    role: 'receptionist' as 'management' | 'doctor' | 'receptionist' | 'admin',
     clinicId: '',
     password: '',
     createdAt: '',
@@ -590,7 +590,14 @@ const AdminPanelPage: React.FC = () => {
     setError('');
     
     // Basic validation
-    if (!newUser.email?.trim() || !newUser.firstName?.trim() || !newUser.lastName?.trim() || !newUser.clinicId || !newUser.password?.trim()) {
+    const isAdminRole = newUser.role === 'admin';
+    if (
+      !newUser.email?.trim() ||
+      !newUser.firstName?.trim() ||
+      !newUser.lastName?.trim() ||
+      (!isAdminRole && !newUser.clinicId) ||
+      !newUser.password?.trim()
+    ) {
       setError('Please fill in all required fields');
       return;
     }
@@ -613,7 +620,8 @@ const AdminPanelPage: React.FC = () => {
         firstName: newUser.firstName.trim(),
         lastName: newUser.lastName.trim(),
         role: newUser.role,
-        clinicId: newUser.clinicId,
+        // Admin users do not require a clinic
+        clinicId: newUser.role === 'admin' ? '' : newUser.clinicId,
       };
       
       // Use the secure secondary app method
@@ -1617,9 +1625,11 @@ const AdminPanelPage: React.FC = () => {
                   <MenuItem value="management">Management</MenuItem>
                   <MenuItem value="doctor">Doctor</MenuItem>
                   <MenuItem value="receptionist">Receptionist</MenuItem>
+                  <MenuItem value="admin">Admin</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
+            {newUser.role !== 'admin' && (
             <Grid item xs={6}>
               <FormControl fullWidth margin="dense">
                 <InputLabel>Clinic</InputLabel>
@@ -1662,6 +1672,7 @@ const AdminPanelPage: React.FC = () => {
                 )}
               </FormControl>
             </Grid>
+            )}
             {!editingUser && (
               <Grid item xs={12}>
                 <Typography variant="h6" sx={{ mb: 2, color: 'primary.main', fontWeight: 600 }}>
@@ -1814,7 +1825,7 @@ const AdminPanelPage: React.FC = () => {
                 !newUser.firstName?.trim() ||
                 !newUser.lastName?.trim() ||
                 !newUser.password?.trim() ||
-                !newUser.clinicId
+                (newUser.role !== 'admin' && !newUser.clinicId)
               ))
             }
           >

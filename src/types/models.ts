@@ -23,8 +23,8 @@ export interface Branch {
 export interface User {
   id: string;
   email: string;
-  role: "management" | "doctor" | "receptionist";
-  clinicId: string;
+  role: "management" | "doctor" | "receptionist" | "admin";
+  clinicId: string; // may be empty for admin
   branchId?: string;
   isActive: boolean;
   firstName: string;

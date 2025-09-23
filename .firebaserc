@@ -9,11 +9,11 @@
   "targets": {
     "clinicy-health": {
       "hosting": {
-        "dev": [
-          "my-clinic-dev"
-        ],
         "prod": [
           "clinicy-health"
+        ],
+        "dev": [
+          "clinic-d9c0a"
         ]
       }
     }

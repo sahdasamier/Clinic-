@@ -40,6 +40,48 @@
         <div style="width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #1D3557; border-radius: 50%; animation: spin 1s linear infinite;"></div>
       </div>
     </div>
+    <script>
+      // Guard against duplicate Shadow DOM attachment and duplicate custom element definitions
+      (function () {
+        try {
+          var proto = window.Element && window.Element.prototype;
+          if (proto && !proto.__attachShadowGuarded) {
+            var originalAttachShadow = proto.attachShadow;
+            if (originalAttachShadow) {
+              proto.attachShadow = function (init) {
+                if (this.shadowRoot) {
+                  // Shadow root already exists; return it instead of throwing
+                  return this.shadowRoot;
+                }
+                try {
+                  return originalAttachShadow.call(this, init);
+                } catch (e) {
+                  // If something else attached a shadow root concurrently, return existing root
+                  if (this.shadowRoot) return this.shadowRoot;
+                  throw e;
+                }
+              };
+              Object.defineProperty(proto, '__attachShadowGuarded', { value: true });
+            }
+          }
+
+          if (window.customElements && !window.customElements.__defineGuarded) {
+            var originalDefine = window.customElements.define.bind(window.customElements);
+            window.customElements.define = function (name, constructor, options) {
+              if (window.customElements.get(name)) {
+                // Skip duplicate definition to avoid re-instantiation issues
+                return;
+              }
+              return originalDefine(name, constructor, options);
+            };
+            Object.defineProperty(window.customElements, '__defineGuarded', { value: true });
+          }
+        } catch (e) {
+          // No-op: guards are best-effort
+          console.warn('Shadow DOM/customElements guards setup warning:', e);
+        }
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
     <script>
       // Remove loading indicator and show content when loaded

@@ -33,7 +33,7 @@ export interface CreateUserData {
   password: string;
   firstName: string;
   lastName: string;
-  role: 'management' | 'doctor' | 'receptionist';
+  role: 'management' | 'doctor' | 'receptionist' | 'admin';
   clinicId: string;
 }
 

@@ -54,7 +54,7 @@ import EnhancedMedicalConditionSelector from '../components/EnhancedMedicalCondi
 import EnhancedMedicationSelector from '@components/EnhancedMedicationSelector';
 import EnhancedMedicalRequirementSelector from '../components/EnhancedMedicalRequirementSelector';
 import AddRequirementDialog from '../components/AddRequirementDialog';
-import { addMedicalRequirementToPatient, deleteMedicalRequirement } from '../utils/medicalRequirementHelpers';
+import { addMedicalRequirementToPatient, deleteMedicalRequirement, updateMedicalRequirement } from '../utils/medicalRequirementHelpers';
 
 import MedicalRequirementsService from '@/services/MedicalRequirementsService';
 

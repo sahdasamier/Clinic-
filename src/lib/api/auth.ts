@@ -48,7 +48,7 @@ export interface UserData {
   email: string;
   firstName: string;
   lastName: string;
-  role: 'management' | 'doctor' | 'receptionist';
+  role: 'management' | 'doctor' | 'receptionist' | 'admin';
   clinicId: string;
   isActive: boolean;
   createdAt: any;
@@ -61,7 +61,7 @@ export interface UserInvitation {
   email: string;
   firstName: string;
   lastName: string;
-  role: 'management' | 'doctor' | 'receptionist';
+  role: 'management' | 'doctor' | 'receptionist' | 'admin';
   clinicId: string;
   invitedBy: string;
   invitedAt: any;
@@ -175,7 +175,8 @@ export const validateUserData = async (userData: {
     return { isValid: false, error: 'Last name is required' };
   }
   
-  if (!userData.clinicId?.trim()) {
+  // Clinic is required for non-admin roles only
+  if (userData.role !== 'admin' && !userData.clinicId?.trim()) {
     return { isValid: false, error: 'Clinic selection is required' };
   }
 
@@ -305,7 +306,8 @@ export async function createUserAccount(userData: {
     if (!userData.lastName?.trim()) {
       return { success: false, error: 'Last name is required' };
     }
-    if (!userData.clinicId?.trim()) {
+    // Clinic is required for non-admin roles only
+    if (userData.role !== 'admin' && !userData.clinicId?.trim()) {
       return { success: false, error: 'Clinic selection is required' };
     }
     
@@ -334,7 +336,7 @@ export async function createUserAccount(userData: {
       firstName: userData.firstName.trim(),
       lastName: userData.lastName.trim(),
       role: userData.role as any,
-      clinicId: userData.clinicId,
+      clinicId: userData.role === 'admin' ? '' : userData.clinicId,
       isActive: true,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),

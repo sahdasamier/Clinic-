@@ -141,7 +141,7 @@ export const createTestUser = async (userData: {
   password: string;
   firstName: string;
   lastName: string;
-  role: 'management' | 'doctor' | 'receptionist';
+  role: 'management' | 'doctor' | 'receptionist' | 'admin';
 }) => {
   try {
     console.log(`🔧 Creating test user: ${userData.email}`);
