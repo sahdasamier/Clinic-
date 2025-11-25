@@ -55,20 +55,22 @@ const CHART_TYPES = [
 ];
 
 interface PaymentData {
-  id: number;
+  id: string | number;
   patient: string;
+  patientName?: string;
   doctor: string;
   amount: number;
+  paidAmount?: number;
   currency: string;
   date: string;
-  status: 'paid' | 'pending' | 'overdue' | 'partial';
+  status: 'paid' | 'pending' | 'overdue' | 'partial' | 'cancelled';
   method: string;
   description: string;
 }
 
 interface RevenueProfitTrendWidgetProps {
   payments: PaymentData[];
-  colorPalette: {
+  colorPalette?: {
     primary: string;
     success: string;
     warning: string;
@@ -91,7 +93,13 @@ interface TrendDataPoint {
 
 const RevenueProfitTrendWidget: React.FC<RevenueProfitTrendWidgetProps> = ({
   payments,
-  colorPalette,
+  colorPalette = {
+    primary: '#1976d2',
+    success: '#2e7d32',
+    warning: '#ed6c02',
+    error: '#d32f2f',
+    info: '#0288d1',
+  },
   refreshKey = 0
 }) => {
   const { t } = useTranslation();
@@ -303,9 +311,11 @@ const RevenueProfitTrendWidget: React.FC<RevenueProfitTrendWidgetProps> = ({
 
       const data = dataMap.get(key)!;
       
-      // Revenue calculation: paid payments normally, but in debug mode include all payments
+      // ✅ CORRECT: Revenue calculation - use paidAmount if available, otherwise amount
+      // Only count paid payments (or all in debug mode)
       if (payment.status === 'paid' || debugMode) {
-        data.revenue += payment.amount;
+        const amount = payment.paidAmount || payment.amount || 0;
+        data.revenue += amount;
         data.paidCount += 1;
         
         if (debugMode && payment.status !== 'paid') {
@@ -368,10 +378,16 @@ const RevenueProfitTrendWidget: React.FC<RevenueProfitTrendWidgetProps> = ({
 
   // Calculate summary statistics
   const summaryStats = useMemo(() => {
-    // Revenue calculation: paid payments normally, but in debug mode include all payments
+    // ✅ CORRECT: Revenue calculation - only paid payments (or all in debug mode)
     const revenuePayments = debugMode ? filteredPayments : filteredPayments.filter(p => p.status === 'paid');
     const paidPayments = filteredPayments.filter(p => p.status === 'paid');
-    const totalRevenue = revenuePayments.reduce((sum, p) => sum + p.amount, 0);
+    
+    // ✅ CORRECT: Use paidAmount if available, otherwise amount
+    const totalRevenue = revenuePayments.reduce((sum, p) => {
+      const amount = p.paidAmount || p.amount || 0;
+      return sum + amount;
+    }, 0);
+    
     const totalProfit = totalRevenue * 0.7; // 70% profit margin
     
     console.log('📊 RevenueProfitTrendWidget - Summary Stats:', {

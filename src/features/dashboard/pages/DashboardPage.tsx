@@ -55,6 +55,8 @@ import {
 
 // Import the new Revenue & Profit Trend Widget
 import RevenueProfitTrendWidget from '@features/dashboard/widgets/RevenueProfitTrendWidget';
+import PatientConfirmationWidget from '@features/dashboard/widgets/PatientConfirmationWidget';
+import BudgetProfitSummaryCard from '@features/dashboard/widgets/BudgetProfitSummaryCard';
 
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@store/auth';
@@ -70,7 +72,7 @@ import {
   useRealtimeUpdates 
 } from '@hooks/useGlobalData';
 
-// Professional Color Palette
+// Enhanced Professional Color Palette with Gradients
 const colorPalette = {
   primary: '#1976d2',
   secondary: '#9c27b0',
@@ -78,14 +80,21 @@ const colorPalette = {
   error: '#d32f2f',
   warning: '#ed6c02',
   info: '#0288d1',
-  background: '#f5f5f5'
+  background: '#f5f5f5',
+  // New gradient colors
+  gradient1: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+  gradient2: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+  gradient3: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+  gradient4: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+  gradient5: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+  gradient6: 'linear-gradient(135deg, #30cfd0 0%, #330867 100%)',
 };
 
 // Error boundary component for Firebase errors
 const FirebaseErrorBoundary: React.FC<{
   children: React.ReactNode;
   fallback?: React.ReactNode;
-  onError?: (error: Error) => void;
+  onError?: (error: Error | ErrorEvent) => void;
 }> = ({ children, fallback, onError }) => {
   const [hasError, setHasError] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -112,7 +121,7 @@ const FirebaseErrorBoundary: React.FC<{
       }
     };
 
-    const handleError = (event: ErrorEvent) => {
+    const handleWindowError = (event: ErrorEvent) => {
       if (event.message?.includes('FIRESTORE') || 
           event.message?.includes('Firebase') ||
           event.message?.includes('INTERNAL ASSERTION FAILED')) {
@@ -121,11 +130,11 @@ const FirebaseErrorBoundary: React.FC<{
     };
 
     window.addEventListener('unhandledrejection', handleUnhandledRejection);
-    window.addEventListener('error', handleError);
+    window.addEventListener('error', handleWindowError);
 
     return () => {
       window.removeEventListener('unhandledrejection', handleUnhandledRejection);
-      window.removeEventListener('error', handleError);
+      window.removeEventListener('error', handleWindowError);
     };
   }, []);
 
@@ -207,9 +216,10 @@ const DashboardPage: React.FC = () => {
   const [connectionRetries, setConnectionRetries] = useState(0);
 
   // ✅ Firebase error handler
-  const handleFirebaseError = (error: Error) => {
+  const handleFirebaseError = (error: Error | ErrorEvent) => {
     console.error('🚨 Dashboard Firebase Error:', error);
-    setFirebaseError(error.message);
+    const message = error instanceof Error ? error.message : 'An error occurred';
+    setFirebaseError(message);
     
     // Auto-retry logic
     if (connectionRetries < 3) {
@@ -299,15 +309,43 @@ const DashboardPage: React.FC = () => {
         payment?.createdAt && new Date(payment.createdAt) >= thisMonth
       );
 
-             return {
+      // ✅ CORRECT: Calculate revenue only from PAID payments
+      const paidPayments = safePayments.filter(p => p?.status === 'paid');
+      const thisMonthPaidPayments = thisMonthPayments.filter(p => p?.status === 'paid');
+      
+      // ✅ CORRECT: Use paidAmount if available, otherwise amount
+      const totalRevenue = paidPayments.reduce((sum, payment) => {
+        const amount = payment?.paidAmount || payment?.amount || 0;
+        return sum + amount;
+      }, 0);
+      
+      const thisMonthRevenue = thisMonthPaidPayments.reduce((sum, payment) => {
+        const amount = payment?.paidAmount || payment?.amount || 0;
+        return sum + amount;
+      }, 0);
+      
+      // ✅ CORRECT: Calculate confirmed appointments (confirmed OR completed OR checked-in)
+      const confirmedAppointments = safeAppointments.filter(apt => {
+        const status = apt?.status?.toLowerCase();
+        return status === 'confirmed' || status === 'completed' || status === 'checked-in';
+      }).length;
+      
+      // ✅ CORRECT: Calculate pending appointments (pending OR scheduled)
+      const pendingAppointments = safeAppointments.filter(apt => {
+        const status = apt?.status?.toLowerCase();
+        return status === 'pending' || status === 'scheduled';
+      }).length;
+
+      return {
         totalPatients: safePatients.length,
         totalAppointments: safeAppointments.length,
-      todayAppointments: todayAppointments.length,
+        todayAppointments: todayAppointments.length,
         completedAppointments: safeAppointments.filter(apt => apt?.status === 'completed').length,
-        pendingAppointments: safeAppointments.filter(apt => apt?.status === 'scheduled').length,
-        totalRevenue: safePayments.reduce((sum, payment) => sum + (payment?.amount || 0), 0),
-        thisMonthRevenue: thisMonthPayments.reduce((sum, payment) => sum + (payment?.amount || 0), 0),
-        averageRevenue: safePayments.length > 0 ? safePayments.reduce((sum, payment) => sum + (payment?.amount || 0), 0) / safePayments.length : 0,
+        confirmedAppointments: confirmedAppointments,
+        pendingAppointments: pendingAppointments,
+        totalRevenue: totalRevenue,
+        thisMonthRevenue: thisMonthRevenue,
+        averageRevenue: paidPayments.length > 0 ? totalRevenue / paidPayments.length : 0,
         newPatientsThisMonth: safePatients.filter(patient => {
           if (!patient?.createdAt) return false;
           const createdDate = new Date(patient.createdAt);
@@ -388,53 +426,148 @@ const DashboardPage: React.FC = () => {
 
   return (
     <FirebaseErrorBoundary onError={handleFirebaseError}>
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        {/* Header with enhanced real-time status */}
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-          <Typography variant="h4" component="h1" gutterBottom>
-            {t('dashboard.title')}
-                  </Typography>
-          <Box display="flex" alignItems="center" gap={2}>
-            {/* Connection Status */}
-            <Chip
-              icon={
-                dashboardStats?.connectionStatus === 'connected' ? 
-                  <CheckCircle /> : 
-                  <Warning />
-              }
-              label={
-                dashboardStats?.isOnline ? 
-                  `Connected - ${updateCount} updates` : 
-                  'Offline'
-              }
-              color={
-                dashboardStats?.connectionStatus === 'connected' ? 'success' : 'warning'
-              }
-              variant="outlined"
-              size="small"
-            />
-            
-            {/* Last Update */}
-            {lastUpdate && (
-              <Typography variant="caption" color="textSecondary">
-                Last update: {lastUpdate.toLocaleTimeString()}
-                  </Typography>
-            )}
-
-            {/* Manual Refresh */}
-            <Tooltip title={firebaseError ? "Restart Firebase Connection" : "Refresh Data"}>
-              <span>
-                <IconButton 
-                  onClick={handleManualRefresh}
-                  disabled={isLoading}
-                  color={firebaseError ? "error" : "default"}
-                >
-                  <Refresh />
-                </IconButton>
-              </span>
-            </Tooltip>
-                </Box>
+      <Container maxWidth="xl" sx={{ 
+        mt: 4, 
+        mb: 4,
+        background: 'linear-gradient(135deg, rgba(248,250,252,0.4) 0%, rgba(255,255,255,0.2) 100%)',
+        borderRadius: 4,
+        p: 3,
+      }}>
+        {/* Enhanced Header matching Patient Page styling exactly */}
+        <Box sx={{ 
+          mb: 4, 
+          p: 4,
+          background: 'linear-gradient(90deg,rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%)',
+          borderRadius: 4,
+          color: 'white',
+          position: 'relative',
+          overflow: 'hidden',
+          boxShadow: '0 8px 32px rgba(102, 126, 234, 0.25)',
+        }}>
+          {/* Responsive Main Header Content */}
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: { xs: 'column', md: 'row' },
+            alignItems: { xs: 'flex-start', md: 'center' }, 
+            justifyContent: 'space-between', 
+            gap: { xs: 3, md: 0 },
+            position: 'relative', 
+            zIndex: 2 
+          }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', width: { xs: '100%', md: 'auto' } }}>
+              <Box
+                sx={{
+                  width: { xs: 48, sm: 56, md: 64 },
+                  height: { xs: 48, sm: 56, md: 64 },
+                  borderRadius: { xs: '16px', md: '20px' },
+                  backgroundColor: 'rgba(255,255,255,0.2)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  mr: { xs: 2, sm: 2.5, md: 3 },
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid rgba(255,255,255,0.3)',
+                  flexShrink: 0
+                }}
+              >
+                <Analytics sx={{ fontSize: { xs: 24, sm: 28, md: 32 }, color: 'white' }} />
               </Box>
+              <Box>
+                <Typography 
+                  variant="h3"
+                  sx={{ 
+                    fontWeight: 800, 
+                    color: 'white',
+                    mb: { xs: 0.5, md: 1 },
+                    textShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                    fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' },
+                    lineHeight: 1.2
+                  }}
+                >
+                  {t('Dashboard')}
+                </Typography>
+                <Typography 
+                  variant="h6"
+                  sx={{ 
+                    color: 'rgba(255,255,255,0.9)',
+                    fontWeight: 400,
+                    fontSize: { xs: '0.9rem', sm: '1.1rem', md: '1.25rem' }
+                  }}
+                >
+                  📊 Welcome back! Here's your clinic overview
+                </Typography>
+              </Box>
+            </Box>
+            
+            {/* Responsive Action Buttons */}
+            <Box sx={{ 
+              display: 'flex', 
+              flexDirection: { xs: 'column', sm: 'row' },
+              gap: { xs: 1.5, sm: 2 },
+              width: { xs: '100%', md: 'auto' }
+            }}>
+              {/* Connection Status */}
+              <Chip
+                icon={
+                  dashboardStats?.connectionStatus === 'connected' ? 
+                    <CheckCircle /> : 
+                    <Warning />
+                }
+                label={
+                  dashboardStats?.isOnline ? 
+                    `Connected - ${updateCount} updates` : 
+                    'Offline'
+                }
+                sx={{
+                  backgroundColor: 'rgba(255,255,255,0.2)',
+                  color: 'white',
+                  border: '1px solid rgba(255,255,255,0.3)',
+                  backdropFilter: 'blur(10px)',
+                  fontWeight: 600,
+                  '& .MuiChip-icon': {
+                    color: 'white'
+                  }
+                }}
+                size="small"
+              />
+              
+              {/* Last Update */}
+              {lastUpdate && (
+                <Typography variant="caption" sx={{ 
+                  color: 'rgba(255,255,255,0.9)',
+                  fontWeight: 500,
+                  display: { xs: 'none', sm: 'block' }
+                }}>
+                  Last update: {lastUpdate.toLocaleTimeString()}
+                </Typography>
+              )}
+
+              {/* Manual Refresh */}
+              <Tooltip title={firebaseError ? "Restart Firebase Connection" : "Refresh Data"}>
+                <span>
+                  <IconButton 
+                    onClick={handleManualRefresh}
+                    disabled={isLoading}
+                    sx={{
+                      backgroundColor: 'rgba(255,255,255,0.2)',
+                      color: 'white',
+                      border: '1px solid rgba(255,255,255,0.3)',
+                      backdropFilter: 'blur(10px)',
+                      '&:hover': {
+                        backgroundColor: 'rgba(255,255,255,0.3)',
+                      },
+                      '&.Mui-disabled': {
+                        color: 'rgba(255,255,255,0.5)',
+                      }
+                    }}
+                  >
+                    <Refresh />
+                  </IconButton>
+                </span>
+              </Tooltip>
+            </Box>
+          </Box>
+        </Box>
             
         {/* Enhanced Error Display */}
         {hasErrors && (
@@ -466,26 +599,49 @@ const DashboardPage: React.FC = () => {
           <LinearProgress sx={{ mb: 3 }} />
         )}
 
-        {/* Key Metrics Cards with Error Boundaries */}
+        {/* Enhanced Key Metrics Cards with Beautiful Gradients */}
         <FirebaseErrorBoundary>
           <Grid container spacing={3} sx={{ mb: 4 }}>
             {/* Total Patients */}
             <Grid item xs={12} sm={6} md={3}>
-              <Card sx={{ backgroundColor: colorPalette.primary, color: 'white' }}>
-                <CardContent>
+              <Card sx={{ 
+                background: colorPalette.gradient1,
+                color: 'white',
+                borderRadius: 4,
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  transform: 'translateY(-8px)',
+                  boxShadow: '0 20px 40px rgba(102, 126, 234, 0.4)',
+                }
+              }}>
+                <CardContent sx={{ p: 3 }}>
                   <Box display="flex" alignItems="center" justifyContent="space-between">
                     <Box>
-                      <Typography variant="h6" component="div">
+                      <Typography variant="subtitle2" component="div" sx={{ opacity: 0.9, mb: 1, fontWeight: 600 }}>
                         {t('dashboard.totalPatients')}
                       </Typography>
-                      <Typography variant="h4" component="div">
+                      <Typography variant="h3" component="div" sx={{ fontWeight: 800, mb: 1 }}>
                         {dashboardMetrics.totalPatients}
                       </Typography>
-                      <Typography variant="body2">
-                        +{dashboardMetrics.newPatientsThisMonth} this month
-                      </Typography>
+                      <Chip 
+                        label={`+${dashboardMetrics.newPatientsThisMonth} this month`}
+                        size="small"
+                        sx={{ 
+                          backgroundColor: 'rgba(255,255,255,0.2)', 
+                          color: 'white',
+                          fontWeight: 600,
+                          backdropFilter: 'blur(10px)'
+                        }}
+                      />
                     </Box>
-                    <People fontSize="large" />
+                    <Box sx={{
+                      background: 'rgba(255,255,255,0.2)',
+                      borderRadius: 3,
+                      p: 2,
+                      backdropFilter: 'blur(10px)'
+                    }}>
+                      <People sx={{ fontSize: 48 }} />
+                    </Box>
                     </Box>
                 </CardContent>
               </Card>
@@ -493,21 +649,44 @@ const DashboardPage: React.FC = () => {
 
             {/* Today's Appointments */}
             <Grid item xs={12} sm={6} md={3}>
-              <Card sx={{ backgroundColor: colorPalette.secondary, color: 'white' }}>
-                <CardContent>
+              <Card sx={{ 
+                background: colorPalette.gradient2,
+                color: 'white',
+                borderRadius: 4,
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  transform: 'translateY(-8px)',
+                  boxShadow: '0 20px 40px rgba(245, 87, 108, 0.4)',
+                }
+              }}>
+                <CardContent sx={{ p: 3 }}>
                   <Box display="flex" alignItems="center" justifyContent="space-between">
                     <Box>
-                      <Typography variant="h6" component="div">
+                      <Typography variant="subtitle2" component="div" sx={{ opacity: 0.9, mb: 1, fontWeight: 600 }}>
                         {t('dashboard.todayAppointments')}
                           </Typography>
-                      <Typography variant="h4" component="div">
+                      <Typography variant="h3" component="div" sx={{ fontWeight: 800, mb: 1 }}>
                         {dashboardMetrics.todayAppointments}
                           </Typography>
-                      <Typography variant="body2">
-                        {dashboardMetrics.totalAppointments} total
-                          </Typography>
+                      <Chip 
+                        label={`${dashboardMetrics.totalAppointments} total`}
+                        size="small"
+                        sx={{ 
+                          backgroundColor: 'rgba(255,255,255,0.2)', 
+                          color: 'white',
+                          fontWeight: 600,
+                          backdropFilter: 'blur(10px)'
+                        }}
+                      />
+                    </Box>
+                    <Box sx={{
+                      background: 'rgba(255,255,255,0.2)',
+                      borderRadius: 3,
+                      p: 2,
+                      backdropFilter: 'blur(10px)'
+                    }}>
+                      <CalendarToday sx={{ fontSize: 48 }} />
                         </Box>
-                    <CalendarToday fontSize="large" />
                 </Box>
                 </CardContent>
               </Card>
@@ -515,21 +694,44 @@ const DashboardPage: React.FC = () => {
 
             {/* Revenue */}
             <Grid item xs={12} sm={6} md={3}>
-              <Card sx={{ backgroundColor: colorPalette.success, color: 'white' }}>
-                <CardContent>
+              <Card sx={{ 
+                background: colorPalette.gradient4,
+                color: 'white',
+                borderRadius: 4,
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  transform: 'translateY(-8px)',
+                  boxShadow: '0 20px 40px rgba(67, 233, 123, 0.4)',
+                }
+              }}>
+                <CardContent sx={{ p: 3 }}>
                   <Box display="flex" alignItems="center" justifyContent="space-between">
                     <Box>
-                      <Typography variant="h6" component="div">
+                      <Typography variant="subtitle2" component="div" sx={{ opacity: 0.9, mb: 1, fontWeight: 600 }}>
                         {t('dashboard.totalRevenue')}
                   </Typography>
-                      <Typography variant="h4" component="div">
+                      <Typography variant="h3" component="div" sx={{ fontWeight: 800, mb: 1 }}>
                         ${dashboardMetrics.totalRevenue.toLocaleString()}
                       </Typography>
-                      <Typography variant="body2">
-                        ${dashboardMetrics.thisMonthRevenue.toLocaleString()} this month
-                      </Typography>
+                      <Chip 
+                        label={`$${dashboardMetrics.thisMonthRevenue.toLocaleString()} this month`}
+                        size="small"
+                        sx={{ 
+                          backgroundColor: 'rgba(255,255,255,0.2)', 
+                          color: 'white',
+                          fontWeight: 600,
+                          backdropFilter: 'blur(10px)'
+                        }}
+                      />
+                    </Box>
+                    <Box sx={{
+                      background: 'rgba(255,255,255,0.2)',
+                      borderRadius: 3,
+                      p: 2,
+                      backdropFilter: 'blur(10px)'
+                    }}>
+                      <TrendingUp sx={{ fontSize: 48 }} />
                 </Box>
-                    <TrendingUp fontSize="large" />
                 </Box>
                 </CardContent>
               </Card>
@@ -537,23 +739,46 @@ const DashboardPage: React.FC = () => {
 
             {/* Completion Rate */}
             <Grid item xs={12} sm={6} md={3}>
-              <Card sx={{ backgroundColor: colorPalette.info, color: 'white' }}>
-                <CardContent>
+              <Card sx={{ 
+                background: colorPalette.gradient3,
+                color: 'white',
+                borderRadius: 4,
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  transform: 'translateY(-8px)',
+                  boxShadow: '0 20px 40px rgba(79, 172, 254, 0.4)',
+                }
+              }}>
+                <CardContent sx={{ p: 3 }}>
                   <Box display="flex" alignItems="center" justifyContent="space-between">
                     <Box>
-                      <Typography variant="h6" component="div">
+                      <Typography variant="subtitle2" component="div" sx={{ opacity: 0.9, mb: 1, fontWeight: 600 }}>
                         {t('dashboard.completionRate')}
                 </Typography>
-                      <Typography variant="h4" component="div">
+                      <Typography variant="h3" component="div" sx={{ fontWeight: 800, mb: 1 }}>
                         {dashboardMetrics.totalAppointments > 0 
                           ? Math.round((dashboardMetrics.completedAppointments / dashboardMetrics.totalAppointments) * 100)
                           : 0}%
                       </Typography>
-                      <Typography variant="body2">
-                        {dashboardMetrics.completedAppointments} completed
-                      </Typography>
+                      <Chip 
+                        label={`${dashboardMetrics.completedAppointments} completed`}
+                        size="small"
+                        sx={{ 
+                          backgroundColor: 'rgba(255,255,255,0.2)', 
+                          color: 'white',
+                          fontWeight: 600,
+                          backdropFilter: 'blur(10px)'
+                        }}
+                      />
                     </Box>
-                    <CheckCircle fontSize="large" />
+                    <Box sx={{
+                      background: 'rgba(255,255,255,0.2)',
+                      borderRadius: 3,
+                      p: 2,
+                      backdropFilter: 'blur(10px)'
+                    }}>
+                      <CheckCircle sx={{ fontSize: 48 }} />
+                    </Box>
                 </Box>
                 </CardContent>
               </Card>
@@ -561,25 +786,115 @@ const DashboardPage: React.FC = () => {
           </Grid>
         </FirebaseErrorBoundary>
 
-        {/* Revenue & Profit Trend Widget with Error Boundary */}
+        {/* Analytics Widgets Section with Enhanced Design */}
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="h5" sx={{ 
+            mb: 3, 
+            fontWeight: 700,
+            background: 'linear-gradient(90deg, rgba(9, 9, 121, 1) 0%, rgba(0, 212, 255, 1) 100%)',
+            backgroundClip: 'text',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1
+          }}>
+            <Analytics /> Financial & Patient Analytics
+          </Typography>
+          
+          {/* Budget & Profit Summary Card */}
+          <FirebaseErrorBoundary>
+            <Grid container spacing={3} sx={{ mb: 3 }}>
+              <Grid item xs={12}>
+                <BudgetProfitSummaryCard payments={payments as any || []} />
+              </Grid>
+            </Grid>
+          </FirebaseErrorBoundary>
+          
+          <FirebaseErrorBoundary>
+            <Grid container spacing={3} sx={{ mb: 3 }}>
+              {/* Revenue & Profit Trend Widget */}
+              <Grid item xs={12}>
+                <RevenueProfitTrendWidget 
+                  payments={payments as any || []} 
+                  colorPalette={colorPalette}
+                />
+              </Grid>
+            </Grid>
+          </FirebaseErrorBoundary>
+
+          {/* Patient Confirmation Widget */}
         <FirebaseErrorBoundary>
-          <Grid container spacing={3} sx={{ mb: 4 }}>
+            <Grid container spacing={3}>
             <Grid item xs={12}>
-              <RevenueProfitTrendWidget payments={payments || []} />
+                <PatientConfirmationWidget 
+                  appointments={appointments as any || []}
+                  patients={patients || []}
+                />
             </Grid>
           </Grid>
         </FirebaseErrorBoundary>
+        </Box>
 
-        {/* Real-time Data Tables with Error Boundaries */}
+        {/* Recent Activity Section with Enhanced Design */}
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="h5" sx={{ 
+            mb: 3, 
+            fontWeight: 700,
+            background: 'linear-gradient(90deg, rgba(9, 9, 121, 1) 0%, rgba(0, 212, 255, 1) 100%)',
+            backgroundClip: 'text',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1
+          }}>
+            <Timeline /> Recent Activity
+          </Typography>
+          
         <FirebaseErrorBoundary>
           <Grid container spacing={3}>
             {/* Recent Appointments */}
             <Grid item xs={12} md={6}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>
+                <Card sx={{
+                  borderRadius: 4,
+                  background: 'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(248,250,252,0.98) 100%)',
+                  backdropFilter: 'blur(20px)',
+                  border: '1px solid rgba(9, 9, 121, 0.1)',
+                  boxShadow: '0 8px 32px rgba(9, 9, 121, 0.08)',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    transform: 'translateY(-4px)',
+                    boxShadow: '0 12px 40px rgba(9, 9, 121, 0.12)',
+                  }
+                }}>
+                  <CardContent sx={{ p: 3 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                      <Box sx={{
+                        p: 1.5,
+                        borderRadius: 2,
+                        background: 'linear-gradient(135deg, rgba(240, 98, 146, 0.1) 0%, rgba(245, 87, 108, 0.1) 100%)',
+                        border: '1px solid rgba(245, 87, 108, 0.2)'
+                      }}>
+                        <CalendarToday sx={{ 
+                          fontSize: 24,
+                          background: 'linear-gradient(90deg, rgba(240, 98, 146, 1) 0%, rgba(245, 87, 108, 1) 100%)',
+                          color: 'transparent',
+                          backgroundClip: 'text',
+                          WebkitBackgroundClip: 'text',
+                          WebkitTextFillColor: 'transparent'
+                        }} />
+                      </Box>
+                      <Typography variant="h6" sx={{ 
+                        fontWeight: 700,
+                        background: 'linear-gradient(90deg, rgba(240, 98, 146, 1) 0%, rgba(245, 87, 108, 1) 100%)',
+                        backgroundClip: 'text',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent'
+                      }}>
                     Recent Appointments
                     </Typography>
+                    </Box>
                   <TableContainer>
                     <Table size="small">
                       <TableHead>
@@ -590,9 +905,9 @@ const DashboardPage: React.FC = () => {
                         </TableRow>
                       </TableHead>
                       <TableBody>
-                        {(appointments || []).slice(0, 5).map((appointment) => (
+                        {(appointments || []).slice(0, 5).map((appointment: any) => (
                           <TableRow key={appointment?.id || Math.random()}>
-                            <TableCell>{appointment?.patientName || 'Unknown'}</TableCell>
+                            <TableCell>{appointment?.patientName || appointment?.patient || appointment?.patientId || 'Unknown'}</TableCell>
                             <TableCell>
                               {appointment?.date ? new Date(appointment.date).toLocaleDateString() : 'N/A'}
                             </TableCell>
@@ -600,7 +915,7 @@ const DashboardPage: React.FC = () => {
                               <Chip 
                                 label={appointment?.status || 'unknown'} 
                                 color={
-                                  appointment?.status === 'completed' ? 'success' :
+                                  appointment?.status === 'completed' || appointment?.status === 'confirmed' ? 'success' :
                                   appointment?.status === 'cancelled' ? 'error' : 'default'
                                 }
                                 size="small" 
@@ -626,11 +941,45 @@ const DashboardPage: React.FC = () => {
 
             {/* Recent Payments */}
             <Grid item xs={12} md={6}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>
+                <Card sx={{
+                  borderRadius: 4,
+                  background: 'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(248,250,252,0.98) 100%)',
+                  backdropFilter: 'blur(20px)',
+                  border: '1px solid rgba(9, 9, 121, 0.1)',
+                  boxShadow: '0 8px 32px rgba(9, 9, 121, 0.08)',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    transform: 'translateY(-4px)',
+                    boxShadow: '0 12px 40px rgba(9, 9, 121, 0.12)',
+                  }
+                }}>
+                  <CardContent sx={{ p: 3 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                      <Box sx={{
+                        p: 1.5,
+                        borderRadius: 2,
+                        background: 'linear-gradient(135deg, rgba(67, 233, 123, 0.1) 0%, rgba(56, 249, 215, 0.1) 100%)',
+                        border: '1px solid rgba(67, 233, 123, 0.2)'
+                      }}>
+                        <TrendingUp sx={{ 
+                          fontSize: 24,
+                          background: 'linear-gradient(90deg, rgba(67, 233, 123, 1) 0%, rgba(56, 249, 215, 1) 100%)',
+                          color: 'transparent',
+                          backgroundClip: 'text',
+                          WebkitBackgroundClip: 'text',
+                          WebkitTextFillColor: 'transparent'
+                        }} />
+                      </Box>
+                      <Typography variant="h6" sx={{ 
+                        fontWeight: 700,
+                        background: 'linear-gradient(90deg, rgba(67, 233, 123, 1) 0%, rgba(56, 249, 215, 1) 100%)',
+                        backgroundClip: 'text',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent'
+                      }}>
                     Recent Payments
                               </Typography>
+                    </Box>
                   <TableContainer>
                     <Table size="small">
                       <TableHead>
@@ -641,14 +990,14 @@ const DashboardPage: React.FC = () => {
                         </TableRow>
                       </TableHead>
                       <TableBody>
-                        {(payments || []).slice(0, 5).map((payment) => (
+                        {(payments || []).slice(0, 5).map((payment: any) => (
                           <TableRow key={payment?.id || Math.random()}>
-                            <TableCell>{payment?.patientName || 'Unknown'}</TableCell>
-                            <TableCell>${payment?.amount?.toLocaleString() || '0'}</TableCell>
+                            <TableCell>{payment?.patientName || payment?.patient || payment?.patientId || 'Unknown'}</TableCell>
+                            <TableCell>${((payment?.paidAmount || payment?.amount || 0)).toLocaleString()}</TableCell>
                             <TableCell>
                               <Chip 
                                 label={payment?.status || 'unknown'} 
-                                color={payment?.status === 'completed' ? 'success' : 'warning'}
+                                color={payment?.status === 'paid' ? 'success' : payment?.status === 'overdue' ? 'error' : 'warning'}
                                 size="small"
                               />
                             </TableCell>
@@ -671,6 +1020,7 @@ const DashboardPage: React.FC = () => {
             </Grid>
           </Grid>
         </FirebaseErrorBoundary>
+        </Box>
 
         {/* Enhanced Debug Information (development only) */}
         {process.env.NODE_ENV === 'development' && (
