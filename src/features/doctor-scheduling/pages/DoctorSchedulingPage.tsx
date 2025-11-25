@@ -385,7 +385,7 @@ const DoctorSchedulingPage: React.FC = () => {
   // Check if doctor is working on selected date
   const isDoctorWorking = (doctor: SchedulingDoctor) => {
     const dayOfWeek = getSelectedDayOfWeek();
-    return !doctor.offDays.includes(dayOfWeek);
+    return !doctor.offDays?.includes(dayOfWeek);
   };
 
   // Get working doctors for selected date
@@ -466,7 +466,7 @@ const DoctorSchedulingPage: React.FC = () => {
     // Get custom time slots from appointments (using timeSlot field)
     const customSlots = doctorAppointments
       .map(apt => apt.timeSlot)
-      .filter(timeSlot => !regularSlots.includes(timeSlot));
+      .filter(timeSlot => timeSlot && !regularSlots.includes(timeSlot));
     
     // Combine and sort all slots
     const allSlots = [...regularSlots, ...customSlots].sort();
@@ -895,13 +895,13 @@ const DoctorSchedulingPage: React.FC = () => {
     daysOfWeek.forEach(day => {
       if (!initialWeeklyData[day]) {
         initialWeeklyData[day] = {
-          isWorking: !doctor.offDays.includes(day),
+          isWorking: !doctor.offDays?.includes(day),
           timeSlots: [],
           notes: ''
         };
         
         // Add default time slots since localStorage is disabled
-        if (!doctor.offDays.includes(day)) {
+        if (!doctor.offDays?.includes(day)) {
           const slots = [];
           const startHour = parseInt(doctor.workingHours.start.split(':')[0]);
           const startMinute = parseInt(doctor.workingHours.start.split(':')[1]);
@@ -1220,7 +1220,7 @@ const DoctorSchedulingPage: React.FC = () => {
           const doctor = doctors.find(d => d.name === apt.doctor);
           const aptDate = new Date(apt.date);
           const dayName = daysOfWeek[aptDate.getDay()];
-          if (doctor?.offDays.includes(dayName)) return;
+          if (doctor?.offDays?.includes(dayName)) return;
         }
 
         const futureDate = new Date(apt.date);
@@ -2439,7 +2439,7 @@ const DoctorSchedulingPage: React.FC = () => {
                            </TableCell>
                            {daysOfWeek.map((day) => (
                              <TableCell key={day} sx={{ borderColor: 'rgba(9, 9, 121, 0.1)' }}>
-                               {doctor.offDays.includes(day) ? (
+                               {doctor.offDays?.includes(day) ? (
                                  <Chip 
                                    label={t('off')} 
                                    size="small" 
@@ -2611,7 +2611,7 @@ const DoctorSchedulingPage: React.FC = () => {
                                    borderRadius: 2, 
                                    border: '1px solid rgba(0,0,0,0.1)',
                                    textAlign: 'center',
-                                   backgroundColor: doctor.offDays.includes(day) 
+                                   backgroundColor: doctor.offDays?.includes(day) 
                                      ? 'rgba(244, 67, 54, 0.05)' 
                                      : 'rgba(76, 175, 80, 0.05)'
                                  }}>
@@ -2624,7 +2624,7 @@ const DoctorSchedulingPage: React.FC = () => {
                                    }}>
                                      {t(day).substring(0, 3)}
                                    </Typography>
-                                   {doctor.offDays.includes(day) ? (
+                                   {doctor.offDays?.includes(day) ? (
                                      <Chip 
                                        label={t('off')} 
                                        size="small" 
@@ -3147,17 +3147,17 @@ const DoctorSchedulingPage: React.FC = () => {
                      renderValue={(selected) => selected.map(day => t(day)).join(', ')}
                    >
                      {daysOfWeek.map((day) => (
-                       <MenuItem key={day} value={day}>
-                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                           <Box sx={{ 
-                             width: 8, 
-                             height: 8, 
-                             borderRadius: '50%', 
-                             backgroundColor: doctorFormData.offDays.includes(day) ? '#4caf50' : '#e0e0e0' 
-                           }} />
-                           {t(day)}
-                         </Box>
-                       </MenuItem>
+                      <MenuItem key={day} value={day}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Box sx={{ 
+                            width: 8, 
+                            height: 8, 
+                            borderRadius: '50%', 
+                            backgroundColor: doctorFormData.offDays?.includes(day) ? '#4caf50' : '#e0e0e0' 
+                          }} />
+                          {t(day)}
+                        </Box>
+                      </MenuItem>
                      ))}
                    </Select>
                  </FormControl>
@@ -3391,7 +3391,7 @@ const DoctorSchedulingPage: React.FC = () => {
                              width: 8, 
                              height: 8, 
                              borderRadius: '50%', 
-                             backgroundColor: doctorFormData.offDays.includes(day) ? 'rgba(9, 9, 121, 1)' : '#e0e0e0' 
+                             backgroundColor: doctorFormData.offDays?.includes(day) ? 'rgba(9, 9, 121, 1)' : '#e0e0e0' 
                            }} />
                            {t(day)}
                          </Box>

@@ -108,11 +108,23 @@ export const PERMISSION_LEVEL_DESCRIPTIONS: Record<PermissionLevel, string> = {
 
 // Check if user has permission for a specific action
 export const hasPermission = (
-  userPermissions: UserPermissions, 
+  userPermissions: UserPermissions | null | undefined, 
   feature: PermissionKey, 
   requiredLevel: PermissionLevel = 'read'
 ): boolean => {
+  // Safety check for null/undefined permissions
+  if (!userPermissions) {
+    console.warn(`hasPermission: userPermissions is ${userPermissions}, denying access to ${feature}`);
+    return false;
+  }
+  
   const userLevel = userPermissions[feature];
+  
+  // Safety check for undefined user level
+  if (userLevel === undefined || userLevel === null) {
+    console.warn(`hasPermission: userLevel for ${feature} is ${userLevel}, denying access`);
+    return false;
+  }
   
   if (userLevel === 'none') return false;
   if (requiredLevel === 'none') return true;
@@ -122,16 +134,51 @@ export const hasPermission = (
   const userLevelIndex = levels.indexOf(userLevel);
   const requiredLevelIndex = levels.indexOf(requiredLevel);
   
+  // Additional safety check
+  if (userLevelIndex === -1) {
+    console.warn(`hasPermission: Invalid userLevel "${userLevel}" for ${feature}`);
+    return false;
+  }
+  
   return userLevelIndex >= requiredLevelIndex;
 };
 
 // Get permissions for a user (with role fallback)
 export const getUserPermissions = (user: any): UserPermissions => {
   // If user has custom permissions, use those
-  if (user.permissions) {
-    return user.permissions;
+  if (user?.permissions) {
+    // Ensure all permission keys exist in custom permissions
+    const allKeys: PermissionKey[] = [
+      'dashboard',
+      'patients',
+      'appointments',
+      'payments',
+      'laboratoryRadiology',
+      'reports',
+      'settings',
+      'notifications',
+      'doctor_scheduling',
+      'patient_details',
+      'appointment_calendar',
+      'payment_management',
+      'laboratoryRadiology_management',
+      'user_management',
+      'clinic_settings'
+    ];
+    
+    const normalizedPermissions: UserPermissions = {} as UserPermissions;
+    allKeys.forEach(key => {
+      normalizedPermissions[key] = user.permissions[key] || 'none';
+    });
+    
+    return normalizedPermissions;
   }
   
   // Otherwise, use default permissions for their role
+  if (!user || !user.role) {
+    console.warn('getUserPermissions: User or user.role is undefined, using receptionist defaults');
+    return DEFAULT_PERMISSIONS.receptionist;
+  }
+  
   return DEFAULT_PERMISSIONS[user.role] || DEFAULT_PERMISSIONS.receptionist;
 }; 

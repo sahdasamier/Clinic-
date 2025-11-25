@@ -41,44 +41,94 @@
       </div>
     </div>
     <script>
-      // Guard against duplicate Shadow DOM attachment and duplicate custom element definitions
+      // ✅ IMPROVED: Comprehensive guard against Shadow DOM and Custom Element conflicts
       (function () {
         try {
+          // === Shadow DOM Guard ===
           var proto = window.Element && window.Element.prototype;
-          if (proto && !proto.__attachShadowGuarded) {
+          if (proto && proto.attachShadow && !proto.__attachShadowGuarded) {
             var originalAttachShadow = proto.attachShadow;
-            if (originalAttachShadow) {
-              proto.attachShadow = function (init) {
+            
+            // Store shadow roots to track them
+            var shadowRootMap = new WeakMap();
+            
+            proto.attachShadow = function (init) {
+              // Check if shadow root already exists on this element
+              if (this.shadowRoot) {
+                console.warn('[Shadow DOM Guard] Shadow root already exists, returning existing root');
+                return this.shadowRoot;
+              }
+              
+              // Check our WeakMap tracking
+              if (shadowRootMap.has(this)) {
+                console.warn('[Shadow DOM Guard] Element tracked with shadow root, returning existing root');
+                return shadowRootMap.get(this);
+              }
+              
+              try {
+                var shadowRoot = originalAttachShadow.call(this, init);
+                shadowRootMap.set(this, shadowRoot);
+                return shadowRoot;
+              } catch (e) {
+                // Final safety check - if error but shadow root exists, return it
                 if (this.shadowRoot) {
-                  // Shadow root already exists; return it instead of throwing
+                  console.warn('[Shadow DOM Guard] Error caught but shadow root exists, returning it');
+                  shadowRootMap.set(this, this.shadowRoot);
                   return this.shadowRoot;
                 }
-                try {
-                  return originalAttachShadow.call(this, init);
-                } catch (e) {
-                  // If something else attached a shadow root concurrently, return existing root
-                  if (this.shadowRoot) return this.shadowRoot;
-                  throw e;
-                }
-              };
-              Object.defineProperty(proto, '__attachShadowGuarded', { value: true });
-            }
+                // If truly a new error, log and rethrow
+                console.error('[Shadow DOM Guard] Failed to attach shadow root:', e);
+                throw e;
+              }
+            };
+            
+            // Mark as guarded
+            Object.defineProperty(proto, '__attachShadowGuarded', { 
+              value: true,
+              writable: false,
+              configurable: false
+            });
+            
+            console.log('✅ Shadow DOM guard installed');
           }
 
+          // === Custom Elements Guard ===
           if (window.customElements && !window.customElements.__defineGuarded) {
             var originalDefine = window.customElements.define.bind(window.customElements);
+            var definedElements = new Set();
+            
             window.customElements.define = function (name, constructor, options) {
+              // Check if already registered
               if (window.customElements.get(name)) {
-                // Skip duplicate definition to avoid re-instantiation issues
+                console.warn('[Custom Elements Guard] Element already defined:', name);
                 return;
               }
-              return originalDefine(name, constructor, options);
+              
+              // Check our tracking
+              if (definedElements.has(name)) {
+                console.warn('[Custom Elements Guard] Element in tracking:', name);
+                return;
+              }
+              
+              try {
+                definedElements.add(name);
+                return originalDefine(name, constructor, options);
+              } catch (e) {
+                console.error('[Custom Elements Guard] Failed to define element:', name, e);
+                // Don't rethrow - failing to define a custom element shouldn't break the app
+              }
             };
-            Object.defineProperty(window.customElements, '__defineGuarded', { value: true });
+            
+            Object.defineProperty(window.customElements, '__defineGuarded', { 
+              value: true,
+              writable: false,
+              configurable: false
+            });
+            
+            console.log('✅ Custom Elements guard installed');
           }
         } catch (e) {
-          // No-op: guards are best-effort
-          console.warn('Shadow DOM/customElements guards setup warning:', e);
+          console.error('❌ Failed to install DOM guards:', e);
         }
       })();
     </script>

@@ -308,11 +308,19 @@ const Sidebar: React.FC = () => {
     if (isAdmin) return '#10b981'; // Green for admin
     if (!userPermissions) return '#6b7280'; // Gray for loading
     
-    const userLevel = userPermissions[link.permission];
+    const userLevel = userPermissions?.[link.permission];
+    
+    // Safety check for undefined
+    if (!userLevel || userLevel === undefined) {
+      console.warn(`getPermissionLevelColor: undefined permission level for ${link.permission}`);
+      return '#6b7280'; // Gray
+    }
+    
     switch (userLevel) {
       case 'full': return '#10b981'; // Green
       case 'write': return '#f59e0b'; // Orange
       case 'read': return '#3b82f6'; // Blue
+      case 'none': return '#6b7280'; // Gray
       default: return '#6b7280'; // Gray
     }
   };

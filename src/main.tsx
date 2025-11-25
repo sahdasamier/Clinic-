@@ -16,19 +16,7 @@ const initializeServices = async () => {
   try {
     console.log('🚀 Starting service initialization...');
     
-    // Guard against Shadow DOM polyfill conflicts
-    if (typeof window !== 'undefined' && window.Element && !(window.Element.prototype.attachShadow as any)._guarded) {
-      const originalAttachShadow = window.Element.prototype.attachShadow;
-      window.Element.prototype.attachShadow = function(options) {
-        if (this.shadowRoot) {
-          console.warn('Shadow root already exists on element, skipping...');
-          return this.shadowRoot;
-        }
-        return originalAttachShadow.call(this, options);
-      };
-      (window.Element.prototype.attachShadow as any)._guarded = true;
-    }
-    
+    // Shadow DOM guard is already in index.html, no need for duplicate here
 
     // ✅ CRITICAL: Initialize modern Firebase services FIRST
     try {
@@ -87,13 +75,38 @@ const initializeServices = async () => {
   }
 };
 
-// ✅ IMPROVED: Better app startup with loading states and error recovery
-const startApp = async () => {
-  const root = ReactDOM.createRoot(document.getElementById('root')!);
-  
-  try {
-    // Show a loading screen first
-    root.render(
+// ✅ IMPROVED: AppInitializer component to manage loading states within React
+const AppInitializer: React.FC = () => {
+  const [initState, setInitState] = React.useState<{
+    status: 'loading' | 'error' | 'warning' | 'ready';
+    error?: Error;
+  }>({ status: 'loading' });
+
+  React.useEffect(() => {
+    const initialize = async () => {
+      try {
+        console.log('🚀 Starting application initialization...');
+        const initError = await initializeServices();
+        
+        if (initError) {
+          console.warn('⚠️ App starting with limited functionality due to initialization errors');
+          setInitState({ status: 'warning', error: initError instanceof Error ? initError : new Error('Unknown initialization error') });
+        } else {
+          console.log('✅ All services initialized successfully');
+          console.log('🎨 Rendering React application...');
+          setInitState({ status: 'ready' });
+        }
+      } catch (error) {
+        console.error('❌ CRITICAL: Failed to start application:', error);
+        setInitState({ status: 'error', error: error instanceof Error ? error : new Error('Unknown error') });
+      }
+    };
+
+    initialize();
+  }, []);
+
+  if (initState.status === 'loading') {
+    return (
       <div style={{
         display: 'flex',
         flexDirection: 'column',
@@ -122,91 +135,10 @@ const startApp = async () => {
         `}</style>
       </div>
     );
-    
-    // Initialize services
-    console.log('🚀 Starting application initialization...');
-    const initError = await initializeServices();
-    
-    if (initError) {
-      console.warn('⚠️ App starting with limited functionality due to initialization errors');
-      
-      // Show warning but continue
-      root.render(
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center',
-          height: '100vh',
-          backgroundColor: '#fff3e0',
-          fontFamily: 'Arial, sans-serif',
-          padding: '20px',
-          textAlign: 'center'
-        }}>
-          <h2 style={{ color: '#f57c00', marginBottom: '20px' }}>⚠️ Limited Functionality Mode</h2>
-          <p style={{ color: '#666', marginBottom: '20px', maxWidth: '600px' }}>
-            Some services failed to initialize properly. The app will start with limited functionality.
-            You can still use basic features, but some advanced features may not work.
-          </p>
-          <p style={{ color: '#999', fontSize: '0.9em', marginBottom: '20px' }}>
-            Error: {initError instanceof Error ? initError.message : 'Unknown error'}
-          </p>
-          <button 
-            onClick={() => window.location.reload()} 
-            style={{
-              padding: '10px 20px',
-              backgroundColor: '#f57c00',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '16px',
-              marginRight: '10px'
-            }}
-          >
-            Retry
-          </button>
-          <button 
-            onClick={() => {
-              // Continue with limited functionality
-              root.render(
-                <FirebaseServiceInitializer>
-                  <App />
-                </FirebaseServiceInitializer>
-              );
-            }}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: '#1976d2',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '16px'
-            }}
-          >
-            Continue Anyway
-          </button>
-        </div>
-      );
-      return;
-    }
-    
-    console.log('✅ All services initialized successfully');
-    
-    // Render the actual app
-    console.log('🎨 Rendering React application...');
-    root.render(
-      <FirebaseServiceInitializer>
-        <App />
-      </FirebaseServiceInitializer>
-    );
-    
-  } catch (error) {
-    console.error('❌ CRITICAL: Failed to start application:', error);
-    
-    // Render error screen
-    root.render(
+  }
+
+  if (initState.status === 'error') {
+    return (
       <div style={{
         display: 'flex',
         flexDirection: 'column',
@@ -223,7 +155,7 @@ const startApp = async () => {
           The application failed to initialize properly. Please check your internet connection and reload the page.
         </p>
         <p style={{ color: '#999', fontSize: '0.9em', marginBottom: '20px' }}>
-          Error: {error instanceof Error ? error.message : 'Unknown error'}
+          Error: {initState.error?.message || 'Unknown error'}
         </p>
         <button 
           onClick={() => window.location.reload()} 
@@ -242,7 +174,100 @@ const startApp = async () => {
       </div>
     );
   }
+
+  if (initState.status === 'warning') {
+    return (
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '100vh',
+          backgroundColor: '#fff3e0',
+          fontFamily: 'Arial, sans-serif',
+          padding: '20px',
+          textAlign: 'center'
+        }}>
+          <h2 style={{ color: '#f57c00', marginBottom: '20px' }}>⚠️ Limited Functionality Mode</h2>
+          <p style={{ color: '#666', marginBottom: '20px', maxWidth: '600px' }}>
+            Some services failed to initialize properly. The app will start with limited functionality.
+            You can still use basic features, but some advanced features may not work.
+          </p>
+          <p style={{ color: '#999', fontSize: '0.9em', marginBottom: '20px' }}>
+          Error: {initState.error?.message || 'Unknown error'}
+          </p>
+          <button 
+            onClick={() => window.location.reload()} 
+            style={{
+              padding: '10px 20px',
+              backgroundColor: '#f57c00',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '16px',
+              marginRight: '10px'
+            }}
+          >
+            Retry
+          </button>
+          <button 
+          onClick={() => setInitState({ status: 'ready' })}
+            style={{
+              padding: '10px 20px',
+              backgroundColor: '#1976d2',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '16px'
+            }}
+          >
+            Continue Anyway
+          </button>
+        </div>
+      );
+  }
+
+  // Ready state - render the actual app
+  return (
+      <FirebaseServiceInitializer>
+        <App />
+      </FirebaseServiceInitializer>
+    );
+};
+
+// ✅ CRITICAL: Ensure single React root creation (prevents HMR issues)
+let root: ReturnType<typeof ReactDOM.createRoot>;
+
+const startApp = () => {
+  const rootElement = document.getElementById('root');
+  
+  if (!rootElement) {
+    console.error('❌ Root element not found!');
+    return;
+  }
+
+  // Check if root was already created (HMR might trigger this multiple times)
+  if (!root) {
+    console.log('🎨 Creating React root...');
+    root = ReactDOM.createRoot(rootElement);
+  } else {
+    console.log('🔄 Reusing existing React root (HMR)...');
+  }
+
+  // Render the app
+  root.render(<AppInitializer />);
+  console.log('✅ App rendered successfully');
 };
 
 // Start the application
 startApp();
+
+// HMR support - ensure clean updates during development
+if (import.meta.hot) {
+  import.meta.hot.accept(() => {
+    console.log('🔥 HMR update detected, re-rendering...');
+    startApp();
+  });
+}

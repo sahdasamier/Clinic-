@@ -33,7 +33,7 @@
         z-index: 9999;
       }
     </style>
-    <script type="module" crossorigin src="/assets/index-BPplisjF.js"></script>
+    <script type="module" crossorigin src="/assets/index-KB5giT4L.js"></script>
     <link rel="modulepreload" crossorigin href="/assets/vendor-react-DT9JNvY8.js">
     <link rel="modulepreload" crossorigin href="/assets/vendor-mui-3VYSSPoU.js">
     <link rel="modulepreload" crossorigin href="/assets/vendor-i18n-BjntHquI.js">
@@ -47,6 +47,98 @@
         <div style="width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #1D3557; border-radius: 50%; animation: spin 1s linear infinite;"></div>
       </div>
     </div>
+    <script>
+      // ✅ IMPROVED: Comprehensive guard against Shadow DOM and Custom Element conflicts
+      (function () {
+        try {
+          // === Shadow DOM Guard ===
+          var proto = window.Element && window.Element.prototype;
+          if (proto && proto.attachShadow && !proto.__attachShadowGuarded) {
+            var originalAttachShadow = proto.attachShadow;
+            
+            // Store shadow roots to track them
+            var shadowRootMap = new WeakMap();
+            
+            proto.attachShadow = function (init) {
+              // Check if shadow root already exists on this element
+              if (this.shadowRoot) {
+                console.warn('[Shadow DOM Guard] Shadow root already exists, returning existing root');
+                return this.shadowRoot;
+              }
+              
+              // Check our WeakMap tracking
+              if (shadowRootMap.has(this)) {
+                console.warn('[Shadow DOM Guard] Element tracked with shadow root, returning existing root');
+                return shadowRootMap.get(this);
+              }
+              
+              try {
+                var shadowRoot = originalAttachShadow.call(this, init);
+                shadowRootMap.set(this, shadowRoot);
+                return shadowRoot;
+              } catch (e) {
+                // Final safety check - if error but shadow root exists, return it
+                if (this.shadowRoot) {
+                  console.warn('[Shadow DOM Guard] Error caught but shadow root exists, returning it');
+                  shadowRootMap.set(this, this.shadowRoot);
+                  return this.shadowRoot;
+                }
+                // If truly a new error, log and rethrow
+                console.error('[Shadow DOM Guard] Failed to attach shadow root:', e);
+                throw e;
+              }
+            };
+            
+            // Mark as guarded
+            Object.defineProperty(proto, '__attachShadowGuarded', { 
+              value: true,
+              writable: false,
+              configurable: false
+            });
+            
+            console.log('✅ Shadow DOM guard installed');
+          }
+
+          // === Custom Elements Guard ===
+          if (window.customElements && !window.customElements.__defineGuarded) {
+            var originalDefine = window.customElements.define.bind(window.customElements);
+            var definedElements = new Set();
+            
+            window.customElements.define = function (name, constructor, options) {
+              // Check if already registered
+              if (window.customElements.get(name)) {
+                console.warn('[Custom Elements Guard] Element already defined:', name);
+                return;
+              }
+              
+              // Check our tracking
+              if (definedElements.has(name)) {
+                console.warn('[Custom Elements Guard] Element in tracking:', name);
+                return;
+              }
+              
+              try {
+                definedElements.add(name);
+                return originalDefine(name, constructor, options);
+              } catch (e) {
+                console.error('[Custom Elements Guard] Failed to define element:', name, e);
+                // Don't rethrow - failing to define a custom element shouldn't break the app
+              }
+            };
+            
+            Object.defineProperty(window.customElements, '__defineGuarded', { 
+              value: true,
+              writable: false,
+              configurable: false
+            });
+            
+            console.log('✅ Custom Elements guard installed');
+          }
+        } catch (e) {
+          console.error('❌ Failed to install DOM guards:', e);
+        }
+      })();
+    </script>
     <script>
       // Remove loading indicator and show content when loaded
       document.addEventListener('DOMContentLoaded', function() {
