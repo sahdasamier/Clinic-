@@ -72,7 +72,7 @@ import {
   useRealtimeUpdates 
 } from '@hooks/useGlobalData';
 
-// Enhanced Professional Color Palette with Gradients
+// Enhanced Professional Color Palette with Modern Gradients
 const colorPalette = {
   primary: '#1976d2',
   secondary: '#9c27b0',
@@ -81,13 +81,18 @@ const colorPalette = {
   warning: '#ed6c02',
   info: '#0288d1',
   background: '#f5f5f5',
-  // New gradient colors
-  gradient1: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-  gradient2: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-  gradient3: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-  gradient4: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
-  gradient5: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
-  gradient6: 'linear-gradient(135deg, #30cfd0 0%, #330867 100%)',
+  // Enhanced vibrant gradient colors
+  gradient1: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #667eea 100%)',
+  gradient2: 'linear-gradient(135deg, #f093fb 0%, #f5576c 50%, #f093fb 100%)',
+  gradient3: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 50%, #4facfe 100%)',
+  gradient4: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 50%, #43e97b 100%)',
+  gradient5: 'linear-gradient(135deg, #fa709a 0%, #fee140 50%, #fa709a 100%)',
+  gradient6: 'linear-gradient(135deg, #30cfd0 0%, #330867 50%, #30cfd0 100%)',
+  // New premium gradients
+  premiumBlue: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+  premiumPink: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+  premiumCyan: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+  premiumGreen: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
 };
 
 // Error boundary component for Firebase errors
@@ -429,9 +434,26 @@ const DashboardPage: React.FC = () => {
       <Container maxWidth="xl" sx={{ 
         mt: 4, 
         mb: 4,
-        background: 'linear-gradient(135deg, rgba(248,250,252,0.4) 0%, rgba(255,255,255,0.2) 100%)',
+        background: 'linear-gradient(135deg, rgba(248,250,252,0.6) 0%, rgba(255,255,255,0.4) 50%, rgba(240,247,255,0.6) 100%)',
         borderRadius: 4,
         p: 3,
+        position: 'relative',
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'radial-gradient(circle at 20% 50%, rgba(102, 126, 234, 0.05) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(0, 212, 255, 0.05) 0%, transparent 50%)',
+          borderRadius: 4,
+          pointerEvents: 'none',
+          zIndex: 0,
+        },
+        '& > *': {
+          position: 'relative',
+          zIndex: 1,
+        }
       }}>
         {/* Enhanced Header matching Patient Page styling exactly */}
         <Box sx={{ 
@@ -608,39 +630,65 @@ const DashboardPage: React.FC = () => {
                 background: colorPalette.gradient1,
                 color: 'white',
                 borderRadius: 4,
-                transition: 'all 0.3s ease',
+                border: '1px solid rgba(255,255,255,0.1)',
+                transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                position: 'relative',
+                overflow: 'hidden',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: '-50%',
+                  right: '-50%',
+                  width: '200%',
+                  height: '200%',
+                  background: 'radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%)',
+                  opacity: 0,
+                  transition: 'opacity 0.4s ease',
+                },
                 '&:hover': {
-                  transform: 'translateY(-8px)',
-                  boxShadow: '0 20px 40px rgba(102, 126, 234, 0.4)',
+                  transform: 'translateY(-12px) scale(1.02)',
+                  boxShadow: '0 24px 48px rgba(102, 126, 234, 0.5), 0 0 0 1px rgba(255,255,255,0.2)',
+                  '&::before': {
+                    opacity: 1,
+                  }
                 }
               }}>
-                <CardContent sx={{ p: 3 }}>
+                <CardContent sx={{ p: 3, position: 'relative', zIndex: 1 }}>
                   <Box display="flex" alignItems="center" justifyContent="space-between">
                     <Box>
-                      <Typography variant="subtitle2" component="div" sx={{ opacity: 0.9, mb: 1, fontWeight: 600 }}>
+                      <Typography variant="subtitle2" component="div" sx={{ opacity: 0.95, mb: 1, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', fontSize: '0.75rem' }}>
                         {t('dashboard.totalPatients')}
                       </Typography>
-                      <Typography variant="h3" component="div" sx={{ fontWeight: 800, mb: 1 }}>
+                      <Typography variant="h3" component="div" sx={{ fontWeight: 900, mb: 1.5, textShadow: '0 2px 8px rgba(0,0,0,0.2)' }}>
                         {dashboardMetrics.totalPatients}
                       </Typography>
                       <Chip 
                         label={`+${dashboardMetrics.newPatientsThisMonth} this month`}
                         size="small"
                         sx={{ 
-                          backgroundColor: 'rgba(255,255,255,0.2)', 
+                          backgroundColor: 'rgba(255,255,255,0.25)', 
                           color: 'white',
-                          fontWeight: 600,
-                          backdropFilter: 'blur(10px)'
+                          fontWeight: 700,
+                          backdropFilter: 'blur(10px)',
+                          border: '1px solid rgba(255,255,255,0.3)',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
                         }}
                       />
                     </Box>
                     <Box sx={{
-                      background: 'rgba(255,255,255,0.2)',
+                      background: 'rgba(255,255,255,0.25)',
                       borderRadius: 3,
-                      p: 2,
-                      backdropFilter: 'blur(10px)'
+                      p: 2.5,
+                      backdropFilter: 'blur(10px)',
+                      border: '1px solid rgba(255,255,255,0.3)',
+                      boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+                      transition: 'all 0.3s ease',
+                      '&:hover': {
+                        transform: 'scale(1.1) rotate(5deg)',
+                        background: 'rgba(255,255,255,0.35)',
+                      }
                     }}>
-                      <People sx={{ fontSize: 48 }} />
+                      <People sx={{ fontSize: 52, filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))' }} />
                     </Box>
                     </Box>
                 </CardContent>
@@ -653,40 +701,66 @@ const DashboardPage: React.FC = () => {
                 background: colorPalette.gradient2,
                 color: 'white',
                 borderRadius: 4,
-                transition: 'all 0.3s ease',
+                border: '1px solid rgba(255,255,255,0.1)',
+                transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                position: 'relative',
+                overflow: 'hidden',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: '-50%',
+                  right: '-50%',
+                  width: '200%',
+                  height: '200%',
+                  background: 'radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%)',
+                  opacity: 0,
+                  transition: 'opacity 0.4s ease',
+                },
                 '&:hover': {
-                  transform: 'translateY(-8px)',
-                  boxShadow: '0 20px 40px rgba(245, 87, 108, 0.4)',
+                  transform: 'translateY(-12px) scale(1.02)',
+                  boxShadow: '0 24px 48px rgba(245, 87, 108, 0.5), 0 0 0 1px rgba(255,255,255,0.2)',
+                  '&::before': {
+                    opacity: 1,
+                  }
                 }
               }}>
-                <CardContent sx={{ p: 3 }}>
+                <CardContent sx={{ p: 3, position: 'relative', zIndex: 1 }}>
                   <Box display="flex" alignItems="center" justifyContent="space-between">
                     <Box>
-                      <Typography variant="subtitle2" component="div" sx={{ opacity: 0.9, mb: 1, fontWeight: 600 }}>
+                      <Typography variant="subtitle2" component="div" sx={{ opacity: 0.95, mb: 1, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', fontSize: '0.75rem' }}>
                         {t('dashboard.todayAppointments')}
-                          </Typography>
-                      <Typography variant="h3" component="div" sx={{ fontWeight: 800, mb: 1 }}>
+                      </Typography>
+                      <Typography variant="h3" component="div" sx={{ fontWeight: 900, mb: 1.5, textShadow: '0 2px 8px rgba(0,0,0,0.2)' }}>
                         {dashboardMetrics.todayAppointments}
-                          </Typography>
+                      </Typography>
                       <Chip 
                         label={`${dashboardMetrics.totalAppointments} total`}
                         size="small"
                         sx={{ 
-                          backgroundColor: 'rgba(255,255,255,0.2)', 
+                          backgroundColor: 'rgba(255,255,255,0.25)', 
                           color: 'white',
-                          fontWeight: 600,
-                          backdropFilter: 'blur(10px)'
+                          fontWeight: 700,
+                          backdropFilter: 'blur(10px)',
+                          border: '1px solid rgba(255,255,255,0.3)',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
                         }}
                       />
                     </Box>
                     <Box sx={{
-                      background: 'rgba(255,255,255,0.2)',
+                      background: 'rgba(255,255,255,0.25)',
                       borderRadius: 3,
-                      p: 2,
-                      backdropFilter: 'blur(10px)'
+                      p: 2.5,
+                      backdropFilter: 'blur(10px)',
+                      border: '1px solid rgba(255,255,255,0.3)',
+                      boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+                      transition: 'all 0.3s ease',
+                      '&:hover': {
+                        transform: 'scale(1.1) rotate(-5deg)',
+                        background: 'rgba(255,255,255,0.35)',
+                      }
                     }}>
-                      <CalendarToday sx={{ fontSize: 48 }} />
-                        </Box>
+                      <CalendarToday sx={{ fontSize: 52, filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))' }} />
+                    </Box>
                 </Box>
                 </CardContent>
               </Card>
@@ -698,40 +772,66 @@ const DashboardPage: React.FC = () => {
                 background: colorPalette.gradient4,
                 color: 'white',
                 borderRadius: 4,
-                transition: 'all 0.3s ease',
+                border: '1px solid rgba(255,255,255,0.1)',
+                transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                position: 'relative',
+                overflow: 'hidden',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: '-50%',
+                  right: '-50%',
+                  width: '200%',
+                  height: '200%',
+                  background: 'radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%)',
+                  opacity: 0,
+                  transition: 'opacity 0.4s ease',
+                },
                 '&:hover': {
-                  transform: 'translateY(-8px)',
-                  boxShadow: '0 20px 40px rgba(67, 233, 123, 0.4)',
+                  transform: 'translateY(-12px) scale(1.02)',
+                  boxShadow: '0 24px 48px rgba(67, 233, 123, 0.5), 0 0 0 1px rgba(255,255,255,0.2)',
+                  '&::before': {
+                    opacity: 1,
+                  }
                 }
               }}>
-                <CardContent sx={{ p: 3 }}>
+                <CardContent sx={{ p: 3, position: 'relative', zIndex: 1 }}>
                   <Box display="flex" alignItems="center" justifyContent="space-between">
                     <Box>
-                      <Typography variant="subtitle2" component="div" sx={{ opacity: 0.9, mb: 1, fontWeight: 600 }}>
+                      <Typography variant="subtitle2" component="div" sx={{ opacity: 0.95, mb: 1, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', fontSize: '0.75rem' }}>
                         {t('dashboard.totalRevenue')}
-                  </Typography>
-                      <Typography variant="h3" component="div" sx={{ fontWeight: 800, mb: 1 }}>
+                      </Typography>
+                      <Typography variant="h3" component="div" sx={{ fontWeight: 900, mb: 1.5, textShadow: '0 2px 8px rgba(0,0,0,0.2)' }}>
                         ${dashboardMetrics.totalRevenue.toLocaleString()}
                       </Typography>
                       <Chip 
                         label={`$${dashboardMetrics.thisMonthRevenue.toLocaleString()} this month`}
                         size="small"
                         sx={{ 
-                          backgroundColor: 'rgba(255,255,255,0.2)', 
+                          backgroundColor: 'rgba(255,255,255,0.25)', 
                           color: 'white',
-                          fontWeight: 600,
-                          backdropFilter: 'blur(10px)'
+                          fontWeight: 700,
+                          backdropFilter: 'blur(10px)',
+                          border: '1px solid rgba(255,255,255,0.3)',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
                         }}
                       />
                     </Box>
                     <Box sx={{
-                      background: 'rgba(255,255,255,0.2)',
+                      background: 'rgba(255,255,255,0.25)',
                       borderRadius: 3,
-                      p: 2,
-                      backdropFilter: 'blur(10px)'
+                      p: 2.5,
+                      backdropFilter: 'blur(10px)',
+                      border: '1px solid rgba(255,255,255,0.3)',
+                      boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+                      transition: 'all 0.3s ease',
+                      '&:hover': {
+                        transform: 'scale(1.1) rotate(5deg)',
+                        background: 'rgba(255,255,255,0.35)',
+                      }
                     }}>
-                      <TrendingUp sx={{ fontSize: 48 }} />
-                </Box>
+                      <TrendingUp sx={{ fontSize: 52, filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))' }} />
+                    </Box>
                 </Box>
                 </CardContent>
               </Card>
@@ -743,19 +843,36 @@ const DashboardPage: React.FC = () => {
                 background: colorPalette.gradient3,
                 color: 'white',
                 borderRadius: 4,
-                transition: 'all 0.3s ease',
+                border: '1px solid rgba(255,255,255,0.1)',
+                transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                position: 'relative',
+                overflow: 'hidden',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: '-50%',
+                  right: '-50%',
+                  width: '200%',
+                  height: '200%',
+                  background: 'radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%)',
+                  opacity: 0,
+                  transition: 'opacity 0.4s ease',
+                },
                 '&:hover': {
-                  transform: 'translateY(-8px)',
-                  boxShadow: '0 20px 40px rgba(79, 172, 254, 0.4)',
+                  transform: 'translateY(-12px) scale(1.02)',
+                  boxShadow: '0 24px 48px rgba(79, 172, 254, 0.5), 0 0 0 1px rgba(255,255,255,0.2)',
+                  '&::before': {
+                    opacity: 1,
+                  }
                 }
               }}>
-                <CardContent sx={{ p: 3 }}>
+                <CardContent sx={{ p: 3, position: 'relative', zIndex: 1 }}>
                   <Box display="flex" alignItems="center" justifyContent="space-between">
                     <Box>
-                      <Typography variant="subtitle2" component="div" sx={{ opacity: 0.9, mb: 1, fontWeight: 600 }}>
+                      <Typography variant="subtitle2" component="div" sx={{ opacity: 0.95, mb: 1, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', fontSize: '0.75rem' }}>
                         {t('dashboard.completionRate')}
-                </Typography>
-                      <Typography variant="h3" component="div" sx={{ fontWeight: 800, mb: 1 }}>
+                      </Typography>
+                      <Typography variant="h3" component="div" sx={{ fontWeight: 900, mb: 1.5, textShadow: '0 2px 8px rgba(0,0,0,0.2)' }}>
                         {dashboardMetrics.totalAppointments > 0 
                           ? Math.round((dashboardMetrics.completedAppointments / dashboardMetrics.totalAppointments) * 100)
                           : 0}%
@@ -764,20 +881,29 @@ const DashboardPage: React.FC = () => {
                         label={`${dashboardMetrics.completedAppointments} completed`}
                         size="small"
                         sx={{ 
-                          backgroundColor: 'rgba(255,255,255,0.2)', 
+                          backgroundColor: 'rgba(255,255,255,0.25)', 
                           color: 'white',
-                          fontWeight: 600,
-                          backdropFilter: 'blur(10px)'
+                          fontWeight: 700,
+                          backdropFilter: 'blur(10px)',
+                          border: '1px solid rgba(255,255,255,0.3)',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
                         }}
                       />
                     </Box>
                     <Box sx={{
-                      background: 'rgba(255,255,255,0.2)',
+                      background: 'rgba(255,255,255,0.25)',
                       borderRadius: 3,
-                      p: 2,
-                      backdropFilter: 'blur(10px)'
+                      p: 2.5,
+                      backdropFilter: 'blur(10px)',
+                      border: '1px solid rgba(255,255,255,0.3)',
+                      boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+                      transition: 'all 0.3s ease',
+                      '&:hover': {
+                        transform: 'scale(1.1) rotate(-5deg)',
+                        background: 'rgba(255,255,255,0.35)',
+                      }
                     }}>
-                      <CheckCircle sx={{ fontSize: 48 }} />
+                      <CheckCircle sx={{ fontSize: 52, filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))' }} />
                     </Box>
                 </Box>
                 </CardContent>
@@ -788,19 +914,36 @@ const DashboardPage: React.FC = () => {
 
         {/* Analytics Widgets Section with Enhanced Design */}
         <Box sx={{ mb: 4 }}>
-          <Typography variant="h5" sx={{ 
-            mb: 3, 
-            fontWeight: 700,
-            background: 'linear-gradient(90deg, rgba(9, 9, 121, 1) 0%, rgba(0, 212, 255, 1) 100%)',
-            backgroundClip: 'text',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1
+          <Box sx={{ 
+            mb: 3,
+            p: 2,
+            borderRadius: 3,
+            background: 'linear-gradient(135deg, rgba(9, 9, 121, 0.05) 0%, rgba(0, 212, 255, 0.05) 100%)',
+            border: '1px solid rgba(9, 9, 121, 0.1)',
+            backdropFilter: 'blur(10px)',
           }}>
-            <Analytics /> Financial & Patient Analytics
-          </Typography>
+            <Typography variant="h5" sx={{ 
+              fontWeight: 800,
+              background: 'linear-gradient(90deg, rgba(9, 9, 121, 1) 0%, rgba(0, 212, 255, 1) 100%)',
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1.5,
+              fontSize: { xs: '1.25rem', md: '1.5rem' }
+            }}>
+              <Box sx={{
+                p: 1,
+                borderRadius: 2,
+                background: 'linear-gradient(135deg, rgba(9, 9, 121, 0.1) 0%, rgba(0, 212, 255, 0.1) 100%)',
+                border: '1px solid rgba(9, 9, 121, 0.2)'
+              }}>
+                <Analytics sx={{ fontSize: 28, background: 'linear-gradient(90deg, rgba(9, 9, 121, 1) 0%, rgba(0, 212, 255, 1) 100%)', backgroundClip: 'text', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }} />
+              </Box>
+              Financial & Patient Analytics
+            </Typography>
+          </Box>
           
           {/* Budget & Profit Summary Card */}
           <FirebaseErrorBoundary>
@@ -838,19 +981,36 @@ const DashboardPage: React.FC = () => {
 
         {/* Recent Activity Section with Enhanced Design */}
         <Box sx={{ mb: 4 }}>
-          <Typography variant="h5" sx={{ 
-            mb: 3, 
-            fontWeight: 700,
-            background: 'linear-gradient(90deg, rgba(9, 9, 121, 1) 0%, rgba(0, 212, 255, 1) 100%)',
-            backgroundClip: 'text',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1
+          <Box sx={{ 
+            mb: 3,
+            p: 2,
+            borderRadius: 3,
+            background: 'linear-gradient(135deg, rgba(9, 9, 121, 0.05) 0%, rgba(0, 212, 255, 0.05) 100%)',
+            border: '1px solid rgba(9, 9, 121, 0.1)',
+            backdropFilter: 'blur(10px)',
           }}>
-            <Timeline /> Recent Activity
-          </Typography>
+            <Typography variant="h5" sx={{ 
+              fontWeight: 800,
+              background: 'linear-gradient(90deg, rgba(9, 9, 121, 1) 0%, rgba(0, 212, 255, 1) 100%)',
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1.5,
+              fontSize: { xs: '1.25rem', md: '1.5rem' }
+            }}>
+              <Box sx={{
+                p: 1,
+                borderRadius: 2,
+                background: 'linear-gradient(135deg, rgba(9, 9, 121, 0.1) 0%, rgba(0, 212, 255, 0.1) 100%)',
+                border: '1px solid rgba(9, 9, 121, 0.2)'
+              }}>
+                <Timeline sx={{ fontSize: 28, background: 'linear-gradient(90deg, rgba(9, 9, 121, 1) 0%, rgba(0, 212, 255, 1) 100%)', backgroundClip: 'text', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }} />
+              </Box>
+              Recent Activity
+            </Typography>
+          </Box>
           
         <FirebaseErrorBoundary>
           <Grid container spacing={3}>
@@ -858,14 +1018,27 @@ const DashboardPage: React.FC = () => {
             <Grid item xs={12} md={6}>
                 <Card sx={{
                   borderRadius: 4,
-                  background: 'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(248,250,252,0.98) 100%)',
+                  background: 'linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.95) 100%)',
                   backdropFilter: 'blur(20px)',
-                  border: '1px solid rgba(9, 9, 121, 0.1)',
-                  boxShadow: '0 8px 32px rgba(9, 9, 121, 0.08)',
-                  transition: 'all 0.3s ease',
+                  border: '1px solid rgba(9, 9, 121, 0.15)',
+                  boxShadow: '0 8px 32px rgba(9, 9, 121, 0.12), 0 0 0 1px rgba(255,255,255,0.5) inset',
+                  transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: '4px',
+                    background: 'linear-gradient(90deg, rgba(240, 98, 146, 1) 0%, rgba(245, 87, 108, 1) 100%)',
+                    opacity: 0.8,
+                  },
                   '&:hover': {
-                    transform: 'translateY(-4px)',
-                    boxShadow: '0 12px 40px rgba(9, 9, 121, 0.12)',
+                    transform: 'translateY(-6px)',
+                    boxShadow: '0 16px 48px rgba(240, 98, 146, 0.2), 0 0 0 1px rgba(255,255,255,0.6) inset',
+                    border: '1px solid rgba(240, 98, 146, 0.3)',
                   }
                 }}>
                   <CardContent sx={{ p: 3 }}>
@@ -873,8 +1046,9 @@ const DashboardPage: React.FC = () => {
                       <Box sx={{
                         p: 1.5,
                         borderRadius: 2,
-                        background: 'linear-gradient(135deg, rgba(240, 98, 146, 0.1) 0%, rgba(245, 87, 108, 0.1) 100%)',
-                        border: '1px solid rgba(245, 87, 108, 0.2)'
+                        background: 'linear-gradient(135deg, rgba(240, 98, 146, 0.15) 0%, rgba(245, 87, 108, 0.15) 100%)',
+                        border: '1px solid rgba(245, 87, 108, 0.25)',
+                        boxShadow: '0 2px 8px rgba(240, 98, 146, 0.1)'
                       }}>
                         <CalendarToday sx={{ 
                           fontSize: 24,
@@ -896,7 +1070,29 @@ const DashboardPage: React.FC = () => {
                     </Typography>
                     </Box>
                   <TableContainer>
-                    <Table size="small">
+                    <Table size="small" sx={{
+                      '& .MuiTableHead-root': {
+                        background: 'linear-gradient(135deg, rgba(240, 98, 146, 0.05) 0%, rgba(245, 87, 108, 0.05) 100%)',
+                      },
+                      '& .MuiTableCell-head': {
+                        fontWeight: 700,
+                        color: 'rgba(9, 9, 121, 0.8)',
+                        textTransform: 'uppercase',
+                        fontSize: '0.75rem',
+                        letterSpacing: '0.5px',
+                        borderBottom: '2px solid rgba(240, 98, 146, 0.2)',
+                      },
+                      '& .MuiTableRow-root': {
+                        transition: 'all 0.2s ease',
+                        '&:hover': {
+                          background: 'linear-gradient(135deg, rgba(240, 98, 146, 0.03) 0%, rgba(245, 87, 108, 0.03) 100%)',
+                          transform: 'scale(1.01)',
+                        }
+                      },
+                      '& .MuiTableCell-body': {
+                        borderBottom: '1px solid rgba(240, 98, 146, 0.1)',
+                      }
+                    }}>
                       <TableHead>
                         <TableRow>
                           <TableCell>Patient</TableCell>
@@ -907,7 +1103,7 @@ const DashboardPage: React.FC = () => {
                       <TableBody>
                         {(appointments || []).slice(0, 5).map((appointment: any) => (
                           <TableRow key={appointment?.id || Math.random()}>
-                            <TableCell>{appointment?.patientName || appointment?.patient || appointment?.patientId || 'Unknown'}</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>{appointment?.patientName || appointment?.patient || appointment?.patientId || 'Unknown'}</TableCell>
                             <TableCell>
                               {appointment?.date ? new Date(appointment.date).toLocaleDateString() : 'N/A'}
                             </TableCell>
@@ -918,15 +1114,16 @@ const DashboardPage: React.FC = () => {
                                   appointment?.status === 'completed' || appointment?.status === 'confirmed' ? 'success' :
                                   appointment?.status === 'cancelled' ? 'error' : 'default'
                                 }
-                                size="small" 
+                                size="small"
+                                sx={{ fontWeight: 600 }}
                               />
                             </TableCell>
                           </TableRow>
                         ))}
                         {(!appointments || appointments.length === 0) && (
                           <TableRow>
-                            <TableCell colSpan={3} align="center">
-                              <Typography variant="body2" color="textSecondary">
+                            <TableCell colSpan={3} align="center" sx={{ py: 4 }}>
+                              <Typography variant="body2" color="textSecondary" sx={{ fontStyle: 'italic' }}>
                                 No appointments available
                               </Typography>
                             </TableCell>
@@ -943,14 +1140,27 @@ const DashboardPage: React.FC = () => {
             <Grid item xs={12} md={6}>
                 <Card sx={{
                   borderRadius: 4,
-                  background: 'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(248,250,252,0.98) 100%)',
+                  background: 'linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.95) 100%)',
                   backdropFilter: 'blur(20px)',
-                  border: '1px solid rgba(9, 9, 121, 0.1)',
-                  boxShadow: '0 8px 32px rgba(9, 9, 121, 0.08)',
-                  transition: 'all 0.3s ease',
+                  border: '1px solid rgba(9, 9, 121, 0.15)',
+                  boxShadow: '0 8px 32px rgba(9, 9, 121, 0.12), 0 0 0 1px rgba(255,255,255,0.5) inset',
+                  transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: '4px',
+                    background: 'linear-gradient(90deg, rgba(67, 233, 123, 1) 0%, rgba(56, 249, 215, 1) 100%)',
+                    opacity: 0.8,
+                  },
                   '&:hover': {
-                    transform: 'translateY(-4px)',
-                    boxShadow: '0 12px 40px rgba(9, 9, 121, 0.12)',
+                    transform: 'translateY(-6px)',
+                    boxShadow: '0 16px 48px rgba(67, 233, 123, 0.2), 0 0 0 1px rgba(255,255,255,0.6) inset',
+                    border: '1px solid rgba(67, 233, 123, 0.3)',
                   }
                 }}>
                   <CardContent sx={{ p: 3 }}>
@@ -958,8 +1168,9 @@ const DashboardPage: React.FC = () => {
                       <Box sx={{
                         p: 1.5,
                         borderRadius: 2,
-                        background: 'linear-gradient(135deg, rgba(67, 233, 123, 0.1) 0%, rgba(56, 249, 215, 0.1) 100%)',
-                        border: '1px solid rgba(67, 233, 123, 0.2)'
+                        background: 'linear-gradient(135deg, rgba(67, 233, 123, 0.15) 0%, rgba(56, 249, 215, 0.15) 100%)',
+                        border: '1px solid rgba(67, 233, 123, 0.25)',
+                        boxShadow: '0 2px 8px rgba(67, 233, 123, 0.1)'
                       }}>
                         <TrendingUp sx={{ 
                           fontSize: 24,
@@ -981,7 +1192,29 @@ const DashboardPage: React.FC = () => {
                               </Typography>
                     </Box>
                   <TableContainer>
-                    <Table size="small">
+                    <Table size="small" sx={{
+                      '& .MuiTableHead-root': {
+                        background: 'linear-gradient(135deg, rgba(67, 233, 123, 0.05) 0%, rgba(56, 249, 215, 0.05) 100%)',
+                      },
+                      '& .MuiTableCell-head': {
+                        fontWeight: 700,
+                        color: 'rgba(9, 9, 121, 0.8)',
+                        textTransform: 'uppercase',
+                        fontSize: '0.75rem',
+                        letterSpacing: '0.5px',
+                        borderBottom: '2px solid rgba(67, 233, 123, 0.2)',
+                      },
+                      '& .MuiTableRow-root': {
+                        transition: 'all 0.2s ease',
+                        '&:hover': {
+                          background: 'linear-gradient(135deg, rgba(67, 233, 123, 0.03) 0%, rgba(56, 249, 215, 0.03) 100%)',
+                          transform: 'scale(1.01)',
+                        }
+                      },
+                      '& .MuiTableCell-body': {
+                        borderBottom: '1px solid rgba(67, 233, 123, 0.1)',
+                      }
+                    }}>
                       <TableHead>
                         <TableRow>
                           <TableCell>Patient</TableCell>
@@ -992,21 +1225,22 @@ const DashboardPage: React.FC = () => {
                       <TableBody>
                         {(payments || []).slice(0, 5).map((payment: any) => (
                           <TableRow key={payment?.id || Math.random()}>
-                            <TableCell>{payment?.patientName || payment?.patient || payment?.patientId || 'Unknown'}</TableCell>
-                            <TableCell>${((payment?.paidAmount || payment?.amount || 0)).toLocaleString()}</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>{payment?.patientName || payment?.patient || payment?.patientId || 'Unknown'}</TableCell>
+                            <TableCell sx={{ fontWeight: 700, color: 'rgba(67, 233, 123, 1)' }}>${((payment?.paidAmount || payment?.amount || 0)).toLocaleString()}</TableCell>
                             <TableCell>
                               <Chip 
                                 label={payment?.status || 'unknown'} 
                                 color={payment?.status === 'paid' ? 'success' : payment?.status === 'overdue' ? 'error' : 'warning'}
                                 size="small"
+                                sx={{ fontWeight: 600 }}
                               />
                             </TableCell>
                           </TableRow>
                         ))}
                         {(!payments || payments.length === 0) && (
                           <TableRow>
-                            <TableCell colSpan={3} align="center">
-                              <Typography variant="body2" color="textSecondary">
+                            <TableCell colSpan={3} align="center" sx={{ py: 4 }}>
+                              <Typography variant="body2" color="textSecondary" sx={{ fontStyle: 'italic' }}>
                                 No payments available
                               </Typography>
                             </TableCell>
